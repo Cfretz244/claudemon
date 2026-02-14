@@ -64,12 +64,15 @@ export class OverworldScene extends Phaser.Scene {
   // Game state
   private playerState!: PlayerState;
   private stepCounter = 0;
+  private isWarping = false;
 
   constructor() {
     super({ key: 'OverworldScene' });
   }
 
   init(data: SceneData): void {
+    this.isWarping = false;
+    this.isMoving = false;
     const mapId = data.mapId || 'pallet_town';
     this.currentMap = ALL_MAPS[mapId];
     this.playerGridX = data.playerX ?? 9;
@@ -107,10 +110,10 @@ export class OverworldScene extends Phaser.Scene {
     );
     this.player.setDepth(10);
 
-    // Pikachu follower
+    // Pikachu follower - starts hidden on player tile, appears after first step
     this.pikachuVisible = this.playerState.party.length > 0 && this.playerState.party[0].speciesId === 25;
     this.pikachuGridX = this.playerGridX;
-    this.pikachuGridY = this.playerGridY + 1;
+    this.pikachuGridY = this.playerGridY;
     this.pikachu = this.add.sprite(
       this.pikachuGridX * TILE_SIZE + TILE_SIZE / 2,
       this.pikachuGridY * TILE_SIZE + TILE_SIZE / 2,
@@ -118,7 +121,7 @@ export class OverworldScene extends Phaser.Scene {
       0
     );
     this.pikachu.setDepth(9);
-    this.pikachu.setVisible(this.pikachuVisible);
+    this.pikachu.setVisible(false); // Hidden until player takes first step
     this.playerMoveHistory = [];
 
     // Create NPCs
@@ -209,7 +212,7 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   update(): void {
-    if (this.isMoving || this.textBox.getIsVisible() || this.menuOpen) return;
+    if (this.isMoving || this.isWarping || this.textBox.getIsVisible() || this.menuOpen) return;
 
     // Movement
     let dir: Direction | null = null;
@@ -244,6 +247,13 @@ export class OverworldScene extends Phaser.Scene {
 
     // Check collision
     if (this.currentMap.collision[newY]?.[newX]) {
+      // If the blocked tile has a warp, trigger it (handles tree-bordered exits)
+      const warp = this.currentMap.warps.find(w => w.x === newX && w.y === newY);
+      if (warp) {
+        soundSystem.doorOpen();
+        this.warpTo(warp.targetMap, warp.targetX, warp.targetY);
+        return;
+      }
       soundSystem.bump();
       return;
     }
@@ -274,13 +284,10 @@ export class OverworldScene extends Phaser.Scene {
         this.isMoving = false;
         this.player.play(`player_idle_${this.playerDirection}`, true);
 
-        // Move Pikachu follower
+        // Move Pikachu follower - always trail 1 tile behind
         if (this.pikachuVisible) {
-          this.playerMoveHistory.push({ x: prevX, y: prevY, dir: this.playerDirection });
-          if (this.playerMoveHistory.length > 1) {
-            const target = this.playerMoveHistory.shift()!;
-            this.movePikachu(target.x, target.y, target.dir);
-          }
+          if (!this.pikachu.visible) this.pikachu.setVisible(true);
+          this.movePikachu(prevX, prevY, this.playerDirection);
         }
 
         // Check for warp
@@ -318,6 +325,9 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private warpTo(mapId: string, targetX: number, targetY: number): void {
+    // Prevent double-warps
+    if (this.isWarping) return;
+
     // Special Elite Four trigger
     if (mapId === 'elite_four') {
       if (this.playerState.badges.length < 8) {
@@ -327,6 +337,7 @@ export class OverworldScene extends Phaser.Scene {
         ]);
         return;
       }
+      this.isWarping = true;
       this.startEliteFour();
       return;
     }
@@ -336,6 +347,8 @@ export class OverworldScene extends Phaser.Scene {
       console.warn(`Map not found: ${mapId}`);
       return;
     }
+
+    this.isWarping = true;
 
     // Fade out and in
     this.cameras.main.fadeOut(200, 0, 0, 0);
@@ -376,6 +389,7 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private checkWildEncounter(x: number, y: number): void {
+    if (this.isWarping) return;
     const tileType = this.currentMap.tiles[y]?.[x];
     // Encounters happen on tall grass, cave floors, and indoor floors (for Pokemon Tower etc.)
     const encounterTiles = [TileType.TALL_GRASS, TileType.CAVE_FLOOR];
@@ -395,6 +409,7 @@ export class OverworldScene extends Phaser.Scene {
         const level = enc.minLevel + Math.floor(Math.random() * (enc.maxLevel - enc.minLevel + 1));
         const wildPokemon = createPokemon(enc.speciesId, level);
 
+        this.isWarping = true; // Block movement during battle transition
         soundSystem.battleStart();
 
         // Transition to battle
@@ -415,6 +430,8 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private handleAction(): void {
+    if (this.isWarping) return;
+
     // If textbox is showing, advance it
     if (this.textBox.getIsVisible()) {
       this.textBox.advance();
@@ -478,6 +495,10 @@ export class OverworldScene extends Phaser.Scene {
             move.currentPp = move.maxPp;
           }
         }
+        // Record this as last heal location (the Pokemon Center entrance)
+        this.playerState.lastHealMap = this.currentMap.id;
+        this.playerState.lastHealX = this.playerGridX;
+        this.playerState.lastHealY = this.playerGridY;
       });
       return;
     }
@@ -528,6 +549,7 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private startTrainerBattle(npc: NPCData): void {
+    this.isWarping = true; // Block movement during battle transition
     soundSystem.battleStart();
 
     this.cameras.main.flash(300, 0, 0, 0);

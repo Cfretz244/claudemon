@@ -6,6 +6,9 @@ export interface SaveData {
   currentMap: string;
   playerX: number;
   playerY: number;
+  lastHealMap: string;
+  lastHealX: number;
+  lastHealY: number;
   party: PokemonInstance[];
   pc: PokemonInstance[];
   bag: Record<string, number>;
@@ -56,6 +59,9 @@ export class SaveSystem {
       currentMap: 'player_house',
       playerX: 3,
       playerY: 5,
+      lastHealMap: 'player_house',
+      lastHealX: 3,
+      lastHealY: 5,
       party: [],
       pc: [],
       bag: {

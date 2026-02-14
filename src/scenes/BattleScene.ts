@@ -676,7 +676,7 @@ export class BattleScene extends Phaser.Scene {
         `${this.playerState.name} blacked out!`,
       ]);
 
-      // Heal party and return to last Pokemon Center
+      // Heal party and return to last healed location
       for (const p of this.playerState.party) {
         p.currentHp = p.stats.hp;
         p.status = StatusCondition.NONE;
@@ -686,9 +686,9 @@ export class BattleScene extends Phaser.Scene {
       this.playerState.money = Math.floor(this.playerState.money / 2);
 
       this.scene.start('OverworldScene', {
-        mapId: 'pokemon_center',
-        playerX: 5,
-        playerY: 5,
+        mapId: this.playerState.lastHealMap,
+        playerX: this.playerState.lastHealX,
+        playerY: this.playerState.lastHealY,
         saveData: this.playerState.toSave(),
       });
     }

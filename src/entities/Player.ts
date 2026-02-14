@@ -15,6 +15,9 @@ export class PlayerState {
   pokedexCaught: number[];
   storyFlags: Record<string, boolean>;
   playTime: number;
+  lastHealMap: string;
+  lastHealX: number;
+  lastHealY: number;
 
   constructor() {
     this.name = 'RED';
@@ -29,6 +32,9 @@ export class PlayerState {
     this.pokedexCaught = [];
     this.storyFlags = {};
     this.playTime = 0;
+    this.lastHealMap = 'player_house';
+    this.lastHealX = 3;
+    this.lastHealY = 5;
   }
 
   static fromSave(save: SaveData): PlayerState {
@@ -45,6 +51,9 @@ export class PlayerState {
     state.pokedexCaught = save.pokedexCaught;
     state.storyFlags = save.storyFlags;
     state.playTime = save.playTime;
+    state.lastHealMap = save.lastHealMap || 'player_house';
+    state.lastHealX = save.lastHealX ?? 3;
+    state.lastHealY = save.lastHealY ?? 5;
     return state;
   }
 
@@ -65,6 +74,9 @@ export class PlayerState {
       pokedexCaught: this.pokedexCaught,
       storyFlags: this.storyFlags,
       playTime: this.playTime,
+      lastHealMap: this.lastHealMap,
+      lastHealX: this.lastHealX,
+      lastHealY: this.lastHealY,
     };
   }
 

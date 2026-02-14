@@ -122,10 +122,15 @@ export class BattleMenu {
     this.active = false;
     this.container.setVisible(false);
     this.moveContainer.setVisible(false);
-    this.cleanupInput();
   }
 
+  private inputBound = false;
+
   private setupInput(): void {
+    // Only bind input once to prevent stacking listeners
+    if (this.inputBound) return;
+    this.inputBound = true;
+
     const keyboard = this.scene.input.keyboard!;
 
     const upKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
@@ -143,10 +148,6 @@ export class BattleMenu {
     zKey.on('down', () => { if (this.active) this.confirm(); });
     enterKey.on('down', () => { if (this.active) this.confirm(); });
     xKey.on('down', () => { if (this.active) this.cancel(); });
-  }
-
-  private cleanupInput(): void {
-    // Keys persist in the scene, which is fine - they just check this.active
   }
 
   private navigate(dir: string): void {

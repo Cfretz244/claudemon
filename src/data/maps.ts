@@ -57,10 +57,16 @@ export const PALLET_TOWN: MapData = (() => {
   // Sign
   setTile(11, 16, T.SIGN);
 
-  // Trees border
+  // Trees border (with gap at north for Route 1 exit)
   for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.TREE);
-    setTile(x, 1, T.TREE);
+    // Leave gap at x=8-11 for north exit path
+    if (x < 8 || x > 11) {
+      setTile(x, 0, T.TREE);
+      setTile(x, 1, T.TREE);
+    } else {
+      setTile(x, 0, T.PATH);
+      setTile(x, 1, T.PATH);
+    }
   }
   for (let y = 0; y < H; y++) {
     setTile(0, y, T.TREE);
@@ -79,9 +85,13 @@ export const PALLET_TOWN: MapData = (() => {
   fillRect(3, 11, 4, 2, T.TALL_GRASS);
   fillRect(14, 11, 4, 2, T.TALL_GRASS);
 
-  // Fence along south
+  // Fence along south (with gap at x=9-10 for south exit)
   for (let x = 2; x < W - 2; x++) {
-    setTile(x, H - 1, T.FENCE);
+    if (x === 9 || x === 10) {
+      setTile(x, H - 1, T.PATH);
+    } else {
+      setTile(x, H - 1, T.FENCE);
+    }
   }
 
   // Signs
@@ -245,8 +255,8 @@ export const OAKS_LAB: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 17 },
-      { x: 5, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 17 },
+      { x: 4, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 16 },
+      { x: 5, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 16 },
     ],
     npcs: [
       {
