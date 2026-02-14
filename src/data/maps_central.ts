@@ -73,6 +73,8 @@ export const LAVENDER_TOWN: MapData = (() => {
       { x: 14, y: 8, targetMap: 'pokemon_tower', targetX: 5, targetY: 13 },
       // Pokemon Center door
       { x: 5, y: 9, targetMap: 'pokemon_center_lavender', targetX: 4, targetY: 7 },
+      // Pokemart door
+      { x: 5, y: 17, targetMap: 'pokemart_lavender', targetX: 3, targetY: 7 },
     ],
     npcs: [
       {
@@ -552,6 +554,8 @@ export const CELADON_CITY: MapData = (() => {
       { x: 6, y: 10, targetMap: 'celadon_gym', targetX: 4, targetY: 13 },
       // Pokemon Center door
       { x: 22, y: 9, targetMap: 'pokemon_center_celadon', targetX: 4, targetY: 7 },
+      // Department Store (Pokemart)
+      { x: 23, y: 20, targetMap: 'pokemart_celadon', targetX: 3, targetY: 7 },
     ],
     npcs: [
       {
@@ -799,6 +803,8 @@ export const SAFFRON_CITY: MapData = (() => {
       { x: 7, y: 9, targetMap: 'saffron_gym', targetX: 4, targetY: 13 },
       // Pokemon Center door
       { x: 6, y: 22, targetMap: 'pokemon_center_saffron', targetX: 4, targetY: 7 },
+      // Pokemart door
+      { x: 24, y: 22, targetMap: 'pokemart_saffron', targetX: 3, targetY: 7 },
     ],
     npcs: [
       {
@@ -977,19 +983,103 @@ export const POKEMON_CENTER_SAFFRON: MapData = (() => {
   };
 })();
 
+// ─── POKeMON MART (LAVENDER)  (8x8 indoor) ───────────────────────
+const POKEMART_LAVENDER: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+  fillRect(0, 0, W, 2, T.WALL);
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
+  setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
+  setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+  return {
+    id: 'pokemart_lavender', name: 'POKeMON MART', width: W, height: H, tiles, collision,
+    warps: [{ x: 3, y: H - 1, targetMap: 'lavender_town', targetX: 5, targetY: 18 }],
+    npcs: [{
+      id: 'mart_clerk', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
+      dialogue: ['Welcome! How may I\nserve you?'],
+      shopStock: ['great_ball', 'super_potion', 'revive', 'antidote', 'burn_heal', 'ice_heal', 'paralyze_heal', 'escape_rope'],
+    }],
+  };
+})();
+
+// ─── POKeMON MART (CELADON / DEPT STORE)  (8x8 indoor) ──────────
+const POKEMART_CELADON: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+  fillRect(0, 0, W, 2, T.WALL);
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
+  setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
+  setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+  return {
+    id: 'pokemart_celadon', name: 'CELADON DEPT STORE', width: W, height: H, tiles, collision,
+    warps: [{ x: 3, y: H - 1, targetMap: 'celadon_city', targetX: 23, targetY: 21 }],
+    npcs: [{
+      id: 'mart_clerk', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
+      dialogue: ['Welcome to CELADON\nDEPT STORE!'],
+      shopStock: ['poke_ball', 'great_ball', 'ultra_ball', 'potion', 'super_potion', 'hyper_potion', 'revive', 'full_heal', 'antidote', 'repel', 'escape_rope'],
+    }],
+  };
+})();
+
+// ─── POKeMON MART (SAFFRON)  (8x8 indoor) ───────────────────────
+const POKEMART_SAFFRON: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+  fillRect(0, 0, W, 2, T.WALL);
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
+  setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
+  setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+  return {
+    id: 'pokemart_saffron', name: 'POKeMON MART', width: W, height: H, tiles, collision,
+    warps: [{ x: 3, y: H - 1, targetMap: 'saffron_city', targetX: 24, targetY: 23 }],
+    npcs: [{
+      id: 'mart_clerk', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
+      dialogue: ['Welcome! How may I\nserve you?'],
+      shopStock: ['great_ball', 'ultra_ball', 'super_potion', 'hyper_potion', 'revive', 'full_heal'],
+    }],
+  };
+})();
+
 // ─── Combined export ─────────────────────────────────────────────────────────
 
 export const CENTRAL_MAPS: Record<string, MapData> = {
   lavender_town: LAVENDER_TOWN,
   pokemon_tower: POKEMON_TOWER,
   pokemon_center_lavender: POKEMON_CENTER_LAVENDER,
+  pokemart_lavender: POKEMART_LAVENDER,
   route7: ROUTE7,
   route8: ROUTE8,
   route11: ROUTE11,
   celadon_city: CELADON_CITY,
   celadon_gym: CELADON_GYM,
   pokemon_center_celadon: POKEMON_CENTER_CELADON,
+  pokemart_celadon: POKEMART_CELADON,
   saffron_city: SAFFRON_CITY,
   saffron_gym: SAFFRON_GYM,
   pokemon_center_saffron: POKEMON_CENTER_SAFFRON,
+  pokemart_saffron: POKEMART_SAFFRON,
 };

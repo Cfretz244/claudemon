@@ -1,16 +1,19 @@
 import Phaser from 'phaser';
-import { TILE_SIZE, GAME_WIDTH, GAME_HEIGHT, MOVE_DURATION, Direction, DIR_VECTORS, MAX_PARTY_SIZE } from '../utils/constants';
-import { ALL_MAPS, SOLID_TILES } from '../data/maps';
+import { TILE_SIZE, GAME_WIDTH, MOVE_DURATION, Direction, DIR_VECTORS } from '../utils/constants';
+import { ALL_MAPS } from '../data/maps';
 import { MapData, TileType, NPCData } from '../types/map.types';
 import { TextBox } from '../components/TextBox';
+import { PokedexScreen } from '../components/PokedexScreen';
+import { PartyScreen } from '../components/PartyScreen';
+import { BagScreen } from '../components/BagScreen';
+import { ShopScreen } from '../components/ShopScreen';
 import { generateNPCSprite } from '../utils/spriteGenerator';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
-import { PokemonInstance, StatusCondition } from '../types/pokemon.types';
+import { StatusCondition } from '../types/pokemon.types';
 import { createPokemon } from '../entities/Pokemon';
 import { PlayerState } from '../entities/Player';
 import { ELITE_FOUR, CHAMPION } from '../data/eliteFour';
-import { POKEMON_DATA } from '../data/pokemon';
 
 interface SceneData {
   mapId: string;
@@ -54,12 +57,19 @@ export class OverworldScene extends Phaser.Scene {
   // UI
   private textBox!: TextBox;
   private menuOpen = false;
+  private screenOpen = false;
   private menuContainer!: Phaser.GameObjects.Container;
   private menuCursor!: Phaser.GameObjects.Text;
   private menuSelectedIndex = 0;
   private menuItems = ['POKeDEX', 'POKeMON', 'BAG', 'SAVE', 'EXIT'];
   private mapNameText!: Phaser.GameObjects.Text;
   private mapNameTimer: Phaser.Time.TimerEvent | null = null;
+
+  // Screens
+  private pokedexScreen!: PokedexScreen;
+  private partyScreen!: PartyScreen;
+  private bagScreen!: BagScreen;
+  private shopScreen!: ShopScreen;
 
   // Game state
   private playerState!: PlayerState;
@@ -146,6 +156,12 @@ export class OverworldScene extends Phaser.Scene {
     this.textBox = new TextBox(this);
     this.createMenu();
 
+    // Screens
+    this.pokedexScreen = new PokedexScreen(this);
+    this.partyScreen = new PartyScreen(this);
+    this.bagScreen = new BagScreen(this);
+    this.shopScreen = new ShopScreen(this);
+
     // Show map name
     this.showMapName(this.currentMap.name);
 
@@ -153,6 +169,7 @@ export class OverworldScene extends Phaser.Scene {
     this.actionKey.on('down', () => this.handleAction());
     this.startKey.on('down', () => this.toggleMenu());
     this.cancelKey.on('down', () => {
+      if (this.screenOpen) return; // Screens handle their own X input
       if (this.menuOpen) this.closeMenu();
       else if (this.textBox.getIsVisible()) this.textBox.advance();
     });
@@ -212,7 +229,7 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   update(): void {
-    if (this.isMoving || this.isWarping || this.textBox.getIsVisible() || this.menuOpen) return;
+    if (this.isMoving || this.isWarping || this.textBox.getIsVisible() || this.menuOpen || this.screenOpen) return;
 
     // Movement
     let dir: Direction | null = null;
@@ -430,7 +447,7 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private handleAction(): void {
-    if (this.isWarping) return;
+    if (this.isWarping || this.screenOpen) return;
 
     // If textbox is showing, advance it
     if (this.textBox.getIsVisible()) {
@@ -503,8 +520,8 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    if (npc.id === 'mart_clerk') {
-      this.showShopMenu();
+    if (npc.shopStock || npc.id.startsWith('mart_clerk')) {
+      this.showShopMenu(npc);
       return;
     }
 
@@ -599,7 +616,7 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private toggleMenu(): void {
-    if (this.textBox.getIsVisible()) return;
+    if (this.textBox.getIsVisible() || this.screenOpen) return;
 
     if (this.menuOpen) {
       this.closeMenu();
@@ -672,77 +689,36 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    const lines = this.playerState.party.map((p, i) => {
-      const species = this.getPokemonName(p.speciesId);
-      return `${i + 1}. ${p.nickname || species} Lv${p.level}\n   HP: ${p.currentHp}/${p.stats.hp}`;
+    this.screenOpen = true;
+    this.partyScreen.show(this.playerState.party, () => {
+      this.screenOpen = false;
     });
-
-    this.textBox.show(lines);
   }
 
   private showBagScreen(): void {
     this.closeMenu();
-    const items = Object.entries(this.playerState.bag);
-    if (items.length === 0) {
-      this.textBox.show(['Your BAG is empty!']);
-      return;
-    }
-
-    const lines = items.map(([id, count]) => {
-      const name = id.replace(/_/g, ' ').toUpperCase();
-      return `${name} x${count}`;
+    this.screenOpen = true;
+    this.bagScreen.show(this.playerState, () => {
+      this.screenOpen = false;
     });
-
-    this.textBox.show(['BAG:', ...lines]);
   }
 
   private showPokedex(): void {
     this.closeMenu();
-    const seen = this.playerState.pokedexSeen.length;
-    const caught = this.playerState.pokedexCaught.length;
-    this.textBox.show([
-      'POKeDEX',
-      `SEEN:   ${seen}`,
-      `CAUGHT: ${caught}`,
-      `Completion: ${Math.floor(caught / 151 * 100)}%`,
-    ]);
+    this.screenOpen = true;
+    this.pokedexScreen.show(
+      this.playerState.pokedexSeen,
+      this.playerState.pokedexCaught,
+      () => { this.screenOpen = false; }
+    );
   }
 
-  private showShopMenu(): void {
-    const shopItems = [
-      { id: 'poke_ball', name: 'POKe BALL', price: 200 },
-      { id: 'great_ball', name: 'GREAT BALL', price: 600 },
-      { id: 'potion', name: 'POTION', price: 300 },
-      { id: 'super_potion', name: 'SUPER POTION', price: 700 },
-      { id: 'antidote', name: 'ANTIDOTE', price: 100 },
-      { id: 'repel', name: 'REPEL', price: 350 },
-    ];
-
-    // Auto-buy 3 of each affordable item (simplified shop)
-    const boughtItems: string[] = [];
-    for (const item of shopItems) {
-      if (this.playerState.money >= item.price) {
-        this.playerState.money -= item.price;
-        this.playerState.addItem(item.id, 1);
-        boughtItems.push(item.name);
-      }
-    }
-
-    if (boughtItems.length > 0) {
-      soundSystem.menuSelect();
-      this.textBox.show([
-        'Welcome to the\nPOKeMON MART!',
-        `Bought: ${boughtItems.join(', ')}`,
-        `Remaining: $${this.playerState.money}`,
-        'Thank you! Come\nagain!',
-      ]);
-    } else {
-      this.textBox.show([
-        'Welcome to the\nPOKeMON MART!',
-        "You don't have enough\nmoney!",
-        'Come back later!',
-      ]);
-    }
+  private showShopMenu(npc: NPCData): void {
+    const stock = npc.shopStock || ['poke_ball', 'potion'];
+    this.screenOpen = true;
+    this.shopScreen.show(this.playerState, stock, () => {
+      this.screenOpen = false;
+    });
   }
 
   private saveGame(): void {
@@ -777,7 +753,4 @@ export class OverworldScene extends Phaser.Scene {
     });
   }
 
-  private getPokemonName(speciesId: number): string {
-    return POKEMON_DATA[speciesId]?.name || `POKeMON #${speciesId}`;
-  }
 }

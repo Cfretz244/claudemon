@@ -816,12 +816,60 @@ export const POKEMON_CENTER_ROUTE10: MapData = (() => {
 // ---------------------------------------------------------------------------
 // Combined map registry for the Vermilion area
 // ---------------------------------------------------------------------------
+// ─── POKeMON MART (VERMILION)  (8x8 indoor) ───────────────────────
+export const POKEMART_VERMILION: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++)
+      for (let dx = 0; dx < w; dx++)
+        setTile(x + dx, y + dy, type);
+  }
+
+  fillRect(0, 0, W, 2, T.WALL);
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+
+  setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
+  setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
+  setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+
+  return {
+    id: 'pokemart_vermilion',
+    name: 'POKeMON MART',
+    width: W, height: H,
+    tiles, collision,
+    warps: [
+      { x: 3, y: H - 1, targetMap: 'vermilion_city', targetX: 6, targetY: 10 },
+    ],
+    npcs: [
+      {
+        id: 'mart_clerk',
+        x: 2, y: 2,
+        spriteColor: 0x4080f0,
+        direction: Direction.DOWN,
+        dialogue: ['Welcome! How may I\nserve you?'],
+        shopStock: ['poke_ball', 'great_ball', 'potion', 'super_potion', 'repel', 'escape_rope'],
+      },
+    ],
+  };
+})();
+
 export const VERMILION_MAPS: Record<string, MapData> = {
   route5: ROUTE5,
   route6: ROUTE6,
   vermilion_city: VERMILION_CITY,
   vermilion_gym: VERMILION_GYM,
   pokemon_center_vermilion: POKEMON_CENTER_VERMILION,
+  pokemart_vermilion: POKEMART_VERMILION,
   route9: ROUTE9,
   route10: ROUTE10,
   rock_tunnel: ROCK_TUNNEL,

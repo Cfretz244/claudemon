@@ -685,6 +685,8 @@ export const FUCHSIA_CITY: MapData = (() => {
       { x: 7, y: 10, targetMap: 'fuchsia_gym', targetX: 4, targetY: 13 },
       // Pokemon Center door
       { x: 18, y: 9, targetMap: 'pokemon_center_fuchsia', targetX: 4, targetY: 7 },
+      // Pokemart door
+      { x: 18, y: 20, targetMap: 'pokemart_fuchsia', targetX: 3, targetY: 7 },
     ],
     npcs: [
       {
@@ -987,6 +989,33 @@ export const SAFARI_ZONE: MapData = (() => {
   };
 })();
 
+// ─── POKeMON MART (FUCHSIA)  (8x8 indoor) ───────────────────────
+const POKEMART_FUCHSIA: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+  fillRect(0, 0, W, 2, T.WALL);
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
+  setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
+  setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+  return {
+    id: 'pokemart_fuchsia', name: 'POKeMON MART', width: W, height: H, tiles, collision,
+    warps: [{ x: 3, y: H - 1, targetMap: 'fuchsia_city', targetX: 18, targetY: 21 }],
+    npcs: [{
+      id: 'mart_clerk', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
+      dialogue: ['Welcome! How may I\nserve you?'],
+      shopStock: ['great_ball', 'ultra_ball', 'super_potion', 'hyper_potion', 'full_heal', 'revive'],
+    }],
+  };
+})();
+
 // ─── SOUTH MAPS REGISTRY ──────────────────────────────────────────────────────
 export const SOUTH_MAPS: Record<string, MapData> = {
   route12: ROUTE12,
@@ -999,5 +1028,6 @@ export const SOUTH_MAPS: Record<string, MapData> = {
   fuchsia_city: FUCHSIA_CITY,
   fuchsia_gym: FUCHSIA_GYM,
   pokemon_center_fuchsia: POKEMON_CENTER_FUCHSIA,
+  pokemart_fuchsia: POKEMART_FUCHSIA,
   safari_zone: SAFARI_ZONE,
 };

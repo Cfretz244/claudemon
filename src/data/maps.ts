@@ -628,6 +628,7 @@ export const POKEMART: MapData = (() => {
         dialogue: [
           'Welcome! How may I\nserve you?',
         ],
+        shopStock: ['poke_ball', 'potion', 'antidote', 'paralyze_heal', 'burn_heal'],
       },
     ],
   };

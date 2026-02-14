@@ -361,8 +361,8 @@ export const CINNABAR_ISLAND: MapData = (() => {
       { x: 14, y: 9, targetMap: 'pokemon_center_cinnabar', targetX: 4, targetY: 7 },
       // Pokemon Mansion warp
       { x: 5, y: 17, targetMap: 'pokemon_mansion', targetX: 7, targetY: 14 },
-      // Pokemart (no interior yet, but keep warp for future)
-      { x: 14, y: 16, targetMap: 'cinnabar_island', targetX: 14, targetY: 16 },
+      // Pokemart
+      { x: 14, y: 16, targetMap: 'pokemart_cinnabar', targetX: 3, targetY: 7 },
     ],
     npcs: [
       {
@@ -1193,6 +1193,10 @@ export const POKEMON_CENTER_INDIGO: MapData = (() => {
   setTile(5, 2, T.COUNTER);
   setTile(6, 2, T.COUNTER);
 
+  // Mart counter (right side)
+  setTile(1, 4, T.COUNTER);
+  setTile(2, 4, T.COUNTER);
+
   // PC
   setTile(8, 2, T.PC);
 
@@ -1224,6 +1228,14 @@ export const POKEMON_CENTER_INDIGO: MapData = (() => {
           'We heal your POKeMON\nback to perfect health!',
           'Your POKeMON have been\nfully restored!',
         ],
+      },
+      {
+        id: 'mart_clerk',
+        x: 2, y: 3,
+        spriteColor: 0x4080f0,
+        direction: Direction.DOWN,
+        dialogue: ['Welcome! Stock up\nbefore the ELITE FOUR!'],
+        shopStock: ['ultra_ball', 'hyper_potion', 'max_potion', 'full_restore', 'revive', 'full_heal'],
       },
     ],
   };
@@ -1356,6 +1368,33 @@ export const CERULEAN_CAVE: MapData = (() => {
   };
 })();
 
+// ─── POKeMON MART (CINNABAR)  (8x8 indoor) ──────────────────────
+const POKEMART_CINNABAR: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+  fillRect(0, 0, W, 2, T.WALL);
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
+  setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
+  setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+  return {
+    id: 'pokemart_cinnabar', name: 'POKeMON MART', width: W, height: H, tiles, collision,
+    warps: [{ x: 3, y: H - 1, targetMap: 'cinnabar_island', targetX: 14, targetY: 17 }],
+    npcs: [{
+      id: 'mart_clerk', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
+      dialogue: ['Welcome! How may I\nserve you?'],
+      shopStock: ['ultra_ball', 'hyper_potion', 'max_potion', 'full_heal', 'revive', 'escape_rope'],
+    }],
+  };
+})();
+
 // ─────────────────────────────────────────────────────────────
 // Combined export
 // ─────────────────────────────────────────────────────────────
@@ -1367,6 +1406,7 @@ export const ENDGAME_MAPS: Record<string, MapData> = {
   cinnabar_gym: CINNABAR_GYM,
   pokemon_mansion: POKEMON_MANSION,
   pokemon_center_cinnabar: POKEMON_CENTER_CINNABAR,
+  pokemart_cinnabar: POKEMART_CINNABAR,
   route21: ROUTE21,
   route22: ROUTE22,
   route23: ROUTE23,

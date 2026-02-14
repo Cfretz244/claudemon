@@ -42,6 +42,7 @@ export interface NPCData {
   trainerTeam?: string;
   movementPattern?: 'stationary' | 'wander' | 'patrol';
   sightRange?: number;
+  shopStock?: string[];
 }
 
 export interface MapData {

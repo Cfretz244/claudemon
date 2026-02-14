@@ -777,6 +777,59 @@ export const ROUTE25: MapData = (() => {
 })();
 
 // ─────────────────────────────────────────────────────────────
+// POKeMON MART (CERULEAN)  (8x8 indoor)
+// ─────────────────────────────────────────────────────────────
+export const POKEMART_CERULEAN: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++)
+      for (let dx = 0; dx < w; dx++)
+        setTile(x + dx, y + dy, type);
+  }
+
+  // Walls
+  fillRect(0, 0, W, 2, T.WALL);
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+
+  // Counter
+  setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
+
+  // Shelves
+  setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
+  setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+
+  return {
+    id: 'pokemart_cerulean',
+    name: 'POKeMON MART',
+    width: W, height: H,
+    tiles, collision,
+    warps: [
+      { x: 3, y: H - 1, targetMap: 'cerulean_city', targetX: 18, targetY: 20 },
+    ],
+    npcs: [
+      {
+        id: 'mart_clerk',
+        x: 2, y: 2,
+        spriteColor: 0x4080f0,
+        direction: Direction.DOWN,
+        dialogue: ['Welcome! How may I\nserve you?'],
+        shopStock: ['poke_ball', 'great_ball', 'potion', 'super_potion', 'antidote', 'repel'],
+      },
+    ],
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────
 // Combined export
 // ─────────────────────────────────────────────────────────────
 export const CERULEAN_MAPS: Record<string, MapData> = {
@@ -785,6 +838,7 @@ export const CERULEAN_MAPS: Record<string, MapData> = {
   cerulean_city: CERULEAN_CITY,
   cerulean_gym: CERULEAN_GYM,
   pokemon_center_cerulean: POKEMON_CENTER_CERULEAN,
+  pokemart_cerulean: POKEMART_CERULEAN,
   route24: ROUTE24,
   route25: ROUTE25,
 };
