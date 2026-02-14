@@ -5,7 +5,8 @@ import { BattleType } from '../types/battle.types';
 import { POKEMON_DATA } from '../data/pokemon';
 import { MOVES_DATA } from '../data/moves';
 import { BattleHUD } from '../components/BattleHUD';
-import { BattleMenu, MenuSelection } from '../components/BattleMenu';
+import { BattleMenu, MenuSelection, BagItem } from '../components/BattleMenu';
+import { ITEMS } from '../data/items';
 import { TextBox } from '../components/TextBox';
 import { calculateDamage, checkCritical, checkAccuracy } from '../systems/DamageCalculator';
 import { calculateExpGain, addExperience, learnMove } from '../systems/ExperienceSystem';
@@ -212,7 +213,24 @@ export class BattleScene extends Phaser.Scene {
 
   private showBattleMenu(): void {
     if (this.battleOver) return;
-    this.menu.show(this.playerPokemon, (selection) => this.handleMenuSelection(selection));
+    const bagItems = this.buildBagItems();
+    this.menu.show(this.playerPokemon, (selection) => this.handleMenuSelection(selection), bagItems);
+  }
+
+  private buildBagItems(): BagItem[] {
+    const usableIds = [
+      'poke_ball', 'great_ball', 'ultra_ball', 'master_ball',
+      'potion', 'super_potion', 'hyper_potion', 'max_potion', 'full_restore',
+    ];
+    const items: BagItem[] = [];
+    for (const id of usableIds) {
+      const qty = this.playerState.bag[id];
+      if (qty && qty > 0) {
+        const itemData = ITEMS[id];
+        items.push({ id, name: itemData?.name || id, quantity: qty });
+      }
+    }
+    return items;
   }
 
   private handleMenuSelection(selection: MenuSelection): void {
@@ -223,7 +241,11 @@ export class BattleScene extends Phaser.Scene {
         this.executeTurn(selection.moveIndex);
         break;
       case 'bag':
-        this.showBagInBattle();
+        if (!selection.itemId) {
+          this.textBox.show(["No usable items!"], () => this.showBattleMenu());
+          return;
+        }
+        this.handleBagSelection(selection.itemId);
         break;
       case 'pokemon':
         this.showPartyInBattle();
@@ -231,6 +253,40 @@ export class BattleScene extends Phaser.Scene {
       case 'run':
         this.tryRun();
         break;
+    }
+  }
+
+  private handleBagSelection(itemId: string): void {
+    const itemData = ITEMS[itemId];
+    const isBall = itemData?.category === 'ball';
+
+    if (isBall && this.battleType === BattleType.TRAINER) {
+      this.textBox.show(["The TRAINER blocked\nthe BALL!", "Don't be a thief!"], () => {
+        // Opponent gets a free attack (throwing is your turn)
+        const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+        const aiMove = this.opponentPokemon.moves[aiMoveIndex];
+        const aiMoveData = MOVES_DATA[aiMove?.moveId];
+        if (aiMove && aiMoveData) {
+          this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false).then(() => {
+            if (this.playerPokemon.currentHp <= 0) {
+              this.handlePlayerFaint();
+            } else {
+              this.turnInProgress = false;
+              this.showBattleMenu();
+            }
+          });
+        } else {
+          this.turnInProgress = false;
+          this.showBattleMenu();
+        }
+      });
+      return;
+    }
+
+    if (isBall) {
+      this.useBall(itemId);
+    } else {
+      this.usePotion(itemId);
     }
   }
 
@@ -742,34 +798,6 @@ export class BattleScene extends Phaser.Scene {
         }
       });
     }
-  }
-
-  private showBagInBattle(): void {
-    const items = Object.entries(this.playerState.bag).filter(([id]) => {
-      return ['poke_ball', 'great_ball', 'ultra_ball', 'master_ball', 'potion', 'super_potion', 'hyper_potion', 'full_restore'].includes(id);
-    });
-
-    if (items.length === 0) {
-      this.textBox.show(["No usable items!"], () => this.showBattleMenu());
-      return;
-    }
-
-    // For simplicity, auto-use first available ball (wild) or first potion
-    if (this.battleType === BattleType.WILD) {
-      const ball = items.find(([id]) => id.includes('ball'));
-      if (ball) {
-        this.useBall(ball[0]);
-        return;
-      }
-    }
-
-    const potion = items.find(([id]) => id.includes('potion') || id === 'full_restore');
-    if (potion) {
-      this.usePotion(potion[0]);
-      return;
-    }
-
-    this.textBox.show(["No usable items!"], () => this.showBattleMenu());
   }
 
   private async useBall(ballType: string): Promise<void> {

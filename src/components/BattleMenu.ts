@@ -4,11 +4,18 @@ import { PokemonInstance, PokemonMove } from '../types/pokemon.types';
 import { MOVES_DATA } from '../data/moves';
 import { soundSystem } from '../systems/SoundSystem';
 
+export interface BagItem {
+  id: string;
+  name: string;
+  quantity: number;
+}
+
 export type MenuSelection = {
   type: 'fight';
   moveIndex: number;
 } | {
   type: 'bag';
+  itemId: string;
 } | {
   type: 'pokemon';
 } | {
@@ -21,7 +28,7 @@ export class BattleMenu {
   private mainMenuItems: Phaser.GameObjects.Text[] = [];
   private mainCursor: Phaser.GameObjects.Text;
   private selectedIndex = 0;
-  private mode: 'main' | 'fight' = 'main';
+  private mode: 'main' | 'fight' | 'bag' = 'main';
   private moveTexts: Phaser.GameObjects.Text[] = [];
   private movePPTexts: Phaser.GameObjects.Text[] = [];
   private moveContainer: Phaser.GameObjects.Container;
@@ -30,6 +37,16 @@ export class BattleMenu {
   private currentMoves: PokemonMove[] = [];
   private onSelect: ((selection: MenuSelection) => void) | null = null;
   private active = false;
+
+  // Bag sub-menu state
+  private bagItems: BagItem[] = [];
+  private bagContainer: Phaser.GameObjects.Container;
+  private bagTexts: Phaser.GameObjects.Text[] = [];
+  private bagQtyTexts: Phaser.GameObjects.Text[] = [];
+  private bagCursor: Phaser.GameObjects.Text;
+  private bagSelectedIndex = 0;
+  private bagScrollOffset = 0;
+  private static readonly BAG_VISIBLE_ROWS = 3;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -104,16 +121,57 @@ export class BattleMenu {
     this.moveContainer.setDepth(200);
     this.moveContainer.setScrollFactor(0);
     this.moveContainer.setVisible(false);
+
+    // Bag selection menu (overlays the whole bottom, like move menu)
+    const bagBg = scene.add.graphics();
+    bagBg.fillStyle(0xf8f8f8, 1);
+    bagBg.fillRoundedRect(2, GAME_HEIGHT - 38, GAME_WIDTH - 4, 36, 2);
+    bagBg.lineStyle(1, 0x383838, 1);
+    bagBg.strokeRoundedRect(2, GAME_HEIGHT - 38, GAME_WIDTH - 4, 36, 2);
+
+    this.bagTexts = [];
+    this.bagQtyTexts = [];
+    for (let i = 0; i < BattleMenu.BAG_VISIBLE_ROWS; i++) {
+      const nameText = scene.add.text(
+        16,
+        GAME_HEIGHT - 34 + i * 11,
+        '',
+        { fontSize: '7px', color: '#383838', fontFamily: 'monospace' }
+      );
+      this.bagTexts.push(nameText);
+
+      const qtyText = scene.add.text(
+        GAME_WIDTH - 30,
+        GAME_HEIGHT - 34 + i * 11,
+        '',
+        { fontSize: '7px', color: '#383838', fontFamily: 'monospace' }
+      );
+      this.bagQtyTexts.push(qtyText);
+    }
+
+    this.bagCursor = scene.add.text(
+      8,
+      GAME_HEIGHT - 34,
+      '>',
+      { fontSize: '7px', color: '#383838', fontFamily: 'monospace' }
+    );
+
+    this.bagContainer = scene.add.container(0, 0, [bagBg, ...this.bagTexts, ...this.bagQtyTexts, this.bagCursor]);
+    this.bagContainer.setDepth(200);
+    this.bagContainer.setScrollFactor(0);
+    this.bagContainer.setVisible(false);
   }
 
-  show(pokemon: PokemonInstance, onSelect: (selection: MenuSelection) => void): void {
+  show(pokemon: PokemonInstance, onSelect: (selection: MenuSelection) => void, bagItems?: BagItem[]): void {
     this.currentMoves = pokemon.moves;
     this.onSelect = onSelect;
+    this.bagItems = bagItems || [];
     this.active = true;
     this.mode = 'main';
     this.selectedIndex = 0;
     this.container.setVisible(true);
     this.moveContainer.setVisible(false);
+    this.bagContainer.setVisible(false);
     this.updateMainCursor();
     this.setupInput();
   }
@@ -122,6 +180,7 @@ export class BattleMenu {
     this.active = false;
     this.container.setVisible(false);
     this.moveContainer.setVisible(false);
+    this.bagContainer.setVisible(false);
   }
 
   private inputBound = false;
@@ -165,7 +224,7 @@ export class BattleMenu {
 
       this.selectedIndex = Phaser.Math.Clamp(this.selectedIndex, 0, 3);
       this.updateMainCursor();
-    } else {
+    } else if (this.mode === 'fight') {
       const col = this.moveSelectedIndex % 2;
       const row = Math.floor(this.moveSelectedIndex / 2);
       const maxIndex = Math.min(3, this.currentMoves.length - 1);
@@ -177,6 +236,26 @@ export class BattleMenu {
 
       this.moveSelectedIndex = Phaser.Math.Clamp(this.moveSelectedIndex, 0, maxIndex);
       this.updateMoveCursor();
+    } else if (this.mode === 'bag') {
+      if (dir === 'up') {
+        if (this.bagSelectedIndex > 0) {
+          this.bagSelectedIndex--;
+          if (this.bagSelectedIndex < this.bagScrollOffset) {
+            this.bagScrollOffset = this.bagSelectedIndex;
+            this.updateBagTexts();
+          }
+          this.updateBagCursor();
+        }
+      } else if (dir === 'down') {
+        if (this.bagSelectedIndex < this.bagItems.length - 1) {
+          this.bagSelectedIndex++;
+          if (this.bagSelectedIndex >= this.bagScrollOffset + BattleMenu.BAG_VISIBLE_ROWS) {
+            this.bagScrollOffset = this.bagSelectedIndex - BattleMenu.BAG_VISIBLE_ROWS + 1;
+            this.updateBagTexts();
+          }
+          this.updateBagCursor();
+        }
+      }
     }
   }
 
@@ -190,7 +269,7 @@ export class BattleMenu {
           this.showMoveMenu();
           break;
         case 1: // BAG
-          this.onSelect({ type: 'bag' });
+          this.showBagMenu();
           break;
         case 2: // POKeMON
           this.onSelect({ type: 'pokemon' });
@@ -199,11 +278,16 @@ export class BattleMenu {
           this.onSelect({ type: 'run' });
           break;
       }
-    } else {
+    } else if (this.mode === 'fight') {
       // Move selected
       const move = this.currentMoves[this.moveSelectedIndex];
       if (move && move.currentPp > 0) {
         this.onSelect({ type: 'fight', moveIndex: this.moveSelectedIndex });
+      }
+    } else if (this.mode === 'bag') {
+      const item = this.bagItems[this.bagSelectedIndex];
+      if (item) {
+        this.onSelect({ type: 'bag', itemId: item.id });
       }
     }
   }
@@ -213,6 +297,11 @@ export class BattleMenu {
       this.mode = 'main';
       this.container.setVisible(true);
       this.moveContainer.setVisible(false);
+      soundSystem.menuMove();
+    } else if (this.mode === 'bag') {
+      this.mode = 'main';
+      this.container.setVisible(true);
+      this.bagContainer.setVisible(false);
       soundSystem.menuMove();
     }
   }
@@ -239,6 +328,48 @@ export class BattleMenu {
     this.updateMoveCursor();
   }
 
+  private showBagMenu(): void {
+    if (this.bagItems.length === 0) {
+      // No items - emit a special selection that BattleScene handles
+      if (this.onSelect) {
+        this.onSelect({ type: 'bag', itemId: '' });
+      }
+      return;
+    }
+
+    this.mode = 'bag';
+    this.bagSelectedIndex = 0;
+    this.bagScrollOffset = 0;
+    this.container.setVisible(false);
+    this.bagContainer.setVisible(true);
+
+    this.updateBagTexts();
+    this.updateBagCursor();
+  }
+
+  private updateBagTexts(): void {
+    for (let i = 0; i < BattleMenu.BAG_VISIBLE_ROWS; i++) {
+      const itemIndex = this.bagScrollOffset + i;
+      if (itemIndex < this.bagItems.length) {
+        const item = this.bagItems[itemIndex];
+        this.bagTexts[i].setText(item.name.substring(0, 12));
+        this.bagQtyTexts[i].setText(`x${item.quantity}`);
+        this.bagTexts[i].setVisible(true);
+        this.bagQtyTexts[i].setVisible(true);
+      } else {
+        this.bagTexts[i].setText('');
+        this.bagQtyTexts[i].setText('');
+        this.bagTexts[i].setVisible(false);
+        this.bagQtyTexts[i].setVisible(false);
+      }
+    }
+  }
+
+  private updateBagCursor(): void {
+    const visibleRow = this.bagSelectedIndex - this.bagScrollOffset;
+    this.bagCursor.setPosition(8, GAME_HEIGHT - 34 + visibleRow * 11);
+  }
+
   private updateMainCursor(): void {
     const col = this.selectedIndex % 2;
     const row = Math.floor(this.selectedIndex / 2);
@@ -260,5 +391,6 @@ export class BattleMenu {
   destroy(): void {
     this.container.destroy();
     this.moveContainer.destroy();
+    this.bagContainer.destroy();
   }
 }
