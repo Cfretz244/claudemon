@@ -15,6 +15,7 @@ import { StatusCondition } from '../types/pokemon.types';
 import { createPokemon } from '../entities/Pokemon';
 import { PlayerState } from '../entities/Player';
 import { ELITE_FOUR, CHAMPION } from '../data/eliteFour';
+import { playBattleTransition } from '../utils/battleTransition';
 
 interface SceneData {
   mapId: string;
@@ -398,8 +399,7 @@ export class OverworldScene extends Phaser.Scene {
       { trainerId: CHAMPION.id, trainerName: CHAMPION.name },
     ];
 
-    this.cameras.main.flash(500, 255, 255, 255);
-    this.time.delayedCall(600, () => {
+    playBattleTransition(this, () => {
       this.scene.start('BattleScene', {
         type: 'trainer',
         trainerId: ELITE_FOUR[0].id,
@@ -602,8 +602,7 @@ export class OverworldScene extends Phaser.Scene {
         soundSystem.battleStart();
 
         // Transition to battle
-        this.cameras.main.flash(300, 0, 0, 0);
-        this.time.delayedCall(400, () => {
+        playBattleTransition(this, () => {
           this.scene.start('BattleScene', {
             type: 'wild',
             wildPokemon,
@@ -741,8 +740,7 @@ export class OverworldScene extends Phaser.Scene {
     this.isWarping = true; // Block movement during battle transition
     soundSystem.battleStart();
 
-    this.cameras.main.flash(300, 0, 0, 0);
-    this.time.delayedCall(400, () => {
+    playBattleTransition(this, () => {
       this.scene.start('BattleScene', {
         type: 'trainer',
         trainerId: npc.id,
