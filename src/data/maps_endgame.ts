@@ -272,7 +272,7 @@ export const SEAFOAM_ISLANDS: MapData = (() => {
       },
     ],
     wildEncounters: {
-      grassRate: 0.15,
+      grassRate: 0.08,
       encounters: [
         { speciesId: 86, minLevel: 30, maxLevel: 34, weight: 25 },  // Seel
         { speciesId: 90, minLevel: 30, maxLevel: 34, weight: 20 },  // Shellder
@@ -1050,7 +1050,7 @@ export const VICTORY_ROAD: MapData = (() => {
       },
     ],
     wildEncounters: {
-      grassRate: 0.15,
+      grassRate: 0.08,
       encounters: [
         { speciesId: 67, minLevel: 36, maxLevel: 42, weight: 20 },  // Machoke
         { speciesId: 75, minLevel: 36, maxLevel: 42, weight: 20 },  // Graveler
@@ -1352,7 +1352,7 @@ export const CERULEAN_CAVE: MapData = (() => {
       },
     ],
     wildEncounters: {
-      grassRate: 0.15,
+      grassRate: 0.08,
       encounters: [
         { speciesId: 42, minLevel: 46, maxLevel: 52, weight: 15 },  // Golbat
         { speciesId: 82, minLevel: 46, maxLevel: 52, weight: 10 },  // Magneton

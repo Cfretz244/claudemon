@@ -738,7 +738,7 @@ export const ROCK_TUNNEL: MapData = (() => {
       },
     ],
     wildEncounters: {
-      grassRate: 0.15,
+      grassRate: 0.08,
       encounters: [
         { speciesId: 41, minLevel: 15, maxLevel: 18, weight: 30 }, // Zubat
         { speciesId: 74, minLevel: 15, maxLevel: 18, weight: 25 }, // Geodude

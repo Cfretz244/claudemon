@@ -115,7 +115,7 @@ export const MT_MOON: MapData = (() => {
       },
     ],
     wildEncounters: {
-      grassRate: 0.15,
+      grassRate: 0.08,
       encounters: [
         { speciesId: 41, minLevel: 7, maxLevel: 11, weight: 40 },  // Zubat
         { speciesId: 74, minLevel: 8, maxLevel: 11, weight: 25 },  // Geodude

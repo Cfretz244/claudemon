@@ -805,7 +805,7 @@ export const VIRIDIAN_FOREST: MapData = (() => {
       },
     ],
     wildEncounters: {
-      grassRate: 0.25,
+      grassRate: 0.15,
       encounters: [
         { speciesId: 10, minLevel: 3, maxLevel: 6, weight: 30 }, // Caterpie
         { speciesId: 13, minLevel: 3, maxLevel: 6, weight: 25 }, // Weedle

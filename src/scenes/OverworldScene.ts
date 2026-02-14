@@ -75,6 +75,7 @@ export class OverworldScene extends Phaser.Scene {
   // Game state
   private playerState!: PlayerState;
   private stepCounter = 0;
+  private lastEncounterStep = 0;
   private isWarping = false;
 
   constructor() {
@@ -320,10 +321,13 @@ export class OverworldScene extends Phaser.Scene {
           return;
         }
 
+        this.stepCounter++;
+
+        // Check for trainer line-of-sight
+        if (this.checkTrainerSight()) return;
+
         // Check for wild encounter
         this.checkWildEncounter(newX, newY);
-
-        this.stepCounter++;
       },
     });
   }
@@ -410,6 +414,164 @@ export class OverworldScene extends Phaser.Scene {
     });
   }
 
+  private checkTrainerSight(): boolean {
+    if (this.isWarping) return false;
+
+    for (const npc of this.currentMap.npcs) {
+      if (!npc.isTrainer || !npc.sightRange) continue;
+      if (this.playerState.defeatedTrainers.includes(npc.id)) continue;
+
+      // Check if player is in trainer's line of sight
+      const vec = DIR_VECTORS[npc.direction];
+      const dx = this.playerGridX - npc.x;
+      const dy = this.playerGridY - npc.y;
+
+      // Player must be along the trainer's facing axis
+      let inSight = false;
+      let distance = 0;
+      if (vec.x !== 0 && dy === 0) {
+        // Horizontal sight line
+        distance = dx * vec.x; // positive if player is in the direction trainer faces
+        inSight = distance > 0 && distance <= npc.sightRange;
+      } else if (vec.y !== 0 && dx === 0) {
+        // Vertical sight line
+        distance = dy * vec.y;
+        inSight = distance > 0 && distance <= npc.sightRange;
+      }
+
+      if (!inSight) continue;
+
+      // Check for obstacles between trainer and player
+      let blocked = false;
+      for (let i = 1; i < distance; i++) {
+        const checkX = npc.x + vec.x * i;
+        const checkY = npc.y + vec.y * i;
+        if (this.currentMap.collision[checkY]?.[checkX]) {
+          blocked = true;
+          break;
+        }
+        // Check for other NPCs blocking line of sight
+        for (const otherNpc of this.currentMap.npcs) {
+          if (otherNpc.id !== npc.id && otherNpc.x === checkX && otherNpc.y === checkY) {
+            blocked = true;
+            break;
+          }
+        }
+        if (blocked) break;
+      }
+      if (blocked) continue;
+
+      // Trainer spotted the player!
+      this.isWarping = true; // Block all input
+      this.triggerTrainerEncounter(npc, distance);
+      return true;
+    }
+    return false;
+  }
+
+  private triggerTrainerEncounter(npc: NPCData, distance: number): void {
+    const sprite = this.npcSprites.get(npc.id);
+    if (!sprite) return;
+
+    // Show "!" alert bubble above trainer (Game Boy style)
+    const bubbleX = sprite.x;
+    const bubbleY = sprite.y - TILE_SIZE - 2;
+    const bubbleW = 12;
+    const bubbleH = 14;
+
+    const bubble = this.add.graphics();
+    bubble.setDepth(20);
+    // White bubble background with black border
+    bubble.fillStyle(0xf8f8f8, 1);
+    bubble.fillRoundedRect(bubbleX - bubbleW / 2, bubbleY - bubbleH / 2, bubbleW, bubbleH, 2);
+    bubble.lineStyle(1, 0x383838, 1);
+    bubble.strokeRoundedRect(bubbleX - bubbleW / 2, bubbleY - bubbleH / 2, bubbleW, bubbleH, 2);
+    // Small triangle pointer at bottom
+    bubble.fillStyle(0xf8f8f8, 1);
+    bubble.fillTriangle(bubbleX - 2, bubbleY + bubbleH / 2, bubbleX + 2, bubbleY + bubbleH / 2, bubbleX, bubbleY + bubbleH / 2 + 3);
+    bubble.lineStyle(1, 0x383838, 1);
+    bubble.lineBetween(bubbleX - 2, bubbleY + bubbleH / 2, bubbleX, bubbleY + bubbleH / 2 + 3);
+    bubble.lineBetween(bubbleX + 2, bubbleY + bubbleH / 2, bubbleX, bubbleY + bubbleH / 2 + 3);
+
+    const exclamation = this.add.text(
+      bubbleX,
+      bubbleY,
+      '!',
+      {
+        fontSize: '10px',
+        fontFamily: 'monospace',
+        color: '#383838',
+        fontStyle: 'bold',
+      }
+    );
+    exclamation.setOrigin(0.5, 0.5);
+    exclamation.setDepth(21);
+
+    soundSystem.bump(); // Alert sound
+
+    // After a brief pause showing "!", trainer walks toward player
+    this.time.delayedCall(600, () => {
+      exclamation.destroy();
+      bubble.destroy();
+
+      // Trainer walks toward the player, stopping 1 tile away
+      const tilesToWalk = distance - 1;
+      if (tilesToWalk <= 0) {
+        // Already adjacent - turn player to face trainer, start battle
+        const oppositeDir: Record<Direction, Direction> = {
+          [Direction.UP]: Direction.DOWN,
+          [Direction.DOWN]: Direction.UP,
+          [Direction.LEFT]: Direction.RIGHT,
+          [Direction.RIGHT]: Direction.LEFT,
+        };
+        this.playerDirection = oppositeDir[npc.direction];
+        this.player.play(`player_idle_${this.playerDirection}`, true);
+        this.isWarping = false; // Allow dialogue input
+        this.interactWithNPC(npc);
+        return;
+      }
+
+      const vec = DIR_VECTORS[npc.direction];
+      let stepsTaken = 0;
+
+      const walkStep = () => {
+        if (stepsTaken >= tilesToWalk) {
+          // Update NPC's actual position in the data
+          npc.x += vec.x * tilesToWalk;
+          npc.y += vec.y * tilesToWalk;
+          // Turn player to face the approaching trainer
+          const oppositeDir: Record<Direction, Direction> = {
+            [Direction.UP]: Direction.DOWN,
+            [Direction.DOWN]: Direction.UP,
+            [Direction.LEFT]: Direction.RIGHT,
+            [Direction.RIGHT]: Direction.LEFT,
+          };
+          this.playerDirection = oppositeDir[npc.direction];
+          this.player.play(`player_idle_${this.playerDirection}`, true);
+          this.isWarping = false; // Allow dialogue input
+          this.interactWithNPC(npc);
+          return;
+        }
+
+        stepsTaken++;
+        const targetPixelX = (npc.x + vec.x * stepsTaken) * TILE_SIZE + TILE_SIZE / 2;
+        const targetPixelY = (npc.y + vec.y * stepsTaken) * TILE_SIZE + TILE_SIZE / 2;
+
+        this.tweens.add({
+          targets: sprite,
+          x: targetPixelX,
+          y: targetPixelY,
+          duration: MOVE_DURATION,
+          onComplete: () => {
+            walkStep();
+          },
+        });
+      };
+
+      walkStep();
+    });
+  }
+
   private checkWildEncounter(x: number, y: number): void {
     if (this.isWarping) return;
     const tileType = this.currentMap.tiles[y]?.[x];
@@ -419,6 +581,10 @@ export class OverworldScene extends Phaser.Scene {
 
     const encounters = this.currentMap.wildEncounters;
     if (!encounters) return;
+
+    // Minimum steps between encounters to prevent back-to-back fights
+    const MIN_STEPS_BETWEEN = 4;
+    if (this.stepCounter - this.lastEncounterStep < MIN_STEPS_BETWEEN) return;
 
     if (Math.random() > encounters.grassRate) return;
 
@@ -431,6 +597,7 @@ export class OverworldScene extends Phaser.Scene {
         const level = enc.minLevel + Math.floor(Math.random() * (enc.maxLevel - enc.minLevel + 1));
         const wildPokemon = createPokemon(enc.speciesId, level);
 
+        this.lastEncounterStep = this.stepCounter;
         this.isWarping = true; // Block movement during battle transition
         soundSystem.battleStart();
 
