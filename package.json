@@ -1,0 +1,21 @@
+{
+  "name": "pokemon-yellow-clone",
+  "version": "1.0.0",
+  "description": "Pokemon Yellow clone in retro Atari style",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  }
+}
