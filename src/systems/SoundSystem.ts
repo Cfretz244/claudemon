@@ -1,7 +1,24 @@
-// Web Audio API chiptune sound effects
+import { MUSIC_TRACKS, MusicTrack } from '../data/musicTracks';
+
+type NoteEntry = [number, number]; // [frequency, duration in beats]
+
+// Web Audio API chiptune sound effects + music engine
 export class SoundSystem {
   private ctx: AudioContext | null = null;
   private enabled = true;
+
+  // Music engine state
+  private currentTrackId: string | null = null;
+  private melodyOsc: OscillatorNode | null = null;
+  private bassOsc: OscillatorNode | null = null;
+  private melodyGain: GainNode | null = null;
+  private bassGain: GainNode | null = null;
+  private schedulerInterval: ReturnType<typeof setInterval> | null = null;
+  private melodyIndex = 0;
+  private bassIndex = 0;
+  private melodyNextTime = 0;
+  private bassNextTime = 0;
+  private currentTrack: MusicTrack | null = null;
 
   private getCtx(): AudioContext {
     if (!this.ctx) {
@@ -12,6 +29,173 @@ export class SoundSystem {
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
+    if (!enabled) this.stopMusic();
+  }
+
+  // ── Music Engine ─────────────────────────────────────────
+
+  startMusic(trackId: string): void {
+    if (!this.enabled) return;
+    if (this.currentTrackId === trackId) return; // same track, no-op
+
+    const track = MUSIC_TRACKS[trackId];
+    if (!track) return;
+
+    this.stopMusic();
+
+    try {
+      const ctx = this.getCtx();
+      this.currentTrack = track;
+      this.currentTrackId = trackId;
+
+      // Create long-lived oscillators
+      this.melodyOsc = ctx.createOscillator();
+      this.melodyOsc.type = 'square';
+      this.melodyGain = ctx.createGain();
+      this.melodyGain.gain.value = 0;
+      this.melodyOsc.connect(this.melodyGain);
+      this.melodyGain.connect(ctx.destination);
+      this.melodyOsc.start();
+
+      this.bassOsc = ctx.createOscillator();
+      this.bassOsc.type = 'triangle';
+      this.bassGain = ctx.createGain();
+      this.bassGain.gain.value = 0;
+      this.bassOsc.connect(this.bassGain);
+      this.bassGain.connect(ctx.destination);
+      this.bassOsc.start();
+
+      // Reset indices
+      this.melodyIndex = 0;
+      this.bassIndex = 0;
+      this.melodyNextTime = ctx.currentTime + 0.05;
+      this.bassNextTime = ctx.currentTime + 0.05;
+
+      // Start look-ahead scheduler
+      this.schedulerInterval = setInterval(() => this.scheduleNotes(), 50);
+    } catch {
+      // Audio context not available
+    }
+  }
+
+  stopMusic(): void {
+    if (this.schedulerInterval !== null) {
+      clearInterval(this.schedulerInterval);
+      this.schedulerInterval = null;
+    }
+
+    // Capture references to the OLD nodes before clearing instance fields,
+    // so the delayed cleanup doesn't kill newly-created oscillators.
+    const oldMelodyOsc = this.melodyOsc;
+    const oldBassOsc = this.bassOsc;
+    const oldMelodyGain = this.melodyGain;
+    const oldBassGain = this.bassGain;
+
+    this.melodyOsc = null;
+    this.bassOsc = null;
+    this.melodyGain = null;
+    this.bassGain = null;
+    this.currentTrackId = null;
+    this.currentTrack = null;
+
+    try {
+      const ctx = this.ctx;
+      if (ctx) {
+        const now = ctx.currentTime;
+        // Ramp gain to 0 to avoid clicks
+        if (oldMelodyGain) {
+          oldMelodyGain.gain.cancelScheduledValues(now);
+          oldMelodyGain.gain.setValueAtTime(oldMelodyGain.gain.value, now);
+          oldMelodyGain.gain.linearRampToValueAtTime(0, now + 0.05);
+        }
+        if (oldBassGain) {
+          oldBassGain.gain.cancelScheduledValues(now);
+          oldBassGain.gain.setValueAtTime(oldBassGain.gain.value, now);
+          oldBassGain.gain.linearRampToValueAtTime(0, now + 0.05);
+        }
+      }
+
+      // Stop oscillators after fade
+      setTimeout(() => {
+        try {
+          oldMelodyOsc?.stop();
+          oldBassOsc?.stop();
+        } catch { /* already stopped */ }
+        oldMelodyOsc?.disconnect();
+        oldBassOsc?.disconnect();
+        oldMelodyGain?.disconnect();
+        oldBassGain?.disconnect();
+      }, 60);
+    } catch {
+      // Audio context not available - nothing to clean up
+    }
+  }
+
+  private scheduleNotes(): void {
+    if (!this.ctx || !this.currentTrack) return;
+    const ctx = this.ctx;
+    const lookAhead = 0.1; // schedule 100ms ahead
+
+    // Schedule melody notes
+    while (this.melodyNextTime < ctx.currentTime + lookAhead) {
+      this.scheduleNote(
+        this.currentTrack.melody,
+        this.melodyIndex,
+        this.melodyNextTime,
+        this.melodyOsc!,
+        this.melodyGain!,
+        0.04,
+        this.currentTrack.bpm,
+      );
+      const note = this.currentTrack.melody[this.melodyIndex] as NoteEntry;
+      this.melodyNextTime += this.beatDuration(note[1], this.currentTrack.bpm);
+      this.melodyIndex = (this.melodyIndex + 1) % this.currentTrack.melody.length;
+    }
+
+    // Schedule bass notes
+    while (this.bassNextTime < ctx.currentTime + lookAhead) {
+      this.scheduleNote(
+        this.currentTrack.bass,
+        this.bassIndex,
+        this.bassNextTime,
+        this.bassOsc!,
+        this.bassGain!,
+        0.03,
+        this.currentTrack.bpm,
+      );
+      const note = this.currentTrack.bass[this.bassIndex] as NoteEntry;
+      this.bassNextTime += this.beatDuration(note[1], this.currentTrack.bpm);
+      this.bassIndex = (this.bassIndex + 1) % this.currentTrack.bass.length;
+    }
+  }
+
+  private scheduleNote(
+    notes: NoteEntry[],
+    index: number,
+    time: number,
+    osc: OscillatorNode,
+    gain: GainNode,
+    volume: number,
+    bpm: number,
+  ): void {
+    const [freq, beats] = notes[index];
+    const duration = this.beatDuration(beats, bpm);
+
+    if (freq === 0) {
+      // Rest: silence the oscillator
+      gain.gain.setValueAtTime(0, time);
+    } else {
+      osc.frequency.setValueAtTime(freq, time);
+      gain.gain.setValueAtTime(volume, time);
+      // Fade out slightly before next note to avoid clicks
+      gain.gain.setValueAtTime(volume, time + duration - 0.01);
+      gain.gain.linearRampToValueAtTime(0, time + duration);
+    }
+  }
+
+  private beatDuration(beats: number, bpm: number): number {
+    // 1 beat = eighth note, so 2 beats = quarter note at the given BPM
+    return (beats * 60) / (bpm * 2);
   }
 
   private playTone(frequency: number, duration: number, type: OscillatorType = 'square', volume = 0.1): void {

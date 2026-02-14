@@ -10,6 +10,7 @@ import { ShopScreen } from '../components/ShopScreen';
 import { generateNPCSprite } from '../utils/spriteGenerator';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
+import { getMusicForMap } from '../data/musicTracks';
 import { StatusCondition } from '../types/pokemon.types';
 import { createPokemon } from '../entities/Pokemon';
 import { PlayerState } from '../entities/Player';
@@ -161,6 +162,10 @@ export class OverworldScene extends Phaser.Scene {
     this.partyScreen = new PartyScreen(this);
     this.bagScreen = new BagScreen(this);
     this.shopScreen = new ShopScreen(this);
+
+    // Start map music
+    const musicId = getMusicForMap(this.currentMap);
+    if (musicId) soundSystem.startMusic(musicId);
 
     // Show map name
     this.showMapName(this.currentMap.name);

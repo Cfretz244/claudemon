@@ -41,6 +41,7 @@ export class TitleScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.setBackgroundColor('#000000');
     this.state = 'menu';
+    soundSystem.startMusic('title');
 
     // Title text
     this.add.text(GAME_WIDTH / 2, 20, 'POKeMON', {
@@ -219,6 +220,7 @@ export class TitleScene extends Phaser.Scene {
     } else if (option === 'CONTINUE') {
       const save = SaveSystem.load();
       if (save) {
+        soundSystem.stopMusic();
         this.scene.start('OverworldScene', {
           mapId: save.currentMap,
           playerX: save.playerX,
@@ -374,6 +376,7 @@ export class TitleScene extends Phaser.Scene {
       this.rivalName = this.currentName;
       this.namingContainer.setVisible(false);
       // Start the game
+      soundSystem.stopMusic();
       this.scene.start('OverworldScene', {
         mapId: 'player_house',
         playerX: 3,

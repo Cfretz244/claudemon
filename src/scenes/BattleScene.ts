@@ -164,6 +164,15 @@ export class BattleScene extends Phaser.Scene {
     }
     introMessages.push(`Go! ${playerName}!`);
 
+    // Start battle music
+    if (this.eliteFourQueue.length > 0 || this.hallOfFame || ELITE_FOUR.some(e => e.id === this.trainerId) || this.trainerId === CHAMPION.id) {
+      soundSystem.startMusic('elite_four');
+    } else if (this.battleType === BattleType.TRAINER) {
+      soundSystem.startMusic('trainer_battle');
+    } else {
+      soundSystem.startMusic('wild_battle');
+    }
+
     soundSystem.pokemonCry(300 + this.opponentPokemon.speciesId * 3);
 
     this.textBox.show(introMessages, () => {
@@ -671,6 +680,7 @@ export class BattleScene extends Phaser.Scene {
     } else {
       // All Pokemon fainted - white out
       this.battleOver = true;
+      soundSystem.stopMusic();
       await this.showText([
         `${this.playerState.name} is out of\nusable POKeMON!`,
         `${this.playerState.name} blacked out!`,
@@ -886,6 +896,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private endBattle(): void {
+    soundSystem.stopMusic();
+
     // Update party state back
     this.playerState.party[this.currentPlayerPokemonIndex] = this.playerPokemon;
 
