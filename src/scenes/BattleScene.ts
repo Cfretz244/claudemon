@@ -214,7 +214,13 @@ export class BattleScene extends Phaser.Scene {
   private showBattleMenu(): void {
     if (this.battleOver) return;
     const bagItems = this.buildBagItems();
-    this.menu.show(this.playerPokemon, (selection) => this.handleMenuSelection(selection), bagItems);
+    this.menu.show(
+      this.playerPokemon,
+      (selection) => this.handleMenuSelection(selection),
+      bagItems,
+      this.playerState.party,
+      this.currentPlayerPokemonIndex,
+    );
   }
 
   private buildBagItems(): BagItem[] {
@@ -248,7 +254,7 @@ export class BattleScene extends Phaser.Scene {
         this.handleBagSelection(selection.itemId);
         break;
       case 'pokemon':
-        this.showPartyInBattle();
+        this.switchPlayerPokemon(selection.partyIndex);
         break;
       case 'run':
         this.tryRun();
@@ -913,14 +919,44 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  private showPartyInBattle(): void {
-    const lines = this.playerState.party.map((p, i) => {
-      const name = this.getSpeciesName(p.speciesId);
-      const marker = i === this.currentPlayerPokemonIndex ? '>' : ' ';
-      return `${marker}${name} Lv${p.level}\n  HP: ${p.currentHp}/${p.stats.hp}`;
-    });
+  private switchPlayerPokemon(newIndex: number): void {
+    // Save current Pokemon state back to party
+    this.playerState.party[this.currentPlayerPokemonIndex] = this.playerPokemon;
 
-    this.textBox.show(lines, () => this.showBattleMenu());
+    // Switch to new Pokemon
+    this.currentPlayerPokemonIndex = newIndex;
+    this.playerPokemon = this.playerState.party[newIndex];
+
+    // Update sprite
+    this.ensurePokemonSprite(this.playerPokemon.speciesId);
+    const spriteKey = `pokemon_${this.playerPokemon.speciesId}`;
+    this.playerSprite.setTexture(spriteKey, 1);
+    this.playerSprite.setAlpha(1);
+    this.playerSprite.setY(76);
+
+    // Update HUD
+    this.hud.updatePlayer(this.playerPokemon);
+
+    const name = this.getSpeciesName(this.playerPokemon.speciesId);
+    this.textBox.show([`Go! ${name}!`], () => {
+      // Opponent gets a free attack turn after switching
+      const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+      const aiMove = this.opponentPokemon.moves[aiMoveIndex];
+      const aiMoveData = MOVES_DATA[aiMove?.moveId];
+      if (aiMove && aiMoveData) {
+        this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false).then(() => {
+          if (this.playerPokemon.currentHp <= 0) {
+            this.handlePlayerFaint();
+          } else {
+            this.turnInProgress = false;
+            this.showBattleMenu();
+          }
+        });
+      } else {
+        this.turnInProgress = false;
+        this.showBattleMenu();
+      }
+    });
   }
 
   private endBattle(): void {

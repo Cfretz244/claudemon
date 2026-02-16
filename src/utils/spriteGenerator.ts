@@ -424,12 +424,23 @@ export function generatePikachuFollowerSprite(scene: Phaser.Scene): void {
       ctx.fillStyle = '#302020';
       ctx.fillRect(3, 0, 3, 2);
       ctx.fillRect(10, 0, 3, 2);
-      ctx.fillStyle = '#e03030';
-      ctx.fillRect(3, 8, 2, 2);
-      ctx.fillRect(11, 8, 2, 2);
+      // Direction-aware cheeks and eyes
       if (dir === 'down') {
+        ctx.fillStyle = '#e03030';
+        ctx.fillRect(3, 8, 2, 2);
+        ctx.fillRect(11, 8, 2, 2);
         ctx.fillStyle = '#302020';
         ctx.fillRect(5, 6, 2, 2);
+        ctx.fillRect(9, 6, 2, 2);
+      } else if (dir === 'left') {
+        ctx.fillStyle = '#e03030';
+        ctx.fillRect(3, 8, 2, 2);
+        ctx.fillStyle = '#302020';
+        ctx.fillRect(5, 6, 2, 2);
+      } else if (dir === 'right') {
+        ctx.fillStyle = '#e03030';
+        ctx.fillRect(11, 8, 2, 2);
+        ctx.fillStyle = '#302020';
         ctx.fillRect(9, 6, 2, 2);
       }
       ctx.fillStyle = '#c0a020';

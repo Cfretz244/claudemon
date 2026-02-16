@@ -55,6 +55,8 @@ export class OverworldScene extends Phaser.Scene {
   private actionKey!: Phaser.Input.Keyboard.Key;
   private startKey!: Phaser.Input.Keyboard.Key;
   private cancelKey!: Phaser.Input.Keyboard.Key;
+  private lastDir: Direction | null = null;
+  private dirHeldFrames = 0;
 
   // UI
   private textBox!: TextBox;
@@ -245,11 +247,26 @@ export class OverworldScene extends Phaser.Scene {
     else if (this.cursors.left.isDown) dir = Direction.LEFT;
     else if (this.cursors.right.isDown) dir = Direction.RIGHT;
 
-    if (dir) {
-      this.playerDirection = dir;
-      this.player.play(`player_idle_${dir}`, true);
-      this.tryMove(dir);
+    if (dir !== null) {
+      if (dir !== this.lastDir) {
+        // New direction — just turn, delay before walking
+        this.lastDir = dir;
+        this.dirHeldFrames = 0;
+        this.playerDirection = dir;
+        this.player.play(`player_idle_${dir}`, true);
+      } else if (dir === this.playerDirection) {
+        // Already facing this way — walk immediately (no delay on continuation)
+        this.tryMove(dir);
+      } else {
+        // Turned this frame, wait for threshold
+        this.dirHeldFrames++;
+        if (this.dirHeldFrames >= 3) {
+          this.tryMove(dir);
+        }
+      }
     } else {
+      this.lastDir = null;
+      this.dirHeldFrames = 0;
       this.player.play(`player_idle_${this.playerDirection}`, true);
     }
   }

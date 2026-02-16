@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { PokemonInstance, PokemonMove } from '../types/pokemon.types';
 import { MOVES_DATA } from '../data/moves';
+import { POKEMON_DATA } from '../data/pokemon';
 import { soundSystem } from '../systems/SoundSystem';
 
 export interface BagItem {
@@ -18,6 +19,7 @@ export type MenuSelection = {
   itemId: string;
 } | {
   type: 'pokemon';
+  partyIndex: number;
 } | {
   type: 'run';
 };
@@ -28,7 +30,7 @@ export class BattleMenu {
   private mainMenuItems: Phaser.GameObjects.Text[] = [];
   private mainCursor: Phaser.GameObjects.Text;
   private selectedIndex = 0;
-  private mode: 'main' | 'fight' | 'bag' = 'main';
+  private mode: 'main' | 'fight' | 'bag' | 'pokemon' = 'main';
   private moveTexts: Phaser.GameObjects.Text[] = [];
   private movePPTexts: Phaser.GameObjects.Text[] = [];
   private moveContainer: Phaser.GameObjects.Container;
@@ -47,6 +49,16 @@ export class BattleMenu {
   private bagSelectedIndex = 0;
   private bagScrollOffset = 0;
   private static readonly BAG_VISIBLE_ROWS = 3;
+
+  // Party sub-menu state
+  private partyPokemon: PokemonInstance[] = [];
+  private partyContainer!: Phaser.GameObjects.Container;
+  private partyTexts: Phaser.GameObjects.Text[] = [];
+  private partyCursor!: Phaser.GameObjects.Text;
+  private partySelectedIndex = 0;
+  private partyScrollOffset = 0;
+  private currentActivePokemonIndex = 0;
+  private static readonly PARTY_VISIBLE_ROWS = 3;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -160,18 +172,57 @@ export class BattleMenu {
     this.bagContainer.setDepth(200);
     this.bagContainer.setScrollFactor(0);
     this.bagContainer.setVisible(false);
+
+    // Party selection menu
+    const partyBg = scene.add.graphics();
+    partyBg.fillStyle(0xf8f8f8, 1);
+    partyBg.fillRoundedRect(2, GAME_HEIGHT - 38, GAME_WIDTH - 4, 36, 2);
+    partyBg.lineStyle(1, 0x383838, 1);
+    partyBg.strokeRoundedRect(2, GAME_HEIGHT - 38, GAME_WIDTH - 4, 36, 2);
+
+    this.partyTexts = [];
+    for (let i = 0; i < BattleMenu.PARTY_VISIBLE_ROWS; i++) {
+      const text = scene.add.text(
+        16,
+        GAME_HEIGHT - 34 + i * 11,
+        '',
+        { fontSize: '7px', color: '#383838', fontFamily: 'monospace' }
+      );
+      this.partyTexts.push(text);
+    }
+
+    this.partyCursor = scene.add.text(
+      8,
+      GAME_HEIGHT - 34,
+      '>',
+      { fontSize: '7px', color: '#383838', fontFamily: 'monospace' }
+    );
+
+    this.partyContainer = scene.add.container(0, 0, [partyBg, ...this.partyTexts, this.partyCursor]);
+    this.partyContainer.setDepth(200);
+    this.partyContainer.setScrollFactor(0);
+    this.partyContainer.setVisible(false);
   }
 
-  show(pokemon: PokemonInstance, onSelect: (selection: MenuSelection) => void, bagItems?: BagItem[]): void {
+  show(
+    pokemon: PokemonInstance,
+    onSelect: (selection: MenuSelection) => void,
+    bagItems?: BagItem[],
+    party?: PokemonInstance[],
+    activePokemonIndex?: number,
+  ): void {
     this.currentMoves = pokemon.moves;
     this.onSelect = onSelect;
     this.bagItems = bagItems || [];
+    this.partyPokemon = party || [];
+    this.currentActivePokemonIndex = activePokemonIndex ?? 0;
     this.active = true;
     this.mode = 'main';
     this.selectedIndex = 0;
     this.container.setVisible(true);
     this.moveContainer.setVisible(false);
     this.bagContainer.setVisible(false);
+    this.partyContainer.setVisible(false);
     this.updateMainCursor();
     this.setupInput();
   }
@@ -181,6 +232,7 @@ export class BattleMenu {
     this.container.setVisible(false);
     this.moveContainer.setVisible(false);
     this.bagContainer.setVisible(false);
+    this.partyContainer.setVisible(false);
   }
 
   private inputBound = false;
@@ -256,6 +308,26 @@ export class BattleMenu {
           this.updateBagCursor();
         }
       }
+    } else if (this.mode === 'pokemon') {
+      if (dir === 'up') {
+        if (this.partySelectedIndex > 0) {
+          this.partySelectedIndex--;
+          if (this.partySelectedIndex < this.partyScrollOffset) {
+            this.partyScrollOffset = this.partySelectedIndex;
+            this.updatePartyTexts();
+          }
+          this.updatePartyCursor();
+        }
+      } else if (dir === 'down') {
+        if (this.partySelectedIndex < this.partyPokemon.length - 1) {
+          this.partySelectedIndex++;
+          if (this.partySelectedIndex >= this.partyScrollOffset + BattleMenu.PARTY_VISIBLE_ROWS) {
+            this.partyScrollOffset = this.partySelectedIndex - BattleMenu.PARTY_VISIBLE_ROWS + 1;
+            this.updatePartyTexts();
+          }
+          this.updatePartyCursor();
+        }
+      }
     }
   }
 
@@ -272,7 +344,7 @@ export class BattleMenu {
           this.showBagMenu();
           break;
         case 2: // POKeMON
-          this.onSelect({ type: 'pokemon' });
+          this.showPartyMenu();
           break;
         case 3: // RUN
           this.onSelect({ type: 'run' });
@@ -289,6 +361,14 @@ export class BattleMenu {
       if (item) {
         this.onSelect({ type: 'bag', itemId: item.id });
       }
+    } else if (this.mode === 'pokemon') {
+      const pokemon = this.partyPokemon[this.partySelectedIndex];
+      if (!pokemon) return;
+      // Can't select fainted Pokemon
+      if (pokemon.currentHp <= 0) return;
+      // Can't select the already-active Pokemon
+      if (this.partySelectedIndex === this.currentActivePokemonIndex) return;
+      this.onSelect({ type: 'pokemon', partyIndex: this.partySelectedIndex });
     }
   }
 
@@ -302,6 +382,11 @@ export class BattleMenu {
       this.mode = 'main';
       this.container.setVisible(true);
       this.bagContainer.setVisible(false);
+      soundSystem.menuMove();
+    } else if (this.mode === 'pokemon') {
+      this.mode = 'main';
+      this.container.setVisible(true);
+      this.partyContainer.setVisible(false);
       soundSystem.menuMove();
     }
   }
@@ -370,6 +455,41 @@ export class BattleMenu {
     this.bagCursor.setPosition(8, GAME_HEIGHT - 34 + visibleRow * 11);
   }
 
+  private showPartyMenu(): void {
+    if (this.partyPokemon.length === 0) return;
+
+    this.mode = 'pokemon';
+    this.partySelectedIndex = 0;
+    this.partyScrollOffset = 0;
+    this.container.setVisible(false);
+    this.partyContainer.setVisible(true);
+
+    this.updatePartyTexts();
+    this.updatePartyCursor();
+  }
+
+  private updatePartyTexts(): void {
+    for (let i = 0; i < BattleMenu.PARTY_VISIBLE_ROWS; i++) {
+      const idx = this.partyScrollOffset + i;
+      if (idx < this.partyPokemon.length) {
+        const p = this.partyPokemon[idx];
+        const name = POKEMON_DATA[p.speciesId]?.name || `#${p.speciesId}`;
+        const active = idx === this.currentActivePokemonIndex ? '*' : ' ';
+        const status = p.currentHp <= 0 ? 'FNT' : `${p.currentHp}/${p.stats.hp}`;
+        this.partyTexts[i].setText(`${active}${name} L${p.level} ${status}`);
+        this.partyTexts[i].setVisible(true);
+      } else {
+        this.partyTexts[i].setText('');
+        this.partyTexts[i].setVisible(false);
+      }
+    }
+  }
+
+  private updatePartyCursor(): void {
+    const visibleRow = this.partySelectedIndex - this.partyScrollOffset;
+    this.partyCursor.setPosition(8, GAME_HEIGHT - 34 + visibleRow * 11);
+  }
+
   private updateMainCursor(): void {
     const col = this.selectedIndex % 2;
     const row = Math.floor(this.selectedIndex / 2);
@@ -392,5 +512,6 @@ export class BattleMenu {
     this.container.destroy();
     this.moveContainer.destroy();
     this.bagContainer.destroy();
+    this.partyContainer.destroy();
   }
 }
