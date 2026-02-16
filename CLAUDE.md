@@ -40,6 +40,7 @@ The `OverworldScene` has an `isWarping` flag that blocks all player input during
 ```
 src/
   main.ts                         # Phaser config, scene registration
+  spriteViewer.ts                 # Sprite debugging/preview tool
   scenes/
     BootScene.ts                  # Programmatic sprite/texture generation
     TitleScene.ts                 # Title screen, NEW GAME/CONTINUE, player/rival naming
@@ -65,6 +66,12 @@ src/
     BattleHUD.ts                  # HP bars, battle info
     BattleMenu.ts                 # FIGHT/BAG/POKeMON/RUN + move selection
     HealthBar.ts                  # Animated HP bar
+    BagScreen.ts                  # Inventory UI (overworld item use, toss)
+    MoveForgetUI.ts               # Move forget selection overlay (used by BattleScene + BagScreen)
+    PartyScreen.ts                # Party management screen
+    PCScreen.ts                   # PC Pokemon storage system
+    PokedexScreen.ts              # Pokedex display
+    ShopScreen.ts                 # Poke Mart shop UI
   data/
     pokemon.ts                    # All 151 species (POKEMON_DATA)
     moves.ts                      # 165 Gen 1 moves (MOVES_DATA)
@@ -74,6 +81,7 @@ src/
     gymLeaders.ts                 # 8 gym leaders (GYM_LEADERS)
     eliteFour.ts                  # Elite Four + Champion + Hall of Fame text
     wildEncounters.ts             # Encounter tables for routes/caves
+    musicTracks.ts                # Chiptune music track definitions
     maps.ts                       # Core maps (Pallet→Pewter) + ALL_MAPS registry
     maps_cerulean.ts              # Mt Moon, Cerulean area (CERULEAN_MAPS)
     maps_vermilion.ts             # Vermilion area (VERMILION_MAPS)
@@ -87,6 +95,13 @@ src/
   utils/
     constants.ts                  # TILE_SIZE, GAME_WIDTH/HEIGHT, Direction enum, etc.
     spriteGenerator.ts            # Canvas-based sprite generation
+    battleTransition.ts           # Battle transition visual effects
+  sprites/
+    index.ts                      # Sprite registry, exports all batches
+    types.ts                      # Sprite data type definitions
+    batch01_starters.ts           # Sprite data batches (01-10), organized by Pokedex order
+    ...batch10_legends.ts
+    pokemon/                      # 151 individual hand-drawn Pokemon sprite files
 ```
 
 ## Map System
@@ -153,6 +168,18 @@ When a gym leader (found in `GYM_LEADERS` by trainer id) is defeated, their `bad
 
 Triggered by warping to the special map id `'elite_four'`. Builds a queue of battles (E4 members + Champion). After beating the Champion, `hallOfFame` triggers credits and returns the player to Pallet Town.
 
+### Move Learning
+
+When a Pokemon levels up and tries to learn a new move:
+- If the Pokemon has **fewer than 4 moves**, the move is learned automatically
+- If the Pokemon already has **4 moves**, a `MoveForgetUI` overlay appears letting the player choose which move to forget (or cancel)
+
+`MoveForgetUI` is a reusable component (`src/components/MoveForgetUI.ts`) used by both:
+- **BattleScene**: via `promptMoveForget()` — async/Promise-based, integrates with `showText()` for dialogue
+- **BagScreen**: via `processNextPendingMove()` — callback-based with a `pendingMoves` queue for rare candy level-ups that teach multiple moves
+
+The UI shows 6 rows (4 existing moves + new move highlighted in red + CANCEL). It manages its own keyboard input while active. Callers set their mode to block their own input while MoveForgetUI is shown.
+
 ### Whiteout
 
 When all party Pokemon faint, the player is sent to `playerState.lastHealMap` at `lastHealX/lastHealY`. This is updated whenever the player heals at a nurse (any NPC with `id.startsWith('nurse')`).
@@ -163,6 +190,7 @@ When all party Pokemon faint, the player is sent to `playerState.lastHealMap` at
 - **Z / Enter**: Confirm / interact / advance dialogue
 - **X**: Cancel / close menu / backspace (naming)
 - **Enter**: Open/close start menu (overworld)
+- **M**: Toggle music and sound on/off
 
 ## Common Tasks
 
@@ -191,3 +219,7 @@ Add to `MOVES_DATA` in `moves.ts`. Physical types (Normal, Fighting, Flying, Poi
 - `createPokemon(speciesId, level)` creates a full `PokemonInstance` with calculated stats and moves
 - `PlayerState.toSave()` / `PlayerState.fromSave()` serialize state for scene transitions and localStorage
 - Scene transitions pass `saveData: this.playerState.toSave()` to preserve state across map changes
+- UI components that handle their own input (MoveForgetUI, BagScreen, etc.) use an `active`/`visible` flag to gate input handlers, and an `inputBound` flag to prevent stacking listeners
+- Overlay UIs (MoveForgetUI, BagScreen) set a high depth (950-1000) and use `setScrollFactor(0)` to stay fixed on screen
+- `BattleScene` uses async/await with Promise-wrapped callbacks for sequential dialogue + UI flows
+- `BagScreen` is callback/mode-based (not async) — new UI states are added as mode strings and handled in `navigate()`/`confirm()`/`back()`
