@@ -11,8 +11,8 @@
  *   --track <n>       Use only MIDI track N (0-indexed, can repeat: --track 0 --track 1)
  *   --bpm <n>         Override BPM (default: read from MIDI or 120)
  *   --transpose <n>   Transpose all notes by N semitones
- *   --maxbeats <n>    Truncate output to N beats (default: 64)
- *   --quantize <n>    Quantize grid: 1=eighth, 2=quarter (default: 1)
+ *   --maxbeats <n>    Truncate output to N beats (default: 256)
+ *   --quantize <n>    Quantize grid: 0.5=sixteenth, 1=eighth, 2=quarter (default: 0.5)
  *   --dump            Dump raw note events per track/channel (for exploration)
  *   --id <name>       Track ID for the output
  */
@@ -62,8 +62,8 @@ Options:
   --track <n>       Only use MIDI track N (repeatable)
   --bpm <n>         Override BPM (default: from MIDI or 120)
   --transpose <n>   Transpose semitones (default: 0)
-  --maxbeats <n>    Max beats in output (default: 64)
-  --quantize <n>    Grid size: 1=eighth note, 2=quarter (default: 1)
+  --maxbeats <n>    Max beats in output (default: 256)
+  --quantize <n>    Grid size: 0.5=sixteenth, 1=eighth, 2=quarter (default: 0.5)
   --dump            Just dump raw note data per track/channel
   --id <name>       Track ID for output`);
   process.exit(0);
@@ -74,8 +74,8 @@ let melodyChannel = null;
 let bassChannel = null;
 let overrideBpm = null;
 let transpose = 0;
-let maxBeats = 64;
-let quantize = 1;
+let maxBeats = 256;
+let quantize = 0.5;
 let dumpMode = false;
 let trackId = 'my_track';
 const trackFilter = [];
@@ -88,7 +88,7 @@ for (let i = 0; i < args.length; i++) {
   else if (arg === '--bpm') { overrideBpm = parseFloat(args[++i]); }
   else if (arg === '--transpose') { transpose = parseInt(args[++i]); }
   else if (arg === '--maxbeats') { maxBeats = parseInt(args[++i]); }
-  else if (arg === '--quantize') { quantize = parseInt(args[++i]); }
+  else if (arg === '--quantize') { quantize = parseFloat(args[++i]); }
   else if (arg === '--dump') { dumpMode = true; }
   else if (arg === '--id') { trackId = args[++i]; }
   else if (!arg.startsWith('--')) { filePath = arg; }
@@ -168,7 +168,7 @@ if (dumpMode) {
   console.log(`MIDI file: ${filePath}`);
   console.log(`Format: ${midi.header.format}, Tracks: ${midi.header.numTracks}, Ticks/beat: ${ticksPerBeat}`);
   console.log(`Tempo: ${midiBpm} BPM (${microsPerBeat} µs/beat)`);
-  console.log(`Eighth note = ${eighthTicks} ticks\n`);
+  console.log(`Eighth note = ${eighthTicks} ticks, Sixteenth = ${eighthTicks / 2} ticks\n`);
 
   for (const [key, notes] of channelNotes) {
     const [trackIdx, ch] = key.split(':');
@@ -178,8 +178,10 @@ if (dumpMode) {
     const avgNote = notes.length > 0
       ? Math.round(notes.reduce((s, n) => s + n.note, 0) / notes.length)
       : 0;
+    const lastTick = notes.length > 0 ? Math.max(...notes.map(n => n.endTick)) : 0;
+    const totalBeats = Math.round(lastTick / eighthTicks);
 
-    console.log(`═══ Track ${trackIdx}, Channel ${ch} ═══  (${notes.length} notes, range: ${noteRange}, avg: ${midiToName(avgNote)})`);
+    console.log(`═══ Track ${trackIdx}, Channel ${ch} ═══  (${notes.length} notes, range: ${noteRange}, avg: ${midiToName(avgNote)}, ~${totalBeats} eighth-note beats)`);
 
     // Show first N notes
     const preview = notes.slice(0, 48);
@@ -254,24 +256,63 @@ if (typeof bassChannel === 'number') {
 
 console.error(`Using melody: ${melodyChannel}, bass: ${bassChannel}, BPM: ${bpm}`);
 
-// ── Quantize notes into beat grid ────────────────────────────
-function quantizeChannel(notes) {
+// ── Flatten polyphony ────────────────────────────────────────
+// When multiple notes overlap in time on the same channel,
+// keep only the highest note (for melody) or lowest (for bass).
+function flattenPolyphony(notes, mode = 'high') {
   if (!notes || notes.length === 0) return [];
+
+  // Sort by start tick, then by note (high or low priority)
+  const sorted = [...notes].sort((a, b) => {
+    if (a.startTick !== b.startTick) return a.startTick - b.startTick;
+    return mode === 'high' ? b.note - a.note : a.note - b.note;
+  });
+
+  const result = [];
+  let lastEnd = 0;
+
+  for (const n of sorted) {
+    // Skip notes that are entirely within a previous note
+    if (n.startTick < lastEnd && n.endTick <= lastEnd) continue;
+
+    // Trim notes that start during a previous note
+    const adjusted = { ...n };
+    if (adjusted.startTick < lastEnd) {
+      adjusted.startTick = lastEnd;
+    }
+
+    if (adjusted.endTick > adjusted.startTick) {
+      result.push(adjusted);
+      lastEnd = adjusted.endTick;
+    }
+  }
+
+  return result;
+}
+
+// ── Quantize notes into beat grid ────────────────────────────
+function quantizeChannel(notes, mode = 'high') {
+  if (!notes || notes.length === 0) return [];
+
+  // Flatten polyphony first
+  const flat = flattenPolyphony(notes, mode);
 
   const result = [];
   let currentTick = 0;
 
-  for (const n of notes) {
+  for (const n of flat) {
     // Insert rest if there's a gap
     const gapTicks = n.startTick - currentTick;
     if (gapTicks > quantizeTicks * 0.5) {
-      const restBeats = Math.max(1, Math.round(gapTicks / quantizeTicks)) * quantize;
-      result.push([0, restBeats]); // R = 0
+      const restGridUnits = Math.max(1, Math.round(gapTicks / quantizeTicks));
+      const restBeats = restGridUnits * quantize;
+      result.push([0, restBeats]);
     }
 
     // Note duration in our beat units
     const durTicks = n.endTick - n.startTick;
-    const durBeats = Math.max(1, Math.round(durTicks / quantizeTicks)) * quantize;
+    const durGridUnits = Math.max(1, Math.round(durTicks / quantizeTicks));
+    const durBeats = durGridUnits * quantize;
     const freq = Math.round(midiToFreq(n.note) * 100) / 100;
     result.push([freq, durBeats]);
 
@@ -284,8 +325,8 @@ function quantizeChannel(notes) {
 const melodyNotes = channelNotes.get(melodyChannel) || [];
 const bassNotes = channelNotes.get(bassChannel) || [];
 
-let melody = quantizeChannel(melodyNotes);
-let bass = quantizeChannel(bassNotes);
+let melody = quantizeChannel(melodyNotes, 'high');
+let bass = quantizeChannel(bassNotes, 'low');
 
 // ── Trim to maxBeats ─────────────────────────────────────────
 function trimToBeats(notes, max) {
@@ -294,29 +335,40 @@ function trimToBeats(notes, max) {
   for (const [freq, dur] of notes) {
     if (total + dur > max) {
       const remaining = max - total;
-      if (remaining > 0) result.push([freq, remaining]);
+      if (remaining >= quantize) result.push([freq, remaining]);
       break;
     }
     result.push([freq, dur]);
     total += dur;
   }
-  // Pad with rest if short
-  const currentTotal = result.reduce((s, [, d]) => s + d, 0);
-  if (currentTotal < max) {
-    result.push([0, max - currentTotal]);
-  }
   return result;
+}
+
+// Make melody and bass same length (trim to shorter)
+function equalizeLength(m, b) {
+  const mLen = m.reduce((s, [, d]) => s + d, 0);
+  const bLen = b.reduce((s, [, d]) => s + d, 0);
+  const target = Math.min(mLen, bLen);
+  return [trimToBeats(m, target), trimToBeats(b, target)];
 }
 
 melody = trimToBeats(melody, maxBeats);
 bass = trimToBeats(bass, maxBeats);
+[melody, bass] = equalizeLength(melody, bass);
 
 // ── Format output ────────────────────────────────────────────
+function formatBeatDur(dur) {
+  // Display cleanly: 0.5 → 0.5, 1 → 1, 2 → 2, etc.
+  if (dur === Math.floor(dur)) return String(dur);
+  return String(dur);
+}
+
 function formatNote([freq, dur]) {
-  if (freq === 0) return `[R, ${dur}]`;
+  const durStr = formatBeatDur(dur);
+  if (freq === 0) return `[R, ${durStr}]`;
   const name = freqToConst(freq);
-  if (name) return `[${name}, ${dur}]`;
-  return `[${freq}, ${dur}]`;
+  if (name) return `[${name}, ${durStr}]`;
+  return `[${freq}, ${durStr}]`;
 }
 
 function formatNoteArray(notes, label) {
