@@ -36,7 +36,6 @@ export class TitleScene extends Phaser.Scene {
 
   // Oak intro state
   private introContainer!: Phaser.GameObjects.Container;
-  private introPages: string[] = [];
   private introPageIndex = 0;
   private introText!: Phaser.GameObjects.Text;
 
@@ -107,7 +106,7 @@ export class TitleScene extends Phaser.Scene {
 
     // Naming container (hidden initially)
     this.namingContainer = this.add.container(0, 0);
-    this.namingContainer.setDepth(100);
+    this.namingContainer.setDepth(300);
     this.namingContainer.setVisible(false);
 
     // Input
@@ -226,8 +225,7 @@ export class TitleScene extends Phaser.Scene {
   private selectOption(): void {
     const option = this.options[this.selectedOption];
     if (option === 'NEW GAME') {
-      this.state = 'name_player';
-      this.showNamingScreen('YOUR NAME?', NAME_OPTIONS_PLAYER);
+      this.showOakIntro();
     } else if (option === 'CONTINUE') {
       const save = SaveSystem.load();
       if (save) {
@@ -381,29 +379,43 @@ export class TitleScene extends Phaser.Scene {
     if (this.state === 'name_player') {
       this.playerName = this.currentName;
       this.currentName = '';
-      this.state = 'name_rival';
-      this.showNamingScreen('RIVAL NAME?', NAME_OPTIONS_RIVAL);
+      // Return to Oak intro
+      this.namingContainer.setVisible(false);
+      this.state = 'oak_intro';
+      this.introContainer.setVisible(true);
+      this.introText.setText(this.getIntroPageText());
     } else if (this.state === 'name_rival') {
       this.rivalName = this.currentName;
       this.namingContainer.setVisible(false);
-      this.showOakIntro();
+      // Return to Oak intro
+      this.state = 'oak_intro';
+      this.introContainer.setVisible(true);
+      this.introText.setText(this.getIntroPageText());
     }
   }
 
   private introNidorino: Phaser.GameObjects.Image | null = null;
 
+  private getIntroPageText(): string {
+    switch (this.introPageIndex) {
+      case 0: return 'Hello there!\nWelcome to the world\nof POKeMON!';
+      case 1: return "My name is OAK!\nPeople call me the\nPOKeMON PROF!";
+      case 2: return 'This world is\ninhabited by creatures\ncalled POKeMON!';
+      case 3: return 'For some people,\nPOKeMON are pets.\nOthers use them\nfor fights.';
+      case 4: return 'Myself...\nI study POKeMON\nas a profession.';
+      case 5: return 'First, what is\nyour name?';
+      case 6: return `Right! So your\nname is ${this.playerName}!`;
+      case 7: return "This is my grandson.\nHe's been your rival\nsince you were\na baby.";
+      case 8: return '...Erm, what was\nhis name again?';
+      case 9: return `That's right!\nI remember now!\nHis name is ${this.rivalName}!`;
+      case 10: return `${this.playerName}!\nYour very own\nPOKeMON legend is\nabout to unfold!`;
+      case 11: return "A world of dreams\nand adventures with\nPOKeMON awaits!\nLet's go!";
+      default: return '';
+    }
+  }
+
   private showOakIntro(): void {
     this.state = 'oak_intro';
-    // Pages: first few are Oak talking, page 2 shows Nidorino alongside
-    this.introPages = [
-      'Hello there!\nWelcome to the world\nof POKeMON!',
-      "My name is OAK!\nPeople call me the\nPOKeMON PROF!",
-      'This world is\ninhab\u00ADited by creatures\ncalled POKeMON!',  // Nidorino appears here
-      'For some people,\nPOKeMON are pets.\nOthers use them\nfor fights.',
-      'Myself... I study\nPOKeMON as a\nprofession.',
-      `${this.playerName}!\nYour very own\nPOKeMON legend is\nabout to unfold!`,
-      'A world of dreams\nand adventures with\nPOKeMON awaits!\nLet\'s go!',
-    ];
     this.introPageIndex = 0;
 
     this.introContainer = this.add.container(0, 0);
@@ -415,35 +427,43 @@ export class TitleScene extends Phaser.Scene {
     this.introContainer.add(bg);
 
     // Oak portrait sprite
-    const oakPortrait = this.add.image(GAME_WIDTH / 2, 30, 'oak_portrait');
+    const oakPortrait = this.add.image(GAME_WIDTH / 2, 2, 'oak_portrait');
     oakPortrait.setOrigin(0.5, 0);
     oakPortrait.setScale(2);
     this.introContainer.add(oakPortrait);
 
     // Nidorino - hidden initially, appears on page 2
-    this.introNidorino = this.add.image(GAME_WIDTH / 2 + 40, 55, 'nidorino_portrait');
+    this.introNidorino = this.add.image(GAME_WIDTH / 2 + 40, 45, 'nidorino_portrait');
     this.introNidorino.setScale(1.5);
     this.introNidorino.setAlpha(0);
     this.introContainer.add(this.introNidorino);
 
-    this.introText = this.add.text(GAME_WIDTH / 2, 115, this.introPages[0], {
+    // Text box at bottom
+    const textBox = this.add.graphics();
+    textBox.fillStyle(0x000000);
+    textBox.fillRect(4, 80, GAME_WIDTH - 8, 60);
+    textBox.lineStyle(1, 0xf8f8f8);
+    textBox.strokeRect(4, 80, GAME_WIDTH - 8, 60);
+    this.introContainer.add(textBox);
+
+    this.introText = this.add.text(12, 84, this.getIntroPageText(), {
       fontSize: '8px',
       color: '#f8f8f8',
       fontFamily: 'monospace',
-      align: 'center',
-      wordWrap: { width: GAME_WIDTH - 20 },
-    }).setOrigin(0.5, 0);
+      wordWrap: { width: GAME_WIDTH - 28 },
+      lineSpacing: 2,
+    });
     this.introContainer.add(this.introText);
 
     // Prompt arrow
-    const arrow = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 12, 'v', {
+    const arrow = this.add.text(GAME_WIDTH - 14, 132, 'v', {
       fontSize: '8px',
       color: '#f8f8f8',
       fontFamily: 'monospace',
-    }).setOrigin(0.5);
+    });
     this.tweens.add({
       targets: arrow,
-      y: GAME_HEIGHT - 8,
+      y: 136,
       duration: 400,
       yoyo: true,
       repeat: -1,
@@ -453,7 +473,24 @@ export class TitleScene extends Phaser.Scene {
 
   private advanceIntro(): void {
     this.introPageIndex++;
-    if (this.introPageIndex >= this.introPages.length) {
+
+    // Trigger player naming after "what is your name?"
+    if (this.introPageIndex === 6 && !this.playerName) {
+      this.state = 'name_player';
+      this.introContainer.setVisible(false);
+      this.showNamingScreen('YOUR NAME?', NAME_OPTIONS_PLAYER);
+      return;
+    }
+
+    // Trigger rival naming after "what was his name?"
+    if (this.introPageIndex === 9 && !this.rivalName) {
+      this.state = 'name_rival';
+      this.introContainer.setVisible(false);
+      this.showNamingScreen('RIVAL NAME?', NAME_OPTIONS_RIVAL);
+      return;
+    }
+
+    if (this.introPageIndex > 11) {
       // Done with intro - start the game
       this.introContainer.destroy();
       soundSystem.stopMusic();
@@ -465,25 +502,26 @@ export class TitleScene extends Phaser.Scene {
         playerName: this.playerName,
         rivalName: this.rivalName,
       });
-    } else {
-      this.introText.setText(this.introPages[this.introPageIndex]);
-      soundSystem.menuSelect();
+      return;
+    }
 
-      // Show Nidorino on page 2 (index 2), hide after page 3 (index 4+)
-      if (this.introNidorino) {
-        if (this.introPageIndex === 2) {
-          this.tweens.add({
-            targets: this.introNidorino,
-            alpha: 1,
-            duration: 300,
-          });
-        } else if (this.introPageIndex === 4) {
-          this.tweens.add({
-            targets: this.introNidorino,
-            alpha: 0,
-            duration: 300,
-          });
-        }
+    this.introText.setText(this.getIntroPageText());
+    soundSystem.menuSelect();
+
+    // Show Nidorino on page 2, hide on page 4
+    if (this.introNidorino) {
+      if (this.introPageIndex === 2) {
+        this.tweens.add({
+          targets: this.introNidorino,
+          alpha: 1,
+          duration: 300,
+        });
+      } else if (this.introPageIndex === 4) {
+        this.tweens.add({
+          targets: this.introNidorino,
+          alpha: 0,
+          duration: 300,
+        });
       }
     }
   }
