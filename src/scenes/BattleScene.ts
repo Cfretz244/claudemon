@@ -10,6 +10,7 @@ import { ITEMS } from '../data/items';
 import { TextBox } from '../components/TextBox';
 import { calculateDamage, checkCritical, checkAccuracy } from '../systems/DamageCalculator';
 import { calculateExpGain, addExperience, learnMove } from '../systems/ExperienceSystem';
+import { MoveForgetUI } from '../components/MoveForgetUI';
 import { checkEvolution, evolvePokemon } from '../systems/EvolutionSystem';
 import { attemptCatch } from '../systems/CatchSystem';
 import { selectAIMove } from '../systems/AISystem';
@@ -61,6 +62,7 @@ export class BattleScene extends Phaser.Scene {
   private hud!: BattleHUD;
   private menu!: BattleMenu;
   private textBox!: TextBox;
+  private moveForgetUI!: MoveForgetUI;
 
   // Battle flow
   private battleOver = false;
@@ -146,6 +148,9 @@ export class BattleScene extends Phaser.Scene {
     // Menu
     this.menu = new BattleMenu(this);
     this.menu.hide();
+
+    // Move forget UI
+    this.moveForgetUI = new MoveForgetUI(this);
 
     // Mark as seen in Pokedex
     this.playerState.markSeen(this.opponentPokemon.speciesId);
@@ -623,15 +628,12 @@ export class BattleScene extends Phaser.Scene {
       // Check for new moves
       for (const moveId of lu.newMoves) {
         const moveData = MOVES_DATA[moveId];
-        if (moveData) {
-          if (this.playerPokemon.moves.length < 4) {
-            learnMove(this.playerPokemon, moveId);
-            await this.showText([`${playerName} learned\n${moveData.name}!`]);
-          } else {
-            // For simplicity, auto-replace oldest move
-            learnMove(this.playerPokemon, moveId, 0);
-            await this.showText([`${playerName} learned\n${moveData.name}!`, `(Replaced first move)`]);
-          }
+        if (!moveData) continue;
+        if (this.playerPokemon.moves.length < 4) {
+          learnMove(this.playerPokemon, moveId);
+          await this.showText([`${playerName} learned\n${moveData.name}!`]);
+        } else {
+          await this.promptMoveForget(this.playerPokemon, moveId);
         }
       }
 
@@ -1043,6 +1045,33 @@ export class BattleScene extends Phaser.Scene {
   private updateHUD(): void {
     this.hud.updatePlayer(this.playerPokemon);
     this.hud.updateOpponent(this.opponentPokemon);
+  }
+
+  private async promptMoveForget(pokemon: PokemonInstance, moveId: number): Promise<void> {
+    const moveName = MOVES_DATA[moveId]?.name || '???';
+    const pokeName = this.getSpeciesName(pokemon.speciesId);
+
+    await this.showText([
+      `${pokeName} wants to learn\n${moveName}!`,
+      `But ${pokeName} already\nknows 4 moves.`,
+      `Forget a move to make\nroom for ${moveName}?`,
+    ]);
+
+    const replaceIndex = await new Promise<number | null>(resolve => {
+      this.moveForgetUI.show(pokemon, moveId, resolve);
+    });
+
+    if (replaceIndex !== null) {
+      const oldMoveName = MOVES_DATA[pokemon.moves[replaceIndex].moveId]?.name || '???';
+      learnMove(pokemon, moveId, replaceIndex);
+      await this.showText([
+        `1, 2, and... Poof!`,
+        `${pokeName} forgot\n${oldMoveName}.`,
+        `And...\n${pokeName} learned\n${moveName}!`,
+      ]);
+    } else {
+      await this.showText([`${pokeName} did not\nlearn ${moveName}.`]);
+    }
   }
 
   private showText(messages: string[]): Promise<void> {

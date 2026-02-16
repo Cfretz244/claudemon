@@ -2,10 +2,12 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { PokemonInstance, StatusCondition } from '../types/pokemon.types';
 import { POKEMON_DATA } from '../data/pokemon';
+import { MOVES_DATA } from '../data/moves';
 import { ITEMS } from '../data/items';
 import { soundSystem } from '../systems/SoundSystem';
 import { PlayerState } from '../entities/Player';
-import { addExperience } from '../systems/ExperienceSystem';
+import { addExperience, learnMove } from '../systems/ExperienceSystem';
+import { MoveForgetUI } from './MoveForgetUI';
 
 export class BagScreen {
   private scene: Phaser.Scene;
@@ -19,7 +21,7 @@ export class BagScreen {
   private cursorIndex = 0;
   private scrollOffset = 0;
   private readonly visibleRows = 7;
-  private mode: 'list' | 'options' | 'party_pick' | 'toss_qty' = 'list';
+  private mode: 'list' | 'options' | 'party_pick' | 'toss_qty' | 'move_forget' = 'list';
 
   // Display objects
   private bg!: Phaser.GameObjects.Graphics;
@@ -53,6 +55,10 @@ export class BagScreen {
 
   // Input
   private inputBound = false;
+
+  // Move forget UI
+  private moveForgetUI!: MoveForgetUI;
+  private pendingMoves: { pokemon: PokemonInstance; moveId: number }[] = [];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -164,6 +170,9 @@ export class BagScreen {
     this.messageContainer = scene.add.container(0, 0, [msgBg, this.messageText]);
     this.messageContainer.setVisible(false);
 
+    // Move forget UI (created separately, not in container — it manages its own depth)
+    this.moveForgetUI = new MoveForgetUI(scene);
+
     this.container = scene.add.container(0, 0, [
       this.bg, this.titleText, this.moneyText, ...this.rowTexts,
       this.cursorText, this.descText, this.optionsContainer,
@@ -221,6 +230,7 @@ export class BagScreen {
 
   private navigate(dir: number): void {
     if (this.messageVisible) return;
+    if (this.mode === 'move_forget') return; // MoveForgetUI handles its own input
     soundSystem.menuMove();
 
     if (this.mode === 'list') {
@@ -253,9 +263,16 @@ export class BagScreen {
   }
 
   private confirm(): void {
+    if (this.mode === 'move_forget') return; // MoveForgetUI handles its own input
+
     if (this.messageVisible) {
       this.messageVisible = false;
       this.messageContainer.setVisible(false);
+      // After dismissing a message, check if there are pending moves to process
+      if (this.pendingMoves.length > 0) {
+        this.processNextPendingMove();
+        return;
+      }
       return;
     }
 
@@ -285,9 +302,16 @@ export class BagScreen {
   }
 
   private back(): void {
+    if (this.mode === 'move_forget') return; // MoveForgetUI handles its own input
+
     if (this.messageVisible) {
       this.messageVisible = false;
       this.messageContainer.setVisible(false);
+      // After dismissing a message, check if there are pending moves to process
+      if (this.pendingMoves.length > 0) {
+        this.processNextPendingMove();
+        return;
+      }
       return;
     }
 
@@ -370,9 +394,24 @@ export class BagScreen {
         this.showMessage("It won't have any\neffect!");
         return;
       }
-      addExperience(pokemon, 999999);
+      const levelUps = addExperience(pokemon, 999999);
       this.playerState.useItem(item.id);
       soundSystem.heal();
+
+      // Collect new moves from level-ups
+      this.pendingMoves = [];
+      for (const lu of levelUps) {
+        for (const moveId of lu.newMoves) {
+          const moveData = MOVES_DATA[moveId];
+          if (!moveData) continue;
+          if (pokemon.moves.length < 4) {
+            learnMove(pokemon, moveId);
+          } else {
+            this.pendingMoves.push({ pokemon, moveId });
+          }
+        }
+      }
+
       this.showMessage(`${this.getPokemonName(pokemon)} grew to\nLv${pokemon.level}!`);
       this.afterItemUse();
       return;
@@ -516,11 +555,40 @@ export class BagScreen {
     }
   }
 
+  private processNextPendingMove(): void {
+    if (this.pendingMoves.length === 0) return;
+
+    const { pokemon, moveId } = this.pendingMoves.shift()!;
+    const moveName = MOVES_DATA[moveId]?.name || '???';
+    const pokeName = this.getPokemonName(pokemon);
+
+    // If the pokemon now has room (from a previous forget), just learn it
+    if (pokemon.moves.length < 4) {
+      learnMove(pokemon, moveId);
+      this.showMessage(`${pokeName} learned\n${moveName}!`);
+      return;
+    }
+
+    // Show the move forget UI
+    this.mode = 'move_forget';
+    this.moveForgetUI.show(pokemon, moveId, (replaceIndex) => {
+      if (replaceIndex !== null) {
+        const oldMoveName = MOVES_DATA[pokemon.moves[replaceIndex].moveId]?.name || '???';
+        learnMove(pokemon, moveId, replaceIndex);
+        this.showMessage(`${pokeName} forgot\n${oldMoveName} and\nlearned ${moveName}!`);
+      } else {
+        this.showMessage(`${pokeName} did not\nlearn ${moveName}.`);
+      }
+      this.mode = 'list';
+    });
+  }
+
   private getPokemonName(p: PokemonInstance): string {
     return p.nickname || POKEMON_DATA[p.speciesId]?.name || '???';
   }
 
   destroy(): void {
+    this.moveForgetUI.destroy();
     this.container.destroy();
   }
 }
