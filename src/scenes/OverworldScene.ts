@@ -260,7 +260,7 @@ export class OverworldScene extends Phaser.Scene {
       } else {
         // Turned this frame, wait for threshold
         this.dirHeldFrames++;
-        if (this.dirHeldFrames >= 3) {
+        if (this.dirHeldFrames >= 2) {
           this.tryMove(dir);
         }
       }
