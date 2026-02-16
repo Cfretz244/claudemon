@@ -21,6 +21,8 @@ export enum TileType {
   SAND = 17,
   CAVE_FLOOR = 18,
   CAVE_WALL = 19,
+  CUT_TREE = 20,
+  BOULDER = 21,
 }
 
 export interface WarpPoint {
@@ -56,6 +58,7 @@ export interface MapData {
   npcs: NPCData[];
   wildEncounters?: WildEncounterTable;
   musicId?: string;
+  isDark?: boolean;
 }
 
 export interface WildEncounterTable {

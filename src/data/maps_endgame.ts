@@ -9,6 +9,7 @@ function fill2D<V>(w: number, h: number, v: V): V[][] {
 
 const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
+  T.CUT_TREE, T.BOULDER,
 ]);
 
 // ─────────────────────────────────────────────────────────────
@@ -983,11 +984,11 @@ export const VICTORY_ROAD: MapData = (() => {
   fillRect(3, 15, 3, 2, T.CAVE_WALL);
   fillRect(14, 15, 3, 2, T.CAVE_WALL);
 
-  // Strength puzzle: wall blocks in corridors
-  setTile(6, 7, T.WALL);
-  setTile(11, 10, T.WALL);
-  setTile(7, 15, T.WALL);
-  setTile(10, 14, T.WALL);
+  // Strength puzzle: boulders in corridors
+  setTile(6, 7, T.BOULDER);
+  setTile(11, 10, T.BOULDER);
+  setTile(7, 15, T.BOULDER);
+  setTile(10, 14, T.BOULDER);
 
   return {
     id: 'victory_road',

@@ -9,6 +9,7 @@ function fill2D<V>(w: number, h: number, v: V): V[][] {
 
 const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
+  T.CUT_TREE, T.BOULDER,
 ]);
 
 // ─────────────────────────────────────────────────────────────

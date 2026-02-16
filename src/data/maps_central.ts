@@ -9,6 +9,7 @@ function fill2D<V>(w: number, h: number, v: V): V[][] {
 
 const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
+  T.CUT_TREE, T.BOULDER,
 ]);
 
 // ─── 1. LAVENDER TOWN ────────────────────────────────────────────────────────
@@ -181,14 +182,49 @@ export const POKEMON_TOWER: MapData = (() => {
         sightRange: 3,
       },
       {
-        id: 'tower_old_man',
+        id: 'rival_tower',
+        x: 5, y: 6,
+        spriteColor: 0x6080c0,
+        direction: Direction.DOWN,
+        dialogue: [
+          "{RIVAL}: {PLAYER}!\nWhat are you doing\nhere?",
+          "Since you're here,\nlet's battle!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'tower_rocket1',
+        x: 3, y: 9,
+        spriteColor: 0x383838,
+        direction: Direction.UP,
+        dialogue: [
+          'ROCKET: You again?!\nTEAM ROCKET owns\nthis tower!',
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'tower_rocket2',
+        x: 8, y: 10,
+        spriteColor: 0x383838,
+        direction: Direction.LEFT,
+        dialogue: [
+          'ROCKET: You want to\nsave MR. FUJI?',
+          "You'll have to get\nthrough me first!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'mr_fuji',
         x: 5, y: 3,
         spriteColor: 0xc0c0c0,
         direction: Direction.DOWN,
         dialogue: [
-          "I can feel a strange\npresence here...",
-          "The ghosts won't let\nthe spirits rest in",
-          'peace... We need the\nSILPH SCOPE...',
+          "MR. FUJI: Thank you\nfor saving me!",
+          "Those TEAM ROCKET\nruffians held me\nhostage!",
+          "Please, take this\nPOKe FLUTE as thanks!",
         ],
       },
     ],
@@ -558,6 +594,8 @@ export const CELADON_CITY: MapData = (() => {
       { x: 22, y: 9, targetMap: 'pokemon_center_celadon', targetX: 4, targetY: 7 },
       // Department Store (Pokemart)
       { x: 23, y: 20, targetMap: 'pokemart_celadon', targetX: 3, targetY: 7 },
+      // Game Corner basement
+      { x: 13, y: 19, targetMap: 'game_corner_basement', targetX: 5, targetY: 12 },
     ],
     npcs: [
       {
@@ -598,6 +636,16 @@ export const CELADON_CITY: MapData = (() => {
         dialogue: [
           "ERIKA is the GYM\nLEADER here.",
           "She uses GRASS-type\nPOKeMON. Be prepared!",
+        ],
+      },
+      {
+        id: 'celadon_tea_lady',
+        x: 4, y: 19,
+        spriteColor: 0xc0a080,
+        direction: Direction.RIGHT,
+        dialogue: [
+          "I work at CELADON\nMANSION.",
+          "Here, have some TEA!\nIt's very refreshing!",
         ],
       },
     ],
@@ -809,6 +857,8 @@ export const SAFFRON_CITY: MapData = (() => {
       { x: 6, y: 22, targetMap: 'pokemon_center_saffron', targetX: 4, targetY: 7 },
       // Pokemart door
       { x: 24, y: 22, targetMap: 'pokemart_saffron', targetX: 3, targetY: 7 },
+      // Silph Co door
+      { x: 15, y: 10, targetMap: 'silph_co', targetX: 7, targetY: 14 },
     ],
     npcs: [
       {
@@ -1070,6 +1120,182 @@ const POKEMART_SAFFRON: MapData = (() => {
   };
 })();
 
+// ─── GAME CORNER BASEMENT ───────────────────────────────────────────────────
+
+const GAME_CORNER_BASEMENT: MapData = (() => {
+  const W = 12, H = 14;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Walls: top 2 rows, sides
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+
+  // Interior walls creating corridors
+  fillRect(4, 4, 1, 4, T.WALL);
+  fillRect(7, 2, 1, 4, T.WALL);
+  fillRect(4, 10, 4, 1, T.WALL);
+
+  // Giovanni's desk at the back
+  setTile(5, 2, T.COUNTER);
+  setTile(6, 2, T.COUNTER);
+
+  return {
+    id: 'game_corner_basement',
+    name: 'ROCKET HIDEOUT',
+    width: W, height: H,
+    tiles, collision,
+    warps: [
+      { x: 5, y: 13, targetMap: 'celadon_city', targetX: 13, targetY: 20 },
+    ],
+    npcs: [
+      {
+        id: 'game_corner_rocket1',
+        x: 3, y: 6,
+        spriteColor: 0x383838,
+        direction: Direction.RIGHT,
+        dialogue: ['ROCKET: You found\nour secret hideout!', 'No one leaves alive!'],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'game_corner_rocket2',
+        x: 9, y: 8,
+        spriteColor: 0x383838,
+        direction: Direction.LEFT,
+        dialogue: ['ROCKET: Stop right\nthere, kid!'],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'giovanni_game_corner',
+        x: 6, y: 3,
+        spriteColor: 0x604020,
+        direction: Direction.DOWN,
+        dialogue: [
+          'GIOVANNI: So, you\nhave found me!',
+          "I am the leader of\nTEAM ROCKET!",
+          "I shall not allow\nyou to disrupt our\nplans!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+    ],
+  };
+})();
+
+// ─── SILPH CO. ──────────────────────────────────────────────────────────────
+
+const SILPH_CO: MapData = (() => {
+  const W = 15, H = 16;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Walls: top 2 rows, sides
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+
+  // Office partitions
+  fillRect(5, 4, 1, 4, T.WALL);
+  fillRect(9, 4, 1, 4, T.WALL);
+  fillRect(3, 10, 9, 1, T.WALL);
+  // Gaps in partitions
+  setTile(5, 6, T.INDOOR_FLOOR);
+  setTile(9, 6, T.INDOOR_FLOOR);
+  setTile(7, 10, T.INDOOR_FLOOR);
+
+  // Desks
+  setTile(3, 2, T.COUNTER);
+  setTile(4, 2, T.COUNTER);
+  setTile(10, 2, T.COUNTER);
+  setTile(11, 2, T.COUNTER);
+
+  // President's desk (top center)
+  setTile(7, 2, T.COUNTER);
+
+  // Carpet paths
+  fillRect(6, 11, 3, 4, T.CARPET);
+
+  return {
+    id: 'silph_co',
+    name: 'SILPH CO.',
+    width: W, height: H,
+    tiles, collision,
+    warps: [
+      { x: 7, y: 15, targetMap: 'saffron_city', targetX: 15, targetY: 11 },
+    ],
+    npcs: [
+      {
+        id: 'silph_rocket1',
+        x: 3, y: 6,
+        spriteColor: 0x383838,
+        direction: Direction.RIGHT,
+        dialogue: ['ROCKET: SILPH CO. is\nunder our control!'],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'silph_rocket2',
+        x: 11, y: 8,
+        spriteColor: 0x383838,
+        direction: Direction.LEFT,
+        dialogue: ['ROCKET: No one gets\npast me!'],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'rival_silph',
+        x: 7, y: 7,
+        spriteColor: 0x6080c0,
+        direction: Direction.DOWN,
+        dialogue: [
+          "{RIVAL}: {PLAYER}!\nWhat a surprise!",
+          "TEAM ROCKET is all\nover SILPH CO.!",
+          "But first, let's\nhave a battle!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'giovanni_silph',
+        x: 7, y: 3,
+        spriteColor: 0x604020,
+        direction: Direction.DOWN,
+        dialogue: [
+          "GIOVANNI: We meet\nagain, child!",
+          "You have interfered\nwith TEAM ROCKET\nfor the last time!",
+          "Prepare to feel my\nwrath!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'silph_president',
+        x: 8, y: 2,
+        spriteColor: 0xc0a060,
+        direction: Direction.DOWN,
+        dialogue: [
+          "PRESIDENT: Thank\ngoodness you're here!",
+          "TEAM ROCKET has taken\nover our company!",
+          "Please, defeat their\nboss!",
+        ],
+      },
+    ],
+  };
+})();
+
 // ─── Combined export ─────────────────────────────────────────────────────────
 
 export const CENTRAL_MAPS: Record<string, MapData> = {
@@ -1088,4 +1314,6 @@ export const CENTRAL_MAPS: Record<string, MapData> = {
   saffron_gym: SAFFRON_GYM,
   pokemon_center_saffron: POKEMON_CENTER_SAFFRON,
   pokemart_saffron: POKEMART_SAFFRON,
+  game_corner_basement: GAME_CORNER_BASEMENT,
+  silph_co: SILPH_CO,
 };

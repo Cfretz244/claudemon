@@ -5,11 +5,21 @@ import { POKEMON_DATA } from '../data/pokemon';
 import { MOVES_DATA } from '../data/moves';
 import { soundSystem } from '../systems/SoundSystem';
 
+// Field move IDs
+const FIELD_MOVES: Record<number, { name: string; fieldName: string }> = {
+  15: { name: 'CUT', fieldName: 'cut' },
+  19: { name: 'FLY', fieldName: 'fly' },
+  57: { name: 'SURF', fieldName: 'surf' },
+  70: { name: 'STRENGTH', fieldName: 'strength' },
+  148: { name: 'FLASH', fieldName: 'flash' },
+};
+
 export class PartyScreen {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
   private visible = false;
   private onClose: (() => void) | null = null;
+  private onFieldMove: ((moveId: number) => void) | null = null;
 
   // State
   private party: PokemonInstance[] = [];
@@ -28,7 +38,8 @@ export class PartyScreen {
   private optionsContainer!: Phaser.GameObjects.Container;
   private optionsCursor!: Phaser.GameObjects.Text;
   private optionsIndex = 0;
-  private readonly optionLabels = ['SUMMARY', 'SWITCH', 'CANCEL'];
+  private currentOptionLabels: string[] = [];
+  private readonly baseOptionLabels = ['SUMMARY', 'SWITCH', 'CANCEL'];
 
   // Summary sub-view
   private summaryContainer!: Phaser.GameObjects.Container;
@@ -64,23 +75,11 @@ export class PartyScreen {
       fontSize: '7px', color: '#383838', fontFamily: 'monospace',
     });
 
-    // Options sub-menu
-    const optBg = scene.add.graphics();
-    optBg.fillStyle(0xf8f8f8, 1);
-    optBg.fillRoundedRect(0, 0, 56, 46, 2);
-    optBg.lineStyle(1, 0x383838, 1);
-    optBg.strokeRoundedRect(0, 0, 56, 46, 2);
-
-    const optTexts = this.optionLabels.map((label, i) =>
-      scene.add.text(14, 4 + i * 14, label, {
-        fontSize: '7px', color: '#383838', fontFamily: 'monospace',
-      })
-    );
+    // Options sub-menu (built dynamically when opened)
     this.optionsCursor = scene.add.text(4, 4, '>', {
       fontSize: '7px', color: '#383838', fontFamily: 'monospace',
     });
-
-    this.optionsContainer = scene.add.container(GAME_WIDTH - 60, 30, [optBg, ...optTexts, this.optionsCursor]);
+    this.optionsContainer = scene.add.container(GAME_WIDTH - 68, 30);
     this.optionsContainer.setVisible(false);
 
     // Summary sub-view
@@ -112,9 +111,10 @@ export class PartyScreen {
     this.container.setVisible(false);
   }
 
-  show(party: PokemonInstance[], onClose: () => void): void {
+  show(party: PokemonInstance[], onClose: () => void, onFieldMove?: (moveId: number) => void): void {
     this.party = party;
     this.onClose = onClose;
+    this.onFieldMove = onFieldMove || null;
     this.visible = true;
     this.mode = 'list';
     this.cursorIndex = 0;
@@ -160,9 +160,46 @@ export class PartyScreen {
     } else if (this.mode === 'options') {
       this.optionsIndex += dir;
       if (this.optionsIndex < 0) this.optionsIndex = 0;
-      if (this.optionsIndex >= this.optionLabels.length) this.optionsIndex = this.optionLabels.length - 1;
+      if (this.optionsIndex >= this.currentOptionLabels.length) this.optionsIndex = this.currentOptionLabels.length - 1;
       this.optionsCursor.setY(4 + this.optionsIndex * 14);
     }
+  }
+
+  private buildOptions(): void {
+    // Build options for the selected Pokemon, including field moves
+    this.currentOptionLabels = [];
+    const pokemon = this.party[this.cursorIndex];
+    if (pokemon && this.onFieldMove) {
+      for (const move of pokemon.moves) {
+        const fm = FIELD_MOVES[move.moveId];
+        if (fm) {
+          this.currentOptionLabels.push(fm.name);
+        }
+      }
+    }
+    this.currentOptionLabels.push(...this.baseOptionLabels);
+
+    // Rebuild options container content
+    this.optionsContainer.removeAll(true);
+    const optBg = this.scene.add.graphics();
+    const optH = this.currentOptionLabels.length * 14 + 8;
+    optBg.fillStyle(0xf8f8f8, 1);
+    optBg.fillRoundedRect(0, 0, 64, optH, 2);
+    optBg.lineStyle(1, 0x383838, 1);
+    optBg.strokeRoundedRect(0, 0, 64, optH, 2);
+    this.optionsContainer.add(optBg);
+
+    for (let i = 0; i < this.currentOptionLabels.length; i++) {
+      const t = this.scene.add.text(14, 4 + i * 14, this.currentOptionLabels[i], {
+        fontSize: '7px', color: '#383838', fontFamily: 'monospace',
+      });
+      this.optionsContainer.add(t);
+    }
+
+    this.optionsCursor = this.scene.add.text(4, 4, '>', {
+      fontSize: '7px', color: '#383838', fontFamily: 'monospace',
+    });
+    this.optionsContainer.add(this.optionsCursor);
   }
 
   private confirm(): void {
@@ -172,20 +209,30 @@ export class PartyScreen {
       // Open options
       this.mode = 'options';
       this.optionsIndex = 0;
+      this.buildOptions();
       this.optionsCursor.setY(4);
       this.optionsContainer.setVisible(true);
     } else if (this.mode === 'options') {
-      const option = this.optionLabels[this.optionsIndex];
+      const option = this.currentOptionLabels[this.optionsIndex];
       if (option === 'SUMMARY') {
         this.showSummary(this.cursorIndex);
       } else if (option === 'SWITCH') {
         this.switchFromIndex = this.cursorIndex;
         this.mode = 'switch';
         this.optionsContainer.setVisible(false);
-      } else {
-        // CANCEL
+      } else if (option === 'CANCEL') {
         this.mode = 'list';
         this.optionsContainer.setVisible(false);
+      } else {
+        // Field move selected - find the move ID
+        const entry = Object.entries(FIELD_MOVES).find(([, v]) => v.name === option);
+        if (entry && this.onFieldMove) {
+          const moveId = parseInt(entry[0]);
+          this.hide();
+          if (this.onClose) this.onClose();
+          this.onFieldMove(moveId);
+          return;
+        }
       }
     } else if (this.mode === 'switch') {
       if (this.cursorIndex !== this.switchFromIndex) {

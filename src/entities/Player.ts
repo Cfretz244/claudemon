@@ -25,7 +25,7 @@ export class PlayerState {
     this.rivalName = 'BLUE';
     this.party = [];
     this.pc = [];
-    this.bag = { poke_ball: 5, potion: 3 };
+    this.bag = {};
     this.pcItems = {};
     this.money = 3000;
     this.badges = [];

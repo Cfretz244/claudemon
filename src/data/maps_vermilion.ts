@@ -9,6 +9,7 @@ function fill2D<V>(w: number, h: number, v: V): V[][] {
 
 const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
+  T.CUT_TREE, T.BOULDER,
 ]);
 
 // ---------------------------------------------------------------------------
@@ -246,6 +247,10 @@ export const VERMILION_CITY: MapData = (() => {
   // Re-place the dock door on top of water area
   setTile(23, 22, T.DOOR);
 
+  // CUT trees blocking path to gym
+  setTile(5, 14, T.CUT_TREE);
+  setTile(6, 14, T.CUT_TREE);
+
   // Flowers
   setTile(14, 6, T.FLOWER);
   setTile(15, 6, T.FLOWER);
@@ -255,7 +260,6 @@ export const VERMILION_CITY: MapData = (() => {
 
   // Signs
   setTile(9, 12, T.SIGN);
-  setTile(6, 14, T.SIGN);
 
   return {
     id: 'vermilion_city',
@@ -696,6 +700,7 @@ export const ROCK_TUNNEL: MapData = (() => {
     height: H,
     tiles,
     collision,
+    isDark: true,
     warps: [
       // South entrance -> Route 10 (near tunnel mouth)
       { x: 9, y: 19, targetMap: 'route10', targetX: 10, targetY: 13 },
@@ -869,6 +874,94 @@ export const POKEMART_VERMILION: MapData = (() => {
   };
 })();
 
+// ---------------------------------------------------------------------------
+// S.S. ANNE -- ship interior with rival battle + Captain gives HM01 Cut
+// ---------------------------------------------------------------------------
+export const SS_ANNE: MapData = (() => {
+  const W = 15, H = 12;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Walls: top 2 rows and sides
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+
+  // Corridor along center
+  fillRect(1, 5, 13, 2, T.CARPET);
+
+  // Captain's room (top-left)
+  fillRect(2, 2, 4, 3, T.INDOOR_FLOOR);
+  setTile(4, 5, T.DOOR);
+  // Captain's desk
+  setTile(3, 2, T.COUNTER);
+  setTile(4, 2, T.COUNTER);
+
+  // Cabins (decorative walls)
+  fillRect(8, 2, 5, 3, T.INDOOR_FLOOR);
+  setTile(10, 5, T.DOOR);
+  setTile(9, 2, T.COUNTER);
+  setTile(11, 2, T.COUNTER);
+
+  // Entrance area at bottom
+  fillRect(4, 8, 7, 3, T.CARPET);
+  setTile(5, 11, T.DOOR);
+
+  return {
+    id: 'ss_anne',
+    name: 'S.S. ANNE',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      // Exit back to Vermilion dock
+      { x: 5, y: 11, targetMap: 'vermilion_city', targetX: 23, targetY: 21 },
+    ],
+    npcs: [
+      {
+        id: 'ss_anne_captain',
+        x: 3, y: 3,
+        spriteColor: 0x4060b0,
+        direction: Direction.DOWN,
+        dialogue: [
+          "CAPTAIN: Ugh... I feel\nseasick...",
+          "Thank you for\nchecking on me!",
+          "Here, take this HM\nas my thanks!",
+        ],
+      },
+      {
+        id: 'rival_ss_anne',
+        x: 7, y: 6,
+        spriteColor: 0x6080c0,
+        direction: Direction.LEFT,
+        dialogue: [
+          "{RIVAL}: {PLAYER}!\nBoarded the S.S. ANNE\ntoo, huh?",
+          "Let's see how much\nyou've improved!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'ss_anne_sailor1',
+        x: 10, y: 3,
+        spriteColor: 0x4060b0,
+        direction: Direction.DOWN,
+        dialogue: [
+          "SAILOR: Welcome aboard\nthe S.S. ANNE!",
+          "The CAPTAIN is in the\nroom to the left.",
+        ],
+      },
+    ],
+  };
+})();
+
 export const VERMILION_MAPS: Record<string, MapData> = {
   route5: ROUTE5,
   route6: ROUTE6,
@@ -880,4 +973,5 @@ export const VERMILION_MAPS: Record<string, MapData> = {
   route10: ROUTE10,
   rock_tunnel: ROCK_TUNNEL,
   pokemon_center_route10: POKEMON_CENTER_ROUTE10,
+  ss_anne: SS_ANNE,
 };

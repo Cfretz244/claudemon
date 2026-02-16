@@ -197,6 +197,34 @@ export function generateTileset(scene: Phaser.Scene): void {
       ctx.fillStyle = '#807060';
       ctx.fillRect(4, 4, 4, 4);
     },
+    [TileType.CUT_TREE]: (ctx) => {
+      // Small cuttable tree - lighter green, smaller
+      ctx.fillStyle = '#88c070';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#805028';
+      ctx.fillRect(6, 10, 4, 6);
+      ctx.fillStyle = '#60a050';
+      ctx.fillRect(3, 3, 10, 8);
+      ctx.fillStyle = '#70b060';
+      ctx.fillRect(4, 4, 8, 6);
+      // X mark to show it's cuttable
+      ctx.fillStyle = '#c0a040';
+      ctx.fillRect(6, 5, 4, 1);
+      ctx.fillRect(7, 4, 2, 3);
+    },
+    [TileType.BOULDER]: (ctx) => {
+      // Pushable boulder
+      ctx.fillStyle = '#a09080';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#808070';
+      ctx.fillRect(2, 3, 12, 10);
+      ctx.fillStyle = '#909080';
+      ctx.fillRect(3, 4, 10, 8);
+      // Shading
+      ctx.fillStyle = '#707060';
+      ctx.fillRect(2, 12, 12, 1);
+      ctx.fillRect(13, 3, 1, 10);
+    },
   };
 
   // Generate individual tile textures
@@ -564,4 +592,161 @@ export function generatePokeballSprite(scene: Phaser.Scene): void {
   ctx.fillRect(3, 3, 2, 2);
 
   scene.textures.addCanvas('pokeball_icon', canvas);
+}
+
+export function generateSurfSprite(scene: Phaser.Scene): void {
+  // Player on a Lapras-like surf mount, 4 directions
+  const canvas = document.createElement('canvas');
+  canvas.width = TILE_SIZE * 4;
+  canvas.height = TILE_SIZE * 2;
+  const ctx = canvas.getContext('2d')!;
+
+  const directions = ['down', 'up', 'left', 'right'];
+  directions.forEach((dir, dirIndex) => {
+    for (let frame = 0; frame < 2; frame++) {
+      ctx.save();
+      ctx.translate(dirIndex * TILE_SIZE, frame * TILE_SIZE);
+
+      // Water/wave base
+      ctx.fillStyle = '#58a8f8';
+      ctx.fillRect(1, 10, 14, 6);
+      ctx.fillStyle = '#78c0f8';
+      ctx.fillRect(2, 11, 12, 4);
+      // Wave detail
+      ctx.fillStyle = '#3890f8';
+      const wo = frame * 2;
+      ctx.fillRect(1 + wo, 14, 3, 1);
+      ctx.fillRect(8 + wo, 13, 3, 1);
+
+      // Lapras body (blue-gray)
+      ctx.fillStyle = '#5090b0';
+      ctx.fillRect(3, 6, 10, 6);
+      ctx.fillStyle = '#60a0c0';
+      ctx.fillRect(4, 7, 8, 4);
+
+      // Player on top (small)
+      ctx.fillStyle = '#e03030'; // Hat
+      ctx.fillRect(5, 1, 6, 2);
+      ctx.fillStyle = '#f8c888'; // Face
+      ctx.fillRect(6, 3, 4, 3);
+      ctx.fillStyle = '#3030a0'; // Shirt
+      ctx.fillRect(6, 6, 4, 2);
+
+      if (dir === 'down') {
+        ctx.fillStyle = '#302020';
+        ctx.fillRect(6, 4, 1, 1);
+        ctx.fillRect(9, 4, 1, 1);
+      }
+
+      ctx.restore();
+    }
+  });
+
+  addCanvasSpriteSheet(scene, 'player_surf', canvas, TILE_SIZE, TILE_SIZE);
+}
+
+export function generateOakPortrait(scene: Phaser.Scene): void {
+  // 32x40 portrait of Professor Oak for the intro sequence
+  const w = 32, h = 40;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+
+  // Hair (gray-brown)
+  ctx.fillStyle = '#908070';
+  ctx.fillRect(9, 2, 14, 6);
+  ctx.fillRect(8, 3, 16, 4);
+  ctx.fillRect(7, 5, 18, 3);
+
+  // Face
+  ctx.fillStyle = '#f8c888';
+  ctx.fillRect(10, 7, 12, 10);
+  ctx.fillRect(9, 8, 14, 8);
+
+  // Eyes
+  ctx.fillStyle = '#302020';
+  ctx.fillRect(12, 10, 3, 3);
+  ctx.fillRect(18, 10, 3, 3);
+  // Eye whites
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fillRect(12, 10, 2, 2);
+  ctx.fillRect(18, 10, 2, 2);
+  // Pupils
+  ctx.fillStyle = '#302020';
+  ctx.fillRect(13, 11, 1, 1);
+  ctx.fillRect(19, 11, 1, 1);
+
+  // Mouth
+  ctx.fillStyle = '#c08060';
+  ctx.fillRect(14, 14, 4, 1);
+
+  // Lab coat (white)
+  ctx.fillStyle = '#f0f0f0';
+  ctx.fillRect(7, 17, 18, 16);
+  ctx.fillRect(5, 18, 22, 14);
+  ctx.fillRect(4, 20, 24, 12);
+
+  // Lab coat collar/lapels
+  ctx.fillStyle = '#d8d8d8';
+  ctx.fillRect(11, 17, 2, 4);
+  ctx.fillRect(19, 17, 2, 4);
+
+  // Shirt underneath (dark red/brown)
+  ctx.fillStyle = '#a06040';
+  ctx.fillRect(13, 17, 6, 5);
+
+  // Coat buttons
+  ctx.fillStyle = '#d0d0d0';
+  ctx.fillRect(15, 24, 2, 2);
+  ctx.fillRect(15, 28, 2, 2);
+
+  // Coat outline
+  ctx.strokeStyle = '#808080';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(5.5, 17.5, 21, 15);
+
+  scene.textures.addCanvas('oak_portrait', canvas);
+}
+
+export function generateNidorinoPortrait(scene: Phaser.Scene): void {
+  // 24x24 Nidorino silhouette for intro
+  const w = 24, h = 24;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+
+  // Purple body
+  ctx.fillStyle = '#a060c0';
+  ctx.fillRect(6, 10, 14, 8);
+  ctx.fillRect(4, 12, 18, 5);
+
+  // Head
+  ctx.fillRect(14, 6, 8, 8);
+
+  // Horn
+  ctx.fillStyle = '#d0d0d0';
+  ctx.fillRect(19, 3, 2, 4);
+  ctx.fillRect(20, 2, 1, 2);
+
+  // Ear
+  ctx.fillStyle = '#a060c0';
+  ctx.fillRect(16, 4, 3, 3);
+
+  // Eye
+  ctx.fillStyle = '#e02020';
+  ctx.fillRect(18, 8, 2, 2);
+
+  // Legs
+  ctx.fillStyle = '#8050a0';
+  ctx.fillRect(6, 17, 3, 4);
+  ctx.fillRect(13, 17, 3, 4);
+  ctx.fillRect(17, 17, 3, 4);
+
+  // Tail
+  ctx.fillRect(2, 11, 5, 2);
+  ctx.fillRect(1, 10, 2, 2);
+
+  scene.textures.addCanvas('nidorino_portrait', canvas);
 }

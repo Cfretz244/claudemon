@@ -120,7 +120,7 @@ export const ELITE_FOUR: EliteFourMember[] = [
 
 export const CHAMPION = {
   id: 'champion_rival',
-  name: 'CHAMPION GARY',
+  name: 'CHAMPION {RIVAL}',
   title: 'POKeMON CHAMPION',
   team: [
     { speciesId: 18, level: 61 },  // Pidgeot
@@ -133,7 +133,7 @@ export const CHAMPION = {
   prizeMoney: 6435,
   dialogue: {
     before: [
-      "RIVAL: Hey! I was\nwaiting for you!",
+      "{RIVAL}: Hey! I was\nwaiting for you!",
       "My POKeMON and I\nhave grown stronger!",
       "I'm the POKeMON\nLEAGUE CHAMPION!",
       "Do you know what\nthat means?",

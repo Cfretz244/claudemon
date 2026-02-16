@@ -9,6 +9,7 @@ function fill2D<V>(w: number, h: number, v: V): V[][] {
 
 const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
+  T.CUT_TREE, T.BOULDER,
 ]);
 
 // ─── ROUTE 12 ──────────────────────────────────────────────────────────────────
@@ -428,7 +429,19 @@ export const ROUTE16: MapData = (() => {
       // South exit to Route 17
       { x: 7, y: 19, targetMap: 'route17', targetX: 7, targetY: 1 },
     ],
-    npcs: [],
+    npcs: [
+      {
+        id: 'snorlax_route16',
+        x: 3, y: 8,
+        spriteColor: 0x304060,
+        direction: Direction.DOWN,
+        dialogue: [
+          "A huge POKeMON is\nblocking the path!",
+          "It's sleeping soundly...",
+          'Zzz... Zzz...',
+        ],
+      },
+    ],
     wildEncounters: {
       grassRate: 0.15,
       encounters: [

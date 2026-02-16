@@ -3,7 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { SaveSystem } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
 
-type TitleState = 'menu' | 'name_player' | 'name_rival';
+type TitleState = 'menu' | 'name_player' | 'name_rival' | 'oak_intro';
 
 const NAME_OPTIONS_PLAYER = ['RED', 'ASH', 'JACK'];
 const NAME_OPTIONS_RIVAL = ['BLUE', 'GARY', 'JOHN'];
@@ -33,6 +33,12 @@ export class TitleScene extends Phaser.Scene {
   private namePresetCursor!: Phaser.GameObjects.Text;
   private nameSelectedPreset = 0;
   private namingMode: 'preset' | 'custom' = 'preset';
+
+  // Oak intro state
+  private introContainer!: Phaser.GameObjects.Container;
+  private introPages: string[] = [];
+  private introPageIndex = 0;
+  private introText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'TitleScene' });
@@ -122,6 +128,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private handleNav(dir: string): void {
+    if (this.state === 'oak_intro') return;
     if (this.state === 'menu') {
       if (dir === 'up') {
         this.selectedOption = Math.max(0, this.selectedOption - 1);
@@ -152,6 +159,10 @@ export class TitleScene extends Phaser.Scene {
 
   private handleConfirm(): void {
     soundSystem.menuSelect();
+    if (this.state === 'oak_intro') {
+      this.advanceIntro();
+      return;
+    }
     if (this.state === 'menu') {
       this.selectOption();
     } else if (this.state === 'name_player' || this.state === 'name_rival') {
@@ -375,7 +386,76 @@ export class TitleScene extends Phaser.Scene {
     } else if (this.state === 'name_rival') {
       this.rivalName = this.currentName;
       this.namingContainer.setVisible(false);
-      // Start the game
+      this.showOakIntro();
+    }
+  }
+
+  private introNidorino: Phaser.GameObjects.Image | null = null;
+
+  private showOakIntro(): void {
+    this.state = 'oak_intro';
+    // Pages: first few are Oak talking, page 2 shows Nidorino alongside
+    this.introPages = [
+      'Hello there!\nWelcome to the world\nof POKeMON!',
+      "My name is OAK!\nPeople call me the\nPOKeMON PROF!",
+      'This world is\ninhab\u00ADited by creatures\ncalled POKeMON!',  // Nidorino appears here
+      'For some people,\nPOKeMON are pets.\nOthers use them\nfor fights.',
+      'Myself... I study\nPOKeMON as a\nprofession.',
+      `${this.playerName}!\nYour very own\nPOKeMON legend is\nabout to unfold!`,
+      'A world of dreams\nand adventures with\nPOKeMON awaits!\nLet\'s go!',
+    ];
+    this.introPageIndex = 0;
+
+    this.introContainer = this.add.container(0, 0);
+    this.introContainer.setDepth(200);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000);
+    bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.introContainer.add(bg);
+
+    // Oak portrait sprite
+    const oakPortrait = this.add.image(GAME_WIDTH / 2, 30, 'oak_portrait');
+    oakPortrait.setOrigin(0.5, 0);
+    oakPortrait.setScale(2);
+    this.introContainer.add(oakPortrait);
+
+    // Nidorino - hidden initially, appears on page 2
+    this.introNidorino = this.add.image(GAME_WIDTH / 2 + 40, 55, 'nidorino_portrait');
+    this.introNidorino.setScale(1.5);
+    this.introNidorino.setAlpha(0);
+    this.introContainer.add(this.introNidorino);
+
+    this.introText = this.add.text(GAME_WIDTH / 2, 115, this.introPages[0], {
+      fontSize: '8px',
+      color: '#f8f8f8',
+      fontFamily: 'monospace',
+      align: 'center',
+      wordWrap: { width: GAME_WIDTH - 20 },
+    }).setOrigin(0.5, 0);
+    this.introContainer.add(this.introText);
+
+    // Prompt arrow
+    const arrow = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 12, 'v', {
+      fontSize: '8px',
+      color: '#f8f8f8',
+      fontFamily: 'monospace',
+    }).setOrigin(0.5);
+    this.tweens.add({
+      targets: arrow,
+      y: GAME_HEIGHT - 8,
+      duration: 400,
+      yoyo: true,
+      repeat: -1,
+    });
+    this.introContainer.add(arrow);
+  }
+
+  private advanceIntro(): void {
+    this.introPageIndex++;
+    if (this.introPageIndex >= this.introPages.length) {
+      // Done with intro - start the game
+      this.introContainer.destroy();
       soundSystem.stopMusic();
       this.scene.start('OverworldScene', {
         mapId: 'player_house',
@@ -385,6 +465,26 @@ export class TitleScene extends Phaser.Scene {
         playerName: this.playerName,
         rivalName: this.rivalName,
       });
+    } else {
+      this.introText.setText(this.introPages[this.introPageIndex]);
+      soundSystem.menuSelect();
+
+      // Show Nidorino on page 2 (index 2), hide after page 3 (index 4+)
+      if (this.introNidorino) {
+        if (this.introPageIndex === 2) {
+          this.tweens.add({
+            targets: this.introNidorino,
+            alpha: 1,
+            duration: 300,
+          });
+        } else if (this.introPageIndex === 4) {
+          this.tweens.add({
+            targets: this.introNidorino,
+            alpha: 0,
+            duration: 300,
+          });
+        }
+      }
     }
   }
 }

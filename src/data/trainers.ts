@@ -982,6 +982,19 @@ export const TRAINERS: Record<string, TrainerData> = {
   },
 
   // Rival encounters
+  rival_lab: {
+    id: 'rival_lab',
+    name: 'RIVAL',
+    class: 'Rival',
+    team: [
+      { speciesId: 133, level: 5 }, // Eevee
+    ],
+    prizeMoney: 175,
+    dialogue: {
+      before: ["{RIVAL}: Hey!\nGramps gave me a\nPOKeMON too!", "I'll show you how\na real trainer\nbattles!"],
+      after: ["{RIVAL}: What?!\nUnbelievable!\nI picked the wrong\nPOKeMON!"],
+    },
+  },
   rival_route22: {
     id: 'rival_route22',
     name: 'RIVAL GARY',
@@ -992,8 +1005,195 @@ export const TRAINERS: Record<string, TrainerData> = {
     ],
     prizeMoney: 280,
     dialogue: {
-      before: ["RIVAL: Hey! You're\ngoing to the LEAGUE?", "Not before me!"],
+      before: ["{RIVAL}: Hey! You're\ngoing to the LEAGUE?", "Not before me!"],
       after: ['What?! I lost?!\nI\'ll beat you next\ntime!'],
+    },
+  },
+  rival_ss_anne: {
+    id: 'rival_ss_anne',
+    name: 'RIVAL',
+    class: 'Rival',
+    team: [
+      { speciesId: 21, level: 19 },  // Spearow
+      { speciesId: 27, level: 16 },  // Sandshrew
+      { speciesId: 133, level: 20 }, // Eevee
+    ],
+    prizeMoney: 700,
+    dialogue: {
+      before: ["{RIVAL}: Well, well!\nIf it isn't {PLAYER}!", "Boarded the S.S. ANNE\ntoo, huh?", "Let's see how much\nyou've improved!"],
+      after: ["{RIVAL}: Hmph! You\njust got lucky!", "I'll be stronger\nnext time!"],
+    },
+  },
+  rival_tower: {
+    id: 'rival_tower',
+    name: 'RIVAL',
+    class: 'Rival',
+    team: [
+      { speciesId: 22, level: 25 },  // Fearow
+      { speciesId: 90, level: 23 },  // Shellder
+      { speciesId: 28, level: 23 },  // Sandslash
+      { speciesId: 136, level: 25 }, // Flareon
+    ],
+    prizeMoney: 875,
+    dialogue: {
+      before: ["{RIVAL}: {PLAYER}!\nWhat are you doing\nhere?", "I was just checking\non the ghosts!", "Since you're here,\nlet's battle!"],
+      after: ["{RIVAL}: Grr...\nI'm still not strong\nenough!", "I heard ghosts are\ncausing trouble\nupstairs..."],
+    },
+  },
+  rival_silph: {
+    id: 'rival_silph',
+    name: 'RIVAL',
+    class: 'Rival',
+    team: [
+      { speciesId: 22, level: 37 },  // Fearow
+      { speciesId: 28, level: 35 },  // Sandslash
+      { speciesId: 91, level: 35 },  // Cloyster
+      { speciesId: 65, level: 35 },  // Alakazam
+      { speciesId: 136, level: 40 }, // Flareon
+    ],
+    prizeMoney: 1400,
+    dialogue: {
+      before: ["{RIVAL}: {PLAYER}!\nWhat a surprise!", "TEAM ROCKET is all\nover SILPH CO.!", "But first, let's\nhave a battle!"],
+      after: ["{RIVAL}: You always\nmanage to beat me!", "Go on, take down\nTEAM ROCKET!"],
+    },
+  },
+  rival_route22_2: {
+    id: 'rival_route22_2',
+    name: 'RIVAL',
+    class: 'Rival',
+    team: [
+      { speciesId: 22, level: 47 },  // Fearow
+      { speciesId: 28, level: 45 },  // Sandslash
+      { speciesId: 91, level: 45 },  // Cloyster
+      { speciesId: 65, level: 45 },  // Alakazam
+      { speciesId: 112, level: 45 }, // Rhydon
+      { speciesId: 136, level: 47 }, // Flareon
+    ],
+    prizeMoney: 1645,
+    dialogue: {
+      before: ["{RIVAL}: {PLAYER}!\nYou're headed to the\nPOKeMON LEAGUE too?", "I've trained my\nPOKeMON to be the\nvery best!", "This time I WILL\nbeat you!"],
+      after: ["{RIVAL}: Ugh! I can't\nbelieve I lost again!", "Fine, go beat the\nELITE FOUR!", "But I'll catch up\nsoon!"],
+    },
+  },
+
+  // Game Corner Rockets
+  game_corner_rocket1: {
+    id: 'game_corner_rocket1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 19, level: 20 },  // Rattata
+      { speciesId: 41, level: 20 },  // Zubat
+    ],
+    prizeMoney: 800,
+    dialogue: {
+      before: ['ROCKET: You found\nour secret hideout!', 'No one leaves alive!'],
+      after: ['How did you beat me?!'],
+    },
+  },
+  game_corner_rocket2: {
+    id: 'game_corner_rocket2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 23, level: 21 },  // Ekans
+      { speciesId: 27, level: 21 },  // Sandshrew
+    ],
+    prizeMoney: 840,
+    dialogue: {
+      before: ['ROCKET: Stop right\nthere, kid!'],
+      after: ['I need backup!'],
+    },
+  },
+  giovanni_game_corner: {
+    id: 'giovanni_game_corner',
+    name: 'GIOVANNI',
+    class: 'Boss',
+    team: [
+      { speciesId: 95, level: 25 },  // Onix
+      { speciesId: 111, level: 24 }, // Rhyhorn
+      { speciesId: 31, level: 29 },  // Nidoqueen
+    ],
+    prizeMoney: 2871,
+    dialogue: {
+      before: ['GIOVANNI: So, you\nhave found me!', "I am the leader of\nTEAM ROCKET!", "I shall not allow\nyou to disrupt our\nplans!"],
+      after: ["Blast! You are\ntougher than I\nthought!", "Fine, take this\nSILPH SCOPE!", "But TEAM ROCKET\nwill rise again!"],
+    },
+  },
+
+  // Pokemon Tower Rockets
+  tower_rocket1: {
+    id: 'tower_rocket1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 41, level: 25 },  // Zubat
+      { speciesId: 42, level: 25 },  // Golbat
+    ],
+    prizeMoney: 1000,
+    dialogue: {
+      before: ['ROCKET: You again?!\nTEAM ROCKET owns\nthis tower!'],
+      after: ['TEAM ROCKET will\nremember this!'],
+    },
+  },
+  tower_rocket2: {
+    id: 'tower_rocket2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 109, level: 26 }, // Koffing
+      { speciesId: 24, level: 26 },  // Arbok
+    ],
+    prizeMoney: 1040,
+    dialogue: {
+      before: ['ROCKET: You want to\nsave MR. FUJI?', "You'll have to get\nthrough me first!"],
+      after: ['I can\'t believe I\nlost to a kid!'],
+    },
+  },
+
+  // Silph Co Rockets + Giovanni
+  silph_rocket1: {
+    id: 'silph_rocket1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 24, level: 33 },  // Arbok
+      { speciesId: 97, level: 33 },  // Hypno
+    ],
+    prizeMoney: 1320,
+    dialogue: {
+      before: ['ROCKET: SILPH CO. is\nunder our control!'],
+      after: ['How are you this\nstrong?!'],
+    },
+  },
+  silph_rocket2: {
+    id: 'silph_rocket2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 110, level: 34 }, // Weezing
+      { speciesId: 89, level: 34 },  // Muk
+    ],
+    prizeMoney: 1360,
+    dialogue: {
+      before: ['ROCKET: No one gets\npast me!'],
+      after: ['The boss won\'t be\nhappy about this...'],
+    },
+  },
+  giovanni_silph: {
+    id: 'giovanni_silph',
+    name: 'GIOVANNI',
+    class: 'Boss',
+    team: [
+      { speciesId: 34, level: 37 },  // Nidoking
+      { speciesId: 112, level: 37 }, // Rhydon
+      { speciesId: 31, level: 41 },  // Nidoqueen
+      { speciesId: 111, level: 37 }, // Rhyhorn
+    ],
+    prizeMoney: 4059,
+    dialogue: {
+      before: ["GIOVANNI: Ah, the\nchild from the GAME\nCORNER!", "You have interfered\nwith TEAM ROCKET\nfor the last time!", "Prepare to feel my\nwrath!"],
+      after: ["GIOVANNI: ...I see.\nYou are truly\nformidable.", "I will disband\nTEAM ROCKET here!", "But remember my\nname... GIOVANNI!"],
     },
   },
 };

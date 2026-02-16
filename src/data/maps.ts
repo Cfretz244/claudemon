@@ -16,6 +16,7 @@ function fill2D<V>(width: number, height: number, value: V): V[][] {
 // Collision lookup: which tiles block movement
 export const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
+  T.CUT_TREE, T.BOULDER,
 ]);
 
 export const PALLET_TOWN: MapData = (() => {
@@ -923,6 +924,17 @@ export const PEWTER_CITY: MapData = (() => {
         dialogue: [
           "BROCK is PEWTER GYM's\nleader!",
           "He uses ROCK-type\nPOKeMON!",
+        ],
+      },
+      {
+        id: 'pewter_guide',
+        x: 21, y: 12,
+        spriteColor: 0xe0c060,
+        direction: Direction.LEFT,
+        dialogue: [
+          "Hey! You're not going\nto ROUTE 3 without",
+          "going to the GYM,\nare you?",
+          "You should challenge\nBROCK first!",
         ],
       },
     ],
