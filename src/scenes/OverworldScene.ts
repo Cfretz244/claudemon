@@ -7,6 +7,7 @@ import { PokedexScreen } from '../components/PokedexScreen';
 import { PartyScreen } from '../components/PartyScreen';
 import { BagScreen } from '../components/BagScreen';
 import { ShopScreen } from '../components/ShopScreen';
+import { PCScreen } from '../components/PCScreen';
 import { generateNPCSprite } from '../utils/spriteGenerator';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
@@ -74,6 +75,12 @@ export class OverworldScene extends Phaser.Scene {
   private partyScreen!: PartyScreen;
   private bagScreen!: BagScreen;
   private shopScreen!: ShopScreen;
+  private pcScreen!: PCScreen;
+
+  // Healing machine (permanent in Pokemon Centers)
+  private healMachineGfx: Phaser.GameObjects.Graphics | null = null;
+  private healMachineLightGfx: Phaser.GameObjects.Graphics | null = null;
+  private healMachinePos: { tileX: number; tileY: number; px: number; py: number } | null = null;
 
   // Game state
   private playerState!: PlayerState;
@@ -142,6 +149,9 @@ export class OverworldScene extends Phaser.Scene {
     // Create NPCs
     this.createNPCs();
 
+    // Draw healing machine if this map has a nurse
+    this.drawHealingMachine();
+
     // Camera
     this.cameras.main.startFollow(this.player, true);
     this.cameras.main.setBounds(
@@ -166,6 +176,7 @@ export class OverworldScene extends Phaser.Scene {
     this.partyScreen = new PartyScreen(this);
     this.bagScreen = new BagScreen(this);
     this.shopScreen = new ShopScreen(this);
+    this.pcScreen = new PCScreen(this);
 
     // Start map music
     const musicId = getMusicForMap(this.currentMap);
@@ -664,6 +675,17 @@ export class OverworldScene extends Phaser.Scene {
     const tileType = this.currentMap.tiles[targetY]?.[targetX];
     if (tileType === TileType.SIGN) {
       this.readSign(targetX, targetY);
+      return;
+    }
+
+    if (tileType === TileType.PC) {
+      this.textBox.show(['Turned on the PC.'], () => {
+        this.screenOpen = true;
+        this.pcScreen.show(this.playerState, () => {
+          this.screenOpen = false;
+        });
+      });
+      return;
     }
 
     // Check for Pikachu interaction
@@ -690,20 +712,11 @@ export class OverworldScene extends Phaser.Scene {
 
     // Special NPC handling - all nurses heal
     if (npc.id.startsWith('nurse')) {
-      this.textBox.show(npc.dialogue, () => {
-        // Heal all Pokemon
-        soundSystem.heal();
-        for (const pokemon of this.playerState.party) {
-          pokemon.currentHp = pokemon.stats.hp;
-          pokemon.status = StatusCondition.NONE;
-          for (const move of pokemon.moves) {
-            move.currentPp = move.maxPp;
-          }
-        }
-        // Record this as last heal location (the Pokemon Center entrance)
-        this.playerState.lastHealMap = this.currentMap.id;
-        this.playerState.lastHealX = this.playerGridX;
-        this.playerState.lastHealY = this.playerGridY;
+      // Show greeting dialogue, then run the animated heal sequence
+      const greetDialogue = npc.dialogue.slice(0, -1); // All but the "restored" line
+      const restoreMsg = npc.dialogue[npc.dialogue.length - 1] || 'Your POKeMON have been\nfully restored!';
+      this.textBox.show(greetDialogue.length > 0 ? greetDialogue : ['Let me heal your\nPOKeMON!'], () => {
+        this.runHealAnimation(npc, restoreMsg);
       });
       return;
     }
@@ -898,6 +911,239 @@ export class OverworldScene extends Phaser.Scene {
       this.playerState.pokedexCaught,
       () => { this.screenOpen = false; }
     );
+  }
+
+  private drawHealingMachine(): void {
+    // Clean up from previous map
+    this.healMachineGfx?.destroy();
+    this.healMachineLightGfx?.destroy();
+    this.healMachineGfx = null;
+    this.healMachineLightGfx = null;
+    this.healMachinePos = null;
+
+    // Find nurse NPC
+    const nurse = this.currentMap.npcs.find(n => n.id.startsWith('nurse'));
+    if (!nurse) return;
+
+    // Machine sits one tile to nurse's right (west / -x direction from player's perspective: left)
+    const machTileX = nurse.x - 1;
+    const machTileY = nurse.y;
+    const px = machTileX * TILE_SIZE;
+    const py = machTileY * TILE_SIZE;
+
+    this.healMachinePos = { tileX: machTileX, tileY: machTileY, px, py };
+
+    // Draw machine on the counter tile
+    this.healMachineGfx = this.add.graphics();
+    this.healMachineGfx.setDepth(5);
+
+    // Machine body — metallic gray
+    this.healMachineGfx.fillStyle(0x607068, 1);
+    this.healMachineGfx.fillRoundedRect(px + 1, py + 1, 14, 12, 2);
+    this.healMachineGfx.lineStyle(1, 0x404848, 1);
+    this.healMachineGfx.strokeRoundedRect(px + 1, py + 1, 14, 12, 2);
+
+    // Tray/platform surface — lighter where pokeballs sit
+    this.healMachineGfx.fillStyle(0x8898a0, 1);
+    this.healMachineGfx.fillRect(px + 3, py + 7, 10, 3);
+
+    // Status light (off by default)
+    this.healMachineGfx.fillStyle(0x505050, 1);
+    this.healMachineGfx.fillCircle(px + 12, py + 4, 1.5);
+
+    // Separate graphics for the status light so it can flash independently
+    this.healMachineLightGfx = this.add.graphics();
+    this.healMachineLightGfx.setDepth(6);
+  }
+
+  private runHealAnimation(_npc: NPCData, restoreMsg: string): void {
+    this.isWarping = true; // Block all input during animation
+
+    const partyCount = Math.min(this.playerState.party.length, 6);
+    const hasPikachu = this.pikachuVisible;
+
+    // Save Pikachu state for return trip
+    const pikachuStartX = this.pikachu.x;
+    const pikachuStartY = this.pikachu.y;
+    const pikachuStartGridX = this.pikachuGridX;
+    const pikachuStartGridY = this.pikachuGridY;
+
+    // Machine position (permanent fixture drawn by drawHealingMachine)
+    const mach = this.healMachinePos!;
+    const machineCenterX = mach.px + TILE_SIZE / 2;
+    const trayY = mach.py + 9; // matches the tray surface in drawHealingMachine
+    const lightX = mach.px + 12;
+    const lightY = mach.py + 4;
+
+    // Pokeball positions on the machine tray
+    const trayLeft = mach.px + 3;
+    const trayWidth = 10; // matches tray rect width in drawHealingMachine
+    const ballScale = 0.5;
+    const ballSpacing = trayWidth / (partyCount + 1);
+    const ballPositions: { x: number; y: number }[] = [];
+    for (let i = 0; i < partyCount; i++) {
+      ballPositions.push({
+        x: trayLeft + ballSpacing * (i + 1),
+        y: trayY,
+      });
+    }
+
+    let pikaBall: Phaser.GameObjects.Image | null = null;
+    const ballSprites: Phaser.GameObjects.Image[] = [];
+    let step = 0;
+
+    const nextStep = () => {
+      step++;
+
+      if (step === 1 && hasPikachu) {
+        // Pikachu hops to the machine, then becomes a pokeball
+        soundSystem.pokemonCry(800);
+        this.pikachu.setDepth(11);
+
+        this.tweens.add({
+          targets: this.pikachu,
+          x: machineCenterX,
+          duration: 400,
+          ease: 'Quad.easeOut',
+          onUpdate: (_tween) => {
+            const progress = _tween.progress;
+            const arc = Math.sin(progress * Math.PI) * -14;
+            this.pikachu.y = Phaser.Math.Linear(pikachuStartY, trayY, progress) + arc;
+          },
+          onComplete: () => {
+            this.pikachu.setVisible(false);
+            pikaBall = this.add.image(machineCenterX, trayY, 'pokeball_icon');
+            pikaBall.setDepth(7);
+            pikaBall.setScale(ballScale);
+            soundSystem.healBallDing();
+            this.time.delayedCall(300, nextStep);
+          },
+        });
+      } else if (step === 1 && !hasPikachu) {
+        nextStep();
+      } else if (step === 2) {
+        // Pokeballs appear one by one on the machine tray
+        let ballIndex = 0;
+        const placeBall = () => {
+          if (ballIndex >= partyCount) {
+            this.time.delayedCall(300, nextStep);
+            return;
+          }
+          const pos = ballPositions[ballIndex];
+          if (pos) {
+            const ball = this.add.image(pos.x, pos.y, 'pokeball_icon');
+            ball.setDepth(7);
+            ball.setScale(0);
+            ballSprites.push(ball);
+            soundSystem.healBallDing();
+            this.tweens.add({
+              targets: ball,
+              scale: ballScale,
+              duration: 150,
+              ease: 'Back.easeOut',
+              onComplete: () => {
+                ballIndex++;
+                this.time.delayedCall(180, placeBall);
+              },
+            });
+          } else {
+            ballIndex++;
+            placeBall();
+          }
+        };
+        placeBall();
+      } else if (step === 3) {
+        // Machine processing — status light blinks green, balls pulse
+        soundSystem.healMachineHum();
+        let flashes = 0;
+        const allBalls = pikaBall ? [pikaBall, ...ballSprites] : [...ballSprites];
+        const flashBalls = () => {
+          if (flashes >= 6) {
+            this.healMachineLightGfx?.clear();
+            for (const b of allBalls) b.setAlpha(1);
+            this.time.delayedCall(150, nextStep);
+            return;
+          }
+          const on = flashes % 2 === 0;
+          this.healMachineLightGfx?.clear();
+          this.healMachineLightGfx?.fillStyle(on ? 0x40e040 : 0x505050, 1);
+          this.healMachineLightGfx?.fillCircle(lightX, lightY, 1.5);
+          for (const b of allBalls) b.setAlpha(on ? 1 : 0.4);
+          flashes++;
+          this.time.delayedCall(180, flashBalls);
+        };
+        flashBalls();
+      } else if (step === 4) {
+        // Heal jingle + restore Pokemon — light stays green
+        this.healMachineLightGfx?.clear();
+        this.healMachineLightGfx?.fillStyle(0x40e040, 1);
+        this.healMachineLightGfx?.fillCircle(lightX, lightY, 1.5);
+        soundSystem.heal();
+
+        for (const pokemon of this.playerState.party) {
+          pokemon.currentHp = pokemon.stats.hp;
+          pokemon.status = StatusCondition.NONE;
+          for (const move of pokemon.moves) {
+            move.currentPp = move.maxPp;
+          }
+        }
+        this.playerState.lastHealMap = this.currentMap.id;
+        this.playerState.lastHealX = this.playerGridX;
+        this.playerState.lastHealY = this.playerGridY;
+
+        this.time.delayedCall(800, nextStep);
+      } else if (step === 5) {
+        // Remove pokeballs from machine
+        const allBalls = pikaBall ? [...ballSprites, pikaBall] : [...ballSprites];
+        for (const ball of allBalls) {
+          this.tweens.add({
+            targets: ball,
+            alpha: 0,
+            scale: 0,
+            duration: 200,
+          });
+        }
+        this.time.delayedCall(300, () => {
+          for (const ball of ballSprites) ball.destroy();
+          if (pikaBall) { pikaBall.destroy(); pikaBall = null; }
+          nextStep();
+        });
+      } else if (step === 6 && hasPikachu) {
+        // Pikachu reappears on the machine and hops back
+        this.pikachu.setVisible(true);
+        this.pikachu.x = machineCenterX;
+        this.pikachu.y = trayY;
+
+        const startY = trayY;
+        this.tweens.add({
+          targets: this.pikachu,
+          x: pikachuStartX,
+          duration: 400,
+          ease: 'Quad.easeOut',
+          onUpdate: (_tween) => {
+            const progress = _tween.progress;
+            const arc = Math.sin(progress * Math.PI) * -14;
+            this.pikachu.y = Phaser.Math.Linear(startY, pikachuStartY, progress) + arc;
+          },
+          onComplete: () => {
+            this.pikachu.setDepth(9);
+            this.pikachu.y = pikachuStartY;
+            this.pikachuGridX = pikachuStartGridX;
+            this.pikachuGridY = pikachuStartGridY;
+            this.pikachu.play(`pikachu_idle_${this.pikachuDirection}`, true);
+            soundSystem.pokemonCry(800);
+            this.time.delayedCall(300, nextStep);
+          },
+        });
+      } else if ((step === 6 && !hasPikachu) || step === 7) {
+        // Turn off status light and show final message
+        this.healMachineLightGfx?.clear();
+        this.isWarping = false;
+        this.textBox.show([restoreMsg]);
+      }
+    };
+
+    nextStep();
   }
 
   private showShopMenu(npc: NPCData): void {

@@ -620,10 +620,13 @@ export const POKEMON_CENTER_CINNABAR: MapData = (() => {
     setTile(W - 1, y, T.WALL);
   }
 
-  // Nurse counter
+  // Nurse counter — enclosed bar with side returns
+  setTile(3, 2, T.COUNTER);
   setTile(4, 2, T.COUNTER);
   setTile(5, 2, T.COUNTER);
   setTile(6, 2, T.COUNTER);
+  setTile(3, 3, T.COUNTER);
+  setTile(6, 3, T.COUNTER);
 
   // PC
   setTile(8, 2, T.PC);
@@ -1188,10 +1191,13 @@ export const POKEMON_CENTER_INDIGO: MapData = (() => {
     setTile(W - 1, y, T.WALL);
   }
 
-  // Nurse counter
+  // Nurse counter — enclosed bar with side returns
+  setTile(3, 2, T.COUNTER);
   setTile(4, 2, T.COUNTER);
   setTile(5, 2, T.COUNTER);
   setTile(6, 2, T.COUNTER);
+  setTile(3, 3, T.COUNTER);
+  setTile(6, 3, T.COUNTER);
 
   // Mart counter (right side)
   setTile(1, 4, T.COUNTER);

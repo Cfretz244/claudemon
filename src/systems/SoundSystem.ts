@@ -317,6 +317,19 @@ export class SoundSystem {
     this.playNotes(notes, 'square', 0.1);
   }
 
+  healBallDing(): void {
+    this.playTone(1200, 0.08, 'triangle', 0.07);
+  }
+
+  healMachineHum(): void {
+    this.playNotes([
+      { freq: 200, dur: 0.15, delay: 0 },
+      { freq: 250, dur: 0.15, delay: 0.15 },
+      { freq: 200, dur: 0.15, delay: 0.3 },
+      { freq: 250, dur: 0.15, delay: 0.45 },
+    ], 'triangle', 0.05);
+  }
+
   heal(): void {
     this.playNotes([
       { freq: 440, dur: 0.15, delay: 0 },

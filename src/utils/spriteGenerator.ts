@@ -465,3 +465,31 @@ export function generatePikachuFollowerSprite(scene: Phaser.Scene): void {
 
   addCanvasSpriteSheet(scene, 'pikachu_follower', canvas, TILE_SIZE, TILE_SIZE);
 }
+
+export function generatePokeballSprite(scene: Phaser.Scene): void {
+  const size = 8;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  // Red top half
+  ctx.fillStyle = '#e03030';
+  ctx.fillRect(1, 0, 6, 4);
+  ctx.fillRect(0, 1, 8, 3);
+
+  // White bottom half
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fillRect(1, 4, 6, 4);
+  ctx.fillRect(0, 4, 8, 3);
+
+  // Black dividing line
+  ctx.fillStyle = '#202020';
+  ctx.fillRect(0, 3, 8, 2);
+
+  // Center button
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fillRect(3, 3, 2, 2);
+
+  scene.textures.addCanvas('pokeball_icon', canvas);
+}

@@ -8,6 +8,7 @@ export class PlayerState {
   party: PokemonInstance[];
   pc: PokemonInstance[];
   bag: Record<string, number>;
+  pcItems: Record<string, number>;
   money: number;
   badges: string[];
   defeatedTrainers: string[];
@@ -25,6 +26,7 @@ export class PlayerState {
     this.party = [];
     this.pc = [];
     this.bag = { poke_ball: 5, potion: 3 };
+    this.pcItems = {};
     this.money = 3000;
     this.badges = [];
     this.defeatedTrainers = [];
@@ -44,6 +46,7 @@ export class PlayerState {
     state.party = save.party;
     state.pc = save.pc;
     state.bag = save.bag;
+    state.pcItems = save.pcItems || {};
     state.money = save.money;
     state.badges = save.badges;
     state.defeatedTrainers = save.defeatedTrainers;
@@ -67,6 +70,7 @@ export class PlayerState {
       party: this.party,
       pc: this.pc,
       bag: this.bag,
+      pcItems: this.pcItems,
       money: this.money,
       badges: this.badges,
       defeatedTrainers: this.defeatedTrainers,

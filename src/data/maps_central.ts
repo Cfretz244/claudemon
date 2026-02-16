@@ -221,8 +221,10 @@ export const POKEMON_CENTER_LAVENDER: MapData = (() => {
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
 
-  // Counter
-  fillRect(4, 2, 3, 1, T.COUNTER);
+  // Nurse counter — enclosed bar with side returns
+  fillRect(3, 2, 4, 1, T.COUNTER);
+  setTile(3, 3, T.COUNTER);
+  setTile(6, 3, T.COUNTER);
 
   // PC
   setTile(8, 2, T.PC);
@@ -697,8 +699,10 @@ export const POKEMON_CENTER_CELADON: MapData = (() => {
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
 
-  // Counter
-  fillRect(4, 2, 3, 1, T.COUNTER);
+  // Nurse counter — enclosed bar with side returns
+  fillRect(3, 2, 4, 1, T.COUNTER);
+  setTile(3, 3, T.COUNTER);
+  setTile(6, 3, T.COUNTER);
 
   // PC
   setTile(8, 2, T.PC);
@@ -947,8 +951,10 @@ export const POKEMON_CENTER_SAFFRON: MapData = (() => {
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
 
-  // Counter
-  fillRect(4, 2, 3, 1, T.COUNTER);
+  // Nurse counter — enclosed bar with side returns
+  fillRect(3, 2, 4, 1, T.COUNTER);
+  setTile(3, 3, T.COUNTER);
+  setTile(6, 3, T.COUNTER);
 
   // PC
   setTile(8, 2, T.PC);

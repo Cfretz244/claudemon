@@ -12,6 +12,7 @@ export interface SaveData {
   party: PokemonInstance[];
   pc: PokemonInstance[];
   bag: Record<string, number>;
+  pcItems: Record<string, number>;
   money: number;
   badges: string[];
   defeatedTrainers: string[];
@@ -68,6 +69,7 @@ export class SaveSystem {
         'poke_ball': 5,
         'potion': 3,
       },
+      pcItems: {},
       money: 3000,
       badges: [],
       defeatedTrainers: [],
