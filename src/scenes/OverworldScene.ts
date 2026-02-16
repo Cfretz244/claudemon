@@ -26,6 +26,7 @@ interface SceneData {
   playerName?: string;
   rivalName?: string;
   saveData?: SaveData;
+  introTransition?: boolean;
 }
 
 export class OverworldScene extends Phaser.Scene {
@@ -88,6 +89,9 @@ export class OverworldScene extends Phaser.Scene {
   private lastEncounterStep = 0;
   private isWarping = false;
 
+  // Intro transition
+  private introTransition = false;
+
   // HM field states
   private isSurfing = false;
   private darkOverlay: Phaser.GameObjects.Graphics | null = null;
@@ -100,6 +104,7 @@ export class OverworldScene extends Phaser.Scene {
   init(data: SceneData): void {
     this.isWarping = false;
     this.isMoving = false;
+    this.introTransition = data.introTransition || false;
     const mapId = data.mapId || 'pallet_town';
     this.currentMap = ALL_MAPS[mapId];
     this.playerGridX = data.playerX ?? 9;
@@ -183,13 +188,8 @@ export class OverworldScene extends Phaser.Scene {
     // Draw healing machine if this map has a nurse
     this.drawHealingMachine();
 
-    // Camera
+    // Camera - always keep player centered (no bounds, like original Game Boy)
     this.cameras.main.startFollow(this.player, true);
-    this.cameras.main.setBounds(
-      0, 0,
-      this.currentMap.width * TILE_SIZE,
-      this.currentMap.height * TILE_SIZE
-    );
     this.cameras.main.setDeadzone(0, 0);
 
     // Input
@@ -219,8 +219,26 @@ export class OverworldScene extends Phaser.Scene {
     // Restore cut trees from story flags
     this.restoreCutTrees();
 
-    // Show map name
-    this.showMapName(this.currentMap.name);
+    // Show map name (skip during intro transition)
+    if (!this.introTransition) {
+      this.showMapName(this.currentMap.name);
+    }
+
+    // Intro transition: black overlay fades out to reveal the map
+    if (this.introTransition) {
+      const overlay = this.add.graphics();
+      overlay.setScrollFactor(0);
+      overlay.setDepth(999);
+      overlay.fillStyle(0x000000);
+      overlay.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+      this.tweens.add({
+        targets: overlay,
+        alpha: 0,
+        duration: 600,
+        delay: 200,
+        onComplete: () => overlay.destroy(),
+      });
+    }
 
     // Action key handler
     this.actionKey.on('down', () => this.handleAction());
@@ -232,6 +250,22 @@ export class OverworldScene extends Phaser.Scene {
     });
   }
 
+  private isOutdoorMap(): boolean {
+    const map = this.currentMap;
+    const outdoorTiles = new Set([
+      TileType.TREE, TileType.GRASS, TileType.TALL_GRASS,
+      TileType.WATER, TileType.SAND, TileType.FLOWER,
+      TileType.BUILDING, TileType.FENCE,
+    ]);
+    // Check top and bottom edges for outdoor tile types
+    for (const y of [0, map.height - 1]) {
+      for (let x = 0; x < map.width; x++) {
+        if (outdoorTiles.has(map.tiles[y][x])) return true;
+      }
+    }
+    return false;
+  }
+
   private drawMap(): void {
     // Clear existing tiles
     for (const row of this.tileSprites) {
@@ -241,6 +275,7 @@ export class OverworldScene extends Phaser.Scene {
     }
     this.tileSprites = [];
 
+    // Draw main map tiles
     for (let y = 0; y < this.currentMap.height; y++) {
       const row: Phaser.GameObjects.Image[] = [];
       for (let x = 0; x < this.currentMap.width; x++) {
@@ -255,6 +290,30 @@ export class OverworldScene extends Phaser.Scene {
         row.push(sprite);
       }
       this.tileSprites.push(row);
+    }
+
+    // For outdoor maps, extend edge tiles beyond map bounds
+    // so the camera never shows black void
+    if (this.isOutdoorMap()) {
+      const pad = 6; // tiles of padding (covers half-screen in each direction)
+      const mw = this.currentMap.width;
+      const mh = this.currentMap.height;
+      for (let y = -pad; y < mh + pad; y++) {
+        for (let x = -pad; x < mw + pad; x++) {
+          // Skip tiles that are inside the map (already drawn)
+          if (x >= 0 && x < mw && y >= 0 && y < mh) continue;
+          // Clamp to nearest edge tile
+          const cx = Math.max(0, Math.min(mw - 1, x));
+          const cy = Math.max(0, Math.min(mh - 1, y));
+          const tileType = this.currentMap.tiles[cy][cx];
+          const sprite = this.add.image(
+            x * TILE_SIZE + TILE_SIZE / 2,
+            y * TILE_SIZE + TILE_SIZE / 2,
+            `tile_${tileType}`
+          );
+          sprite.setDepth(0);
+        }
+      }
     }
   }
 
@@ -523,6 +582,22 @@ export class OverworldScene extends Phaser.Scene {
         "He won't let you\nthrough!",
       ]);
       return;
+    }
+
+    // Route 21: water route requires Surf
+    if (mapId === 'route21' && !this.isSurfing) {
+      if (this.partyHasMove(57) && this.playerState.badges.includes('SOUL')) {
+        // Auto-start surfing and proceed with warp
+        this.isSurfing = true;
+        this.player.setTexture('player_surf', 0);
+        this.player.play(`surf_${this.playerDirection}`, true);
+      } else {
+        this.textBox.show([
+          "The sea stretches out\nbefore you...",
+          "You need a POKeMON\nthat knows SURF!",
+        ]);
+        return;
+      }
     }
 
     // SS Anne: need SS Ticket

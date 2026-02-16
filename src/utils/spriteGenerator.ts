@@ -750,3 +750,139 @@ export function generateNidorinoPortrait(scene: Phaser.Scene): void {
 
   scene.textures.addCanvas('nidorino_portrait', canvas);
 }
+
+export function generatePlayerPortrait(scene: Phaser.Scene): void {
+  // 32x40 detailed front-facing player portrait for intro shrink animation
+  const w = 32, h = 40;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+
+  // Red cap
+  ctx.fillStyle = '#e03030';
+  ctx.fillRect(9, 0, 14, 2);
+  ctx.fillRect(7, 2, 18, 3);
+  // White pokeball logo on cap
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fillRect(14, 1, 4, 2);
+  // Cap brim
+  ctx.fillStyle = '#c02020';
+  ctx.fillRect(5, 5, 22, 2);
+
+  // Hair (dark brown)
+  ctx.fillStyle = '#302020';
+  ctx.fillRect(6, 4, 3, 5);
+  ctx.fillRect(23, 4, 3, 5);
+
+  // Face
+  ctx.fillStyle = '#f8c888';
+  ctx.fillRect(9, 7, 14, 9);
+  ctx.fillRect(8, 8, 16, 7);
+  // Eyes
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fillRect(11, 10, 3, 3);
+  ctx.fillRect(18, 10, 3, 3);
+  ctx.fillStyle = '#302020';
+  ctx.fillRect(12, 11, 2, 2);
+  ctx.fillRect(19, 11, 2, 2);
+  // Nose
+  ctx.fillStyle = '#d8a878';
+  ctx.fillRect(15, 12, 2, 1);
+  // Mouth
+  ctx.fillStyle = '#c08060';
+  ctx.fillRect(13, 14, 6, 1);
+
+  // Blue jacket
+  ctx.fillStyle = '#3030a0';
+  ctx.fillRect(7, 16, 18, 14);
+  ctx.fillRect(5, 18, 22, 11);
+  ctx.fillRect(3, 20, 26, 8);
+  // Jacket lapels
+  ctx.fillStyle = '#202080';
+  ctx.fillRect(11, 16, 2, 5);
+  ctx.fillRect(19, 16, 2, 5);
+  // White shirt
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fillRect(13, 16, 6, 4);
+
+  // Hands
+  ctx.fillStyle = '#f8c888';
+  ctx.fillRect(3, 26, 3, 3);
+  ctx.fillRect(26, 26, 3, 3);
+
+  // Belt
+  ctx.fillStyle = '#302020';
+  ctx.fillRect(7, 29, 18, 2);
+  ctx.fillStyle = '#f8d030';
+  ctx.fillRect(14, 29, 4, 2);
+
+  // Jeans
+  ctx.fillStyle = '#3060c0';
+  ctx.fillRect(8, 31, 7, 5);
+  ctx.fillRect(17, 31, 7, 5);
+
+  // Shoes
+  ctx.fillStyle = '#c02020';
+  ctx.fillRect(7, 36, 8, 3);
+  ctx.fillRect(17, 36, 8, 3);
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fillRect(7, 39, 8, 1);
+  ctx.fillRect(17, 39, 8, 1);
+
+  scene.textures.addCanvas('player_portrait', canvas);
+}
+
+export function generatePlayerPortraitMid(scene: Phaser.Scene): void {
+  // 16x24 medium player portrait - intermediate between portrait and overworld sprite
+  const w = 16, h = 24;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+
+  // Cap
+  ctx.fillStyle = '#e03030';
+  ctx.fillRect(3, 0, 10, 2);
+  ctx.fillRect(2, 2, 12, 2);
+  // Brim
+  ctx.fillStyle = '#c02020';
+  ctx.fillRect(1, 3, 14, 1);
+
+  // Hair
+  ctx.fillStyle = '#302020';
+  ctx.fillRect(2, 4, 2, 2);
+  ctx.fillRect(12, 4, 2, 2);
+
+  // Face
+  ctx.fillStyle = '#f8c888';
+  ctx.fillRect(4, 4, 8, 6);
+  // Eyes
+  ctx.fillStyle = '#302020';
+  ctx.fillRect(5, 6, 2, 2);
+  ctx.fillRect(9, 6, 2, 2);
+
+  // Jacket
+  ctx.fillStyle = '#3030a0';
+  ctx.fillRect(3, 10, 10, 7);
+  ctx.fillRect(2, 11, 12, 5);
+  // Shirt
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fillRect(6, 10, 4, 3);
+  // Hands
+  ctx.fillStyle = '#f8c888';
+  ctx.fillRect(1, 14, 2, 2);
+  ctx.fillRect(13, 14, 2, 2);
+
+  // Pants
+  ctx.fillStyle = '#3060c0';
+  ctx.fillRect(4, 17, 4, 4);
+  ctx.fillRect(8, 17, 4, 4);
+
+  // Shoes
+  ctx.fillStyle = '#c02020';
+  ctx.fillRect(3, 21, 5, 3);
+  ctx.fillRect(8, 21, 5, 3);
+
+  scene.textures.addCanvas('player_portrait_mid', canvas);
+}

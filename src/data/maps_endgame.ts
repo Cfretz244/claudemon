@@ -684,11 +684,9 @@ export const ROUTE21: MapData = (() => {
     for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
   }
 
-  // PATH bridge north-south
-  fillRect(6, 0, 3, 25, T.PATH);
-
-  // Small island patch
+  // Small island rest stop midway
   fillRect(4, 10, 7, 3, T.SAND);
+  fillRect(5, 11, 5, 1, T.GRASS);
 
   return {
     id: 'route21',

@@ -20,7 +20,7 @@ export const SOLID_TILES = new Set([
 ]);
 
 export const PALLET_TOWN: MapData = (() => {
-  const W = 20, H = 18;
+  const W = 20, H = 20;
   const tiles = fill2D(W, H, T.GRASS);
   const collision = fill2D(W, H, false);
 
@@ -86,13 +86,12 @@ export const PALLET_TOWN: MapData = (() => {
   fillRect(3, 11, 4, 2, T.TALL_GRASS);
   fillRect(14, 11, 4, 2, T.TALL_GRASS);
 
-  // Fence along south (with gap at x=9-10 for south exit)
+  // South shore - water with trees on sides, then all water
   for (let x = 2; x < W - 2; x++) {
-    if (x === 9 || x === 10) {
-      setTile(x, H - 1, T.PATH);
-    } else {
-      setTile(x, H - 1, T.FENCE);
-    }
+    setTile(x, H - 2, T.WATER);
+  }
+  for (let x = 0; x < W; x++) {
+    setTile(x, H - 1, T.WATER);
   }
 
   // Signs

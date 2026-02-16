@@ -3,7 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { SaveSystem } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
 
-type TitleState = 'menu' | 'name_player' | 'name_rival' | 'oak_intro';
+type TitleState = 'menu' | 'name_player' | 'name_rival' | 'oak_intro' | 'shrinking';
 
 const NAME_OPTIONS_PLAYER = ['RED', 'ASH', 'JACK'];
 const NAME_OPTIONS_RIVAL = ['BLUE', 'GARY', 'JOHN'];
@@ -127,7 +127,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private handleNav(dir: string): void {
-    if (this.state === 'oak_intro') return;
+    if (this.state === 'oak_intro' || this.state === 'shrinking') return;
     if (this.state === 'menu') {
       if (dir === 'up') {
         this.selectedOption = Math.max(0, this.selectedOption - 1);
@@ -157,6 +157,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private handleConfirm(): void {
+    if (this.state === 'shrinking') return;
     soundSystem.menuSelect();
     if (this.state === 'oak_intro') {
       this.advanceIntro();
@@ -491,17 +492,7 @@ export class TitleScene extends Phaser.Scene {
     }
 
     if (this.introPageIndex > 11) {
-      // Done with intro - start the game
-      this.introContainer.destroy();
-      soundSystem.stopMusic();
-      this.scene.start('OverworldScene', {
-        mapId: 'player_house',
-        playerX: 3,
-        playerY: 5,
-        newGame: true,
-        playerName: this.playerName,
-        rivalName: this.rivalName,
-      });
+      this.startShrinkAnimation();
       return;
     }
 
@@ -524,5 +515,55 @@ export class TitleScene extends Phaser.Scene {
         });
       }
     }
+  }
+
+  private startShrinkAnimation(): void {
+    this.state = 'shrinking';
+    this.introContainer.removeAll(true);
+
+    // Black background
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000);
+    bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.introContainer.add(bg);
+
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+
+    // Start with large detailed player portrait
+    const sprite = this.add.image(cx, cy, 'player_portrait');
+    sprite.setOrigin(0.5);
+    sprite.setScale(2);
+    this.introContainer.add(sprite);
+
+    // Step-down shrink: portrait 2x → 1.5x → 1x → mid 1x → overworld 1x
+    this.time.delayedCall(700, () => {
+      sprite.setScale(1.5);
+    });
+    this.time.delayedCall(1000, () => {
+      sprite.setScale(1);
+    });
+    this.time.delayedCall(1300, () => {
+      sprite.setTexture('player_portrait_mid');
+      sprite.setScale(1);
+    });
+    this.time.delayedCall(1600, () => {
+      sprite.setTexture('player', 0);
+      sprite.setScale(1);
+    });
+    this.time.delayedCall(1900, () => {
+      // Don't destroy introContainer - scene.start cleans it up.
+      // This prevents the title menu from flashing for a frame.
+      soundSystem.stopMusic();
+      this.scene.start('OverworldScene', {
+        mapId: 'player_house',
+        playerX: 3,
+        playerY: 5,
+        newGame: true,
+        playerName: this.playerName,
+        rivalName: this.rivalName,
+        introTransition: true,
+      });
+    });
   }
 }
