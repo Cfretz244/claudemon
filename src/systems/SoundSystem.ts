@@ -19,6 +19,7 @@ export class SoundSystem {
   private melodyNextTime = 0;
   private bassNextTime = 0;
   private currentTrack: MusicTrack | null = null;
+  private pausedTrackId: string | null = null;
 
   private getCtx(): AudioContext {
     if (!this.ctx) {
@@ -29,7 +30,18 @@ export class SoundSystem {
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
-    if (!enabled) this.stopMusic();
+    if (!enabled) {
+      this.pausedTrackId = this.currentTrackId;
+      this.stopMusic();
+    } else if (this.pausedTrackId) {
+      this.startMusic(this.pausedTrackId);
+      this.pausedTrackId = null;
+    }
+  }
+
+  toggleEnabled(): boolean {
+    this.setEnabled(!this.enabled);
+    return this.enabled;
   }
 
   // ── Music Engine ─────────────────────────────────────────

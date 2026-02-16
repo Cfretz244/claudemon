@@ -29,3 +29,11 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 new Phaser.Game(config);
+
+// Global music toggle (M key)
+import { soundSystem } from './systems/SoundSystem';
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'm' || e.key === 'M') {
+    soundSystem.toggleEnabled();
+  }
+});
