@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { POKEMON_DATA } from '../data/pokemon';
 import { soundSystem } from '../systems/SoundSystem';
+import { generatePokemonSprite, getShapeForSpecies } from '../utils/spriteGenerator';
 
 export class PokedexScreen {
   private scene: Phaser.Scene;
@@ -28,6 +29,7 @@ export class PokedexScreen {
 
   // Detail sub-view
   private detailContainer!: Phaser.GameObjects.Container;
+  private detailSprite: Phaser.GameObjects.Sprite | null = null;
   private inDetail = false;
 
   // Input
@@ -159,6 +161,10 @@ export class PokedexScreen {
     if (this.inDetail) {
       this.inDetail = false;
       this.detailContainer.setVisible(false);
+      if (this.detailSprite) {
+        this.detailSprite.destroy();
+        this.detailSprite = null;
+      }
     } else {
       this.hide();
       if (this.onClose) this.onClose();
@@ -196,6 +202,17 @@ export class PokedexScreen {
     this.footerText.setText(`SEEN:${seen}  CAUGHT:${caught}`);
   }
 
+  private ensurePokemonSprite(speciesId: number): void {
+    const key = `pokemon_${speciesId}`;
+    if (!this.scene.textures.exists(key)) {
+      const species = POKEMON_DATA[speciesId];
+      if (species) {
+        const shape = getShapeForSpecies(speciesId, species.types);
+        generatePokemonSprite(this.scene, key, species.spriteColor, species.spriteColor2, shape, speciesId);
+      }
+    }
+  }
+
   private showDetail(dexNum: number): void {
     this.inDetail = true;
     const species = POKEMON_DATA[dexNum];
@@ -205,6 +222,24 @@ export class PokedexScreen {
     const status = isCaught ? 'CAUGHT' : 'SEEN';
     const types = species.types.join(' / ');
     const bs = species.baseStats;
+
+    // Remove previous sprite if any
+    if (this.detailSprite) {
+      this.detailSprite.destroy();
+      this.detailSprite = null;
+    }
+
+    // Show sprite for caught Pokemon
+    let textY = 8;
+    if (isCaught) {
+      this.ensurePokemonSprite(dexNum);
+      const key = `pokemon_${dexNum}`;
+      if (this.scene.textures.exists(key)) {
+        this.detailSprite = this.scene.add.sprite(GAME_WIDTH / 2, 28, key, 0);
+        this.detailContainer.add(this.detailSprite);
+        textY = 50;
+      }
+    }
 
     const lines = [
       `#${String(dexNum).padStart(3, '0')} ${species.name}`,
@@ -220,6 +255,7 @@ export class PokedexScreen {
     ];
 
     const detailText = this.detailContainer.getByName('detailText') as Phaser.GameObjects.Text;
+    detailText.setY(textY);
     detailText.setText(lines.join('\n'));
     this.detailContainer.setVisible(true);
   }

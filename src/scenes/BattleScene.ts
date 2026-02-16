@@ -14,7 +14,7 @@ import { checkEvolution, evolvePokemon } from '../systems/EvolutionSystem';
 import { attemptCatch } from '../systems/CatchSystem';
 import { selectAIMove } from '../systems/AISystem';
 import { soundSystem } from '../systems/SoundSystem';
-import { generatePokemonSprite } from '../utils/spriteGenerator';
+import { generatePokemonSprite, getShapeForSpecies } from '../utils/spriteGenerator';
 import { PlayerState } from '../entities/Player';
 import { SaveData } from '../systems/SaveSystem';
 import { getEffectivenessText } from '../data/typeChart';
@@ -200,11 +200,8 @@ export class BattleScene extends Phaser.Scene {
     if (!this.textures.exists(key)) {
       const species = POKEMON_DATA[speciesId];
       if (species) {
-        const shapes: Array<'round' | 'angular' | 'tall' | 'wide' | 'bird' | 'snake' | 'bug'> =
-          ['round', 'angular', 'tall', 'wide', 'bird', 'snake', 'bug'];
-        // Pick shape based on species ID for variety
-        const shape = shapes[speciesId % shapes.length];
-        generatePokemonSprite(this, key, species.spriteColor, species.spriteColor2, shape);
+        const shape = getShapeForSpecies(speciesId, species.types);
+        generatePokemonSprite(this, key, species.spriteColor, species.spriteColor2, shape, speciesId);
       } else {
         generatePokemonSprite(this, key, 0x808080, undefined, 'round');
       }

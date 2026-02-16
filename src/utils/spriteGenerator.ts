@@ -1,5 +1,6 @@
 import { TILE_SIZE } from './constants';
 import { TileType } from '../types/map.types';
+import { PokemonType } from '../types/pokemon.types';
 
 // Helper: create a canvas texture with frames for use as a spritesheet
 function addCanvasSpriteSheet(
@@ -308,6 +309,239 @@ export function generateNPCSprite(scene: Phaser.Scene, key: string, color: numbe
   addCanvasSpriteSheet(scene, key, canvas, TILE_SIZE, TILE_SIZE);
 }
 
+// --- Custom hand-drawn Pokemon battle sprites ---
+type CustomSpriteDrawFn = (ctx: CanvasRenderingContext2D, isBack: boolean) => void;
+
+const CUSTOM_POKEMON_SPRITES: Record<number, CustomSpriteDrawFn> = {
+  // Pikachu (speciesId 25)
+  25: (ctx, isBack) => {
+    // Body
+    ctx.fillStyle = '#f8d030';
+    ctx.fillRect(9, 12, 14, 12);  // torso
+    ctx.fillRect(7, 14, 18, 8);   // wider midsection
+
+    // Ears - tall pointed
+    ctx.fillStyle = '#f8d030';
+    ctx.fillRect(8, 2, 4, 12);    // left ear
+    ctx.fillRect(20, 2, 4, 12);   // right ear
+    // Black ear tips
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(8, 2, 4, 4);     // left tip
+    ctx.fillRect(20, 2, 4, 4);    // right tip
+
+    // Head
+    ctx.fillStyle = '#f8d030';
+    ctx.fillRect(8, 8, 16, 8);    // head block
+    ctx.fillRect(7, 10, 18, 4);   // wider cheek area
+
+    if (!isBack) {
+      // Face
+      // Eyes - black with white highlight
+      ctx.fillStyle = '#302020';
+      ctx.fillRect(11, 10, 3, 4);   // left eye
+      ctx.fillRect(18, 10, 3, 4);   // right eye
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(11, 10, 2, 2);   // left highlight
+      ctx.fillRect(18, 10, 2, 2);   // right highlight
+      // Red cheeks
+      ctx.fillStyle = '#e03030';
+      ctx.fillRect(7, 13, 3, 3);    // left cheek
+      ctx.fillRect(22, 13, 3, 3);   // right cheek
+      // Mouth
+      ctx.fillStyle = '#302020';
+      ctx.fillRect(15, 15, 2, 1);
+    } else {
+      // Back - darker patch
+      ctx.fillStyle = '#c0a020';
+      ctx.fillRect(11, 12, 10, 6);
+      // Back stripe
+      ctx.fillStyle = '#b09018';
+      ctx.fillRect(13, 10, 6, 2);
+    }
+
+    // Arms
+    ctx.fillStyle = '#f8d030';
+    ctx.fillRect(6, 16, 3, 4);    // left arm
+    ctx.fillRect(23, 16, 3, 4);   // right arm
+
+    // Feet
+    ctx.fillStyle = '#c0a020';
+    ctx.fillRect(9, 24, 5, 3);    // left foot
+    ctx.fillRect(18, 24, 5, 3);   // right foot
+
+    // Tail - lightning bolt on right side
+    ctx.fillStyle = '#c0a020';
+    ctx.fillRect(24, 8, 4, 3);    // tail base
+    ctx.fillRect(26, 5, 4, 4);    // tail mid
+    ctx.fillRect(24, 3, 4, 3);    // tail top
+    ctx.fillStyle = '#f8d030';
+    ctx.fillRect(22, 10, 4, 3);   // tail connection
+  },
+
+  // Bulbasaur (speciesId 1)
+  1: (ctx, isBack) => {
+    // Body - squat green quadruped
+    ctx.fillStyle = '#78c850';
+    ctx.fillRect(6, 16, 20, 10);  // body
+    ctx.fillRect(8, 14, 16, 4);   // upper body
+
+    // Bulb on back
+    ctx.fillStyle = '#406830';
+    ctx.fillRect(10, 8, 12, 8);   // bulb
+    ctx.fillRect(8, 10, 16, 4);   // wider bulb middle
+    ctx.fillStyle = '#58a830';
+    ctx.fillRect(12, 9, 8, 5);    // bulb highlight
+
+    if (!isBack) {
+      // Head
+      ctx.fillStyle = '#78c850';
+      ctx.fillRect(4, 14, 8, 8);  // head
+      ctx.fillRect(3, 16, 10, 4); // wider snout
+      // Eyes
+      ctx.fillStyle = '#e03030';
+      ctx.fillRect(5, 15, 3, 3);  // left eye
+      ctx.fillStyle = '#302020';
+      ctx.fillRect(6, 16, 2, 2);  // pupil
+      // Mouth
+      ctx.fillStyle = '#406830';
+      ctx.fillRect(4, 20, 6, 1);
+    } else {
+      // Back view - just the bulb is prominent
+      ctx.fillStyle = '#406830';
+      ctx.fillRect(9, 7, 14, 9);
+      ctx.fillStyle = '#58a830';
+      ctx.fillRect(11, 8, 10, 6);
+    }
+
+    // Four legs
+    ctx.fillStyle = '#58a830';
+    ctx.fillRect(7, 26, 4, 4);    // front-left
+    ctx.fillRect(21, 26, 4, 4);   // front-right
+    ctx.fillRect(10, 26, 4, 3);   // back-left
+    ctx.fillRect(18, 26, 4, 3);   // back-right
+  },
+
+  // Charmander (speciesId 4)
+  4: (ctx, isBack) => {
+    // Body - upright orange lizard
+    ctx.fillStyle = '#f08030';
+    ctx.fillRect(10, 10, 12, 14); // torso
+    ctx.fillRect(8, 12, 16, 10);  // wider mid
+
+    // Head
+    ctx.fillStyle = '#f08030';
+    ctx.fillRect(10, 4, 12, 10);  // head
+    ctx.fillRect(8, 6, 16, 6);    // wider head
+
+    // Yellow belly
+    ctx.fillStyle = '#f8d030';
+    ctx.fillRect(12, 14, 8, 8);
+
+    if (!isBack) {
+      // Eyes
+      ctx.fillStyle = '#302020';
+      ctx.fillRect(11, 7, 3, 3);  // left eye
+      ctx.fillRect(18, 7, 3, 3);  // right eye
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(11, 7, 2, 2);  // left highlight
+      ctx.fillRect(18, 7, 2, 2);  // right highlight
+      // Mouth
+      ctx.fillStyle = '#c06020';
+      ctx.fillRect(13, 11, 6, 1);
+    } else {
+      // Back - darker ridge
+      ctx.fillStyle = '#c06020';
+      ctx.fillRect(14, 8, 4, 10);
+    }
+
+    // Arms
+    ctx.fillStyle = '#f08030';
+    ctx.fillRect(6, 14, 4, 3);    // left arm
+    ctx.fillRect(22, 14, 4, 3);   // right arm
+
+    // Legs
+    ctx.fillStyle = '#c06020';
+    ctx.fillRect(10, 24, 5, 4);   // left leg
+    ctx.fillRect(17, 24, 5, 4);   // right leg
+
+    // Tail with flame
+    ctx.fillStyle = '#f08030';
+    ctx.fillRect(22, 18, 4, 3);   // tail base
+    ctx.fillRect(24, 15, 3, 4);   // tail mid
+    // Flame tip
+    ctx.fillStyle = '#f8d030';
+    ctx.fillRect(25, 12, 3, 4);   // flame outer
+    ctx.fillStyle = '#f87830';
+    ctx.fillRect(26, 13, 2, 2);   // flame inner
+  },
+
+  // Squirtle (speciesId 7)
+  7: (ctx, isBack) => {
+    // Body - round blue
+    ctx.fillStyle = '#68a8d8';
+    ctx.fillRect(8, 10, 16, 14);  // body
+    ctx.fillRect(6, 12, 20, 10);  // wider midsection
+
+    // Head
+    ctx.fillStyle = '#68a8d8';
+    ctx.fillRect(9, 4, 14, 10);   // head
+    ctx.fillRect(7, 6, 18, 6);    // wider head
+
+    // Cream belly
+    ctx.fillStyle = '#f0d890';
+    ctx.fillRect(10, 14, 12, 8);
+
+    if (!isBack) {
+      // Eyes
+      ctx.fillStyle = '#302020';
+      ctx.fillRect(11, 6, 3, 4);  // left eye
+      ctx.fillRect(18, 6, 3, 4);  // right eye
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(11, 6, 2, 2);  // left highlight
+      ctx.fillRect(18, 6, 2, 2);  // right highlight
+      // Mouth
+      ctx.fillStyle = '#4878a8';
+      ctx.fillRect(13, 11, 6, 1);
+    } else {
+      // Back - shell pattern
+      ctx.fillStyle = '#c09040';
+      ctx.fillRect(10, 11, 12, 10); // shell outline
+      ctx.fillStyle = '#d8a850';
+      ctx.fillRect(11, 12, 10, 8);  // shell fill
+      ctx.fillStyle = '#c09040';
+      ctx.fillRect(15, 12, 2, 8);   // shell line vertical
+      ctx.fillRect(11, 15, 10, 2);  // shell line horizontal
+    }
+
+    // Arms
+    ctx.fillStyle = '#68a8d8';
+    ctx.fillRect(4, 14, 4, 4);    // left arm
+    ctx.fillRect(24, 14, 4, 4);   // right arm
+
+    // Legs
+    ctx.fillStyle = '#4878a8';
+    ctx.fillRect(9, 24, 5, 4);    // left leg
+    ctx.fillRect(18, 24, 5, 4);   // right leg
+
+    // Curly tail
+    ctx.fillStyle = '#68a8d8';
+    ctx.fillRect(23, 20, 4, 3);   // tail base
+    ctx.fillRect(25, 17, 3, 4);   // tail curve
+    ctx.fillRect(23, 15, 3, 3);   // tail tip
+  },
+};
+
+// Per-shape eye positioning
+const SHAPE_EYE_POSITIONS: Record<string, { leftX: number; rightX: number; y: number }> = {
+  round:   { leftX: 10, rightX: 18, y: 8 },
+  angular: { leftX: 10, rightX: 18, y: 6 },
+  tall:    { leftX: 11, rightX: 19, y: 4 },
+  wide:    { leftX: 10, rightX: 18, y: 8 },
+  bird:    { leftX: 12, rightX: 18, y: 6 },
+  snake:   { leftX: 10, rightX: 16, y: 5 },
+  bug:     { leftX: 12, rightX: 18, y: 8 },
+};
+
 function drawPokemonShape(
   ctx: CanvasRenderingContext2D, c1: string, c2: string,
   shape: string, _size: number, isBack: boolean
@@ -361,22 +595,67 @@ function drawPokemonShape(
       break;
   }
   if (!isBack) {
+    const eyes = SHAPE_EYE_POSITIONS[shape] || SHAPE_EYE_POSITIONS.round;
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(10, 8, 4, 4);
-    ctx.fillRect(18, 8, 4, 4);
+    ctx.fillRect(eyes.leftX, eyes.y, 4, 4);
+    ctx.fillRect(eyes.rightX, eyes.y, 4, 4);
     ctx.fillStyle = '#000000';
-    ctx.fillRect(12, 9, 2, 3);
-    ctx.fillRect(20, 9, 2, 3);
+    ctx.fillRect(eyes.leftX + 2, eyes.y + 1, 2, 3);
+    ctx.fillRect(eyes.rightX + 2, eyes.y + 1, 2, 3);
   }
   ctx.fillStyle = c2;
   ctx.fillRect(8, 26, 4, 4);
   ctx.fillRect(20, 26, 4, 4);
 }
 
+// Species-specific body shape overrides (for Pokemon whose body doesn't match their type)
+const SHAPE_OVERRIDES: Record<number, 'round' | 'angular' | 'tall' | 'wide' | 'bird' | 'snake' | 'bug'> = {
+  23: 'snake',  // Ekans
+  24: 'snake',  // Arbok
+  95: 'snake',  // Onix
+  147: 'snake', // Dratini
+  148: 'snake', // Dragonair
+  138: 'round', // Omanyte
+  139: 'round', // Omastar
+  140: 'bug',   // Kabuto
+  141: 'bug',   // Kabutops
+  79: 'wide',   // Slowpoke
+  80: 'tall',   // Slowbro
+  143: 'wide',  // Snorlax
+  113: 'round', // Chansey
+};
+
+export type PokemonShape = 'round' | 'angular' | 'tall' | 'wide' | 'bird' | 'snake' | 'bug';
+
+export function getShapeForSpecies(speciesId: number, types: PokemonType[]): PokemonShape {
+  const override = SHAPE_OVERRIDES[speciesId];
+  if (override) return override;
+
+  const primary = types[0];
+  const secondary = types[1];
+
+  // FLYING secondary type (except Bug primary) → bird
+  if (secondary === PokemonType.FLYING && primary !== PokemonType.BUG) return 'bird';
+
+  switch (primary) {
+    case PokemonType.BUG: return 'bug';
+    case PokemonType.ROCK:
+    case PokemonType.GROUND:
+    case PokemonType.ICE: return 'angular';
+    case PokemonType.FIGHTING:
+    case PokemonType.PSYCHIC:
+    case PokemonType.FIRE: return 'tall';
+    case PokemonType.GRASS: return 'wide';
+    case PokemonType.DRAGON: return 'snake';
+    default: return 'round';
+  }
+}
+
 export function generatePokemonSprite(
   scene: Phaser.Scene, key: string, color1: number,
   color2: number | undefined,
-  shape: 'round' | 'angular' | 'tall' | 'wide' | 'bird' | 'snake' | 'bug' = 'round'
+  shape: 'round' | 'angular' | 'tall' | 'wide' | 'bird' | 'snake' | 'bug' = 'round',
+  speciesId?: number
 ): void {
   const size = 32;
   const canvas = document.createElement('canvas');
@@ -384,22 +663,36 @@ export function generatePokemonSprite(
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
 
-  const r1 = (color1 >> 16) & 0xff;
-  const g1 = (color1 >> 8) & 0xff;
-  const b1 = color1 & 0xff;
-  const c1 = `rgb(${r1},${g1},${b1})`;
-  const c2 = color2
-    ? `rgb(${(color2 >> 16) & 0xff},${(color2 >> 8) & 0xff},${color2 & 0xff})`
-    : `rgb(${Math.floor(r1 * 0.7)},${Math.floor(g1 * 0.7)},${Math.floor(b1 * 0.7)})`;
+  // Check for custom hand-drawn sprite
+  const customDraw = speciesId !== undefined ? CUSTOM_POKEMON_SPRITES[speciesId] : undefined;
 
-  ctx.save();
-  drawPokemonShape(ctx, c1, c2, shape, size, false);
-  ctx.restore();
+  if (customDraw) {
+    ctx.save();
+    customDraw(ctx, false); // front view
+    ctx.restore();
 
-  ctx.save();
-  ctx.translate(size, 0);
-  drawPokemonShape(ctx, c1, c2, shape, size, true);
-  ctx.restore();
+    ctx.save();
+    ctx.translate(size, 0);
+    customDraw(ctx, true); // back view
+    ctx.restore();
+  } else {
+    const r1 = (color1 >> 16) & 0xff;
+    const g1 = (color1 >> 8) & 0xff;
+    const b1 = color1 & 0xff;
+    const c1 = `rgb(${r1},${g1},${b1})`;
+    const c2 = color2
+      ? `rgb(${(color2 >> 16) & 0xff},${(color2 >> 8) & 0xff},${color2 & 0xff})`
+      : `rgb(${Math.floor(r1 * 0.7)},${Math.floor(g1 * 0.7)},${Math.floor(b1 * 0.7)})`;
+
+    ctx.save();
+    drawPokemonShape(ctx, c1, c2, shape, size, false);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(size, 0);
+    drawPokemonShape(ctx, c1, c2, shape, size, true);
+    ctx.restore();
+  }
 
   addCanvasSpriteSheet(scene, key, canvas, size, size);
 }
