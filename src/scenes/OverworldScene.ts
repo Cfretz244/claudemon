@@ -224,22 +224,6 @@ export class OverworldScene extends Phaser.Scene {
       this.showMapName(this.currentMap.name);
     }
 
-    // Intro transition: black overlay fades out to reveal the map
-    if (this.introTransition) {
-      const overlay = this.add.graphics();
-      overlay.setScrollFactor(0);
-      overlay.setDepth(999);
-      overlay.fillStyle(0x000000);
-      overlay.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-      this.tweens.add({
-        targets: overlay,
-        alpha: 0,
-        duration: 600,
-        delay: 200,
-        onComplete: () => overlay.destroy(),
-      });
-    }
-
     // Action key handler
     this.actionKey.on('down', () => this.handleAction());
     this.startKey.on('down', () => this.toggleMenu());
@@ -949,28 +933,237 @@ export class OverworldScene extends Phaser.Scene {
     });
   }
 
-  private triggerOakIntercept(): void {
-    this.isWarping = true;
-    this.textBox.show(
-      [
-        "OAK: Hey! Wait!\nDon't go out!",
-        "It's unsafe! Wild\nPOKeMON live in\ntall grass!",
-        'You need your own\nPOKeMON for your\nprotection.',
-        "Come with me to\nmy lab!",
-      ],
-      () => {
-        // Warp player to Oak's lab
-        this.cameras.main.fadeOut(200, 0, 0, 0);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-          this.scene.restart({
-            mapId: 'oaks_lab',
-            playerX: 4,
-            playerY: 11,
-            saveData: this.playerState.toSave(),
-          } as SceneData);
-        });
+  /**
+   * Animate an NPC sprite walking tile-by-tile along a path with frame animation.
+   * NPC spritesheet layout: down=0, up=1, left=2, right=3, walk frames +4
+   */
+  private animateWalkPath(
+    sprite: Phaser.GameObjects.Sprite,
+    path: Array<{x: number, y: number}>,
+    msPerTile: number,
+    onComplete: () => void
+  ): void {
+    let stepIndex = 0;
+    let walkFrame = 0;
+
+    const walkStep = () => {
+      if (stepIndex >= path.length) {
+        onComplete();
+        return;
       }
+
+      const target = path[stepIndex];
+      const currentX = Math.round((sprite.x - TILE_SIZE / 2) / TILE_SIZE);
+      const currentY = Math.round((sprite.y - TILE_SIZE / 2) / TILE_SIZE);
+
+      const dx = target.x - currentX;
+      const dy = target.y - currentY;
+
+      // Direction frame: down=0, up=1, left=2, right=3
+      let dirFrame = 0;
+      if (dy < 0) dirFrame = 1;
+      else if (dy > 0) dirFrame = 0;
+      else if (dx < 0) dirFrame = 2;
+      else if (dx > 0) dirFrame = 3;
+
+      sprite.setFrame(dirFrame + walkFrame * 4);
+      walkFrame = (walkFrame + 1) % 2;
+
+      this.tweens.add({
+        targets: sprite,
+        x: target.x * TILE_SIZE + TILE_SIZE / 2,
+        y: target.y * TILE_SIZE + TILE_SIZE / 2,
+        duration: msPerTile,
+        onComplete: () => {
+          stepIndex++;
+          walkStep();
+        }
+      });
+    };
+
+    walkStep();
+  }
+
+  /**
+   * Animate the player sprite walking tile-by-tile along a path.
+   * Uses registered player walk/idle animations and updates grid position.
+   */
+  private animatePlayerWalkPath(
+    path: Array<{x: number, y: number}>,
+    msPerTile: number,
+    onComplete: () => void
+  ): void {
+    let stepIndex = 0;
+
+    const walkStep = () => {
+      if (stepIndex >= path.length) {
+        this.player.play(`player_idle_${this.playerDirection}`, true);
+        onComplete();
+        return;
+      }
+
+      const target = path[stepIndex];
+      const dx = target.x - this.playerGridX;
+      const dy = target.y - this.playerGridY;
+
+      let dir: string;
+      if (dy > 0) { dir = 'down'; this.playerDirection = Direction.DOWN; }
+      else if (dy < 0) { dir = 'up'; this.playerDirection = Direction.UP; }
+      else if (dx < 0) { dir = 'left'; this.playerDirection = Direction.LEFT; }
+      else { dir = 'right'; this.playerDirection = Direction.RIGHT; }
+
+      this.player.play(`player_walk_${dir}`, true);
+
+      this.playerGridX = target.x;
+      this.playerGridY = target.y;
+
+      this.tweens.add({
+        targets: this.player,
+        x: target.x * TILE_SIZE + TILE_SIZE / 2,
+        y: target.y * TILE_SIZE + TILE_SIZE / 2,
+        duration: msPerTile,
+        onComplete: () => {
+          stepIndex++;
+          walkStep();
+        }
+      });
+    };
+
+    walkStep();
+  }
+
+  /**
+   * Build a path from lab door (10, 16) to a target position.
+   * Routes around buildings: lab (x=7-12, y=12-15), player house (x=2-6, y=3-6),
+   * rival house (x=12-16, y=3-6). Uses x=6 corridor south of houses, then
+   * main path (x=8) north of houses.
+   */
+  private buildPathFromLabTo(targetX: number, targetY: number): Array<{x: number, y: number}> {
+    const path: Array<{x: number, y: number}> = [];
+    let cx = 10, cy = 16;
+
+    // Go west to x=6 (clear of lab building x=7-12)
+    while (cx > 6) { cx--; path.push({x: cx, y: cy}); }
+
+    // Go north on x=6 to y=7 or target row, whichever is further south
+    // (x=6 is safe from y=7 to y=16, but player's house occupies x=6 at y=3-6)
+    const safeStopY = Math.max(targetY, 7);
+    while (cy > safeStopY) { cy--; path.push({x: cx, y: cy}); }
+
+    // If target is above y=7, step east to x=8 (main path) to avoid player's house
+    if (targetY < 7) {
+      while (cx < 8) { cx++; path.push({x: cx, y: cy}); }
+      // Continue north on x=8 (safe: between houses, above lab)
+      while (cy > targetY) { cy--; path.push({x: cx, y: cy}); }
+    }
+
+    // Go to target column
+    while (cx < targetX) { cx++; path.push({x: cx, y: cy}); }
+    while (cx > targetX) { cx--; path.push({x: cx, y: cy}); }
+
+    // Go south to target row if needed
+    while (cy < targetY) { cy++; path.push({x: cx, y: cy}); }
+
+    return path;
+  }
+
+  /**
+   * Build a path from a position to the lab door (10, 16).
+   * Routes around the lab building (x=7-12, y=12-15).
+   */
+  private buildPathToLab(startX: number, startY: number): Array<{x: number, y: number}> {
+    const path: Array<{x: number, y: number}> = [];
+    let cx = startX, cy = startY;
+
+    // Walk south to y=11 if north of building
+    while (cy < 11) { cy++; path.push({x: cx, y: cy}); }
+
+    // Route around the building (x=7-12, y=12-15)
+    if (cx >= 7 && cx <= 12) {
+      // On building's x-range, go west to x=6
+      while (cx > 6) { cx--; path.push({x: cx, y: cy}); }
+    } else if (cx > 12) {
+      // East of building, route to x=13
+      while (cx > 13) { cx--; path.push({x: cx, y: cy}); }
+      while (cx < 13) { cx++; path.push({x: cx, y: cy}); }
+    }
+    // If cx <= 6, already west of building
+
+    // Walk south to y=16 (lab door level)
+    while (cy < 16) { cy++; path.push({x: cx, y: cy}); }
+
+    // Walk to x=10 (lab door)
+    while (cx < 10) { cx++; path.push({x: cx, y: cy}); }
+    while (cx > 10) { cx--; path.push({x: cx, y: cy}); }
+
+    return path;
+  }
+
+  private triggerOakIntercept(): void {
+    const oakColor = 0xc0a080;
+    const oakKey = 'npc_oak_intercept';
+    if (!this.textures.exists(oakKey)) {
+      generateNPCSprite(this, oakKey, oakColor);
+    }
+
+    // Block input during cutscene
+    this.isWarping = true;
+
+    // Oak starts at lab door (10, 16) and walks to the player
+    const oakSprite = this.add.sprite(
+      10 * TILE_SIZE + TILE_SIZE / 2,
+      16 * TILE_SIZE + TILE_SIZE / 2,
+      oakKey, 1  // facing up
     );
+    oakSprite.setDepth(10);
+
+    // Build approach path from lab door to one tile south of player
+    const approachPath = this.buildPathFromLabTo(this.playerGridX, this.playerGridY + 1);
+
+    // Oak walks to the player (faster pace - he's hurrying)
+    this.animateWalkPath(oakSprite, approachPath, 120, () => {
+      // Oak arrived next to player - allow text advancement
+      this.isWarping = false;
+
+      this.textBox.show(["OAK: Hey! Wait!\nDon't go out!"], () => {
+        this.textBox.show([
+          "It's unsafe! Wild\nPOKeMON live in\ntall grass!",
+          'You need your own\nPOKeMON for your\nprotection.',
+          "Come with me to\nmy lab!",
+        ], () => {
+          // Block input for walk to lab
+          this.isWarping = true;
+
+          // Build Oak's return path from Oak's position (one tile south of player) to lab door
+          const oakReturnPath = this.buildPathToLab(this.playerGridX, this.playerGridY + 1);
+          // Player's path: first step south to where Oak was, then follow Oak's route (stop 1 before end)
+          const playerReturnPath = [
+            {x: this.playerGridX, y: this.playerGridY + 1},
+            ...oakReturnPath.slice(0, -1)
+          ];
+
+          // Both walk simultaneously - Oak leads, player follows one tile behind
+          this.animateWalkPath(oakSprite, oakReturnPath, 200, () => {
+            oakSprite.destroy();
+          });
+
+          this.animatePlayerWalkPath(playerReturnPath, 200, () => {
+            this.player.play('player_idle_down', true);
+
+            // Fade out and warp to Oak's lab
+            this.cameras.main.fadeOut(200, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+              this.scene.restart({
+                mapId: 'oaks_lab',
+                playerX: 4,
+                playerY: 11,
+                saveData: this.playerState.toSave(),
+              } as SceneData);
+            });
+          });
+        });
+      });
+    });
   }
 
   private handleAction(): void {

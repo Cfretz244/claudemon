@@ -112,8 +112,10 @@ export const PALLET_TOWN: MapData = (() => {
       // Oak's Lab door
       { x: 10, y: 16, targetMap: 'oaks_lab', targetX: 4, targetY: 11 },
       // North exit to Route 1
+      { x: 8, y: 1, targetMap: 'route1', targetX: 8, targetY: 28 },
       { x: 9, y: 1, targetMap: 'route1', targetX: 9, targetY: 28 },
       { x: 10, y: 1, targetMap: 'route1', targetX: 10, targetY: 28 },
+      { x: 11, y: 1, targetMap: 'route1', targetX: 11, targetY: 28 },
       // South exit to Route 21
       { x: 9, y: 17, targetMap: 'route21', targetX: 7, targetY: 1 },
       { x: 10, y: 17, targetMap: 'route21', targetX: 7, targetY: 1 },
@@ -356,11 +358,15 @@ export const ROUTE1: MapData = (() => {
     collision,
     warps: [
       // South to Pallet Town
+      { x: 8, y: H - 1, targetMap: 'pallet_town', targetX: 8, targetY: 2 },
       { x: 9, y: H - 1, targetMap: 'pallet_town', targetX: 9, targetY: 2 },
       { x: 10, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 2 },
+      { x: 11, y: H - 1, targetMap: 'pallet_town', targetX: 11, targetY: 2 },
       // North to Viridian City
+      { x: 8, y: 0, targetMap: 'viridian_city', targetX: 8, targetY: 27 },
       { x: 9, y: 0, targetMap: 'viridian_city', targetX: 9, targetY: 27 },
       { x: 10, y: 0, targetMap: 'viridian_city', targetX: 10, targetY: 27 },
+      { x: 11, y: 0, targetMap: 'viridian_city', targetX: 11, targetY: 27 },
     ],
     npcs: [
       {
@@ -465,15 +471,19 @@ export const VIRIDIAN_CITY: MapData = (() => {
     collision,
     warps: [
       // South to Route 1
+      { x: 8, y: H - 1, targetMap: 'route1', targetX: 8, targetY: 1 },
       { x: 9, y: H - 1, targetMap: 'route1', targetX: 9, targetY: 1 },
       { x: 10, y: H - 1, targetMap: 'route1', targetX: 10, targetY: 1 },
+      { x: 11, y: H - 1, targetMap: 'route1', targetX: 11, targetY: 1 },
       // Pokemon Center door
       { x: 5, y: 12, targetMap: 'pokemon_center', targetX: 4, targetY: 7 },
       // Pokemart door
       { x: 20, y: 12, targetMap: 'pokemart', targetX: 3, targetY: 7 },
       // North to Route 2
+      { x: 8, y: 1, targetMap: 'route2', targetX: 8, targetY: 28 },
       { x: 9, y: 1, targetMap: 'route2', targetX: 9, targetY: 28 },
       { x: 10, y: 1, targetMap: 'route2', targetX: 10, targetY: 28 },
+      { x: 11, y: 1, targetMap: 'route2', targetX: 11, targetY: 28 },
       // Viridian Gym door
       { x: 7, y: 23, targetMap: 'viridian_gym', targetX: 4, targetY: 13 },
       // West to Route 22
@@ -687,11 +697,15 @@ export const ROUTE2: MapData = (() => {
     collision,
     warps: [
       // South to Viridian
+      { x: 8, y: H - 1, targetMap: 'viridian_city', targetX: 8, targetY: 2 },
       { x: 9, y: H - 1, targetMap: 'viridian_city', targetX: 9, targetY: 2 },
       { x: 10, y: H - 1, targetMap: 'viridian_city', targetX: 10, targetY: 2 },
+      { x: 11, y: H - 1, targetMap: 'viridian_city', targetX: 11, targetY: 2 },
       // North to Viridian Forest / Pewter
+      { x: 8, y: 0, targetMap: 'viridian_forest', targetX: 8, targetY: 28 },
       { x: 9, y: 0, targetMap: 'viridian_forest', targetX: 9, targetY: 28 },
       { x: 10, y: 0, targetMap: 'viridian_forest', targetX: 10, targetY: 28 },
+      { x: 11, y: 0, targetMap: 'viridian_forest', targetX: 11, targetY: 28 },
     ],
     npcs: [],
     wildEncounters: {
@@ -894,8 +908,10 @@ export const PEWTER_CITY: MapData = (() => {
     collision,
     warps: [
       // South to Viridian Forest
+      { x: 8, y: H - 1, targetMap: 'viridian_forest', targetX: 8, targetY: 2 },
       { x: 9, y: H - 1, targetMap: 'viridian_forest', targetX: 9, targetY: 2 },
       { x: 10, y: H - 1, targetMap: 'viridian_forest', targetX: 10, targetY: 2 },
+      { x: 11, y: H - 1, targetMap: 'viridian_forest', targetX: 11, targetY: 2 },
       // Gym
       { x: 7, y: 9, targetMap: 'pewter_gym', targetX: 4, targetY: 13 },
       // Pokemon Center

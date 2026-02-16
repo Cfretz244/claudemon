@@ -57,11 +57,15 @@ export const ROUTE5: MapData = (() => {
     collision,
     warps: [
       // South exit -> Route 6
+      { x: 8, y: 19, targetMap: 'route6', targetX: 8, targetY: 1 },
       { x: 9, y: 19, targetMap: 'route6', targetX: 9, targetY: 1 },
-      { x: 10, y: 19, targetMap: 'route6', targetX: 9, targetY: 1 },
+      { x: 10, y: 19, targetMap: 'route6', targetX: 10, targetY: 1 },
+      { x: 11, y: 19, targetMap: 'route6', targetX: 11, targetY: 1 },
       // North entrance -> Cerulean City
+      { x: 8, y: 0, targetMap: 'cerulean_city', targetX: 10, targetY: 23 },
       { x: 9, y: 0, targetMap: 'cerulean_city', targetX: 11, targetY: 23 },
-      { x: 10, y: 0, targetMap: 'cerulean_city', targetX: 11, targetY: 23 },
+      { x: 10, y: 0, targetMap: 'cerulean_city', targetX: 12, targetY: 23 },
+      { x: 11, y: 0, targetMap: 'cerulean_city', targetX: 13, targetY: 23 },
     ],
     npcs: [
       {
@@ -149,11 +153,15 @@ export const ROUTE6: MapData = (() => {
     collision,
     warps: [
       // South exit -> Vermilion City
+      { x: 8, y: 19, targetMap: 'vermilion_city', targetX: 10, targetY: 2 },
       { x: 9, y: 19, targetMap: 'vermilion_city', targetX: 11, targetY: 2 },
-      { x: 10, y: 19, targetMap: 'vermilion_city', targetX: 11, targetY: 2 },
+      { x: 10, y: 19, targetMap: 'vermilion_city', targetX: 12, targetY: 2 },
+      { x: 11, y: 19, targetMap: 'vermilion_city', targetX: 13, targetY: 2 },
       // North entrance -> Route 5
+      { x: 8, y: 0, targetMap: 'route5', targetX: 8, targetY: 18 },
       { x: 9, y: 0, targetMap: 'route5', targetX: 9, targetY: 18 },
-      { x: 10, y: 0, targetMap: 'route5', targetX: 9, targetY: 18 },
+      { x: 10, y: 0, targetMap: 'route5', targetX: 10, targetY: 18 },
+      { x: 11, y: 0, targetMap: 'route5', targetX: 11, targetY: 18 },
     ],
     npcs: [
       {
