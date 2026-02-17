@@ -226,7 +226,7 @@ export class OverworldScene extends Phaser.Scene {
 
     // Show map name (skip during intro transition)
     if (!this.introTransition) {
-      this.showMapName(this.currentMap.name);
+      this.showMapName(this.currentMap.name.replace('{RIVAL}', this.playerState.rivalName));
     }
 
     // Action key handler

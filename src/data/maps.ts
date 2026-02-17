@@ -212,6 +212,67 @@ export const PLAYER_HOUSE: MapData = (() => {
   };
 })();
 
+export const RIVAL_HOUSE: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+
+  // Walls
+  for (let x = 0; x < W; x++) {
+    setTile(x, 0, T.WALL);
+    setTile(x, 1, T.WALL);
+  }
+  for (let y = 0; y < H; y++) {
+    setTile(0, y, T.WALL);
+    setTile(W - 1, y, T.WALL);
+  }
+
+  // Carpet in center
+  setTile(3, 4, T.CARPET);
+  setTile(4, 4, T.CARPET);
+  setTile(3, 5, T.CARPET);
+  setTile(4, 5, T.CARPET);
+
+  // TV/bookshelf area
+  setTile(2, 2, T.PC);
+  setTile(5, 2, T.MART_SHELF);
+
+  // Door at bottom
+  setTile(3, H - 1, T.DOOR);
+
+  return {
+    id: 'rival_house',
+    name: "{RIVAL}'s HOUSE",
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      { x: 3, y: H - 1, targetMap: 'pallet_town', targetX: 14, targetY: 8 },
+    ],
+    npcs: [
+      {
+        id: 'rival_sister',
+        x: 4, y: 3,
+        spriteColor: 0xf0a050,
+        direction: Direction.DOWN,
+        dialogue: [
+          "DAISY: Hi! My brother\nisn't here right now.",
+          "He left without even\nsaying goodbye!",
+          "He's always like that.",
+        ],
+      },
+    ],
+  };
+})();
+
 export const OAKS_LAB: MapData = (() => {
   const W = 10, H = 12;
   const tiles = fill2D(W, H, T.INDOOR_FLOOR);
@@ -1221,6 +1282,7 @@ export const ALL_MAPS: Record<string, MapData> = {
   // Pallet Town - Pewter City area
   pallet_town: PALLET_TOWN,
   player_house: PLAYER_HOUSE,
+  rival_house: RIVAL_HOUSE,
   oaks_lab: OAKS_LAB,
   route1: ROUTE1,
   viridian_city: VIRIDIAN_CITY,
