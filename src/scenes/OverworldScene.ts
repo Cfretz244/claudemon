@@ -908,7 +908,6 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    soundSystem.startMusic('rival_theme');
     this.textBox.show(
       [
         `${this.playerState.rivalName}: Wait,\n${this.playerState.name}!`,
@@ -1355,24 +1354,17 @@ export class OverworldScene extends Phaser.Scene {
 
     // Rival NPC in lab - context-dependent
     if (npc.id === 'rival') {
-      soundSystem.startMusic('rival_theme');
       if (!this.playerState.storyFlags['has_pikachu']) {
         this.textBox.show([
           `${this.playerState.rivalName}: What?\nGramps isn't here?`,
           "I want my POKeMON!",
-        ], () => {
-          const musicId = getMusicForMap(this.currentMap);
-          if (musicId) soundSystem.startMusic(musicId);
-        });
+        ]);
         return;
       }
       if (this.playerState.storyFlags['rival_battle_lab']) {
         this.textBox.show([
           `${this.playerState.rivalName}: I'll get\nstronger and beat\nyou next time!`,
-        ], () => {
-          const musicId = getMusicForMap(this.currentMap);
-          if (musicId) soundSystem.startMusic(musicId);
-        });
+        ]);
         return;
       }
       // Rival wants to battle (triggered automatically after getting Pikachu)
