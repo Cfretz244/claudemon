@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokemon Sound Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a2e; color: #e0e0e0; font-family: monospace; padding: 20px; }
+    h1 { text-align: center; margin-bottom: 8px; color: #f8d030; font-size: 24px; }
+    .subtitle { text-align: center; margin-bottom: 20px; color: #888; font-size: 14px; }
+
+    .controls {
+      max-width: 900px;
+      margin: 0 auto 20px;
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      align-items: center;
+      background: #2a2a4a;
+      border-radius: 8px;
+      padding: 12px 24px;
+    }
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .slider-group label {
+      font-size: 12px;
+      color: #aaa;
+      min-width: 50px;
+    }
+    .slider-group input[type="range"] {
+      width: 120px;
+      accent-color: #f8d030;
+    }
+    .slider-group .vol-value {
+      font-size: 11px;
+      color: #888;
+      min-width: 32px;
+      text-align: right;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      max-width: 900px;
+      margin: 0 auto 24px;
+    }
+    .card {
+      background: #2a2a4a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.2s;
+      border: 2px solid transparent;
+      user-select: none;
+    }
+    .card:hover { background: #3a3a5a; }
+    .card.playing {
+      border-color: #f8d030;
+      background: #3a3a5a;
+    }
+    .card.playing .track-name {
+      color: #f8d030;
+    }
+    .card .track-name {
+      font-size: 14px;
+      font-weight: bold;
+      color: #f0f0f0;
+      margin-bottom: 4px;
+    }
+    .card .track-info {
+      font-size: 11px;
+      color: #888;
+    }
+    .card .track-info span {
+      margin-right: 10px;
+    }
+    .card .play-indicator {
+      float: right;
+      font-size: 16px;
+      line-height: 1;
+      color: #666;
+    }
+    .card.playing .play-indicator {
+      color: #f8d030;
+    }
+
+    #viz-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #2a2a4a;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    #viz-container h2 {
+      font-size: 14px;
+      color: #aaa;
+      margin-bottom: 8px;
+    }
+    #viz-canvas {
+      width: 100%;
+      height: 300px;
+      display: block;
+      border-radius: 4px;
+      background: #1a1a2e;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sound Test</h1>
+  <p class="subtitle">12 Music Tracks - Click to play/stop</p>
+
+  <div class="controls" id="controls">
+    <div class="slider-group">
+      <label>Melody</label>
+      <input type="range" id="melody-vol" min="0" max="100" value="100">
+      <span class="vol-value" id="melody-vol-value">100%</span>
+    </div>
+    <div class="slider-group">
+      <label>Bass</label>
+      <input type="range" id="bass-vol" min="0" max="100" value="100">
+      <span class="vol-value" id="bass-vol-value">100%</span>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div id="viz-container">
+    <h2>Note Visualization</h2>
+    <canvas id="viz-canvas"></canvas>
+  </div>
+
+  <script type="module" src="/src/soundTest.ts"></script>
+</body>
+</html>

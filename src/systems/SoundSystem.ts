@@ -20,6 +20,8 @@ export class SoundSystem {
   private bassNextTime = 0;
   private currentTrack: MusicTrack | null = null;
   private pausedTrackId: string | null = null;
+  private melodyVolume = 1.0;
+  private bassVolume = 1.0;
 
   private getCtx(): AudioContext {
     if (!this.ctx) {
@@ -143,6 +145,32 @@ export class SoundSystem {
     }
   }
 
+  // ── Sound Test API ──────────────────────────────────────
+
+  setMelodyVolume(vol: number): void {
+    this.melodyVolume = Math.max(0, Math.min(1, vol));
+  }
+
+  setBassVolume(vol: number): void {
+    this.bassVolume = Math.max(0, Math.min(1, vol));
+  }
+
+  getMelodyIndex(): number {
+    return this.melodyIndex;
+  }
+
+  getBassIndex(): number {
+    return this.bassIndex;
+  }
+
+  getCurrentTrack(): MusicTrack | null {
+    return this.currentTrack;
+  }
+
+  getCurrentTrackId(): string | null {
+    return this.currentTrackId;
+  }
+
   private scheduleNotes(): void {
     if (!this.ctx || !this.currentTrack) return;
     const ctx = this.ctx;
@@ -156,7 +184,7 @@ export class SoundSystem {
         this.melodyNextTime,
         this.melodyOsc!,
         this.melodyGain!,
-        0.04,
+        0.04 * this.melodyVolume,
         this.currentTrack.bpm,
       );
       const note = this.currentTrack.melody[this.melodyIndex] as NoteEntry;
@@ -172,7 +200,7 @@ export class SoundSystem {
         this.bassNextTime,
         this.bassOsc!,
         this.bassGain!,
-        0.03,
+        0.03 * this.bassVolume,
         this.currentTrack.bpm,
       );
       const note = this.currentTrack.bass[this.bassIndex] as NoteEntry;
