@@ -8,6 +8,7 @@ import { PartyScreen } from '../components/PartyScreen';
 import { BagScreen } from '../components/BagScreen';
 import { ShopScreen } from '../components/ShopScreen';
 import { PCScreen } from '../components/PCScreen';
+import { TrainerCard } from '../components/TrainerCard';
 import { generateNPCSprite } from '../utils/spriteGenerator';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
@@ -17,6 +18,7 @@ import { createPokemon } from '../entities/Pokemon';
 import { PlayerState } from '../entities/Player';
 import { ELITE_FOUR, CHAMPION } from '../data/eliteFour';
 import { GYM_LEADERS } from '../data/gymLeaders';
+import { TRAINERS } from '../data/trainers';
 import { playBattleTransition, playTrainerBattleTransition } from '../utils/battleTransition';
 
 interface SceneData {
@@ -78,6 +80,7 @@ export class OverworldScene extends Phaser.Scene {
   private bagScreen!: BagScreen;
   private shopScreen!: ShopScreen;
   private pcScreen!: PCScreen;
+  private trainerCard!: TrainerCard;
 
   // Healing machine (permanent in Pokemon Centers)
   private healMachineGfx: Phaser.GameObjects.Graphics | null = null;
@@ -209,6 +212,7 @@ export class OverworldScene extends Phaser.Scene {
     this.bagScreen = new BagScreen(this);
     this.shopScreen = new ShopScreen(this);
     this.pcScreen = new PCScreen(this);
+    this.trainerCard = new TrainerCard(this);
 
     // Start map music
     const musicId = getMusicForMap(this.currentMap);
@@ -687,6 +691,7 @@ export class OverworldScene extends Phaser.Scene {
         type: 'trainer',
         trainerId: ELITE_FOUR[0].id,
         trainerName: ELITE_FOUR[0].name,
+        trainerClass: 'Elite Four',
         playerState: this.playerState.toSave(),
         returnMap: 'indigo_plateau',
         returnX: 7,
@@ -940,6 +945,7 @@ export class OverworldScene extends Phaser.Scene {
         type: 'trainer',
         trainerId,
         trainerName: this.playerState.rivalName,
+        trainerClass: 'Rival',
         playerState: this.playerState.toSave(),
         returnMap: this.currentMap.id,
         returnX: this.playerGridX,
@@ -1713,11 +1719,16 @@ export class OverworldScene extends Phaser.Scene {
       trainerName = this.playerState.rivalName;
     }
 
+    // Look up trainer class for sprite rendering
+    const trainerData = TRAINERS[npc.id];
+    const trainerClass = trainerData?.class || '';
+
     playTrainerBattleTransition(this, () => {
       this.scene.start('BattleScene', {
         type: 'trainer',
         trainerId: npc.id,
         trainerName,
+        trainerClass,
         playerState: this.playerState.toSave(),
         returnMap: this.currentMap.id,
         returnX: this.playerGridX,
@@ -1731,7 +1742,7 @@ export class OverworldScene extends Phaser.Scene {
 
   // Menu system
   private createMenu(): void {
-    this.menuItems = ['POKeDEX', 'POKeMON', 'BAG', 'SAVE', 'EXIT'];
+    this.menuItems = ['POKeDEX', 'POKeMON', 'BAG', this.playerState.name, 'SAVE', 'EXIT'];
     const menuWidth = 60;
     const menuX = GAME_WIDTH - menuWidth - 2;
     const menuY = 2;
@@ -1809,6 +1820,12 @@ export class OverworldScene extends Phaser.Scene {
   private selectMenuItem(): void {
     const item = this.menuItems[this.menuSelectedIndex];
     soundSystem.menuSelect();
+
+    // Trainer Card (dynamic name entry)
+    if (item === this.playerState.name) {
+      this.showTrainerCard();
+      return;
+    }
 
     switch (item) {
       case 'POKeDEX':
@@ -1890,6 +1907,14 @@ export class OverworldScene extends Phaser.Scene {
     this.closeMenu();
     this.screenOpen = true;
     this.bagScreen.show(this.playerState, () => {
+      this.screenOpen = false;
+    });
+  }
+
+  private showTrainerCard(): void {
+    this.closeMenu();
+    this.screenOpen = true;
+    this.trainerCard.show(this.playerState, () => {
       this.screenOpen = false;
     });
   }

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { generateTileset, generatePlayerSprite, generatePikachuFollowerSprite, generatePokeballSprite, generateOakPortrait, generateNidorinoPortrait, generateSurfSprite, generatePlayerPortrait, generatePlayerPortraitMid } from '../utils/spriteGenerator';
+import { generateAllTrainerSprites } from '../utils/trainerSpriteGenerator';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -39,6 +40,7 @@ export class BootScene extends Phaser.Scene {
     generatePlayerPortrait(this);
     generatePlayerPortraitMid(this);
     generateSurfSprite(this);
+    generateAllTrainerSprites(this);
 
     // Create player animations
     this.anims.create({

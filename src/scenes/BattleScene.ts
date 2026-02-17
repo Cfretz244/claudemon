@@ -25,6 +25,7 @@ import { GYM_LEADERS } from '../data/gymLeaders';
 import { ELITE_FOUR, CHAMPION, HALL_OF_FAME_TEXT } from '../data/eliteFour';
 import { playMoveAnimation, AnimationContext } from '../systems/MoveAnimations';
 import '../systems/animations';
+import { getTrainerSpriteKey } from '../utils/trainerSpriteGenerator';
 
 interface BattleSceneData {
   type: string;
@@ -36,6 +37,7 @@ interface BattleSceneData {
   returnMap: string;
   returnX: number;
   returnY: number;
+  trainerClass?: string;
   // Elite Four chain support
   eliteFourQueue?: Array<{ trainerId: string; trainerName: string }>;
   hallOfFame?: boolean;
@@ -59,6 +61,9 @@ export class BattleScene extends Phaser.Scene {
   // Sprites
   private playerSprite!: Phaser.GameObjects.Sprite;
   private opponentSprite!: Phaser.GameObjects.Sprite;
+  private playerTrainerSprite?: Phaser.GameObjects.Image;
+  private opponentTrainerSprite?: Phaser.GameObjects.Image;
+  private trainerClass?: string;
 
   // UI
   private hud!: BattleHUD;
@@ -98,6 +103,7 @@ export class BattleScene extends Phaser.Scene {
     this.returnY = data.returnY;
     this.trainerId = data.trainerId;
     this.trainerName = data.trainerName;
+    this.trainerClass = data.trainerClass;
     this.eliteFourQueue = data.eliteFourQueue || [];
     this.hallOfFame = data.hallOfFame || false;
 
@@ -158,17 +164,39 @@ export class BattleScene extends Phaser.Scene {
     this.ensurePokemonSprite(this.playerPokemon.speciesId);
     this.ensurePokemonSprite(this.opponentPokemon.speciesId);
 
-    // Opponent sprite (top-right, front view, frame 0)
+    // Opponent sprite (top-right, front view, frame 0) - hidden initially
     const oppSpriteKey = `pokemon_${this.opponentPokemon.speciesId}`;
     this.opponentSprite = this.add.sprite(GAME_WIDTH - 40, 28, oppSpriteKey, 0);
     this.opponentSprite.setDepth(5);
     this.opponentSprite.setScrollFactor(0);
 
-    // Player sprite (bottom-left, back view, frame 1)
+    // Player sprite (bottom-left, back view, frame 1) - hidden initially
     const plrSpriteKey = `pokemon_${this.playerPokemon.speciesId}`;
     this.playerSprite = this.add.sprite(36, 76, plrSpriteKey, 1);
     this.playerSprite.setDepth(5);
     this.playerSprite.setScrollFactor(0);
+    this.playerSprite.setAlpha(0);
+
+    // Player trainer back sprite (stands in for the player until Pokemon is sent out)
+    if (this.textures.exists('trainer_player_back')) {
+      this.playerTrainerSprite = this.add.image(36, 76, 'trainer_player_back');
+      this.playerTrainerSprite.setDepth(5);
+      this.playerTrainerSprite.setScrollFactor(0);
+    }
+
+    if (this.battleType === BattleType.TRAINER) {
+      // Trainer battle: hide opponent Pokemon, show trainer sprite
+      this.opponentSprite.setAlpha(0);
+      const trainerSpriteKey = getTrainerSpriteKey(this.trainerId || '', this.trainerClass || '');
+      if (this.textures.exists(trainerSpriteKey)) {
+        this.opponentTrainerSprite = this.add.image(GAME_WIDTH - 40, 30, trainerSpriteKey);
+        this.opponentTrainerSprite.setDepth(5);
+        this.opponentTrainerSprite.setScrollFactor(0);
+      }
+    } else {
+      // Wild battle: show opponent Pokemon immediately
+      this.opponentSprite.setAlpha(1);
+    }
 
     // HUD
     this.hud = new BattleHUD(this);
@@ -188,21 +216,6 @@ export class BattleScene extends Phaser.Scene {
     // Mark as seen in Pokedex
     this.playerState.markSeen(this.opponentPokemon.speciesId);
 
-    // Battle intro
-    const opponentName = this.getSpeciesName(this.opponentPokemon.speciesId);
-    const playerName = this.getSpeciesName(this.playerPokemon.speciesId);
-
-    let introMessages: string[];
-    if (this.battleType === BattleType.WILD) {
-      introMessages = [`Wild ${opponentName}\nappeared!`];
-    } else {
-      introMessages = [
-        `${this.trainerName || 'TRAINER'}\nwants to battle!`,
-        `${this.trainerName || 'TRAINER'} sent\nout ${opponentName}!`,
-      ];
-    }
-    introMessages.push(`Go! ${playerName}!`);
-
     // Start battle music
     if (this.eliteFourQueue.length > 0 || this.hallOfFame || ELITE_FOUR.some(e => e.id === this.trainerId) || this.trainerId === CHAMPION.id) {
       soundSystem.startMusic('elite_four');
@@ -216,10 +229,6 @@ export class BattleScene extends Phaser.Scene {
 
     soundSystem.pokemonCry(300 + this.opponentPokemon.speciesId * 3);
 
-    this.textBox.show(introMessages, () => {
-      this.showBattleMenu();
-    });
-
     // Handle Z/Enter for text box advancement
     const zKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
     const enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
@@ -232,6 +241,79 @@ export class BattleScene extends Phaser.Scene {
       if (this.textBox.getIsVisible()) {
         this.textBox.advance();
       }
+    });
+
+    // Play the battle intro sequence with trainer sprite animations
+    this.playBattleIntro();
+  }
+
+  private async playBattleIntro(): Promise<void> {
+    const opponentName = this.getSpeciesName(this.opponentPokemon.speciesId);
+    const playerName = this.getSpeciesName(this.playerPokemon.speciesId);
+
+    if (this.battleType === BattleType.WILD) {
+      // Wild: opponent Pokemon already visible, show text
+      await this.showText([`Wild ${opponentName}\nappeared!`]);
+      // "Go! Pokemon!" then slide player back sprite out, bring in player pokemon
+      await this.showText([`Go! ${playerName}!`]);
+      await this.slidePlayerIn();
+    } else {
+      // Trainer: show both trainer sprites
+      await this.showText([`${this.trainerName || 'TRAINER'}\nwants to battle!`]);
+      // "Trainer sent out Pokemon!" - slide opponent trainer out, bring in opponent pokemon
+      await this.showText([`${this.trainerName || 'TRAINER'} sent\nout ${opponentName}!`]);
+      await this.slideOpponentIn();
+      // "Go! Pokemon!" - slide player back sprite out, bring in player pokemon
+      await this.showText([`Go! ${playerName}!`]);
+      await this.slidePlayerIn();
+    }
+
+    this.showBattleMenu();
+  }
+
+  private slideOpponentIn(): Promise<void> {
+    return new Promise(resolve => {
+      // Slide opponent trainer sprite off to the right
+      if (this.opponentTrainerSprite) {
+        this.tweens.add({
+          targets: this.opponentTrainerSprite,
+          x: GAME_WIDTH + 40,
+          duration: 400,
+          ease: 'Power2',
+        });
+      }
+      // Fade in opponent Pokemon
+      this.opponentSprite.setAlpha(0);
+      this.tweens.add({
+        targets: this.opponentSprite,
+        alpha: 1,
+        duration: 400,
+        ease: 'Linear',
+        onComplete: () => resolve(),
+      });
+    });
+  }
+
+  private slidePlayerIn(): Promise<void> {
+    return new Promise(resolve => {
+      // Slide player back sprite off to the left
+      if (this.playerTrainerSprite) {
+        this.tweens.add({
+          targets: this.playerTrainerSprite,
+          x: -40,
+          duration: 400,
+          ease: 'Power2',
+        });
+      }
+      // Fade in player Pokemon
+      this.playerSprite.setAlpha(0);
+      this.tweens.add({
+        targets: this.playerSprite,
+        alpha: 1,
+        duration: 400,
+        ease: 'Linear',
+        onComplete: () => resolve(),
+      });
     });
   }
 
