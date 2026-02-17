@@ -465,8 +465,9 @@ export const ROUTE11: MapData = (() => {
   fillRect(12, 6, 5, 3, T.TALL_GRASS);
   fillRect(20, 1, 4, 3, T.TALL_GRASS);
 
-  // Diglett's Cave entrance (simplified - just a building at east end)
-  fillRect(23, 3, 2, 2, T.BUILDING);
+  // Diglett's Cave entrance
+  fillRect(21, 2, 3, 2, T.BUILDING);
+  setTile(22, 4, T.DOOR);
 
   return {
     id: 'route11',
@@ -479,6 +480,8 @@ export const ROUTE11: MapData = (() => {
       // West entrance → Vermilion City
       { x: 0, y: 4, targetMap: 'vermilion_city', targetX: 28, targetY: 12 },
       { x: 0, y: 5, targetMap: 'vermilion_city', targetX: 28, targetY: 13 },
+      // Diglett's Cave entrance
+      { x: 22, y: 4, targetMap: 'digletts_cave', targetX: 6, targetY: 18 },
     ],
     npcs: [
       {
@@ -1296,6 +1299,60 @@ const SILPH_CO: MapData = (() => {
   };
 })();
 
+// ─── DIGLETT'S CAVE ─────────────────────────────────────────────────────────
+
+const DIGLETTS_CAVE: MapData = (() => {
+  const W = 12, H = 20;
+  const tiles = fill2D(W, H, T.CAVE_WALL);
+  const collision = fill2D(W, H, true);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Carve out main cave interior (leave 2-tile border)
+  fillRect(2, 2, 8, 16, T.CAVE_FLOOR);
+
+  // North entrance corridor
+  fillRect(5, 0, 3, 3, T.CAVE_FLOOR);
+  // South entrance corridor
+  fillRect(5, 17, 3, 3, T.CAVE_FLOOR);
+
+  // Interior obstacles — winding tunnel
+  fillRect(2, 5, 3, 2, T.CAVE_WALL);
+  fillRect(7, 8, 3, 2, T.CAVE_WALL);
+  fillRect(2, 11, 3, 2, T.CAVE_WALL);
+  fillRect(7, 14, 3, 2, T.CAVE_WALL);
+
+  return {
+    id: 'digletts_cave',
+    name: "DIGLETT's CAVE",
+    width: W, height: H,
+    tiles, collision,
+    warps: [
+      // North exit → Route 2
+      { x: 5, y: 0, targetMap: 'route2', targetX: 15, targetY: 25 },
+      { x: 6, y: 0, targetMap: 'route2', targetX: 15, targetY: 25 },
+      { x: 7, y: 0, targetMap: 'route2', targetX: 15, targetY: 25 },
+      // South exit → Route 11
+      { x: 5, y: 19, targetMap: 'route11', targetX: 22, targetY: 5 },
+      { x: 6, y: 19, targetMap: 'route11', targetX: 22, targetY: 5 },
+      { x: 7, y: 19, targetMap: 'route11', targetX: 22, targetY: 5 },
+    ],
+    npcs: [],
+    wildEncounters: {
+      grassRate: 0.15,
+      encounters: [
+        { speciesId: 50, minLevel: 15, maxLevel: 22, weight: 90 }, // Diglett
+        { speciesId: 51, minLevel: 29, maxLevel: 31, weight: 10 }, // Dugtrio
+      ],
+    },
+  };
+})();
+
 // ─── Combined export ─────────────────────────────────────────────────────────
 
 export const CENTRAL_MAPS: Record<string, MapData> = {
@@ -1316,4 +1373,5 @@ export const CENTRAL_MAPS: Record<string, MapData> = {
   pokemart_saffron: POKEMART_SAFFRON,
   game_corner_basement: GAME_CORNER_BASEMENT,
   silph_co: SILPH_CO,
+  digletts_cave: DIGLETTS_CAVE,
 };

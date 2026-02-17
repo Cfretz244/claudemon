@@ -6,6 +6,7 @@ export interface ItemData {
   category: 'ball' | 'medicine' | 'battle' | 'key' | 'hm' | 'tm';
   effect?: string;
   healAmount?: number;
+  moveId?: number;
 }
 
 export const ITEMS: Record<string, ItemData> = {
@@ -217,6 +218,7 @@ export const ITEMS: Record<string, ItemData> = {
     description: 'Teaches CUT to a\nPOKeMON. Chops small\ntrees.',
     price: 0,
     category: 'hm',
+    moveId: 15,
   },
   hm02_fly: {
     id: 'hm02_fly',
@@ -224,6 +226,7 @@ export const ITEMS: Record<string, ItemData> = {
     description: 'Teaches FLY to a\nPOKeMON. Fly to visited\ntowns.',
     price: 0,
     category: 'hm',
+    moveId: 19,
   },
   hm03_surf: {
     id: 'hm03_surf',
@@ -231,6 +234,7 @@ export const ITEMS: Record<string, ItemData> = {
     description: 'Teaches SURF to a\nPOKeMON. Crosses water.',
     price: 0,
     category: 'hm',
+    moveId: 57,
   },
   hm04_strength: {
     id: 'hm04_strength',
@@ -238,6 +242,7 @@ export const ITEMS: Record<string, ItemData> = {
     description: 'Teaches STRENGTH.\nPushes heavy boulders.',
     price: 0,
     category: 'hm',
+    moveId: 70,
   },
   hm05_flash: {
     id: 'hm05_flash',
@@ -245,5 +250,6 @@ export const ITEMS: Record<string, ItemData> = {
     description: 'Teaches FLASH.\nLights up dark caves.',
     price: 0,
     category: 'hm',
+    moveId: 148,
   },
 };

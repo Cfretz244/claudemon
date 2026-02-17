@@ -338,7 +338,7 @@ export class BagScreen {
     const item = this.itemList[this.cursorIndex];
     const itemData = ITEMS[item.id];
 
-    if (!itemData || itemData.category !== 'medicine') {
+    if (!itemData || (itemData.category !== 'medicine' && itemData.category !== 'hm')) {
       this.showMessage("Can't use that here!");
       return;
     }
@@ -373,6 +373,49 @@ export class BagScreen {
     const pokemon = this.playerState.party[pokemonIndex];
 
     if (!itemData || !pokemon) return;
+
+    // HM teaching
+    if (itemData.category === 'hm' && itemData.moveId != null) {
+      const moveId = itemData.moveId;
+      const moveName = MOVES_DATA[moveId]?.name || '???';
+      const pokeName = this.getPokemonName(pokemon);
+
+      // Check if Pokemon already knows this move
+      if (pokemon.moves.some(m => m.moveId === moveId)) {
+        this.showMessage(`${pokeName} already\nknows ${moveName}!`);
+        return;
+      }
+
+      // If has room, learn directly (HMs are NOT consumed)
+      if (pokemon.moves.length < 4) {
+        learnMove(pokemon, moveId);
+        soundSystem.heal();
+        this.showMessage(`${pokeName} learned\n${moveName}!`);
+        this.mode = 'list';
+        this.partyContainer.setVisible(false);
+        this.optionsContainer.setVisible(false);
+        this.updateList();
+        return;
+      }
+
+      // Need to forget a move — use MoveForgetUI
+      this.mode = 'move_forget';
+      this.partyContainer.setVisible(false);
+      this.moveForgetUI.show(pokemon, moveId, (replaceIndex) => {
+        if (replaceIndex !== null) {
+          const oldMoveName = MOVES_DATA[pokemon.moves[replaceIndex].moveId]?.name || '???';
+          learnMove(pokemon, moveId, replaceIndex);
+          soundSystem.heal();
+          this.showMessage(`${pokeName} forgot\n${oldMoveName} and\nlearned ${moveName}!`);
+        } else {
+          this.showMessage(`${pokeName} did not\nlearn ${moveName}.`);
+        }
+        this.mode = 'list';
+        this.optionsContainer.setVisible(false);
+        this.updateList();
+      });
+      return;
+    }
 
     // Revive check
     if (item.id === 'revive') {
@@ -497,6 +540,11 @@ export class BagScreen {
 
   private startToss(): void {
     const item = this.itemList[this.cursorIndex];
+    const itemData = ITEMS[item.id];
+    if (itemData && (itemData.category === 'key' || itemData.category === 'hm')) {
+      this.showMessage("That's too important\nto toss!");
+      return;
+    }
     this.mode = 'toss_qty';
     this.tossQty = 1;
     this.tossQtyText.setText(`x1`);

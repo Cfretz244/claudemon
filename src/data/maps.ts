@@ -748,15 +748,30 @@ export const ROUTE2: MapData = (() => {
     setTile(W - 2, y, T.TREE);
   }
 
-  // Tall grass
+  // Vertical tree wall separating east section (requires Cut to pass)
+  for (let y = 0; y < H; y++) {
+    setTile(12, y, T.TREE);
+  }
+  // CUT_TREE gap — only way through the wall from the main path
+  setTile(12, 13, T.CUT_TREE);
+
+  // Tall grass (west side)
   fillRect(3, 4, 5, 4, T.TALL_GRASS);
-  fillRect(12, 10, 5, 4, T.TALL_GRASS);
   fillRect(4, 18, 4, 3, T.TALL_GRASS);
-  fillRect(13, 22, 4, 3, T.TALL_GRASS);
+  // Tall grass (east section — shifted east of tree wall)
+  fillRect(13, 10, 4, 4, T.TALL_GRASS);
 
   // Trees
   setTile(6, 10, T.TREE);
   setTile(14, 6, T.TREE);
+
+  // Oak's Aide building (east section, behind tree wall)
+  fillRect(13, 15, 4, 2, T.BUILDING);
+  setTile(15, 17, T.DOOR);
+
+  // Diglett's Cave entrance building (east section)
+  fillRect(13, 22, 4, 2, T.BUILDING);
+  setTile(15, 24, T.DOOR);
 
   return {
     id: 'route2',
@@ -776,19 +791,12 @@ export const ROUTE2: MapData = (() => {
       { x: 9, y: 0, targetMap: 'viridian_forest', targetX: 14, targetY: 42 },
       { x: 10, y: 0, targetMap: 'viridian_forest', targetX: 15, targetY: 42 },
       { x: 11, y: 0, targetMap: 'viridian_forest', targetX: 16, targetY: 42 },
+      // Oak's Aide house door
+      { x: 15, y: 17, targetMap: 'oaks_aide_house', targetX: 3, targetY: 6 },
+      // Diglett's Cave entrance door
+      { x: 15, y: 24, targetMap: 'digletts_cave', targetX: 6, targetY: 1 },
     ],
-    npcs: [
-      {
-        id: 'oaks_aide_route2',
-        x: 13, y: 18,
-        spriteColor: 0x60a0f0,
-        direction: Direction.LEFT,
-        dialogue: [
-          "OAK's AIDE: Prof. OAK\nordered me to give\nthis to you!",
-          "It's an HM that\nteaches FLASH!",
-        ],
-      },
-    ],
+    npcs: [],
     wildEncounters: {
       grassRate: 0.2,
       encounters: [
@@ -798,6 +806,56 @@ export const ROUTE2: MapData = (() => {
         { speciesId: 13, minLevel: 3, maxLevel: 5, weight: 15 }, // Weedle
       ],
     },
+  };
+})();
+
+export const OAKS_AIDE_HOUSE: MapData = (() => {
+  const W = 6, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+
+  // Walls: top 2 rows, sides
+  for (let x = 0; x < W; x++) {
+    setTile(x, 0, T.WALL);
+    setTile(x, 1, T.WALL);
+  }
+  for (let y = 0; y < H; y++) {
+    setTile(0, y, T.WALL);
+    setTile(W - 1, y, T.WALL);
+  }
+
+  // Door at bottom
+  setTile(3, H - 1, T.DOOR);
+
+  return {
+    id: 'oaks_aide_house',
+    name: "OAK's AIDE's HOUSE",
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      { x: 3, y: H - 1, targetMap: 'route2', targetX: 15, targetY: 18 },
+    ],
+    npcs: [
+      {
+        id: 'oaks_aide_route2',
+        x: 3, y: 3,
+        spriteColor: 0x60a0f0,
+        direction: Direction.DOWN,
+        dialogue: [
+          "OAK's AIDE: Prof. OAK\nordered me to give\nthis to you!",
+          "It's an HM that\nteaches FLASH!",
+        ],
+      },
+    ],
   };
 })();
 
@@ -1419,6 +1477,7 @@ export const ALL_MAPS: Record<string, MapData> = {
   pokemart: POKEMART,
   viridian_gym: VIRIDIAN_GYM,
   route2: ROUTE2,
+  oaks_aide_house: OAKS_AIDE_HOUSE,
   viridian_forest: VIRIDIAN_FOREST,
   pewter_city: PEWTER_CITY,
   pewter_gym: PEWTER_GYM,
