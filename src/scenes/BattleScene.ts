@@ -1278,6 +1278,7 @@ export class BattleScene extends Phaser.Scene {
         const nextName = this.getSpeciesName(this.opponentPokemon.speciesId);
 
         const spriteKey = `pokemon_${this.opponentPokemon.speciesId}`;
+        this.tweens.killTweensOf(this.opponentSprite);
         this.opponentSprite.setTexture(spriteKey, 0);
         this.opponentSprite.setAlpha(1);
         this.opponentSprite.setY(28);
@@ -1349,6 +1350,7 @@ export class BattleScene extends Phaser.Scene {
 
       const nextName = this.getSpeciesName(this.playerPokemon.speciesId);
       const spriteKey = `pokemon_${this.playerPokemon.speciesId}`;
+      this.tweens.killTweensOf(this.playerSprite);
       this.playerSprite.setTexture(spriteKey, 1);
       this.playerSprite.setAlpha(1);
       this.playerSprite.setY(76);
