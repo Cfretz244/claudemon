@@ -211,6 +211,20 @@ export const ITEMS: Record<string, ItemData> = {
     price: 0,
     category: 'key',
   },
+  helix_fossil: {
+    id: 'helix_fossil',
+    name: 'HELIX FOSSIL',
+    description: 'A fossil of an ancient\nPOKeMON that lived\nin the sea.',
+    price: 0,
+    category: 'key',
+  },
+  dome_fossil: {
+    id: 'dome_fossil',
+    name: 'DOME FOSSIL',
+    description: 'A fossil of an ancient\nPOKeMON that lived\non land.',
+    price: 0,
+    category: 'key',
+  },
   // HM items
   hm01_cut: {
     id: 'hm01_cut',

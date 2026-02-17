@@ -174,7 +174,7 @@ export class OverworldScene extends Phaser.Scene {
     this.player.setDepth(10);
 
     // Pikachu follower - starts hidden on player tile, appears after first step
-    this.pikachuVisible = this.playerState.party.length > 0 && this.playerState.party[0].speciesId === 25;
+    this.pikachuVisible = this.playerState.party.some(p => p.speciesId === 25);
     this.pikachuGridX = this.playerGridX;
     this.pikachuGridY = this.playerGridY;
     this.pikachu = this.add.sprite(
@@ -365,6 +365,19 @@ export class OverworldScene extends Phaser.Scene {
         this.playerState.defeatedTrainers.includes('giovanni_silph')) {
       return true;
     }
+    // Mt. Moon fossils: hidden until fossil nerd defeated, disappear once one is taken
+    if ((npc.id === 'mt_moon_helix_fossil' || npc.id === 'mt_moon_dome_fossil')) {
+      if (!this.playerState.defeatedTrainers.includes('mt_moon_fossil_nerd')) {
+        return true; // Can't see fossils until nerd is beaten
+      }
+      if (this.playerState.storyFlags['got_fossil']) {
+        return true; // Both disappear once one is taken
+      }
+    }
+    // Fossil nerd disappears after defeat
+    if (npc.id === 'mt_moon_fossil_nerd' && this.playerState.defeatedTrainers.includes('mt_moon_fossil_nerd')) {
+      return true;
+    }
     return false;
   }
 
@@ -449,8 +462,30 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    // Check collision (surfing allows water tiles)
+    // Check for ledge hop (south only - ledges are one-way drops)
     const targetTile = this.currentMap.tiles[newY]?.[newX];
+    if (targetTile === TileType.LEDGE) {
+      if (dir === Direction.DOWN) {
+        // Hop over the ledge - land on tile below it
+        const landY = newY + 1;
+        if (landY >= this.currentMap.height) return;
+        if (this.currentMap.collision[landY]?.[newX]) return;
+        const landTile = this.currentMap.tiles[landY]?.[newX];
+        if (landTile === TileType.LEDGE) return; // Can't chain ledges
+        // Check NPC at landing spot
+        for (const npc of this.currentMap.npcs) {
+          if (this.shouldSkipNPC(npc)) continue;
+          if (npc.x === newX && npc.y === landY) return;
+        }
+        this.performLedgeHop(newX, landY, dir);
+        return;
+      } else {
+        soundSystem.bump();
+        return;
+      }
+    }
+
+    // Check collision (surfing allows water tiles)
     if (this.currentMap.collision[newY]?.[newX]) {
       // Surfing: water tiles are passable
       if (this.isSurfing && targetTile === TileType.WATER) {
@@ -534,6 +569,56 @@ export class OverworldScene extends Phaser.Scene {
 
         // Check for wild encounter
         this.checkWildEncounter(newX, newY);
+      },
+    });
+  }
+
+  private performLedgeHop(landX: number, landY: number, dir: Direction): void {
+    this.isMoving = true;
+    const prevX = this.playerGridX;
+    const prevY = this.playerGridY;
+    this.playerGridX = landX;
+    this.playerGridY = landY;
+    this.player.play(`player_walk_${dir}`, true);
+    soundSystem.bump();
+
+    const startPixelX = this.player.x;
+    const startPixelY = this.player.y;
+    const endPixelX = landX * TILE_SIZE + TILE_SIZE / 2;
+    const endPixelY = landY * TILE_SIZE + TILE_SIZE / 2;
+    const hopData = { progress: 0 };
+
+    this.tweens.add({
+      targets: hopData,
+      progress: 1,
+      duration: MOVE_DURATION * 2,
+      onUpdate: () => {
+        const p = hopData.progress;
+        this.player.x = startPixelX + (endPixelX - startPixelX) * p;
+        const hopOffset = 10 * Math.sin(p * Math.PI);
+        this.player.y = startPixelY + (endPixelY - startPixelY) * p - hopOffset;
+      },
+      onComplete: () => {
+        this.isMoving = false;
+        this.player.x = endPixelX;
+        this.player.y = endPixelY;
+        this.player.play(`player_idle_${this.playerDirection}`, true);
+
+        if (this.pikachuVisible) {
+          if (!this.pikachu.visible) this.pikachu.setVisible(true);
+          this.movePikachu(prevX, prevY, this.playerDirection);
+        }
+
+        const warp = this.currentMap.warps.find(w => w.x === landX && w.y === landY);
+        if (warp) {
+          soundSystem.doorOpen();
+          this.warpTo(warp.targetMap, warp.targetX, warp.targetY);
+          return;
+        }
+
+        this.stepCounter++;
+        if (this.checkTrainerSight()) return;
+        this.checkWildEncounter(landX, landY);
       },
     });
   }
@@ -1292,6 +1377,7 @@ export class OverworldScene extends Phaser.Scene {
     const targetY = this.playerGridY + vec.y;
 
     for (const npc of this.currentMap.npcs) {
+      if (this.shouldSkipNPC(npc)) continue;
       if (npc.x === targetX && npc.y === targetY) {
         this.interactWithNPC(npc);
         return;
@@ -1356,6 +1442,16 @@ export class OverworldScene extends Phaser.Scene {
             if (ballSprite) {
               ballSprite.destroy();
               this.npcSprites.delete(npc.id);
+            }
+            // Mt. Moon fossils: picking one removes the other
+            if (npc.id === 'mt_moon_helix_fossil' || npc.id === 'mt_moon_dome_fossil') {
+              this.playerState.storyFlags['got_fossil'] = true;
+              const otherId = npc.id === 'mt_moon_helix_fossil' ? 'mt_moon_dome_fossil' : 'mt_moon_helix_fossil';
+              const otherSprite = this.npcSprites.get(otherId);
+              if (otherSprite) {
+                otherSprite.destroy();
+                this.npcSprites.delete(otherId);
+              }
             }
           }
         );
@@ -1824,6 +1920,7 @@ export class OverworldScene extends Phaser.Scene {
       'viridian_city:12,13': ['TRAINER TIPS', "If your POKeMON's HP\nreaches 0, it faints!"],
       'route1:7,10': ['ROUTE 1', 'PALLET TOWN -\nVIRIDIAN CITY'],
       'pewter_city:3,9': ['PEWTER CITY GYM\nLEADER: BROCK', 'The Rock-Solid\nPOKeMON Trainer!'],
+      'route3:41,6': ['ROUTE 3', 'MT. MOON ahead'],
     };
     this.textBox.show(signs[signKey] || [this.currentMap.name]);
   }

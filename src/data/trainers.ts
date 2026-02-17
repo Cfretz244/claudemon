@@ -115,6 +115,106 @@ export const TRAINERS: Record<string, TrainerData> = {
       after: ['I lost again...'],
     },
   },
+  route3_trainer2: {
+    id: 'route3_trainer2',
+    name: 'BUG CATCHER COLTON',
+    class: 'Bug Catcher',
+    team: [
+      { speciesId: 10, level: 10 }, // Caterpie
+      { speciesId: 13, level: 10 }, // Weedle
+      { speciesId: 10, level: 10 }, // Caterpie
+    ],
+    prizeMoney: 100,
+    dialogue: {
+      before: ['BUG CATCHER: Go, my\nbugs! Get him!'],
+      after: ["My bugs aren't\nstrong enough yet..."],
+    },
+  },
+  route3_trainer3: {
+    id: 'route3_trainer3',
+    name: 'LASS JANICE',
+    class: 'Lass',
+    team: [
+      { speciesId: 16, level: 9 },  // Pidgey
+      { speciesId: 29, level: 9 },  // Nidoran F
+    ],
+    prizeMoney: 144,
+    dialogue: {
+      before: ['LASS: I just caught\na new POKeMON!', "Let me try it\nout on you!"],
+      after: ['Oh no! My precious\nPOKeMON!'],
+    },
+  },
+  route3_trainer4: {
+    id: 'route3_trainer4',
+    name: 'BUG CATCHER GREG',
+    class: 'Bug Catcher',
+    team: [
+      { speciesId: 13, level: 9 },  // Weedle
+      { speciesId: 14, level: 9 },  // Kakuna
+      { speciesId: 10, level: 9 },  // Caterpie
+    ],
+    prizeMoney: 90,
+    dialogue: {
+      before: ["BUG CATCHER: Heh!\nAre you scared of", 'bugs? You should be!'],
+      after: ['I need better bugs.'],
+    },
+  },
+  route3_trainer5: {
+    id: 'route3_trainer5',
+    name: 'YOUNGSTER CALVIN',
+    class: 'Youngster',
+    team: [
+      { speciesId: 21, level: 14 }, // Spearow
+    ],
+    prizeMoney: 224,
+    dialogue: {
+      before: ['YOUNGSTER: My\nSPEAROW is the best!', "There's no way\nyou can beat it!"],
+      after: ['My SPEAROW lost?\nNo way!'],
+    },
+  },
+  route3_trainer6: {
+    id: 'route3_trainer6',
+    name: 'BUG CATCHER JAMES',
+    class: 'Bug Catcher',
+    team: [
+      { speciesId: 10, level: 9 },  // Caterpie
+      { speciesId: 10, level: 9 },  // Caterpie
+      { speciesId: 11, level: 10 }, // Metapod
+    ],
+    prizeMoney: 100,
+    dialogue: {
+      before: ["BUG CATCHER: I'm\nraising CATERPIE", "to be a mighty\nBUTTERFREE!"],
+      after: ["I haven't raised\nthem enough..."],
+    },
+  },
+  route3_trainer7: {
+    id: 'route3_trainer7',
+    name: 'LASS SALLY',
+    class: 'Lass',
+    team: [
+      { speciesId: 19, level: 10 }, // Rattata
+      { speciesId: 29, level: 10 }, // Nidoran F
+    ],
+    prizeMoney: 160,
+    dialogue: {
+      before: ['LASS: You look like\na new trainer!', "I'll go easy on you!"],
+      after: ["You're not bad\nat all!"],
+    },
+  },
+  route3_trainer8: {
+    id: 'route3_trainer8',
+    name: 'BUG CATCHER ROBBY',
+    class: 'Bug Catcher',
+    team: [
+      { speciesId: 13, level: 10 }, // Weedle
+      { speciesId: 10, level: 10 }, // Caterpie
+    ],
+    prizeMoney: 100,
+    dialogue: {
+      before: ["BUG CATCHER: Bugs\nare the best", "POKeMON! I'll prove\nit to you!"],
+      after: ['Maybe bugs need\nmore work...'],
+    },
+  },
 
   // Pewter Gym
   pewter_gym_trainer: {
@@ -131,24 +231,82 @@ export const TRAINERS: Record<string, TrainerData> = {
     },
   },
 
-  // Mt. Moon
-  mt_moon_trainer1: {
-    id: 'mt_moon_trainer1',
+  // Mt. Moon 1F
+  mt_moon_bug_catcher: {
+    id: 'mt_moon_bug_catcher',
     name: 'BUG CATCHER KENT',
     class: 'Bug Catcher',
     team: [
-      { speciesId: 41, level: 9 },  // Zubat
-      { speciesId: 46, level: 10 }, // Paras
+      { speciesId: 13, level: 11 }, // Weedle
+      { speciesId: 14, level: 11 }, // Kakuna
     ],
-    prizeMoney: 100,
+    prizeMoney: 110,
     dialogue: {
-      before: ['This cave is full of\nrare POKeMON!'],
-      after: ['I should have trained\nmore...'],
+      before: ['BUG CATCHER: Even\ncaves have bugs!'],
+      after: ['My bugs hate caves\ntoo...'],
     },
   },
-  mt_moon_trainer2: {
-    id: 'mt_moon_trainer2',
-    name: 'SUPER NERD JOVAN',
+  mt_moon_lass: {
+    id: 'mt_moon_lass',
+    name: 'LASS IRIS',
+    class: 'Lass',
+    team: [
+      { speciesId: 35, level: 11 }, // Clefairy
+      { speciesId: 29, level: 11 }, // Nidoran F
+    ],
+    prizeMoney: 176,
+    dialogue: {
+      before: ["LASS: I'm looking for\nCLEFAIRY!"],
+      after: ['I caught one already\nthough...'],
+    },
+  },
+  mt_moon_rocket1: {
+    id: 'mt_moon_rocket1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 27, level: 11 }, // Sandshrew
+      { speciesId: 19, level: 11 }, // Rattata
+    ],
+    prizeMoney: 352,
+    dialogue: {
+      before: ['ROCKET: Get out!\nThis cave belongs to\nTEAM ROCKET!'],
+      after: ['You win this time!'],
+    },
+  },
+  mt_moon_hiker: {
+    id: 'mt_moon_hiker',
+    name: 'HIKER MARCOS',
+    class: 'Hiker',
+    team: [
+      { speciesId: 74, level: 10 }, // Geodude
+      { speciesId: 74, level: 10 }, // Geodude
+      { speciesId: 95, level: 11 }, // Onix
+    ],
+    prizeMoney: 396,
+    dialogue: {
+      before: ['HIKER: I love these\nunderground trails!'],
+      after: ['These trails beat me\ndown...'],
+    },
+  },
+  // Mt. Moon B1F
+  mt_moon_rocket2: {
+    id: 'mt_moon_rocket2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 41, level: 11 }, // Zubat
+      { speciesId: 41, level: 11 }, // Zubat
+    ],
+    prizeMoney: 352,
+    dialogue: {
+      before: ['ROCKET: We need these\nfossils for the boss!'],
+      after: ['The boss will be\nfurious!'],
+    },
+  },
+  mt_moon_super_nerd: {
+    id: 'mt_moon_super_nerd',
+    name: 'SUPER NERD MIGUEL',
     class: 'Super Nerd',
     team: [
       { speciesId: 81, level: 11 }, // Magnemite
@@ -156,8 +314,66 @@ export const TRAINERS: Record<string, TrainerData> = {
     ],
     prizeMoney: 264,
     dialogue: {
-      before: ['SUPER NERD: The\nfossils here are mine!'],
-      after: ['How could I lose to\na child?!'],
+      before: ['SUPER NERD: I study\nfossils in this cave!'],
+      after: ['Back to studying...'],
+    },
+  },
+  mt_moon_rocket3: {
+    id: 'mt_moon_rocket3',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 19, level: 11 }, // Rattata
+      { speciesId: 41, level: 11 }, // Zubat
+    ],
+    prizeMoney: 352,
+    dialogue: {
+      before: ['ROCKET: No one gets\npast me!'],
+      after: ['How did I lose?!'],
+    },
+  },
+  // Mt. Moon B2F
+  mt_moon_rocket4: {
+    id: 'mt_moon_rocket4',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 20, level: 12 }, // Raticate
+      { speciesId: 41, level: 12 }, // Zubat
+    ],
+    prizeMoney: 384,
+    dialogue: {
+      before: ['ROCKET: The fossils\nare ours!'],
+      after: ['Fine, take your\nstupid fossils!'],
+    },
+  },
+  mt_moon_rocket5: {
+    id: 'mt_moon_rocket5',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 23, level: 12 }, // Ekans
+      { speciesId: 27, level: 12 }, // Sandshrew
+    ],
+    prizeMoney: 384,
+    dialogue: {
+      before: ['ROCKET: Scram, kid!\nThis is ROCKET turf!'],
+      after: ["TEAM ROCKET won't\nforget this!"],
+    },
+  },
+  mt_moon_fossil_nerd: {
+    id: 'mt_moon_fossil_nerd',
+    name: 'SUPER NERD MIGUEL',
+    class: 'Super Nerd',
+    team: [
+      { speciesId: 88, level: 12 }, // Grimer
+      { speciesId: 100, level: 12 }, // Voltorb
+      { speciesId: 109, level: 12 }, // Koffing
+    ],
+    prizeMoney: 288,
+    dialogue: {
+      before: ['SUPER NERD: Hands off\nmy fossils!', "I found them first!\nThey're mine!"],
+      after: ["OK, OK! You can have\none fossil!", "But I get the other!"],
     },
   },
 

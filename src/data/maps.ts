@@ -1164,9 +1164,9 @@ export const PEWTER_CITY: MapData = (() => {
       { x: 7, y: 9, targetMap: 'pewter_gym', targetX: 4, targetY: 13 },
       // Pokemon Center
       { x: 16, y: 8, targetMap: 'pokemon_center_pewter', targetX: 4, targetY: 7 },
-      // East to Route 3
-      { x: W - 2, y: 12, targetMap: 'route3', targetX: 1, targetY: 5 },
-      { x: W - 2, y: 13, targetMap: 'route3', targetX: 1, targetY: 6 },
+      // East to Route 3 (upper lane entry)
+      { x: W - 2, y: 12, targetMap: 'route3', targetX: 1, targetY: 3 },
+      { x: W - 2, y: 13, targetMap: 'route3', targetX: 1, targetY: 4 },
     ],
     npcs: [
       {
@@ -1293,7 +1293,7 @@ export const POKEMON_CENTER_PEWTER: MapData = (() => {
 })();
 
 export const ROUTE3: MapData = (() => {
-  const W = 30, H = 12;
+  const W = 50, H = 18;
   const tiles = fill2D(W, H, T.GRASS);
   const collision = fill2D(W, H, false);
 
@@ -1312,25 +1312,121 @@ export const ROUTE3: MapData = (() => {
     }
   }
 
-  // Horizontal path
-  fillRect(0, 5, 30, 2, T.PATH);
-
-  // Border
+  // ── Borders ──
   for (let x = 0; x < W; x++) {
     setTile(x, 0, T.TREE);
     setTile(x, H - 1, T.TREE);
   }
+  for (let y = 0; y < H; y++) {
+    setTile(0, y, T.TREE);
+    setTile(W - 1, y, T.TREE);
+  }
+  // Bottom second row of trees for thicker border
+  for (let x = 0; x < 38; x++) {
+    setTile(x, H - 2, T.TREE);
+  }
 
-  // Tall grass
-  fillRect(4, 2, 5, 3, T.TALL_GRASS);
-  fillRect(14, 2, 4, 3, T.TALL_GRASS);
-  fillRect(22, 7, 5, 3, T.TALL_GRASS);
-  fillRect(8, 7, 4, 3, T.TALL_GRASS);
+  // ── UPPER LANE (y=2-4) ──
+  // Main upper path
+  fillRect(1, 3, 37, 2, T.PATH);
+  // Tall grass above the path
+  fillRect(3, 1, 4, 2, T.TALL_GRASS);
+  fillRect(12, 1, 3, 2, T.TALL_GRASS);
+  fillRect(20, 1, 4, 2, T.TALL_GRASS);
+  fillRect(29, 1, 3, 2, T.TALL_GRASS);
+  // Tree obstacles within upper lane creating narrow passages
+  setTile(7, 3, T.TREE);   // forces player to y=4 near trainer 1
+  setTile(8, 4, T.TREE);   // then back to y=3
+  setTile(16, 4, T.TREE);  // narrows path to y=3 near trainer 2
+  setTile(24, 4, T.TREE);  // narrows path near trainer 3
+  setTile(25, 3, T.TREE);  // forces player to y=4
+  setTile(33, 4, T.TREE);  // narrows path before east section
 
-  // Trees
-  setTile(10, 3, T.TREE);
-  setTile(20, 3, T.TREE);
-  setTile(19, 8, T.TREE);
+  // ── BARRIER: upper→middle (y=5) ── trees + ledges
+  fillRect(1, 5, 7, 1, T.TREE);
+  fillRect(8, 5, 4, 1, T.LEDGE);
+  fillRect(12, 5, 6, 1, T.TREE);
+  fillRect(18, 5, 4, 1, T.LEDGE);
+  fillRect(22, 5, 6, 1, T.TREE);
+  fillRect(28, 5, 4, 1, T.LEDGE);
+  fillRect(32, 5, 6, 1, T.TREE);
+
+  // ── MIDDLE LANE (y=6-9) ──
+  // Landing zone grass (y=6)
+  fillRect(8, 6, 4, 1, T.PATH);
+  fillRect(18, 6, 4, 1, T.PATH);
+  fillRect(28, 6, 4, 1, T.PATH);
+  // Tall grass patches in middle zone
+  fillRect(3, 6, 4, 2, T.TALL_GRASS);
+  fillRect(13, 7, 4, 1, T.TALL_GRASS);
+  fillRect(23, 7, 4, 1, T.TALL_GRASS);
+  fillRect(33, 6, 4, 2, T.TALL_GRASS);
+  // Main middle path
+  fillRect(1, 8, 37, 2, T.PATH);
+  // Tree obstacles in middle lane
+  setTile(10, 8, T.TREE);  // narrows to y=9 near trainer 5
+  setTile(20, 9, T.TREE);  // narrows to y=8 near trainer 6
+  setTile(30, 8, T.TREE);  // narrows to y=9
+
+  // ── BARRIER: middle→lower (y=10) ── trees + ledges
+  fillRect(1, 10, 9, 1, T.TREE);
+  fillRect(10, 10, 4, 1, T.LEDGE);
+  fillRect(14, 10, 6, 1, T.TREE);
+  fillRect(20, 10, 4, 1, T.LEDGE);
+  fillRect(24, 10, 6, 1, T.TREE);
+  fillRect(30, 10, 4, 1, T.LEDGE);
+  fillRect(34, 10, 4, 1, T.TREE);
+
+  // ── LOWER LANE (y=11-15) ──
+  // Landing zone
+  fillRect(10, 11, 4, 1, T.PATH);
+  fillRect(20, 11, 4, 1, T.PATH);
+  fillRect(30, 11, 4, 1, T.PATH);
+  // Tall grass in lower area
+  fillRect(3, 11, 5, 2, T.TALL_GRASS);
+  fillRect(15, 12, 4, 1, T.TALL_GRASS);
+  fillRect(25, 11, 4, 2, T.TALL_GRASS);
+  // Lower path
+  fillRect(2, 13, 36, 2, T.PATH);
+  // Tall grass below lower path
+  fillRect(5, 15, 4, 1, T.TALL_GRASS);
+  fillRect(18, 15, 3, 1, T.TALL_GRASS);
+  fillRect(30, 15, 4, 1, T.TALL_GRASS);
+  // Tree obstacles in lower lane
+  setTile(9, 13, T.TREE);   // narrows to y=14
+  setTile(19, 14, T.TREE);  // narrows to y=13 near trainer 7
+  setTile(27, 13, T.TREE);  // narrows to y=14 near trainer 8
+
+  // ── EAST SECTION (x=38-48): convergence + Pokemon Center ──
+  // Vertical connecting path on east side
+  fillRect(38, 2, 2, 14, T.PATH);
+  // Clear the tree border in the east section
+  for (let y = 1; y < H - 1; y++) {
+    setTile(W - 1, y, T.TREE);
+  }
+  // Pokemon Center building
+  fillRect(42, 1, 5, 4, T.BUILDING);
+  setTile(44, 5, T.DOOR);
+  // Path in front of Pokemon Center (don't overwrite building bottom row)
+  fillRect(40, 5, 4, 1, T.PATH);
+  // East path to Mt. Moon exit
+  fillRect(38, 8, 11, 2, T.PATH);
+  // Clear right border for exit
+  setTile(W - 1, 8, T.TREE);
+  setTile(W - 1, 9, T.TREE);
+  // Sign near Pokemon Center
+  setTile(41, 6, T.SIGN);
+  // Flowers near Pokemon Center
+  setTile(41, 5, T.FLOWER);
+  setTile(46, 5, T.FLOWER);
+  // Close off bottom of east section with trees
+  for (let x = 38; x < W - 1; x++) {
+    setTile(x, H - 2, T.TREE);
+  }
+  // Trees to frame the east area
+  fillRect(40, 11, 1, 4, T.TREE);
+  fillRect(47, 2, 1, 6, T.TREE);
+  fillRect(47, 10, 1, 5, T.TREE);
 
   return {
     id: 'route3',
@@ -1340,25 +1436,121 @@ export const ROUTE3: MapData = (() => {
     tiles,
     collision,
     warps: [
-      // West to Pewter
-      { x: 0, y: 5, targetMap: 'pewter_city', targetX: 22, targetY: 12 },
-      { x: 0, y: 6, targetMap: 'pewter_city', targetX: 22, targetY: 13 },
-      // East to Mt. Moon
-      { x: 29, y: 5, targetMap: 'mt_moon', targetX: 9, targetY: 18 },
-      { x: 29, y: 6, targetMap: 'mt_moon', targetX: 9, targetY: 18 },
+      // West to Pewter (entry at upper lane)
+      { x: 0, y: 3, targetMap: 'pewter_city', targetX: 22, targetY: 12 },
+      { x: 0, y: 4, targetMap: 'pewter_city', targetX: 22, targetY: 13 },
+      // East to Mt. Moon 1F (south entrance)
+      { x: W - 1, y: 8, targetMap: 'mt_moon', targetX: 6, targetY: 24 },
+      { x: W - 1, y: 9, targetMap: 'mt_moon', targetX: 6, targetY: 24 },
+      // Pokemon Center
+      { x: 44, y: 5, targetMap: 'pokemon_center_route3', targetX: 4, targetY: 7 },
     ],
     npcs: [
+      // ── UPPER LANE TRAINERS ──
+      // Trainer 1: Youngster near west entry, facing left to catch players
       {
         id: 'route3_trainer1',
-        x: 8, y: 5,
+        x: 5, y: 4,
         spriteColor: 0xc08060,
-        direction: Direction.RIGHT,
+        direction: Direction.LEFT,
         dialogue: [
           "YOUNGSTER: I just\nlost to BROCK!",
           "I need to train\nharder!",
         ],
         isTrainer: true,
         sightRange: 3,
+      },
+      // Trainer 2: Bug Catcher in narrow passage
+      {
+        id: 'route3_trainer2',
+        x: 14, y: 3,
+        spriteColor: 0x80c080,
+        direction: Direction.DOWN,
+        dialogue: [
+          'BUG CATCHER: Go, my\nbugs! Get him!',
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      // Trainer 3: Lass further east on upper path
+      {
+        id: 'route3_trainer3',
+        x: 22, y: 3,
+        spriteColor: 0xf08080,
+        direction: Direction.RIGHT,
+        dialogue: [
+          'LASS: I just caught\na new POKeMON!',
+          "Let me try it\nout on you!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      // Trainer 4: Bug Catcher guarding upper lane before east section
+      {
+        id: 'route3_trainer4',
+        x: 30, y: 4,
+        spriteColor: 0x80c080,
+        direction: Direction.LEFT,
+        dialogue: [
+          "BUG CATCHER: Heh!\nAre you scared of",
+          'bugs? You should be!',
+        ],
+        isTrainer: true,
+        sightRange: 4,
+      },
+      // ── MIDDLE LANE TRAINERS ──
+      // Trainer 5: Youngster on middle path
+      {
+        id: 'route3_trainer5',
+        x: 15, y: 9,
+        spriteColor: 0xc08060,
+        direction: Direction.UP,
+        dialogue: [
+          'YOUNGSTER: My\nSPEAROW is the best!',
+          "There's no way\nyou can beat it!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      // Trainer 6: Bug Catcher on middle path
+      {
+        id: 'route3_trainer6',
+        x: 25, y: 8,
+        spriteColor: 0x80c080,
+        direction: Direction.DOWN,
+        dialogue: [
+          "BUG CATCHER: I'm\nraising CATERPIE",
+          "to be a mighty\nBUTTERFREE!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      // ── LOWER LANE TRAINERS ──
+      // Trainer 7: Lass on lower path
+      {
+        id: 'route3_trainer7',
+        x: 14, y: 13,
+        spriteColor: 0xf08080,
+        direction: Direction.RIGHT,
+        dialogue: [
+          'LASS: You look like\na new trainer!',
+          "I'll go easy on you!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      // Trainer 8: Bug Catcher near east end of lower path
+      {
+        id: 'route3_trainer8',
+        x: 33, y: 14,
+        spriteColor: 0x80c080,
+        direction: Direction.LEFT,
+        dialogue: [
+          "BUG CATCHER: Bugs\nare the best",
+          "POKeMON! I'll prove\nit to you!",
+        ],
+        isTrainer: true,
+        sightRange: 4,
       },
     ],
     wildEncounters: {
@@ -1372,6 +1564,17 @@ export const ROUTE3: MapData = (() => {
       ],
     },
   };
+})();
+
+// Route 3 Pokemon Center (same layout, different exit)
+export const POKEMON_CENTER_ROUTE3: MapData = (() => {
+  const base = JSON.parse(JSON.stringify(POKEMON_CENTER)) as MapData;
+  base.id = 'pokemon_center_route3';
+  base.warps = [
+    { x: 4, y: base.height - 1, targetMap: 'route3', targetX: 44, targetY: 6 },
+    { x: 5, y: base.height - 1, targetMap: 'route3', targetX: 44, targetY: 6 },
+  ];
+  return base;
 })();
 
 // Viridian Gym (Giovanni - 8th gym, Ground type)
@@ -1483,6 +1686,7 @@ export const ALL_MAPS: Record<string, MapData> = {
   pewter_gym: PEWTER_GYM,
   pokemon_center_pewter: POKEMON_CENTER_PEWTER,
   route3: ROUTE3,
+  pokemon_center_route3: POKEMON_CENTER_ROUTE3,
   // All remaining Kanto maps
   ...CERULEAN_MAPS,
   ...VERMILION_MAPS,
