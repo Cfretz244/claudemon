@@ -1005,7 +1005,7 @@ export const ROUTE24: MapData = (() => {
         direction: Direction.DOWN,
         dialogue: [],
         isItemBall: true,
-        itemId: 'rare_candy',
+        itemId: 'nugget',
       },
       // Team Rocket member at the top
       {

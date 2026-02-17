@@ -3,7 +3,7 @@ export interface ItemData {
   name: string;
   description: string;
   price: number;
-  category: 'ball' | 'medicine' | 'battle' | 'key' | 'hm' | 'tm';
+  category: 'ball' | 'medicine' | 'battle' | 'key' | 'hm' | 'tm' | 'misc';
   effect?: string;
   healAmount?: number;
   moveId?: number;
@@ -153,6 +153,13 @@ export const ITEMS: Record<string, ItemData> = {
     description: 'Raises level by 1.',
     price: 0,
     category: 'medicine',
+  },
+  nugget: {
+    id: 'nugget',
+    name: 'NUGGET',
+    description: 'A nugget of pure gold.\nSell high.',
+    price: 5000,
+    category: 'misc',
   },
   // Key items
   oaks_parcel: {
