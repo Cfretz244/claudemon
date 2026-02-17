@@ -908,6 +908,7 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
+    soundSystem.startMusic('rival_theme');
     this.textBox.show(
       [
         `${this.playerState.rivalName}: Wait,\n${this.playerState.name}!`,
@@ -1112,6 +1113,7 @@ export class OverworldScene extends Phaser.Scene {
 
     // Block input during cutscene
     this.isWarping = true;
+    soundSystem.startMusic('oaks_theme');
 
     // Oak starts at lab door (10, 16) and walks to the player
     const oakSprite = this.add.sprite(
@@ -1276,6 +1278,7 @@ export class OverworldScene extends Phaser.Scene {
 
     // Oak's story progression chain
     if (npc.id === 'oak') {
+      soundSystem.startMusic('oaks_theme');
       if (!this.playerState.storyFlags['has_pikachu']) {
         // Give Pikachu
         this.textBox.show(
@@ -1329,6 +1332,8 @@ export class OverworldScene extends Phaser.Scene {
             this.playerState.addItem('poke_ball', 5);
             this.playerState.storyFlags['delivered_parcel'] = true;
             this.playerState.storyFlags['has_pokedex'] = true;
+            const musicId = getMusicForMap(this.currentMap);
+            if (musicId) soundSystem.startMusic(musicId);
           }
         );
         return;
@@ -1337,30 +1342,43 @@ export class OverworldScene extends Phaser.Scene {
         this.textBox.show([
           'OAK: Good luck filling\nup that POKeDEX!',
           'The world is full of\namazing POKeMON!',
-        ]);
+        ], () => {
+          const musicId = getMusicForMap(this.currentMap);
+          if (musicId) soundSystem.startMusic(musicId);
+        });
         return;
       }
       // Has Pikachu but no parcel yet
       this.textBox.show([
         'OAK: Go explore the\nworld with PIKACHU!',
         'The VIRIDIAN CITY\nMart might have\nsomething for me...',
-      ]);
+      ], () => {
+        const musicId = getMusicForMap(this.currentMap);
+        if (musicId) soundSystem.startMusic(musicId);
+      });
       return;
     }
 
     // Rival NPC in lab - context-dependent
     if (npc.id === 'rival') {
+      soundSystem.startMusic('rival_theme');
       if (!this.playerState.storyFlags['has_pikachu']) {
         this.textBox.show([
           `${this.playerState.rivalName}: What?\nGramps isn't here?`,
           "I want my POKeMON!",
-        ]);
+        ], () => {
+          const musicId = getMusicForMap(this.currentMap);
+          if (musicId) soundSystem.startMusic(musicId);
+        });
         return;
       }
       if (this.playerState.storyFlags['rival_battle_lab']) {
         this.textBox.show([
           `${this.playerState.rivalName}: I'll get\nstronger and beat\nyou next time!`,
-        ]);
+        ], () => {
+          const musicId = getMusicForMap(this.currentMap);
+          if (musicId) soundSystem.startMusic(musicId);
+        });
         return;
       }
       // Rival wants to battle (triggered automatically after getting Pikachu)
@@ -1573,6 +1591,9 @@ export class OverworldScene extends Phaser.Scene {
 
     // Trainer battle check
     if (npc.isTrainer && !this.playerState.defeatedTrainers.includes(npc.id)) {
+      if (npc.id.startsWith('rival_')) {
+        soundSystem.startMusic('rival_theme');
+      }
       const dialogue = npc.dialogue.map(d =>
         d.replace('{PLAYER}', this.playerState.name).replace('{RIVAL}', this.playerState.rivalName)
       );

@@ -418,6 +418,7 @@ export class TitleScene extends Phaser.Scene {
   private showOakIntro(): void {
     this.state = 'oak_intro';
     this.introPageIndex = 0;
+    soundSystem.startMusic('oaks_theme');
 
     this.introContainer = this.add.container(0, 0);
     this.introContainer.setDepth(200);
