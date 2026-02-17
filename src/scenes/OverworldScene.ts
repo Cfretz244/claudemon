@@ -459,6 +459,9 @@ export class OverworldScene extends Phaser.Scene {
       this.isSurfing = false;
       this.player.setTexture('player', 0);
       this.player.play(`player_idle_${this.playerDirection}`, true);
+      // Restore map music
+      const musicId = getMusicForMap(this.currentMap);
+      if (musicId) soundSystem.startMusic(musicId);
     }
 
     // Check NPC collision
@@ -575,6 +578,7 @@ export class OverworldScene extends Phaser.Scene {
         this.isSurfing = true;
         this.player.setTexture('player_surf', 0);
         this.player.play(`surf_${this.playerDirection}`, true);
+        soundSystem.startMusic('surf');
       } else {
         this.textBox.show([
           "The sea stretches out\nbefore you...",
@@ -2115,6 +2119,7 @@ export class OverworldScene extends Phaser.Scene {
       this.isSurfing = true;
       this.player.setTexture('player_surf', 0);
       this.player.play(`surf_${this.playerDirection}`, true);
+      soundSystem.startMusic('surf');
     });
     return true;
   }
