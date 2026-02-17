@@ -1093,6 +1093,8 @@ export const ROUTE25: MapData = (() => {
       // West entrance → Route 24
       { x: 0, y: 5, targetMap: 'route24', targetX: 5, targetY: 1 },
       { x: 0, y: 6, targetMap: 'route24', targetX: 6, targetY: 1 },
+      // Bill's House door
+      { x: 22, y: 7, targetMap: 'bills_house', targetX: 3, targetY: 6 },
     ],
     npcs: [
       {
@@ -1139,19 +1141,6 @@ export const ROUTE25: MapData = (() => {
         dialogue: [],
         isItemBall: true,
         itemId: 'super_potion',
-      },
-      {
-        id: 'bill',
-        x: 22, y: 6,
-        spriteColor: 0x40a040,
-        direction: Direction.DOWN,
-        dialogue: [
-          "BILL: Hi! I'm a true\nPOKeMON FANATIC!",
-          "I have a PC system\nthat stores POKeMON!",
-          'Some call me a\nPOKeMANIAC because',
-          "I collect rare\nPOKeMON from around",
-          'the world!',
-        ],
       },
     ],
     wildEncounters: {
@@ -1222,6 +1211,73 @@ export const POKEMART_CERULEAN: MapData = (() => {
 })();
 
 // ─────────────────────────────────────────────────────────────
+// 8. BILL'S HOUSE  (8x8 indoor)
+// ─────────────────────────────────────────────────────────────
+export const BILLS_HOUSE: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+
+  // Walls
+  for (let x = 0; x < W; x++) {
+    setTile(x, 0, T.WALL);
+    setTile(x, 1, T.WALL);
+  }
+  for (let y = 0; y < H; y++) {
+    setTile(0, y, T.WALL);
+    setTile(W - 1, y, T.WALL);
+  }
+
+  // PC
+  setTile(2, 2, T.PC);
+
+  // Bookshelves / counters
+  setTile(5, 2, T.COUNTER);
+  setTile(6, 2, T.COUNTER);
+
+  // Carpet
+  setTile(3, 4, T.CARPET);
+  setTile(4, 4, T.CARPET);
+
+  // Door at bottom
+  setTile(3, H - 1, T.DOOR);
+
+  return {
+    id: 'bills_house',
+    name: "BILL's HOUSE",
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      { x: 3, y: H - 1, targetMap: 'route25', targetX: 22, targetY: 8 },
+    ],
+    npcs: [
+      {
+        id: 'bill',
+        x: 4, y: 3,
+        spriteColor: 0x40a040,
+        direction: Direction.DOWN,
+        dialogue: [
+          "BILL: Hi! I'm a true\nPOKeMON FANATIC!",
+          "I have a PC system\nthat stores POKeMON!",
+          'Some call me a\nPOKeMANIAC because',
+          "I collect rare\nPOKeMON from around",
+          'the world!',
+        ],
+      },
+    ],
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────
 // Combined export
 // ─────────────────────────────────────────────────────────────
 export const CERULEAN_MAPS: Record<string, MapData> = {
@@ -1235,4 +1291,5 @@ export const CERULEAN_MAPS: Record<string, MapData> = {
   pokemart_cerulean: POKEMART_CERULEAN,
   route24: ROUTE24,
   route25: ROUTE25,
+  bills_house: BILLS_HOUSE,
 };
