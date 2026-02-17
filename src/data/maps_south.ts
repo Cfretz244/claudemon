@@ -441,6 +441,16 @@ export const ROUTE16: MapData = (() => {
           'Zzz... Zzz...',
         ],
       },
+      {
+        id: 'route16_fly_girl',
+        x: 11, y: 5,
+        spriteColor: 0xf070a0,
+        direction: Direction.LEFT,
+        dialogue: [
+          "I love watching my\nPOKeMON fly!",
+          "Here, you should have\nthis HM!",
+        ],
+      },
     ],
     wildEncounters: {
       grassRate: 0.15,
@@ -732,6 +742,15 @@ export const FUCHSIA_CITY: MapData = (() => {
           "He uses poison-type\nPOKeMON. Be careful!",
         ],
       },
+      {
+        id: 'safari_warden',
+        x: 5, y: 21,
+        spriteColor: 0xc08040,
+        direction: Direction.DOWN,
+        dialogue: [
+          "I lost my teeth\nsomewhere in the\nSAFARI ZONE...",
+        ],
+      },
     ],
   };
 })();
@@ -987,6 +1006,25 @@ export const SAFARI_ZONE: MapData = (() => {
           "I've been looking for\na CHANSEY all day!",
           "They're super rare\nbut worth the wait!",
         ],
+      },
+      {
+        id: 'safari_secret_house',
+        x: 20, y: 4,
+        spriteColor: 0x60c060,
+        direction: Direction.DOWN,
+        dialogue: [
+          "Congratulations on\nmaking it this far!",
+          "Here, take this HM\nas your prize!",
+        ],
+      },
+      {
+        id: 'safari_gold_teeth',
+        x: 7, y: 16,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'gold_teeth',
       },
     ],
     wildEncounters: {

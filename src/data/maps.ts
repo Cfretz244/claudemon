@@ -768,7 +768,18 @@ export const ROUTE2: MapData = (() => {
       { x: 10, y: 0, targetMap: 'viridian_forest', targetX: 10, targetY: 28 },
       { x: 11, y: 0, targetMap: 'viridian_forest', targetX: 11, targetY: 28 },
     ],
-    npcs: [],
+    npcs: [
+      {
+        id: 'oaks_aide_route2',
+        x: 13, y: 18,
+        spriteColor: 0x60a0f0,
+        direction: Direction.LEFT,
+        dialogue: [
+          "OAK's AIDE: Prof. OAK\nordered me to give\nthis to you!",
+          "It's an HM that\nteaches FLASH!",
+        ],
+      },
+    ],
     wildEncounters: {
       grassRate: 0.2,
       encounters: [

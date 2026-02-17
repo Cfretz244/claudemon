@@ -594,6 +594,37 @@ export function generatePokeballSprite(scene: Phaser.Scene): void {
   scene.textures.addCanvas('pokeball_icon', canvas);
 }
 
+export function generateItemBallSprite(scene: Phaser.Scene, key: string): void {
+  // 4 cols x 2 rows spritesheet (same format as NPC sprites) but all frames identical
+  const canvas = document.createElement('canvas');
+  canvas.width = TILE_SIZE * 4;
+  canvas.height = TILE_SIZE * 2;
+  const ctx = canvas.getContext('2d')!;
+
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 4; col++) {
+      const ox = col * TILE_SIZE;
+      const oy = row * TILE_SIZE;
+      // Red top half
+      ctx.fillStyle = '#e03030';
+      ctx.fillRect(ox + 4, oy + 3, 8, 5);
+      ctx.fillRect(ox + 3, oy + 4, 10, 3);
+      // White bottom half
+      ctx.fillStyle = '#f8f8f8';
+      ctx.fillRect(ox + 4, oy + 8, 8, 5);
+      ctx.fillRect(ox + 3, oy + 9, 10, 3);
+      // Black dividing line
+      ctx.fillStyle = '#202020';
+      ctx.fillRect(ox + 3, oy + 7, 10, 2);
+      // Center button
+      ctx.fillStyle = '#f8f8f8';
+      ctx.fillRect(ox + 7, oy + 7, 2, 2);
+    }
+  }
+
+  addCanvasSpriteSheet(scene, key, canvas, TILE_SIZE, TILE_SIZE);
+}
+
 export function generateSurfSprite(scene: Phaser.Scene): void {
   // Player on a Lapras-like surf mount, 4 directions
   const canvas = document.createElement('canvas');

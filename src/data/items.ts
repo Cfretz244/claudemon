@@ -203,6 +203,13 @@ export const ITEMS: Record<string, ItemData> = {
     price: 0,
     category: 'key',
   },
+  gold_teeth: {
+    id: 'gold_teeth',
+    name: 'GOLD TEETH',
+    description: "The SAFARI ZONE\nWARDEN's lost teeth.",
+    price: 0,
+    category: 'key',
+  },
   // HM items
   hm01_cut: {
     id: 'hm01_cut',

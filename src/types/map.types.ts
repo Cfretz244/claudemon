@@ -45,6 +45,8 @@ export interface NPCData {
   movementPattern?: 'stationary' | 'wander' | 'patrol';
   sightRange?: number;
   shopStock?: string[];
+  isItemBall?: boolean;
+  itemId?: string;
 }
 
 export interface MapData {

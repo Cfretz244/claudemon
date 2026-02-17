@@ -9,7 +9,8 @@ import { BagScreen } from '../components/BagScreen';
 import { ShopScreen } from '../components/ShopScreen';
 import { PCScreen } from '../components/PCScreen';
 import { TrainerCard } from '../components/TrainerCard';
-import { generateNPCSprite } from '../utils/spriteGenerator';
+import { generateNPCSprite, generateItemBallSprite } from '../utils/spriteGenerator';
+import { ITEMS } from '../data/items';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
 import { getMusicForMap } from '../data/musicTracks';
@@ -307,6 +308,10 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private shouldSkipNPC(npc: NPCData): boolean {
+    // Item balls disappear once picked up
+    if (npc.isItemBall && this.playerState.storyFlags[`picked_up_${npc.id}`]) {
+      return true;
+    }
     // Pewter guide disappears after getting Boulder badge
     if (npc.id === 'pewter_guide' && this.playerState.badges.includes('BOULDER')) {
       return true;
@@ -375,7 +380,11 @@ export class OverworldScene extends Phaser.Scene {
       // Generate NPC sprite if not exists
       const spriteKey = `npc_${npc.id}`;
       if (!this.textures.exists(spriteKey)) {
-        generateNPCSprite(this, spriteKey, npc.spriteColor);
+        if (npc.isItemBall) {
+          generateItemBallSprite(this, spriteKey);
+        } else {
+          generateNPCSprite(this, spriteKey, npc.spriteColor);
+        }
       }
 
       const dirIndex = [Direction.DOWN, Direction.UP, Direction.LEFT, Direction.RIGHT].indexOf(npc.direction);
@@ -1333,6 +1342,27 @@ export class OverworldScene extends Phaser.Scene {
       sprite.setFrame(dirIndex);
     }
 
+    // Item ball pickup
+    if (npc.isItemBall && npc.itemId) {
+      const item = ITEMS[npc.itemId];
+      if (item) {
+        this.textBox.show(
+          [`${this.playerState.name} found\n${item.name}!`],
+          () => {
+            this.playerState.addItem(npc.itemId!);
+            this.playerState.storyFlags[`picked_up_${npc.id}`] = true;
+            // Remove sprite from map
+            const ballSprite = this.npcSprites.get(npc.id);
+            if (ballSprite) {
+              ballSprite.destroy();
+              this.npcSprites.delete(npc.id);
+            }
+          }
+        );
+      }
+      return;
+    }
+
     // Special NPC handling - all nurses heal
     if (npc.id.startsWith('nurse')) {
       // Show greeting dialogue, then run the animated heal sequence
@@ -1597,6 +1627,95 @@ export class OverworldScene extends Phaser.Scene {
       this.textBox.show([
         "Give the TEA to the\nguard at SAFFRON CITY!",
         "He loves a good cup\nof TEA!",
+      ]);
+      return;
+    }
+
+    // Oak's Aide on Route 2 gives HM05 Flash
+    if (npc.id === 'oaks_aide_route2') {
+      if (this.playerState.storyFlags['got_hm05']) {
+        this.textBox.show(["Use FLASH to light\nup dark caves!"]);
+        return;
+      }
+      this.textBox.show(
+        [
+          "OAK's AIDE: Prof. OAK\nordered me to give\nthis to you!",
+          "It's an HM that\nteaches FLASH!",
+          `${this.playerState.name} received\nHM05 FLASH!`,
+        ],
+        () => {
+          this.playerState.addItem('hm05_flash');
+          this.playerState.storyFlags['got_hm05'] = true;
+        }
+      );
+      return;
+    }
+
+    // Route 16 girl gives HM02 Fly
+    if (npc.id === 'route16_fly_girl') {
+      if (this.playerState.storyFlags['got_hm02']) {
+        this.textBox.show(["Fly is so convenient\nfor travel!"]);
+        return;
+      }
+      this.textBox.show(
+        [
+          "I love watching my\nPOKeMON fly!",
+          "Here, you should have\nthis HM!",
+          `${this.playerState.name} received\nHM02 FLY!`,
+        ],
+        () => {
+          this.playerState.addItem('hm02_fly');
+          this.playerState.storyFlags['got_hm02'] = true;
+        }
+      );
+      return;
+    }
+
+    // Safari Zone secret house gives HM03 Surf
+    if (npc.id === 'safari_secret_house') {
+      if (this.playerState.storyFlags['got_hm03']) {
+        this.textBox.show(["You can SURF across\nwater with that!"]);
+        return;
+      }
+      this.textBox.show(
+        [
+          "Congratulations on\nmaking it this far!",
+          "You reached the\nSECRET HOUSE!",
+          "Here, take this HM\nas your prize!",
+          `${this.playerState.name} received\nHM03 SURF!`,
+        ],
+        () => {
+          this.playerState.addItem('hm03_surf');
+          this.playerState.storyFlags['got_hm03'] = true;
+        }
+      );
+      return;
+    }
+
+    // Safari Warden gives HM04 Strength (requires Gold Teeth)
+    if (npc.id === 'safari_warden') {
+      if (this.playerState.storyFlags['got_hm04']) {
+        this.textBox.show(["Those HMs are\nreally something!"]);
+        return;
+      }
+      if (this.playerState.hasItem('gold_teeth')) {
+        this.textBox.show(
+          [
+            "WARDEN: Oh! Those are\nmy teeth!",
+            "Thank you so much!\nLet me give you this!",
+            `${this.playerState.name} received\nHM04 STRENGTH!`,
+          ],
+          () => {
+            this.playerState.useItem('gold_teeth');
+            this.playerState.addItem('hm04_strength');
+            this.playerState.storyFlags['got_hm04'] = true;
+          }
+        );
+        return;
+      }
+      this.textBox.show([
+        "I lost my teeth\nsomewhere in the\nSAFARI ZONE...",
+        "I can't talk well\nwithout them...",
       ]);
       return;
     }
