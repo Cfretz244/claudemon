@@ -3,11 +3,29 @@ import { getTypeEffectiveness } from '../data/typeChart';
 import { POKEMON_DATA } from '../data/pokemon';
 import { DamageResult } from '../types/battle.types';
 
+// Gen 1 stat stage multipliers: stage -6 to +6 maps to 2/8 through 8/2
+const STAGE_MULTIPLIERS = [2/8, 2/7, 2/6, 2/5, 2/4, 2/3, 2/2, 3/2, 4/2, 5/2, 6/2, 7/2, 8/2];
+
+function getStageMultiplier(stage: number): number {
+  return STAGE_MULTIPLIERS[Math.max(-6, Math.min(6, stage)) + 6];
+}
+
+export interface StatStages {
+  atk: number;
+  def: number;
+  spd: number;
+  spc: number;
+  acc: number;
+  eva: number;
+}
+
 export function calculateDamage(
   attacker: PokemonInstance,
   defender: PokemonInstance,
   move: MoveData,
   critical: boolean = false,
+  attackerStages?: StatStages,
+  defenderStages?: StatStages,
 ): DamageResult {
   if (move.power === 0 || move.category === MoveCategory.STATUS) {
     return { damage: 0, isCritical: false, effectiveness: 1 };
@@ -25,10 +43,35 @@ export function calculateDamage(
   if (isPhysical) {
     atk = attacker.stats.attack;
     def = defender.stats.defense;
+    // Apply stat stages (critical hits ignore negative atk stages and positive def stages)
+    if (attackerStages && !critical) {
+      atk = Math.floor(atk * getStageMultiplier(attackerStages.atk));
+    } else if (attackerStages && critical && attackerStages.atk > 0) {
+      atk = Math.floor(atk * getStageMultiplier(attackerStages.atk));
+    }
+    if (defenderStages && !critical) {
+      def = Math.floor(def * getStageMultiplier(defenderStages.def));
+    } else if (defenderStages && critical && defenderStages.def < 0) {
+      def = Math.floor(def * getStageMultiplier(defenderStages.def));
+    }
   } else {
     atk = attacker.stats.special;
     def = defender.stats.special;
+    if (attackerStages && !critical) {
+      atk = Math.floor(atk * getStageMultiplier(attackerStages.spc));
+    } else if (attackerStages && critical && attackerStages.spc > 0) {
+      atk = Math.floor(atk * getStageMultiplier(attackerStages.spc));
+    }
+    if (defenderStages && !critical) {
+      def = Math.floor(def * getStageMultiplier(defenderStages.spc));
+    } else if (defenderStages && critical && defenderStages.spc < 0) {
+      def = Math.floor(def * getStageMultiplier(defenderStages.spc));
+    }
   }
+
+  // Prevent division by zero
+  atk = Math.max(1, atk);
+  def = Math.max(1, def);
 
   // Critical hit doubles level for damage calc in Gen 1
   const level = attacker.level;
@@ -80,7 +123,11 @@ export function checkCritical(attacker: PokemonInstance): boolean {
   return Math.random() < critRate;
 }
 
-export function checkAccuracy(move: MoveData): boolean {
+export function checkAccuracy(move: MoveData, attackerAccStage: number = 0, defenderEvaStage: number = 0): boolean {
   if (move.accuracy === 0) return true; // Always hits (like Swift)
-  return Math.random() * 100 < move.accuracy;
+  // Effective accuracy = base accuracy * acc stage multiplier / eva stage multiplier
+  const accMul = getStageMultiplier(attackerAccStage);
+  const evaMul = getStageMultiplier(defenderEvaStage);
+  const effectiveAccuracy = move.accuracy * accMul / evaMul;
+  return Math.random() * 100 < effectiveAccuracy;
 }

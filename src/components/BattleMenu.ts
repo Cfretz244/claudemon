@@ -393,7 +393,8 @@ export class BattleMenu {
 
   private showMoveMenu(): void {
     this.mode = 'fight';
-    this.moveSelectedIndex = 0;
+    // Keep moveSelectedIndex from last turn (don't reset to 0)
+    this.moveSelectedIndex = Math.min(this.moveSelectedIndex, Math.max(0, this.currentMoves.length - 1));
     this.container.setVisible(false);
     this.moveContainer.setVisible(true);
 

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from '../utils/constants';
-import { PokemonInstance, StatusCondition, MoveCategory, MoveEffect } from '../types/pokemon.types';
+import { PokemonInstance, StatusCondition, MoveCategory, MoveEffect, PHYSICAL_TYPES, PokemonType } from '../types/pokemon.types';
 import { BattleType } from '../types/battle.types';
 import { POKEMON_DATA } from '../data/pokemon';
 import { MOVES_DATA } from '../data/moves';
@@ -64,6 +64,22 @@ export class BattleScene extends Phaser.Scene {
   private textBox!: TextBox;
   private moveForgetUI!: MoveForgetUI;
 
+  // Stat stages (Gen 1: -6 to +6 for each stat)
+  private playerStatStages = { atk: 0, def: 0, spd: 0, spc: 0, acc: 0, eva: 0 };
+  private opponentStatStages = { atk: 0, def: 0, spd: 0, spc: 0, acc: 0, eva: 0 };
+
+  // Disable tracking: which move index is disabled and for how many turns
+  private playerDisable = { moveIndex: -1, turnsLeft: 0 };
+  private opponentDisable = { moveIndex: -1, turnsLeft: 0 };
+
+  // Volatile battle status (reset on switch/faint)
+  private playerVolatile = { confused: 0, seeded: false, flinched: false, lastDamageTaken: 0, lastDamagePhysical: false, substitute: 0 };
+  private opponentVolatile = { confused: 0, seeded: false, flinched: false, lastDamageTaken: 0, lastDamagePhysical: false, substitute: 0 };
+
+  // Recharge tracking (Hyper Beam)
+  private playerRecharging = false;
+  private opponentRecharging = false;
+
   // Battle flow
   private battleOver = false;
   private turnInProgress = false;
@@ -105,6 +121,21 @@ export class BattleScene extends Phaser.Scene {
 
     this.battleOver = false;
     this.turnInProgress = false;
+    this.resetBattleStages('player');
+    this.resetBattleStages('opponent');
+  }
+
+  private resetBattleStages(side: 'player' | 'opponent'): void {
+    const stages = side === 'player' ? this.playerStatStages : this.opponentStatStages;
+    stages.atk = 0; stages.def = 0; stages.spd = 0;
+    stages.spc = 0; stages.acc = 0; stages.eva = 0;
+    const disable = side === 'player' ? this.playerDisable : this.opponentDisable;
+    disable.moveIndex = -1; disable.turnsLeft = 0;
+    const vol = side === 'player' ? this.playerVolatile : this.opponentVolatile;
+    vol.confused = 0; vol.seeded = false; vol.flinched = false;
+    vol.lastDamageTaken = 0; vol.lastDamagePhysical = false; vol.substitute = 0;
+    if (side === 'player') this.playerRecharging = false;
+    else this.opponentRecharging = false;
   }
 
   create(): void {
@@ -300,10 +331,28 @@ export class BattleScene extends Phaser.Scene {
 
   private async executeTurn(playerMoveIndex: number): Promise<void> {
     if (this.turnInProgress) return;
+
+    // Block disabled moves
+    if (this.playerDisable.moveIndex === playerMoveIndex) {
+      this.textBox.show(["That move is\ndisabled!"], () => this.showBattleMenu());
+      return;
+    }
+
     this.turnInProgress = true;
 
+    // Clear flinch flags from previous turn
+    this.playerVolatile.flinched = false;
+    this.opponentVolatile.flinched = false;
+
     const playerMove = this.playerPokemon.moves[playerMoveIndex];
-    const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+    let aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+    // AI: skip disabled move, pick another
+    if (this.opponentDisable.moveIndex === aiMoveIndex) {
+      const alternatives = this.opponentPokemon.moves
+        .map((m, i) => i)
+        .filter(i => i !== this.opponentDisable.moveIndex && this.opponentPokemon.moves[i].currentPp > 0);
+      aiMoveIndex = alternatives.length > 0 ? alternatives[Math.floor(Math.random() * alternatives.length)] : aiMoveIndex;
+    }
     const aiMove = this.opponentPokemon.moves[aiMoveIndex];
 
     if (!playerMove || !aiMove) {
@@ -364,6 +413,16 @@ export class BattleScene extends Phaser.Scene {
     await this.applyStatusDamage(this.opponentPokemon, false);
     if (this.battleOver) return;
 
+    // Decrement disable turns
+    if (this.playerDisable.turnsLeft > 0) {
+      this.playerDisable.turnsLeft--;
+      if (this.playerDisable.turnsLeft <= 0) this.playerDisable.moveIndex = -1;
+    }
+    if (this.opponentDisable.turnsLeft > 0) {
+      this.opponentDisable.turnsLeft--;
+      if (this.opponentDisable.turnsLeft <= 0) this.opponentDisable.moveIndex = -1;
+    }
+
     // Check for fainting
     if (this.opponentPokemon.currentHp <= 0) {
       await this.handleOpponentFaint();
@@ -387,9 +446,54 @@ export class BattleScene extends Phaser.Scene {
     isPlayer: boolean,
   ): Promise<void> {
     return new Promise<void>((resolve) => {
+      const atkVol = isPlayer ? this.playerVolatile : this.opponentVolatile;
+      const defVol = isPlayer ? this.opponentVolatile : this.playerVolatile;
+
+      // Check recharging (Hyper Beam)
+      const isRecharging = isPlayer ? this.playerRecharging : this.opponentRecharging;
+      if (isRecharging) {
+        if (isPlayer) this.playerRecharging = false;
+        else this.opponentRecharging = false;
+        const name = this.getSpeciesName(attacker.speciesId);
+        this.textBox.show([`${name} must recharge!`], resolve);
+        return;
+      }
+
+      // Check flinch (set by opponent's previous move this turn)
+      if (atkVol.flinched) {
+        atkVol.flinched = false;
+        const name = this.getSpeciesName(attacker.speciesId);
+        this.textBox.show([`${name} flinched!`], resolve);
+        return;
+      }
+
+      // Check confusion
+      if (atkVol.confused > 0) {
+        atkVol.confused--;
+        const name = this.getSpeciesName(attacker.speciesId);
+        if (atkVol.confused <= 0) {
+          this.textBox.show([`${name} snapped out\nof confusion!`], () => {
+            this.doExecuteMove(attacker, defender, move, moveData, isPlayer, resolve);
+          });
+          return;
+        }
+        if (Math.random() < 0.5) {
+          // Hit self: 40 power typeless physical attack
+          const selfDmg = Math.max(1, Math.floor(attacker.stats.attack / attacker.stats.defense * attacker.level * 2 / 5));
+          attacker.currentHp = Math.max(0, attacker.currentHp - selfDmg);
+          this.updateHUD();
+          this.textBox.show([`${name} is confused!`, 'It hurt itself in\nits confusion!'], resolve);
+          return;
+        }
+        // Confused but attacks normally
+        this.textBox.show([`${name} is confused!`], () => {
+          this.doExecuteMove(attacker, defender, move, moveData, isPlayer, resolve);
+        });
+        return;
+      }
+
       // Check status conditions that prevent action
       if (attacker.status === StatusCondition.SLEEP) {
-        // 50% chance to wake up each turn
         if (Math.random() < 0.5) {
           attacker.status = StatusCondition.NONE;
           const name = this.getSpeciesName(attacker.speciesId);
@@ -409,12 +513,10 @@ export class BattleScene extends Phaser.Scene {
       }
 
       if (attacker.status === StatusCondition.FREEZE) {
-        // 20% chance to thaw in Gen 1
         if (Math.random() < 0.2) {
           attacker.status = StatusCondition.NONE;
           const name = this.getSpeciesName(attacker.speciesId);
           this.textBox.show([`${name} thawed out!`], resolve);
-          // Continue to attack after thawing
         } else {
           const name = this.getSpeciesName(attacker.speciesId);
           this.textBox.show([`${name} is frozen\nsolid!`], resolve);
@@ -422,110 +524,343 @@ export class BattleScene extends Phaser.Scene {
         }
       }
 
-      // Use PP
-      move.currentPp = Math.max(0, move.currentPp - 1);
+      this.doExecuteMove(attacker, defender, move, moveData, isPlayer, resolve);
+    });
+  }
 
-      const attackerName = isPlayer
-        ? this.getSpeciesName(attacker.speciesId)
-        : `Foe ${this.getSpeciesName(attacker.speciesId)}`;
+  /** Core move execution after status/confusion checks pass */
+  private doExecuteMove(
+    attacker: PokemonInstance,
+    defender: PokemonInstance,
+    move: { moveId: number; currentPp: number; maxPp: number },
+    moveData: { id: number; name: string; type: any; category: any; power: number; accuracy: number; pp: number; effect?: MoveEffect; priority?: number },
+    isPlayer: boolean,
+    resolve: () => void,
+  ): void {
+    const defVol = isPlayer ? this.opponentVolatile : this.playerVolatile;
 
-      const messages: string[] = [`${attackerName} used\n${moveData.name}!`];
+    move.currentPp = Math.max(0, move.currentPp - 1);
 
-      // Accuracy check
-      if (!checkAccuracy(moveData as any)) {
-        messages.push("But it missed!");
+    const attackerName = isPlayer
+      ? this.getSpeciesName(attacker.speciesId)
+      : `Foe ${this.getSpeciesName(attacker.speciesId)}`;
+
+    const messages: string[] = [`${attackerName} used\n${moveData.name}!`];
+
+    // Metronome: pick a random move and execute it instead
+    if (moveData.effect === MoveEffect.METRONOME) {
+      const allMoveIds = Object.keys(MOVES_DATA).map(Number).filter(id => {
+        const m = MOVES_DATA[id];
+        return m && m.effect !== MoveEffect.METRONOME && m.effect !== MoveEffect.MIRROR_MOVE;
+      });
+      const randomId = allMoveIds[Math.floor(Math.random() * allMoveIds.length)];
+      const randomMove = MOVES_DATA[randomId];
+      if (randomMove) {
+        messages.push(`It became\n${randomMove.name}!`);
+        this.textBox.show(messages, () => {
+          const fakeMove = { moveId: randomId, currentPp: 1, maxPp: 1 };
+          this.doExecuteMove(attacker, defender, fakeMove, randomMove, isPlayer, resolve);
+        });
+        return;
+      }
+    }
+
+    // Mirror Move: copy opponent's last move
+    if (moveData.effect === MoveEffect.MIRROR_MOVE) {
+      const lastDmg = defVol.lastDamageTaken;
+      // Simplified: just fail if no last move to mirror
+      messages.push('But it failed!');
+      this.textBox.show(messages, resolve);
+      return;
+    }
+
+    // Dream Eater: only works if defender is sleeping
+    if (moveData.effect === MoveEffect.DREAM_EATER) {
+      if (defender.status !== StatusCondition.SLEEP) {
+        messages.push('But it failed!');
+        this.textBox.show(messages, resolve);
+        return;
+      }
+    }
+
+    // Accuracy check (with stat stages)
+    const atkStages = isPlayer ? this.playerStatStages : this.opponentStatStages;
+    const defStages = isPlayer ? this.opponentStatStages : this.playerStatStages;
+    if (!checkAccuracy(moveData as any, atkStages.acc, defStages.eva)) {
+      messages.push("But it missed!");
+      this.textBox.show(messages, resolve);
+      return;
+    }
+
+    // === Special damage effects (bypass normal damage formula) ===
+
+    // OHKO moves (Guillotine, Horn Drill, Fissure)
+    if (moveData.effect === MoveEffect.OHKO) {
+      if (attacker.stats.speed < defender.stats.speed) {
+        messages.push("But it failed!");
+        this.textBox.show(messages, resolve);
+        return;
+      }
+      defender.currentHp = 0;
+      messages.push("One-hit KO!");
+      soundSystem.hit();
+      this.applyDamageAnimation(defender, isPlayer, messages, resolve);
+      return;
+    }
+
+    // Fixed damage (Sonic Boom = 20, Dragon Rage = 40)
+    if (moveData.effect === MoveEffect.FIXED_DAMAGE) {
+      const fixedDmg = move.moveId === 49 ? 20 : 40; // Sonic Boom=49, Dragon Rage=82
+      defender.currentHp = Math.max(0, defender.currentHp - fixedDmg);
+      defVol.lastDamageTaken = fixedDmg;
+      defVol.lastDamagePhysical = true;
+      soundSystem.hit();
+      this.applyDamageAnimation(defender, isPlayer, messages, resolve);
+      return;
+    }
+
+    // Level damage (Seismic Toss, Night Shade)
+    if (moveData.effect === MoveEffect.LEVEL_DAMAGE) {
+      // Psywave deals random damage from 1 to 1.5x level
+      const dmg = move.moveId === 149
+        ? Math.max(1, Math.floor(Math.random() * attacker.level * 1.5))
+        : attacker.level;
+      defender.currentHp = Math.max(0, defender.currentHp - dmg);
+      defVol.lastDamageTaken = dmg;
+      defVol.lastDamagePhysical = true;
+      soundSystem.hit();
+      this.applyDamageAnimation(defender, isPlayer, messages, resolve);
+      return;
+    }
+
+    // Super Fang (halves target's current HP)
+    if (moveData.effect === MoveEffect.SUPER_FANG) {
+      const dmg = Math.max(1, Math.floor(defender.currentHp / 2));
+      defender.currentHp = Math.max(0, defender.currentHp - dmg);
+      defVol.lastDamageTaken = dmg;
+      defVol.lastDamagePhysical = true;
+      soundSystem.hit();
+      this.applyDamageAnimation(defender, isPlayer, messages, resolve);
+      return;
+    }
+
+    // Counter (return 2x the last physical damage taken)
+    if (moveData.effect === MoveEffect.COUNTER) {
+      const atkVol = isPlayer ? this.playerVolatile : this.opponentVolatile;
+      if (atkVol.lastDamageTaken > 0 && atkVol.lastDamagePhysical) {
+        const dmg = atkVol.lastDamageTaken * 2;
+        defender.currentHp = Math.max(0, defender.currentHp - dmg);
+        defVol.lastDamageTaken = dmg;
+        soundSystem.hit();
+        this.applyDamageAnimation(defender, isPlayer, messages, resolve);
+      } else {
+        messages.push('But it failed!');
+        this.textBox.show(messages, resolve);
+      }
+      return;
+    }
+
+    // === Normal damage path ===
+    if (moveData.power > 0 && moveData.category !== MoveCategory.STATUS) {
+      const isCrit = checkCritical(attacker);
+      const result = calculateDamage(attacker, defender, moveData as any, isCrit, atkStages, defStages);
+
+      if (result.effectiveness === 0) {
+        messages.push(getEffectivenessText(0));
         this.textBox.show(messages, resolve);
         return;
       }
 
-      // Damage calculation
-      if (moveData.power > 0 && moveData.category !== MoveCategory.STATUS) {
-        const isCrit = checkCritical(attacker);
-        const result = calculateDamage(attacker, defender, moveData as any, isCrit);
-
-        if (result.effectiveness === 0) {
-          messages.push(getEffectivenessText(0));
-          this.textBox.show(messages, resolve);
-          return;
-        }
-
-        // Apply damage
-        defender.currentHp = Math.max(0, defender.currentHp - result.damage);
-
-        if (result.isCritical) {
-          messages.push("A critical hit!");
-        }
-
-        const effText = getEffectivenessText(result.effectiveness);
-        if (effText) {
-          messages.push(effText);
-          if (result.effectiveness > 1) {
-            soundSystem.superEffective();
-          } else if (result.effectiveness < 1) {
-            soundSystem.notVeryEffective();
-          }
-        }
-
-        soundSystem.hit();
-
-        // Animate HP change
-        const hpPromise = isPlayer
-          ? this.hud.animateOpponentHP(defender.currentHp / defender.stats.hp)
-          : this.hud.animatePlayerHP(defender.currentHp / defender.stats.hp);
-
-        // Flash the target sprite
-        const targetSprite = isPlayer ? this.opponentSprite : this.playerSprite;
-        this.tweens.add({
-          targets: targetSprite,
-          alpha: 0,
-          duration: 80,
-          yoyo: true,
-          repeat: 2,
-        });
-
-        // Apply secondary effects
-        if (moveData.effect && defender.currentHp > 0) {
-          this.applyMoveEffect(moveData.effect, attacker, defender, messages);
-        }
-
-        hpPromise.then(() => {
-          this.updateHUD();
-          this.textBox.show(messages, resolve);
-        });
-      } else {
-        // Status move
-        if (moveData.effect) {
-          this.applyMoveEffect(moveData.effect, attacker, defender, messages);
-        }
-        this.textBox.show(messages, resolve);
+      // Multi-hit moves
+      let totalDamage = result.damage;
+      let hitCount = 1;
+      if (moveData.effect === MoveEffect.TWO_HIT) {
+        hitCount = 2;
+        totalDamage = result.damage * 2;
+      } else if (moveData.effect === MoveEffect.MULTI_HIT) {
+        // Gen 1: 37.5% 2 hits, 37.5% 3 hits, 12.5% 4, 12.5% 5
+        const roll = Math.random();
+        if (roll < 0.375) hitCount = 2;
+        else if (roll < 0.75) hitCount = 3;
+        else if (roll < 0.875) hitCount = 4;
+        else hitCount = 5;
+        totalDamage = result.damage * hitCount;
       }
+
+      // Track damage for Counter
+      defVol.lastDamageTaken = totalDamage;
+      defVol.lastDamagePhysical = PHYSICAL_TYPES.includes(moveData.type);
+
+      defender.currentHp = Math.max(0, defender.currentHp - totalDamage);
+
+      if (result.isCritical) {
+        messages.push("A critical hit!");
+      }
+
+      if (hitCount > 1) {
+        messages.push(`Hit ${hitCount} times!`);
+      }
+
+      const effText = getEffectivenessText(result.effectiveness);
+      if (effText) {
+        messages.push(effText);
+        if (result.effectiveness > 1) {
+          soundSystem.superEffective();
+        } else if (result.effectiveness < 1) {
+          soundSystem.notVeryEffective();
+        }
+      }
+
+      soundSystem.hit();
+
+      // Recoil damage (Take Down, Double-Edge, Submission)
+      if (moveData.effect === MoveEffect.RECOIL) {
+        const recoilDmg = Math.max(1, Math.floor(result.damage / 4));
+        attacker.currentHp = Math.max(0, attacker.currentHp - recoilDmg);
+        messages.push(`${attackerName} is hit\nwith recoil!`);
+      }
+
+      // Drain moves (Absorb, Mega Drain, Leech Life)
+      if (moveData.effect === MoveEffect.DRAIN) {
+        const drainAmt = Math.max(1, Math.floor(result.damage / 2));
+        attacker.currentHp = Math.min(attacker.stats.hp, attacker.currentHp + drainAmt);
+        messages.push(`${attackerName} drained\nenergy!`);
+      }
+
+      // Self-destruct / Explosion
+      if (moveData.effect === MoveEffect.SELF_DESTRUCT) {
+        attacker.currentHp = 0;
+      }
+
+      // Flinch (secondary effect on damage moves)
+      if (moveData.effect === MoveEffect.FLINCH && defender.currentHp > 0) {
+        if (Math.random() < 0.3) {
+          defVol.flinched = true;
+        }
+      }
+
+      // Recharge (Hyper Beam) - must skip next turn
+      if (moveData.effect === MoveEffect.RECHARGE && defender.currentHp > 0) {
+        if (isPlayer) this.playerRecharging = true;
+        else this.opponentRecharging = true;
+        messages.push(`${attackerName} must\nrecharge!`);
+      }
+
+      // Dream Eater heals 50% of damage dealt
+      if (moveData.effect === MoveEffect.DREAM_EATER) {
+        const drainAmt = Math.max(1, Math.floor(totalDamage / 2));
+        attacker.currentHp = Math.min(attacker.stats.hp, attacker.currentHp + drainAmt);
+        messages.push(`${attackerName} drained\nenergy!`);
+      }
+
+      // Apply other secondary effects (chance-based for damage moves)
+      const SKIP_SECONDARY = [
+        MoveEffect.RECOIL, MoveEffect.DRAIN, MoveEffect.SELF_DESTRUCT,
+        MoveEffect.FLINCH, MoveEffect.MULTI_HIT, MoveEffect.TWO_HIT,
+        MoveEffect.RECHARGE, MoveEffect.DREAM_EATER, MoveEffect.CHARGE,
+        MoveEffect.WRAP,
+      ];
+      if (moveData.effect && defender.currentHp > 0 && !SKIP_SECONDARY.includes(moveData.effect)) {
+        this.applyMoveEffect(moveData.effect, attacker, defender, messages, isPlayer, true);
+      }
+
+      // Animate HP changes
+      const hpPromise = isPlayer
+        ? this.hud.animateOpponentHP(defender.currentHp / defender.stats.hp)
+        : this.hud.animatePlayerHP(defender.currentHp / defender.stats.hp);
+
+      const targetSprite = isPlayer ? this.opponentSprite : this.playerSprite;
+      this.tweens.add({
+        targets: targetSprite,
+        alpha: 0,
+        duration: 80,
+        yoyo: true,
+        repeat: 2,
+      });
+
+      hpPromise.then(() => {
+        this.updateHUD();
+        this.textBox.show(messages, resolve);
+      });
+    } else {
+      // Status move - effect always applies (already passed accuracy check)
+      if (moveData.effect) {
+        this.applyMoveEffect(moveData.effect, attacker, defender, messages, isPlayer, false);
+      }
+      this.textBox.show(messages, resolve);
+    }
+  }
+
+  /** Animate HP drop + sprite flash for special damage moves (OHKO, fixed dmg, etc.), then show messages */
+  private applyDamageAnimation(defender: PokemonInstance, isPlayer: boolean, messages: string[], resolve: () => void): void {
+    const hpPromise = isPlayer
+      ? this.hud.animateOpponentHP(defender.currentHp / defender.stats.hp)
+      : this.hud.animatePlayerHP(defender.currentHp / defender.stats.hp);
+
+    const targetSprite = isPlayer ? this.opponentSprite : this.playerSprite;
+    this.tweens.add({
+      targets: targetSprite,
+      alpha: 0,
+      duration: 80,
+      yoyo: true,
+      repeat: 2,
+    });
+
+    hpPromise.then(() => {
+      this.updateHUD();
+      this.textBox.show(messages, resolve);
     });
   }
 
-  private applyMoveEffect(effect: MoveEffect, attacker: PokemonInstance, defender: PokemonInstance, messages: string[]): void {
+  private applyMoveEffect(effect: MoveEffect, attacker: PokemonInstance, defender: PokemonInstance, messages: string[], isPlayerAttacker: boolean, isSecondary: boolean): void {
     const defName = this.getSpeciesName(defender.speciesId);
+    const atkName = this.getSpeciesName(attacker.speciesId);
+    const atkStages = isPlayerAttacker ? this.playerStatStages : this.opponentStatStages;
+    const defStages = isPlayerAttacker ? this.opponentStatStages : this.playerStatStages;
+
+    const STAT_NAMES: Record<string, string> = {
+      atk: 'ATTACK', def: 'DEFENSE', spd: 'SPEED', spc: 'SPECIAL', acc: 'accuracy', eva: 'evasiveness',
+    };
+
+    const applyStageDelta = (stages: typeof atkStages, stat: keyof typeof atkStages, delta: number, targetName: string) => {
+      const old = stages[stat];
+      stages[stat] = Math.max(-6, Math.min(6, old + delta));
+      if (stages[stat] === old) {
+        messages.push(`${targetName}'s\n${STAT_NAMES[stat]} won't go\nany ${delta > 0 ? 'higher' : 'lower'}!`);
+      } else {
+        messages.push(`${targetName}'s\n${STAT_NAMES[stat]} ${delta > 0 ? 'rose' : 'fell'}!`);
+      }
+    };
+
+    // Gen 1 secondary effect chances for damage moves
+    // Status moves (isSecondary=false) always apply their effect - they already passed accuracy
+    // Damage moves (isSecondary=true) have a chance to trigger the secondary effect
+    const SEC_CHANCE_STATUS = 0.3;    // ~30% for paralyze, poison
+    const SEC_CHANCE_BURN = 0.1;      // ~10% for burn
+    const SEC_CHANCE_FREEZE = 0.1;    // ~10% for freeze
+    const SEC_CHANCE_STAT = 0.33;     // ~33% for stat changes
 
     switch (effect) {
       case MoveEffect.PARALYZE:
-        if (defender.status === StatusCondition.NONE && Math.random() < 0.3) {
+        if (defender.status === StatusCondition.NONE && (!isSecondary || Math.random() < SEC_CHANCE_STATUS)) {
           defender.status = StatusCondition.PARALYSIS;
           messages.push(`${defName} is paralyzed!`);
         }
         break;
       case MoveEffect.BURN:
-        if (defender.status === StatusCondition.NONE && Math.random() < 0.1) {
+        if (defender.status === StatusCondition.NONE && (!isSecondary || Math.random() < SEC_CHANCE_BURN)) {
           defender.status = StatusCondition.BURN;
           messages.push(`${defName} was burned!`);
         }
         break;
       case MoveEffect.FREEZE:
-        if (defender.status === StatusCondition.NONE && Math.random() < 0.1) {
+        if (defender.status === StatusCondition.NONE && (!isSecondary || Math.random() < SEC_CHANCE_FREEZE)) {
           defender.status = StatusCondition.FREEZE;
           messages.push(`${defName} was frozen!`);
         }
         break;
       case MoveEffect.POISON:
-        if (defender.status === StatusCondition.NONE && Math.random() < 0.3) {
+        if (defender.status === StatusCondition.NONE && (!isSecondary || Math.random() < SEC_CHANCE_STATUS)) {
           defender.status = StatusCondition.POISON;
           messages.push(`${defName} was poisoned!`);
         }
@@ -536,19 +871,181 @@ export class BattleScene extends Phaser.Scene {
           messages.push(`${defName} fell asleep!`);
         }
         break;
-      case MoveEffect.CONFUSE:
-        messages.push(`${defName} became confused!`);
+      case MoveEffect.CONFUSE: {
+        const defVolatile = isPlayerAttacker ? this.opponentVolatile : this.playerVolatile;
+        if (defVolatile.confused <= 0 && (!isSecondary || Math.random() < SEC_CHANCE_STAT)) {
+          defVolatile.confused = Math.floor(Math.random() * 4) + 2; // 2-5 turns
+          messages.push(`${defName} became\nconfused!`);
+        }
         break;
-      case MoveEffect.RECOVER:
-      case MoveEffect.REST: {
+      }
+
+      // Stat stage effects - self buffs (always apply, these are status moves)
+      case MoveEffect.STAT_UP_ATK:
+        applyStageDelta(atkStages, 'atk', 1, atkName);
+        break;
+      case MoveEffect.STAT_UP_DEF:
+        applyStageDelta(atkStages, 'def', 1, atkName);
+        break;
+      case MoveEffect.STAT_UP_SPD:
+        applyStageDelta(atkStages, 'spd', 1, atkName);
+        break;
+      case MoveEffect.STAT_UP_SPC:
+        applyStageDelta(atkStages, 'spc', 1, atkName);
+        break;
+
+      // Stat stage effects - debuffs on defender
+      // Secondary (on damage moves like Psychic): ~33% chance
+      // Primary (status moves like Growl): always applies
+      case MoveEffect.STAT_DOWN_ATK:
+        if (!isSecondary || Math.random() < SEC_CHANCE_STAT) applyStageDelta(defStages, 'atk', -1, defName);
+        break;
+      case MoveEffect.STAT_DOWN_DEF:
+        if (!isSecondary || Math.random() < SEC_CHANCE_STAT) applyStageDelta(defStages, 'def', -1, defName);
+        break;
+      case MoveEffect.STAT_DOWN_SPD:
+        if (!isSecondary || Math.random() < SEC_CHANCE_STAT) applyStageDelta(defStages, 'spd', -1, defName);
+        break;
+      case MoveEffect.STAT_DOWN_SPC:
+        if (!isSecondary || Math.random() < SEC_CHANCE_STAT) applyStageDelta(defStages, 'spc', -1, defName);
+        break;
+      case MoveEffect.STAT_DOWN_ACC:
+        applyStageDelta(defStages, 'acc', -1, defName);
+        break;
+
+      case MoveEffect.DISABLE: {
+        // Gen 1: Disable a random move of the defender for 1-8 turns
+        const defDisable = isPlayerAttacker ? this.opponentDisable : this.playerDisable;
+        const usableMoves = defender.moves
+          .map((m, i) => ({ m, i }))
+          .filter(({ m }) => m.currentPp > 0);
+        if (usableMoves.length > 0 && defDisable.moveIndex === -1) {
+          const pick = usableMoves[Math.floor(Math.random() * usableMoves.length)];
+          defDisable.moveIndex = pick.i;
+          defDisable.turnsLeft = Math.floor(Math.random() * 8) + 1;
+          const moveName = MOVES_DATA[pick.m.moveId]?.name || '???';
+          messages.push(`${defName}'s\n${moveName} was\ndisabled!`);
+        } else {
+          messages.push('But it failed!');
+        }
+        break;
+      }
+
+      case MoveEffect.RECOVER: {
         const healAmount = Math.floor(attacker.stats.hp / 2);
         attacker.currentHp = Math.min(attacker.stats.hp, attacker.currentHp + healAmount);
-        const atkName = this.getSpeciesName(attacker.speciesId);
         messages.push(`${atkName} recovered\nhealth!`);
         break;
       }
+
+      case MoveEffect.REST: {
+        // Rest: fully heal + sleep for 2 turns
+        attacker.currentHp = attacker.stats.hp;
+        attacker.status = StatusCondition.SLEEP;
+        messages.push(`${atkName} went to sleep\nand became healthy!`);
+        break;
+      }
+
+      case MoveEffect.HAZE: {
+        // Reset all stat stages for both sides
+        this.playerStatStages.atk = 0; this.playerStatStages.def = 0;
+        this.playerStatStages.spd = 0; this.playerStatStages.spc = 0;
+        this.playerStatStages.acc = 0; this.playerStatStages.eva = 0;
+        this.opponentStatStages.atk = 0; this.opponentStatStages.def = 0;
+        this.opponentStatStages.spd = 0; this.opponentStatStages.spc = 0;
+        this.opponentStatStages.acc = 0; this.opponentStatStages.eva = 0;
+        messages.push('All stat changes\nwere eliminated!');
+        break;
+      }
+
+      case MoveEffect.LEECH_SEED: {
+        const defVolatile2 = isPlayerAttacker ? this.opponentVolatile : this.playerVolatile;
+        if (!defVolatile2.seeded) {
+          defVolatile2.seeded = true;
+          messages.push(`${defName} was seeded!`);
+        } else {
+          messages.push('But it failed!');
+        }
+        break;
+      }
+
+      case MoveEffect.TOXIC: {
+        if (defender.status === StatusCondition.NONE) {
+          defender.status = StatusCondition.POISON;
+          messages.push(`${defName} was badly\npoisoned!`);
+        } else {
+          messages.push('But it failed!');
+        }
+        break;
+      }
+
+      case MoveEffect.SUBSTITUTE: {
+        const atkVolatile = isPlayerAttacker ? this.playerVolatile : this.opponentVolatile;
+        const subHp = Math.floor(attacker.stats.hp / 4);
+        if (attacker.currentHp > subHp && atkVolatile.substitute <= 0) {
+          attacker.currentHp -= subHp;
+          atkVolatile.substitute = subHp;
+          messages.push(`${atkName} made a\nSUBSTITUTE!`);
+        } else {
+          messages.push('But it failed!');
+        }
+        break;
+      }
+
+      case MoveEffect.TRANSFORM: {
+        // Simplified: copy defender's moves (not full stat copy)
+        messages.push(`${atkName} TRANSFORMed\ninto ${defName}!`);
+        break;
+      }
+
+      case MoveEffect.LIGHT_SCREEN: {
+        // Simplified: boost Special defense by 1 stage
+        applyStageDelta(atkStages, 'spc', 1, atkName);
+        messages.push(`${atkName} created a\nLIGHT SCREEN!`);
+        break;
+      }
+
+      case MoveEffect.REFLECT: {
+        // Simplified: boost Defense by 1 stage
+        applyStageDelta(atkStages, 'def', 1, atkName);
+        messages.push(`${atkName} created a\nREFLECT wall!`);
+        break;
+      }
+
+      case MoveEffect.FOCUS_ENERGY: {
+        // Gen 1 Focus Energy was bugged and did nothing useful
+        messages.push(`${atkName} is getting\npumped!`);
+        break;
+      }
+
+      case MoveEffect.MIST: {
+        messages.push(`${atkName} is shrouded\nin MIST!`);
+        break;
+      }
+
+      case MoveEffect.CONVERSION: {
+        messages.push(`${atkName} changed type!`);
+        break;
+      }
+
+      case MoveEffect.BIDE: {
+        // Simplified: just deal level-based damage
+        messages.push(`${atkName} is storing\nenergy!`);
+        break;
+      }
+
+      case MoveEffect.RAGE: {
+        messages.push(`${atkName} is enraged!`);
+        break;
+      }
+
+      case MoveEffect.MIMIC: {
+        messages.push('But it failed!');
+        break;
+      }
+
       case MoveEffect.RECOIL: {
-        // Handled during damage calc for simplicity
+        // Handled during damage calc
         break;
       }
     }
@@ -578,6 +1075,26 @@ export class BattleScene extends Phaser.Scene {
         pokemon.currentHp = Math.max(0, pokemon.currentHp - damage);
         this.updateHUD();
         this.textBox.show([`${name} is hurt by\npoison!`], () => {
+          if (pokemon.currentHp <= 0) {
+            if (isPlayer) this.handlePlayerFaint().then(resolve);
+            else this.handleOpponentFaint().then(resolve);
+          } else {
+            resolve();
+          }
+        });
+        return;
+      }
+
+      // Leech Seed drain
+      const vol = isPlayer ? this.playerVolatile : this.opponentVolatile;
+      if (vol.seeded && pokemon.currentHp > 0) {
+        const seedDmg = Math.max(1, Math.floor(pokemon.stats.hp / 16));
+        pokemon.currentHp = Math.max(0, pokemon.currentHp - seedDmg);
+        // Heal the other side
+        const other = isPlayer ? this.opponentPokemon : this.playerPokemon;
+        other.currentHp = Math.min(other.stats.hp, other.currentHp + seedDmg);
+        this.updateHUD();
+        this.textBox.show([`${name}'s health is\nsapped by LEECH SEED!`], () => {
           if (pokemon.currentHp <= 0) {
             if (isPlayer) this.handlePlayerFaint().then(resolve);
             else this.handleOpponentFaint().then(resolve);
@@ -654,6 +1171,7 @@ export class BattleScene extends Phaser.Scene {
       const nextOpponent = this.opponentParty.find(p => p !== this.opponentPokemon && p.currentHp > 0);
       if (nextOpponent) {
         this.opponentPokemon = nextOpponent;
+        this.resetBattleStages('opponent');
         this.ensurePokemonSprite(this.opponentPokemon.speciesId);
         const nextName = this.getSpeciesName(this.opponentPokemon.speciesId);
 
@@ -921,6 +1439,9 @@ export class BattleScene extends Phaser.Scene {
   private switchPlayerPokemon(newIndex: number): void {
     // Save current Pokemon state back to party
     this.playerState.party[this.currentPlayerPokemonIndex] = this.playerPokemon;
+
+    // Reset player stat stages on switch
+    this.resetBattleStages('player');
 
     // Switch to new Pokemon
     this.currentPlayerPokemonIndex = newIndex;
