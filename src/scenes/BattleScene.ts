@@ -23,6 +23,8 @@ import { createPokemon } from '../entities/Pokemon';
 import { TRAINERS } from '../data/trainers';
 import { GYM_LEADERS } from '../data/gymLeaders';
 import { ELITE_FOUR, CHAMPION, HALL_OF_FAME_TEXT } from '../data/eliteFour';
+import { playMoveAnimation, AnimationContext } from '../systems/MoveAnimations';
+import '../systems/animations';
 
 interface BattleSceneData {
   type: string;
@@ -547,7 +549,15 @@ export class BattleScene extends Phaser.Scene {
       ? this.getSpeciesName(attacker.speciesId)
       : `Foe ${this.getSpeciesName(attacker.speciesId)}`;
 
-    const messages: string[] = [`${attackerName} used\n${moveData.name}!`];
+    const usedMessage = `${attackerName} used\n${moveData.name}!`;
+
+    // Build animation context
+    const animCtx: AnimationContext = {
+      scene: this,
+      attackerSprite: isPlayer ? this.playerSprite : this.opponentSprite,
+      defenderSprite: isPlayer ? this.opponentSprite : this.playerSprite,
+      isPlayer,
+    };
 
     // Metronome: pick a random move and execute it instead
     if (moveData.effect === MoveEffect.METRONOME) {
@@ -558,8 +568,7 @@ export class BattleScene extends Phaser.Scene {
       const randomId = allMoveIds[Math.floor(Math.random() * allMoveIds.length)];
       const randomMove = MOVES_DATA[randomId];
       if (randomMove) {
-        messages.push(`It became\n${randomMove.name}!`);
-        this.textBox.show(messages, () => {
+        this.textBox.show([usedMessage, `It became\n${randomMove.name}!`], () => {
           const fakeMove = { moveId: randomId, currentPp: 1, maxPp: 1 };
           this.doExecuteMove(attacker, defender, fakeMove, randomMove, isPlayer, resolve);
         });
@@ -569,18 +578,14 @@ export class BattleScene extends Phaser.Scene {
 
     // Mirror Move: copy opponent's last move
     if (moveData.effect === MoveEffect.MIRROR_MOVE) {
-      const lastDmg = defVol.lastDamageTaken;
-      // Simplified: just fail if no last move to mirror
-      messages.push('But it failed!');
-      this.textBox.show(messages, resolve);
+      this.textBox.show([usedMessage, 'But it failed!'], resolve);
       return;
     }
 
     // Dream Eater: only works if defender is sleeping
     if (moveData.effect === MoveEffect.DREAM_EATER) {
       if (defender.status !== StatusCondition.SLEEP) {
-        messages.push('But it failed!');
-        this.textBox.show(messages, resolve);
+        this.textBox.show([usedMessage, 'But it failed!'], resolve);
         return;
       }
     }
@@ -589,208 +594,221 @@ export class BattleScene extends Phaser.Scene {
     const atkStages = isPlayer ? this.playerStatStages : this.opponentStatStages;
     const defStages = isPlayer ? this.opponentStatStages : this.playerStatStages;
     if (!checkAccuracy(moveData as any, atkStages.acc, defStages.eva)) {
-      messages.push("But it missed!");
-      this.textBox.show(messages, resolve);
+      this.textBox.show([usedMessage, "But it missed!"], resolve);
       return;
     }
 
-    // === Special damage effects (bypass normal damage formula) ===
+    // Show "X used MOVE!" then play animation, then continue with results
+    this.textBox.show([usedMessage], async () => {
+      // Play move animation
+      await playMoveAnimation(move.moveId, animCtx);
 
-    // OHKO moves (Guillotine, Horn Drill, Fissure)
-    if (moveData.effect === MoveEffect.OHKO) {
-      if (attacker.stats.speed < defender.stats.speed) {
-        messages.push("But it failed!");
-        this.textBox.show(messages, resolve);
-        return;
-      }
-      defender.currentHp = 0;
-      messages.push("One-hit KO!");
-      soundSystem.hit();
-      this.applyDamageAnimation(defender, isPlayer, messages, resolve);
-      return;
-    }
+      const messages: string[] = [];
 
-    // Fixed damage (Sonic Boom = 20, Dragon Rage = 40)
-    if (moveData.effect === MoveEffect.FIXED_DAMAGE) {
-      const fixedDmg = move.moveId === 49 ? 20 : 40; // Sonic Boom=49, Dragon Rage=82
-      defender.currentHp = Math.max(0, defender.currentHp - fixedDmg);
-      defVol.lastDamageTaken = fixedDmg;
-      defVol.lastDamagePhysical = true;
-      soundSystem.hit();
-      this.applyDamageAnimation(defender, isPlayer, messages, resolve);
-      return;
-    }
+      // === Special damage effects (bypass normal damage formula) ===
 
-    // Level damage (Seismic Toss, Night Shade)
-    if (moveData.effect === MoveEffect.LEVEL_DAMAGE) {
-      // Psywave deals random damage from 1 to 1.5x level
-      const dmg = move.moveId === 149
-        ? Math.max(1, Math.floor(Math.random() * attacker.level * 1.5))
-        : attacker.level;
-      defender.currentHp = Math.max(0, defender.currentHp - dmg);
-      defVol.lastDamageTaken = dmg;
-      defVol.lastDamagePhysical = true;
-      soundSystem.hit();
-      this.applyDamageAnimation(defender, isPlayer, messages, resolve);
-      return;
-    }
-
-    // Super Fang (halves target's current HP)
-    if (moveData.effect === MoveEffect.SUPER_FANG) {
-      const dmg = Math.max(1, Math.floor(defender.currentHp / 2));
-      defender.currentHp = Math.max(0, defender.currentHp - dmg);
-      defVol.lastDamageTaken = dmg;
-      defVol.lastDamagePhysical = true;
-      soundSystem.hit();
-      this.applyDamageAnimation(defender, isPlayer, messages, resolve);
-      return;
-    }
-
-    // Counter (return 2x the last physical damage taken)
-    if (moveData.effect === MoveEffect.COUNTER) {
-      const atkVol = isPlayer ? this.playerVolatile : this.opponentVolatile;
-      if (atkVol.lastDamageTaken > 0 && atkVol.lastDamagePhysical) {
-        const dmg = atkVol.lastDamageTaken * 2;
-        defender.currentHp = Math.max(0, defender.currentHp - dmg);
-        defVol.lastDamageTaken = dmg;
+      // OHKO moves (Guillotine, Horn Drill, Fissure)
+      if (moveData.effect === MoveEffect.OHKO) {
+        if (attacker.stats.speed < defender.stats.speed) {
+          messages.push("But it failed!");
+          this.textBox.show(messages, resolve);
+          return;
+        }
+        defender.currentHp = 0;
+        messages.push("One-hit KO!");
         soundSystem.hit();
         this.applyDamageAnimation(defender, isPlayer, messages, resolve);
-      } else {
-        messages.push('But it failed!');
-        this.textBox.show(messages, resolve);
-      }
-      return;
-    }
-
-    // === Normal damage path ===
-    if (moveData.power > 0 && moveData.category !== MoveCategory.STATUS) {
-      const isCrit = checkCritical(attacker);
-      const result = calculateDamage(attacker, defender, moveData as any, isCrit, atkStages, defStages);
-
-      if (result.effectiveness === 0) {
-        messages.push(getEffectivenessText(0));
-        this.textBox.show(messages, resolve);
         return;
       }
 
-      // Multi-hit moves
-      let totalDamage = result.damage;
-      let hitCount = 1;
-      if (moveData.effect === MoveEffect.TWO_HIT) {
-        hitCount = 2;
-        totalDamage = result.damage * 2;
-      } else if (moveData.effect === MoveEffect.MULTI_HIT) {
-        // Gen 1: 37.5% 2 hits, 37.5% 3 hits, 12.5% 4, 12.5% 5
-        const roll = Math.random();
-        if (roll < 0.375) hitCount = 2;
-        else if (roll < 0.75) hitCount = 3;
-        else if (roll < 0.875) hitCount = 4;
-        else hitCount = 5;
-        totalDamage = result.damage * hitCount;
+      // Fixed damage (Sonic Boom = 20, Dragon Rage = 40)
+      if (moveData.effect === MoveEffect.FIXED_DAMAGE) {
+        const fixedDmg = move.moveId === 49 ? 20 : 40; // Sonic Boom=49, Dragon Rage=82
+        defender.currentHp = Math.max(0, defender.currentHp - fixedDmg);
+        defVol.lastDamageTaken = fixedDmg;
+        defVol.lastDamagePhysical = true;
+        soundSystem.hit();
+        this.applyDamageAnimation(defender, isPlayer, messages, resolve);
+        return;
       }
 
-      // Track damage for Counter
-      defVol.lastDamageTaken = totalDamage;
-      defVol.lastDamagePhysical = PHYSICAL_TYPES.includes(moveData.type);
-
-      defender.currentHp = Math.max(0, defender.currentHp - totalDamage);
-
-      if (result.isCritical) {
-        messages.push("A critical hit!");
+      // Level damage (Seismic Toss, Night Shade)
+      if (moveData.effect === MoveEffect.LEVEL_DAMAGE) {
+        const dmg = move.moveId === 149
+          ? Math.max(1, Math.floor(Math.random() * attacker.level * 1.5))
+          : attacker.level;
+        defender.currentHp = Math.max(0, defender.currentHp - dmg);
+        defVol.lastDamageTaken = dmg;
+        defVol.lastDamagePhysical = true;
+        soundSystem.hit();
+        this.applyDamageAnimation(defender, isPlayer, messages, resolve);
+        return;
       }
 
-      if (hitCount > 1) {
-        messages.push(`Hit ${hitCount} times!`);
+      // Super Fang (halves target's current HP)
+      if (moveData.effect === MoveEffect.SUPER_FANG) {
+        const dmg = Math.max(1, Math.floor(defender.currentHp / 2));
+        defender.currentHp = Math.max(0, defender.currentHp - dmg);
+        defVol.lastDamageTaken = dmg;
+        defVol.lastDamagePhysical = true;
+        soundSystem.hit();
+        this.applyDamageAnimation(defender, isPlayer, messages, resolve);
+        return;
       }
 
-      const effText = getEffectivenessText(result.effectiveness);
-      if (effText) {
-        messages.push(effText);
-        if (result.effectiveness > 1) {
-          soundSystem.superEffective();
-        } else if (result.effectiveness < 1) {
-          soundSystem.notVeryEffective();
+      // Counter (return 2x the last physical damage taken)
+      if (moveData.effect === MoveEffect.COUNTER) {
+        const atkVol = isPlayer ? this.playerVolatile : this.opponentVolatile;
+        if (atkVol.lastDamageTaken > 0 && atkVol.lastDamagePhysical) {
+          const dmg = atkVol.lastDamageTaken * 2;
+          defender.currentHp = Math.max(0, defender.currentHp - dmg);
+          defVol.lastDamageTaken = dmg;
+          soundSystem.hit();
+          this.applyDamageAnimation(defender, isPlayer, messages, resolve);
+        } else {
+          messages.push('But it failed!');
+          this.textBox.show(messages, resolve);
+        }
+        return;
+      }
+
+      // === Normal damage path ===
+      if (moveData.power > 0 && moveData.category !== MoveCategory.STATUS) {
+        const isCrit = checkCritical(attacker);
+        const result = calculateDamage(attacker, defender, moveData as any, isCrit, atkStages, defStages);
+
+        if (result.effectiveness === 0) {
+          messages.push(getEffectivenessText(0));
+          this.textBox.show(messages, resolve);
+          return;
+        }
+
+        // Multi-hit moves
+        let totalDamage = result.damage;
+        let hitCount = 1;
+        if (moveData.effect === MoveEffect.TWO_HIT) {
+          hitCount = 2;
+          totalDamage = result.damage * 2;
+        } else if (moveData.effect === MoveEffect.MULTI_HIT) {
+          const roll = Math.random();
+          if (roll < 0.375) hitCount = 2;
+          else if (roll < 0.75) hitCount = 3;
+          else if (roll < 0.875) hitCount = 4;
+          else hitCount = 5;
+          totalDamage = result.damage * hitCount;
+        }
+
+        // Track damage for Counter
+        defVol.lastDamageTaken = totalDamage;
+        defVol.lastDamagePhysical = PHYSICAL_TYPES.includes(moveData.type);
+
+        defender.currentHp = Math.max(0, defender.currentHp - totalDamage);
+
+        if (result.isCritical) {
+          messages.push("A critical hit!");
+        }
+
+        if (hitCount > 1) {
+          messages.push(`Hit ${hitCount} times!`);
+        }
+
+        const effText = getEffectivenessText(result.effectiveness);
+        if (effText) {
+          messages.push(effText);
+          if (result.effectiveness > 1) {
+            soundSystem.superEffective();
+          } else if (result.effectiveness < 1) {
+            soundSystem.notVeryEffective();
+          }
+        }
+
+        soundSystem.hit();
+
+        // Recoil damage (Take Down, Double-Edge, Submission)
+        if (moveData.effect === MoveEffect.RECOIL) {
+          const recoilDmg = Math.max(1, Math.floor(result.damage / 4));
+          attacker.currentHp = Math.max(0, attacker.currentHp - recoilDmg);
+          messages.push(`${attackerName} is hit\nwith recoil!`);
+        }
+
+        // Drain moves (Absorb, Mega Drain, Leech Life)
+        if (moveData.effect === MoveEffect.DRAIN) {
+          const drainAmt = Math.max(1, Math.floor(result.damage / 2));
+          attacker.currentHp = Math.min(attacker.stats.hp, attacker.currentHp + drainAmt);
+          messages.push(`${attackerName} drained\nenergy!`);
+        }
+
+        // Self-destruct / Explosion
+        if (moveData.effect === MoveEffect.SELF_DESTRUCT) {
+          attacker.currentHp = 0;
+        }
+
+        // Flinch (secondary effect on damage moves)
+        if (moveData.effect === MoveEffect.FLINCH && defender.currentHp > 0) {
+          if (Math.random() < 0.3) {
+            defVol.flinched = true;
+          }
+        }
+
+        // Recharge (Hyper Beam) - must skip next turn
+        if (moveData.effect === MoveEffect.RECHARGE && defender.currentHp > 0) {
+          if (isPlayer) this.playerRecharging = true;
+          else this.opponentRecharging = true;
+          messages.push(`${attackerName} must\nrecharge!`);
+        }
+
+        // Dream Eater heals 50% of damage dealt
+        if (moveData.effect === MoveEffect.DREAM_EATER) {
+          const drainAmt = Math.max(1, Math.floor(totalDamage / 2));
+          attacker.currentHp = Math.min(attacker.stats.hp, attacker.currentHp + drainAmt);
+          messages.push(`${attackerName} drained\nenergy!`);
+        }
+
+        // Apply other secondary effects (chance-based for damage moves)
+        const SKIP_SECONDARY = [
+          MoveEffect.RECOIL, MoveEffect.DRAIN, MoveEffect.SELF_DESTRUCT,
+          MoveEffect.FLINCH, MoveEffect.MULTI_HIT, MoveEffect.TWO_HIT,
+          MoveEffect.RECHARGE, MoveEffect.DREAM_EATER, MoveEffect.CHARGE,
+          MoveEffect.WRAP,
+        ];
+        if (moveData.effect && defender.currentHp > 0 && !SKIP_SECONDARY.includes(moveData.effect)) {
+          this.applyMoveEffect(moveData.effect, attacker, defender, messages, isPlayer, true);
+        }
+
+        // Animate HP changes
+        const hpPromise = isPlayer
+          ? this.hud.animateOpponentHP(defender.currentHp / defender.stats.hp)
+          : this.hud.animatePlayerHP(defender.currentHp / defender.stats.hp);
+
+        const targetSprite = isPlayer ? this.opponentSprite : this.playerSprite;
+        this.tweens.add({
+          targets: targetSprite,
+          alpha: 0,
+          duration: 80,
+          yoyo: true,
+          repeat: 2,
+        });
+
+        hpPromise.then(() => {
+          this.updateHUD();
+          if (messages.length > 0) {
+            this.textBox.show(messages, resolve);
+          } else {
+            resolve();
+          }
+        });
+      } else {
+        // Status move - effect always applies (already passed accuracy check)
+        if (moveData.effect) {
+          this.applyMoveEffect(moveData.effect, attacker, defender, messages, isPlayer, false);
+        }
+        if (messages.length > 0) {
+          this.textBox.show(messages, resolve);
+        } else {
+          resolve();
         }
       }
-
-      soundSystem.hit();
-
-      // Recoil damage (Take Down, Double-Edge, Submission)
-      if (moveData.effect === MoveEffect.RECOIL) {
-        const recoilDmg = Math.max(1, Math.floor(result.damage / 4));
-        attacker.currentHp = Math.max(0, attacker.currentHp - recoilDmg);
-        messages.push(`${attackerName} is hit\nwith recoil!`);
-      }
-
-      // Drain moves (Absorb, Mega Drain, Leech Life)
-      if (moveData.effect === MoveEffect.DRAIN) {
-        const drainAmt = Math.max(1, Math.floor(result.damage / 2));
-        attacker.currentHp = Math.min(attacker.stats.hp, attacker.currentHp + drainAmt);
-        messages.push(`${attackerName} drained\nenergy!`);
-      }
-
-      // Self-destruct / Explosion
-      if (moveData.effect === MoveEffect.SELF_DESTRUCT) {
-        attacker.currentHp = 0;
-      }
-
-      // Flinch (secondary effect on damage moves)
-      if (moveData.effect === MoveEffect.FLINCH && defender.currentHp > 0) {
-        if (Math.random() < 0.3) {
-          defVol.flinched = true;
-        }
-      }
-
-      // Recharge (Hyper Beam) - must skip next turn
-      if (moveData.effect === MoveEffect.RECHARGE && defender.currentHp > 0) {
-        if (isPlayer) this.playerRecharging = true;
-        else this.opponentRecharging = true;
-        messages.push(`${attackerName} must\nrecharge!`);
-      }
-
-      // Dream Eater heals 50% of damage dealt
-      if (moveData.effect === MoveEffect.DREAM_EATER) {
-        const drainAmt = Math.max(1, Math.floor(totalDamage / 2));
-        attacker.currentHp = Math.min(attacker.stats.hp, attacker.currentHp + drainAmt);
-        messages.push(`${attackerName} drained\nenergy!`);
-      }
-
-      // Apply other secondary effects (chance-based for damage moves)
-      const SKIP_SECONDARY = [
-        MoveEffect.RECOIL, MoveEffect.DRAIN, MoveEffect.SELF_DESTRUCT,
-        MoveEffect.FLINCH, MoveEffect.MULTI_HIT, MoveEffect.TWO_HIT,
-        MoveEffect.RECHARGE, MoveEffect.DREAM_EATER, MoveEffect.CHARGE,
-        MoveEffect.WRAP,
-      ];
-      if (moveData.effect && defender.currentHp > 0 && !SKIP_SECONDARY.includes(moveData.effect)) {
-        this.applyMoveEffect(moveData.effect, attacker, defender, messages, isPlayer, true);
-      }
-
-      // Animate HP changes
-      const hpPromise = isPlayer
-        ? this.hud.animateOpponentHP(defender.currentHp / defender.stats.hp)
-        : this.hud.animatePlayerHP(defender.currentHp / defender.stats.hp);
-
-      const targetSprite = isPlayer ? this.opponentSprite : this.playerSprite;
-      this.tweens.add({
-        targets: targetSprite,
-        alpha: 0,
-        duration: 80,
-        yoyo: true,
-        repeat: 2,
-      });
-
-      hpPromise.then(() => {
-        this.updateHUD();
-        this.textBox.show(messages, resolve);
-      });
-    } else {
-      // Status move - effect always applies (already passed accuracy check)
-      if (moveData.effect) {
-        this.applyMoveEffect(moveData.effect, attacker, defender, messages, isPlayer, false);
-      }
-      this.textBox.show(messages, resolve);
-    }
+    });
   }
 
   /** Animate HP drop + sprite flash for special damage moves (OHKO, fixed dmg, etc.), then show messages */
