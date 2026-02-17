@@ -94,7 +94,6 @@ export class PokedexScreen {
     this.pokedexSeen = pokedexSeen;
     this.pokedexCaught = pokedexCaught;
     this.onClose = onClose;
-    this.visible = true;
     this.inDetail = false;
     this.cursorIndex = 0;
     this.scrollOffset = 0;
@@ -102,6 +101,10 @@ export class PokedexScreen {
     this.detailContainer.setVisible(false);
     this.updateList();
     this.setupInput();
+    // Defer enabling input to the next frame so the key press that
+    // opened this screen doesn't also trigger a confirm/navigate
+    this.visible = false;
+    this.scene.time.delayedCall(0, () => { this.visible = true; });
   }
 
   hide(): void {

@@ -198,7 +198,6 @@ export class ShopScreen {
     this.playerState = playerState;
     this.shopStock = shopStock;
     this.onClose = onClose;
-    this.visible = true;
     this.mode = 'main';
     this.mainIndex = 0;
     this.mainCursor.setY(4);
@@ -211,6 +210,10 @@ export class ShopScreen {
     this.messageContainer.setVisible(false);
     this.updateMoney();
     this.setupInput();
+    // Defer enabling input to the next frame so the key press that
+    // opened this screen doesn't also trigger a confirm/navigate
+    this.visible = false;
+    this.scene.time.delayedCall(0, () => { this.visible = true; });
   }
 
   hide(): void {

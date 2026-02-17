@@ -172,7 +172,6 @@ export class PCScreen {
   show(playerState: PlayerState, onClose: () => void): void {
     this.playerState = playerState;
     this.onClose = onClose;
-    this.visible = true;
     this.mode = 'main';
     this.mainCursorIndex = 0;
     this.mainMenuCursor.setY(34);
@@ -184,6 +183,10 @@ export class PCScreen {
     this.messageContainer.setVisible(false);
     this.hideListRows();
     this.setupInput();
+    // Defer enabling input to the next frame so the key press that
+    // opened this screen doesn't also trigger a confirm/navigate
+    this.visible = false;
+    this.scene.time.delayedCall(0, () => { this.visible = true; });
   }
 
   hide(): void {

@@ -115,7 +115,6 @@ export class PartyScreen {
     this.party = party;
     this.onClose = onClose;
     this.onFieldMove = onFieldMove || null;
-    this.visible = true;
     this.mode = 'list';
     this.cursorIndex = 0;
     this.switchFromIndex = -1;
@@ -124,6 +123,10 @@ export class PartyScreen {
     this.summaryContainer.setVisible(false);
     this.updateList();
     this.setupInput();
+    // Defer enabling input to the next frame so the key press that
+    // opened this screen doesn't also trigger a confirm/navigate
+    this.visible = false;
+    this.scene.time.delayedCall(0, () => { this.visible = true; });
   }
 
   hide(): void {

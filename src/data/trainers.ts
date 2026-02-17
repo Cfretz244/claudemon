@@ -526,6 +526,21 @@ export const TRAINERS: Record<string, TrainerData> = {
     },
   },
 
+  route25_trainer3: {
+    id: 'route25_trainer3',
+    name: 'LASS HALEY',
+    class: 'Lass',
+    team: [
+      { speciesId: 29, level: 15 }, // Nidoran F
+      { speciesId: 30, level: 15 }, // Nidorina
+    ],
+    prizeMoney: 240,
+    dialogue: {
+      before: ['I wonder what BILL\nis working on...'],
+      after: ['Maybe BILL will show\nme his research.'],
+    },
+  },
+
   // Route 5
   route5_trainer1: {
     id: 'route5_trainer1',

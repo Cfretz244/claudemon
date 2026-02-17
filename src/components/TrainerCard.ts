@@ -118,7 +118,6 @@ export class TrainerCard {
 
   show(playerState: PlayerState, onClose: () => void): void {
     this.onClose = onClose;
-    this.visible = true;
 
     // Populate player info
     this.nameText.setText(`NAME: ${playerState.name}`);
@@ -153,6 +152,10 @@ export class TrainerCard {
 
     this.container.setVisible(true);
     this.setupInput();
+    // Defer enabling input to the next frame so the key press that
+    // opened this screen doesn't also trigger a confirm/navigate
+    this.visible = false;
+    this.scene.time.delayedCall(0, () => { this.visible = true; });
   }
 
   hide(): void {

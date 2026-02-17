@@ -186,7 +186,6 @@ export class BagScreen {
   show(playerState: PlayerState, onClose: () => void): void {
     this.playerState = playerState;
     this.onClose = onClose;
-    this.visible = true;
     this.mode = 'list';
     this.cursorIndex = 0;
     this.scrollOffset = 0;
@@ -199,6 +198,10 @@ export class BagScreen {
     this.rebuildItemList();
     this.updateList();
     this.setupInput();
+    // Defer enabling input to the next frame so the key press that
+    // opened this screen doesn't also trigger a confirm/navigate
+    this.visible = false;
+    this.scene.time.delayedCall(0, () => { this.visible = true; });
   }
 
   hide(): void {
@@ -339,11 +342,15 @@ export class BagScreen {
     const itemData = ITEMS[item.id];
 
     if (!itemData || (itemData.category !== 'medicine' && itemData.category !== 'hm')) {
+      this.mode = 'list';
+      this.optionsContainer.setVisible(false);
       this.showMessage("Can't use that here!");
       return;
     }
 
     if (this.playerState.party.length === 0) {
+      this.mode = 'list';
+      this.optionsContainer.setVisible(false);
       this.showMessage("No POKeMON in party!");
       return;
     }
@@ -542,6 +549,8 @@ export class BagScreen {
     const item = this.itemList[this.cursorIndex];
     const itemData = ITEMS[item.id];
     if (itemData && (itemData.category === 'key' || itemData.category === 'hm')) {
+      this.mode = 'list';
+      this.optionsContainer.setVisible(false);
       this.showMessage("That's too important\nto toss!");
       return;
     }

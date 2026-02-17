@@ -238,6 +238,20 @@ export class OverworldScene extends Phaser.Scene {
       if (this.menuOpen) this.closeMenu();
       else if (this.textBox.getIsVisible()) this.textBox.advance();
     });
+
+    // Menu navigation listeners (added once, gated by menuOpen flag)
+    this.cursors.up.on('down', () => {
+      if (!this.menuOpen) return;
+      this.menuSelectedIndex = Math.max(0, this.menuSelectedIndex - 1);
+      this.menuCursor.setY(4 + this.menuSelectedIndex * 14);
+      soundSystem.menuMove();
+    });
+    this.cursors.down.on('down', () => {
+      if (!this.menuOpen) return;
+      this.menuSelectedIndex = Math.min(this.menuItems.length - 1, this.menuSelectedIndex + 1);
+      this.menuCursor.setY(4 + this.menuSelectedIndex * 14);
+      soundSystem.menuMove();
+    });
   }
 
   private isOutdoorMap(): boolean {
@@ -2005,32 +2019,11 @@ export class OverworldScene extends Phaser.Scene {
     this.menuCursor.setY(4);
     this.menuContainer.setVisible(true);
     soundSystem.menuSelect();
-
-    // Set up menu navigation
-    this.cursors.up.removeAllListeners();
-    this.cursors.down.removeAllListeners();
-
-    this.cursors.up.on('down', () => {
-      if (!this.menuOpen) return;
-      this.menuSelectedIndex = Math.max(0, this.menuSelectedIndex - 1);
-      this.menuCursor.setY(4 + this.menuSelectedIndex * 14);
-      soundSystem.menuMove();
-    });
-    this.cursors.down.on('down', () => {
-      if (!this.menuOpen) return;
-      this.menuSelectedIndex = Math.min(this.menuItems.length - 1, this.menuSelectedIndex + 1);
-      this.menuCursor.setY(4 + this.menuSelectedIndex * 14);
-      soundSystem.menuMove();
-    });
   }
 
   private closeMenu(): void {
     this.menuOpen = false;
     this.menuContainer.setVisible(false);
-
-    // Restore movement listeners
-    this.cursors.up.removeAllListeners();
-    this.cursors.down.removeAllListeners();
   }
 
   private selectMenuItem(): void {
