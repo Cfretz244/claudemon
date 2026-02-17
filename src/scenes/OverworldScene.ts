@@ -16,7 +16,8 @@ import { StatusCondition } from '../types/pokemon.types';
 import { createPokemon } from '../entities/Pokemon';
 import { PlayerState } from '../entities/Player';
 import { ELITE_FOUR, CHAMPION } from '../data/eliteFour';
-import { playBattleTransition } from '../utils/battleTransition';
+import { GYM_LEADERS } from '../data/gymLeaders';
+import { playBattleTransition, playTrainerBattleTransition } from '../utils/battleTransition';
 
 interface SceneData {
   mapId: string;
@@ -681,7 +682,7 @@ export class OverworldScene extends Phaser.Scene {
       { trainerId: CHAMPION.id, trainerName: championName },
     ];
 
-    playBattleTransition(this, () => {
+    playTrainerBattleTransition(this, () => {
       this.scene.start('BattleScene', {
         type: 'trainer',
         trainerId: ELITE_FOUR[0].id,
@@ -693,6 +694,8 @@ export class OverworldScene extends Phaser.Scene {
         eliteFourQueue: queue,
         hallOfFame: false,
       });
+    }, () => {
+      soundSystem.startMusic('elite_four');
     });
   }
 
@@ -900,6 +903,8 @@ export class OverworldScene extends Phaser.Scene {
             returnX: this.playerGridX,
             returnY: this.playerGridY,
           });
+        }, () => {
+          soundSystem.startMusic('wild_battle');
         });
         return;
       }
@@ -930,7 +935,7 @@ export class OverworldScene extends Phaser.Scene {
     this.isWarping = true;
     soundSystem.battleStart();
 
-    playBattleTransition(this, () => {
+    playTrainerBattleTransition(this, () => {
       this.scene.start('BattleScene', {
         type: 'trainer',
         trainerId,
@@ -940,6 +945,8 @@ export class OverworldScene extends Phaser.Scene {
         returnX: this.playerGridX,
         returnY: this.playerGridY,
       });
+    }, () => {
+      soundSystem.startMusic('trainer_battle');
     });
   }
 
@@ -1524,6 +1531,8 @@ export class OverworldScene extends Phaser.Scene {
                 returnX: this.playerGridX,
                 returnY: this.playerGridY,
               });
+            }, () => {
+              soundSystem.startMusic('wild_battle');
             });
             // Set flag to remove Snorlax after battle
             this.playerState.storyFlags[`${npc.id}_cleared`] = true;
@@ -1704,7 +1713,7 @@ export class OverworldScene extends Phaser.Scene {
       trainerName = this.playerState.rivalName;
     }
 
-    playBattleTransition(this, () => {
+    playTrainerBattleTransition(this, () => {
       this.scene.start('BattleScene', {
         type: 'trainer',
         trainerId: npc.id,
@@ -1714,6 +1723,9 @@ export class OverworldScene extends Phaser.Scene {
         returnX: this.playerGridX,
         returnY: this.playerGridY,
       });
+    }, () => {
+      const track = npc.id in GYM_LEADERS ? 'gym_leader_battle' : 'trainer_battle';
+      soundSystem.startMusic(track);
     });
   }
 
