@@ -248,6 +248,15 @@ export const SEAFOAM_ISLANDS: MapData = (() => {
     ],
     npcs: [
       {
+        id: 'seafoam_rare_candy',
+        x: 5, y: 10,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'rare_candy',
+      },
+      {
         id: 'seafoam_trainer1',
         x: 5, y: 6,
         spriteColor: 0xc06060,
@@ -1002,6 +1011,24 @@ export const VICTORY_ROAD: MapData = (() => {
       { x: 9, y: 0, targetMap: 'indigo_plateau', targetX: 7, targetY: 14 },
     ],
     npcs: [
+      {
+        id: 'vr_rare_candy',
+        x: 12, y: 5,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'rare_candy',
+      },
+      {
+        id: 'vr_full_heal',
+        x: 7, y: 11,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'full_heal',
+      },
       {
         id: 'vr_trainer1',
         x: 4, y: 6,

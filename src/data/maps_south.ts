@@ -73,6 +73,15 @@ export const ROUTE12: MapData = (() => {
         ],
       },
       {
+        id: 'route12_super_potion',
+        x: 4, y: 6,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'super_potion',
+      },
+      {
         id: 'route12_trainer1',
         x: 4, y: 9,
         spriteColor: 0xa06060,

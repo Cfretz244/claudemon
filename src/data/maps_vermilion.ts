@@ -717,6 +717,24 @@ export const ROCK_TUNNEL: MapData = (() => {
     ],
     npcs: [
       {
+        id: 'rock_tunnel_escape_rope',
+        x: 4, y: 6,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'escape_rope',
+      },
+      {
+        id: 'rock_tunnel_revive',
+        x: 16, y: 12,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'revive',
+      },
+      {
         id: 'rock_tunnel_trainer1',
         x: 5, y: 9,
         spriteColor: 0x908060,

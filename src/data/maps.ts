@@ -440,6 +440,15 @@ export const ROUTE1: MapData = (() => {
           "POKeMON CENTER in\nVIRIDIAN CITY!",
         ],
       },
+      {
+        id: 'route1_potion',
+        x: 5, y: 15,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'potion',
+      },
     ],
     wildEncounters: {
       grassRate: 0.2,
@@ -763,10 +772,10 @@ export const ROUTE2: MapData = (() => {
       { x: 10, y: H - 1, targetMap: 'viridian_city', targetX: 10, targetY: 2 },
       { x: 11, y: H - 1, targetMap: 'viridian_city', targetX: 11, targetY: 2 },
       // North to Viridian Forest / Pewter
-      { x: 8, y: 0, targetMap: 'viridian_forest', targetX: 8, targetY: 28 },
-      { x: 9, y: 0, targetMap: 'viridian_forest', targetX: 9, targetY: 28 },
-      { x: 10, y: 0, targetMap: 'viridian_forest', targetX: 10, targetY: 28 },
-      { x: 11, y: 0, targetMap: 'viridian_forest', targetX: 11, targetY: 28 },
+      { x: 8, y: 0, targetMap: 'viridian_forest', targetX: 13, targetY: 42 },
+      { x: 9, y: 0, targetMap: 'viridian_forest', targetX: 14, targetY: 42 },
+      { x: 10, y: 0, targetMap: 'viridian_forest', targetX: 15, targetY: 42 },
+      { x: 11, y: 0, targetMap: 'viridian_forest', targetX: 16, targetY: 42 },
     ],
     npcs: [
       {
@@ -793,9 +802,10 @@ export const ROUTE2: MapData = (() => {
 })();
 
 export const VIRIDIAN_FOREST: MapData = (() => {
-  const W = 20, H = 30;
-  const tiles = fill2D(W, H, T.GRASS);
-  const collision = fill2D(W, H, false);
+  const W = 30, H = 45;
+  // Start with dense trees everywhere, then carve corridors
+  const tiles = fill2D(W, H, T.TREE);
+  const collision = fill2D(W, H, true);
 
   function setTile(x: number, y: number, type: TileType) {
     if (x >= 0 && x < W && y >= 0 && y < H) {
@@ -812,45 +822,56 @@ export const VIRIDIAN_FOREST: MapData = (() => {
     }
   }
 
-  // Dense tree borders
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.TREE);
-    setTile(x, 1, T.TREE);
-  }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.TREE);
-    setTile(1, y, T.TREE);
-    setTile(2, y, T.TREE);
-    setTile(W - 1, y, T.TREE);
-    setTile(W - 2, y, T.TREE);
-    setTile(W - 3, y, T.TREE);
-  }
+  // === CARVE MAZE CORRIDORS ===
 
-  // Winding path through forest
-  fillRect(8, 0, 3, 6, T.PATH);
-  fillRect(5, 5, 6, 2, T.PATH);
-  fillRect(5, 6, 3, 6, T.PATH);
-  fillRect(5, 11, 8, 2, T.PATH);
-  fillRect(10, 12, 3, 6, T.PATH);
-  fillRect(5, 17, 8, 2, T.PATH);
-  fillRect(5, 18, 3, 5, T.PATH);
-  fillRect(5, 22, 8, 2, T.PATH);
-  fillRect(10, 23, 3, 7, T.PATH);
+  // South entrance corridor (4 wide to match Route 2 path width)
+  fillRect(13, 40, 4, 5, T.GRASS);
+  // South clearing
+  fillRect(9, 37, 12, 5, T.GRASS);
+  // Dead end west of south clearing (for item)
+  fillRect(4, 38, 6, 4, T.GRASS);
 
-  // Dense tall grass
-  fillRect(4, 3, 4, 3, T.TALL_GRASS);
-  fillRect(12, 5, 4, 4, T.TALL_GRASS);
-  fillRect(4, 8, 4, 3, T.TALL_GRASS);
-  fillRect(8, 14, 3, 3, T.TALL_GRASS);
-  fillRect(4, 20, 5, 3, T.TALL_GRASS);
-  fillRect(12, 24, 4, 4, T.TALL_GRASS);
+  // East path from south clearing
+  fillRect(19, 34, 7, 4, T.GRASS);
+  // Northeast corridor going north
+  fillRect(23, 24, 3, 12, T.GRASS);
+  // East alcove dead end (for item)
+  fillRect(24, 28, 3, 3, T.GRASS);
 
-  // Interior trees
-  setTile(8, 8, T.TREE);
-  setTile(9, 9, T.TREE);
-  setTile(13, 14, T.TREE);
-  setTile(14, 15, T.TREE);
-  setTile(7, 24, T.TREE);
+  // Middle east-west corridor
+  fillRect(4, 22, 22, 3, T.GRASS);
+  // South dead end from middle corridor (for item)
+  fillRect(4, 24, 3, 7, T.GRASS);
+
+  // Northwest corridor going north
+  fillRect(4, 14, 3, 9, T.GRASS);
+  // Upper east-west corridor
+  fillRect(4, 12, 19, 3, T.GRASS);
+  // Central dead end south from upper corridor (for item)
+  fillRect(12, 14, 3, 7, T.GRASS);
+
+  // Upper northeast corridor going north
+  fillRect(20, 5, 3, 9, T.GRASS);
+  // Top east-west corridor
+  fillRect(4, 3, 19, 3, T.GRASS);
+  // North exit corridor (2 wide)
+  fillRect(5, 0, 2, 4, T.GRASS);
+
+  // === TALL GRASS PATCHES ===
+  fillRect(11, 38, 4, 3, T.TALL_GRASS);
+  fillRect(21, 35, 4, 2, T.TALL_GRASS);
+  fillRect(23, 28, 3, 3, T.TALL_GRASS);
+  fillRect(10, 22, 6, 3, T.TALL_GRASS);
+  fillRect(4, 17, 3, 4, T.TALL_GRASS);
+  fillRect(8, 12, 5, 3, T.TALL_GRASS);
+  fillRect(20, 8, 3, 4, T.TALL_GRASS);
+  fillRect(10, 3, 5, 3, T.TALL_GRASS);
+  fillRect(4, 27, 3, 4, T.TALL_GRASS);
+  fillRect(12, 16, 3, 4, T.TALL_GRASS);
+
+  // === PATH markers at entrance/exit ===
+  fillRect(14, 41, 2, 3, T.PATH);
+  fillRect(5, 1, 2, 3, T.PATH);
 
   return {
     id: 'viridian_forest',
@@ -860,17 +881,20 @@ export const VIRIDIAN_FOREST: MapData = (() => {
     tiles,
     collision,
     warps: [
-      // South to Route 2
-      { x: 9, y: H - 1, targetMap: 'route2', targetX: 9, targetY: 1 },
-      { x: 10, y: H - 1, targetMap: 'route2', targetX: 10, targetY: 1 },
-      // North to Pewter City area
-      { x: 9, y: 1, targetMap: 'pewter_city', targetX: 9, targetY: 24 },
-      { x: 10, y: 1, targetMap: 'pewter_city', targetX: 10, targetY: 24 },
+      // South exit to Route 2
+      { x: 13, y: 44, targetMap: 'route2', targetX: 8, targetY: 1 },
+      { x: 14, y: 44, targetMap: 'route2', targetX: 9, targetY: 1 },
+      { x: 15, y: 44, targetMap: 'route2', targetX: 10, targetY: 1 },
+      { x: 16, y: 44, targetMap: 'route2', targetX: 11, targetY: 1 },
+      // North exit to Pewter City
+      { x: 5, y: 0, targetMap: 'pewter_city', targetX: 9, targetY: 24 },
+      { x: 6, y: 0, targetMap: 'pewter_city', targetX: 10, targetY: 24 },
     ],
     npcs: [
+      // 6 Trainers
       {
         id: 'forest_trainer1',
-        x: 7, y: 8,
+        x: 20, y: 36,
         spriteColor: 0x90c090,
         direction: Direction.RIGHT,
         dialogue: [
@@ -882,7 +906,7 @@ export const VIRIDIAN_FOREST: MapData = (() => {
       },
       {
         id: 'forest_trainer2',
-        x: 12, y: 18,
+        x: 24, y: 32,
         spriteColor: 0x90c090,
         direction: Direction.LEFT,
         dialogue: [
@@ -891,6 +915,100 @@ export const VIRIDIAN_FOREST: MapData = (() => {
         ],
         isTrainer: true,
         sightRange: 3,
+      },
+      {
+        id: 'forest_trainer3',
+        x: 5, y: 26,
+        spriteColor: 0x90c090,
+        direction: Direction.DOWN,
+        dialogue: [
+          'BUG CATCHER: Did you\nget lost in here too?',
+          "Let's battle to pass\nthe time!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'forest_trainer4',
+        x: 16, y: 13,
+        spriteColor: 0x90c090,
+        direction: Direction.LEFT,
+        dialogue: [
+          'BUG CATCHER: These\nwoods are full of',
+          'bug POKeMON!',
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'forest_trainer5',
+        x: 15, y: 39,
+        spriteColor: 0xd09040,
+        direction: Direction.UP,
+        dialogue: [
+          'LASS: This forest is\nso pretty!',
+          "But I won't let you\npass without a battle!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'forest_trainer6',
+        x: 21, y: 7,
+        spriteColor: 0x90c090,
+        direction: Direction.DOWN,
+        dialogue: [
+          'BUG CATCHER: I found\na PIKACHU in here!',
+          "They're super rare!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      // 5 Item balls
+      {
+        id: 'forest_poke_ball',
+        x: 5, y: 29,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'poke_ball',
+      },
+      {
+        id: 'forest_potion1',
+        x: 6, y: 40,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'potion',
+      },
+      {
+        id: 'forest_potion2',
+        x: 13, y: 19,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'potion',
+      },
+      {
+        id: 'forest_antidote1',
+        x: 26, y: 29,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'antidote',
+      },
+      {
+        id: 'forest_antidote2',
+        x: 18, y: 4,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'antidote',
       },
     ],
     wildEncounters: {
@@ -980,10 +1098,10 @@ export const PEWTER_CITY: MapData = (() => {
     collision,
     warps: [
       // South to Viridian Forest
-      { x: 8, y: H - 1, targetMap: 'viridian_forest', targetX: 8, targetY: 2 },
-      { x: 9, y: H - 1, targetMap: 'viridian_forest', targetX: 9, targetY: 2 },
-      { x: 10, y: H - 1, targetMap: 'viridian_forest', targetX: 10, targetY: 2 },
-      { x: 11, y: H - 1, targetMap: 'viridian_forest', targetX: 11, targetY: 2 },
+      { x: 8, y: H - 1, targetMap: 'viridian_forest', targetX: 5, targetY: 2 },
+      { x: 9, y: H - 1, targetMap: 'viridian_forest', targetX: 5, targetY: 2 },
+      { x: 10, y: H - 1, targetMap: 'viridian_forest', targetX: 6, targetY: 2 },
+      { x: 11, y: H - 1, targetMap: 'viridian_forest', targetX: 6, targetY: 2 },
       // Gym
       { x: 7, y: 9, targetMap: 'pewter_gym', targetX: 4, targetY: 13 },
       // Pokemon Center

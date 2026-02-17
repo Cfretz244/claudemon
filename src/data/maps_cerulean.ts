@@ -104,6 +104,24 @@ export const MT_MOON: MapData = (() => {
         sightRange: 4,
       },
       {
+        id: 'mt_moon_rare_candy',
+        x: 4, y: 11,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'rare_candy',
+      },
+      {
+        id: 'mt_moon_potion',
+        x: 12, y: 6,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'potion',
+      },
+      {
         id: 'mt_moon_scientist',
         x: 9, y: 10,
         spriteColor: 0xf0f0f0,
@@ -628,6 +646,15 @@ export const ROUTE24: MapData = (() => {
         isTrainer: true,
         sightRange: 2,
       },
+      {
+        id: 'route24_nugget',
+        x: 6, y: 2,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'rare_candy',
+      },
       // Team Rocket member at the top
       {
         id: 'nugget_rocket',
@@ -751,6 +778,15 @@ export const ROUTE25: MapData = (() => {
         ],
         isTrainer: true,
         sightRange: 3,
+      },
+      {
+        id: 'route25_potion',
+        x: 22, y: 8,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'super_potion',
       },
       {
         id: 'bill',

@@ -42,6 +42,64 @@ export const TRAINERS: Record<string, TrainerData> = {
     },
   },
 
+  forest_trainer3: {
+    id: 'forest_trainer3',
+    name: 'BUG CATCHER SAM',
+    class: 'Bug Catcher',
+    team: [
+      { speciesId: 13, level: 5 }, // Weedle
+      { speciesId: 10, level: 5 }, // Caterpie
+    ],
+    prizeMoney: 50,
+    dialogue: {
+      before: ['BUG CATCHER: Did you\nget lost in here too?', "Let's battle to pass\nthe time!"],
+      after: ['I really am lost\nthough...'],
+    },
+  },
+  forest_trainer4: {
+    id: 'forest_trainer4',
+    name: 'BUG CATCHER CHARLIE',
+    class: 'Bug Catcher',
+    team: [
+      { speciesId: 11, level: 6 }, // Metapod
+      { speciesId: 10, level: 6 }, // Caterpie
+      { speciesId: 11, level: 6 }, // Metapod
+    ],
+    prizeMoney: 60,
+    dialogue: {
+      before: ['BUG CATCHER: These\nwoods are full of', 'bug POKeMON!'],
+      after: ['Your POKeMON are\ntougher than bugs!'],
+    },
+  },
+  forest_trainer5: {
+    id: 'forest_trainer5',
+    name: 'LASS JANICE',
+    class: 'Lass',
+    team: [
+      { speciesId: 16, level: 6 }, // Pidgey
+      { speciesId: 43, level: 6 }, // Oddish
+    ],
+    prizeMoney: 96,
+    dialogue: {
+      before: ['LASS: This forest is\nso pretty!', "But I won't let you\npass without a battle!"],
+      after: ['You ruined my walk\nthrough the forest!'],
+    },
+  },
+  forest_trainer6: {
+    id: 'forest_trainer6',
+    name: 'BUG CATCHER GREG',
+    class: 'Bug Catcher',
+    team: [
+      { speciesId: 13, level: 7 }, // Weedle
+      { speciesId: 14, level: 7 }, // Kakuna
+    ],
+    prizeMoney: 70,
+    dialogue: {
+      before: ['BUG CATCHER: I found\na PIKACHU in here!', "They're super rare!"],
+      after: ['I should catch more\nPIKACHU...'],
+    },
+  },
+
   // Route 3
   route3_trainer1: {
     id: 'route3_trainer1',
