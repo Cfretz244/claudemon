@@ -26,6 +26,21 @@ export class SoundSystem {
   private getCtx(): AudioContext {
     if (!this.ctx) {
       this.ctx = new AudioContext();
+      // Resume on first user interaction (browser autoplay policy)
+      const resume = () => {
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+        document.removeEventListener('keydown', resume);
+        document.removeEventListener('click', resume);
+        document.removeEventListener('touchstart', resume);
+      };
+      document.addEventListener('keydown', resume);
+      document.addEventListener('click', resume);
+      document.addEventListener('touchstart', resume);
+    }
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
     }
     return this.ctx;
   }

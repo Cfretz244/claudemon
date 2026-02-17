@@ -562,6 +562,12 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
+    // Pewter east exit: guide blocks Route 3 without Boulder badge
+    if (mapId === 'route3' && this.currentMap.id === 'pewter_city' && !this.playerState.badges.includes('BOULDER')) {
+      this.triggerPewterGuideIntercept();
+      return;
+    }
+
     // Saffron City gate: need Tea
     if (mapId === 'saffron_city' && !this.playerState.hasItem('tea') && !this.playerState.storyFlags['saffron_open']) {
       this.textBox.show([
@@ -1101,6 +1107,79 @@ export class OverworldScene extends Phaser.Scene {
     while (cx > 10) { cx--; path.push({x: cx, y: cy}); }
 
     return path;
+  }
+
+  private triggerPewterGuideIntercept(): void {
+    this.isWarping = true;
+
+    // Find the guide NPC data
+    const guideNpc = this.currentMap.npcs.find(n => n.id === 'pewter_guide');
+    if (!guideNpc) {
+      this.isWarping = false;
+      return;
+    }
+
+    // Use the existing guide sprite or create one
+    const guideSprite = this.npcSprites.get('pewter_guide');
+    if (!guideSprite) {
+      this.isWarping = false;
+      return;
+    }
+
+    // Build path from guide position to one tile east of player
+    const targetX = this.playerGridX + 1;
+    const targetY = this.playerGridY;
+    const path: Array<{x: number, y: number}> = [];
+    let cx = guideNpc.x;
+    let cy = guideNpc.y;
+
+    // Walk vertically to player's row first
+    while (cy < targetY) { cy++; path.push({x: cx, y: cy}); }
+    while (cy > targetY) { cy--; path.push({x: cx, y: cy}); }
+    // Walk horizontally to target
+    while (cx < targetX) { cx++; path.push({x: cx, y: cy}); }
+    while (cx > targetX) { cx--; path.push({x: cx, y: cy}); }
+
+    if (path.length === 0) {
+      // Guide already adjacent
+      this.isWarping = false;
+      this.textBox.show(guideNpc.dialogue);
+      return;
+    }
+
+    this.animateWalkPath(guideSprite, path, 120, () => {
+      // Update guide NPC position
+      guideNpc.x = targetX;
+      guideNpc.y = targetY;
+      this.isWarping = false;
+
+      this.textBox.show(guideNpc.dialogue, () => {
+        this.isWarping = true;
+
+        // Walk player back west to the guide's original x
+        const returnPath: Array<{x: number, y: number}> = [];
+        for (let x = this.playerGridX - 1; x >= 21; x--) {
+          returnPath.push({x, y: this.playerGridY});
+        }
+
+        // Walk guide back to original position
+        const guideReturnPath: Array<{x: number, y: number}> = [];
+        let gx = targetX, gy = targetY;
+        while (gx > 21) { gx--; guideReturnPath.push({x: gx, y: gy}); }
+        while (gy > 12) { gy--; guideReturnPath.push({x: gx, y: gy}); }
+        while (gy < 12) { gy++; guideReturnPath.push({x: gx, y: gy}); }
+
+        this.animatePlayerWalkPath(returnPath, 150, () => {
+          this.isWarping = false;
+        });
+        this.animateWalkPath(guideSprite, guideReturnPath, 150, () => {
+          guideNpc.x = 21;
+          guideNpc.y = 12;
+          // Reset guide to face left
+          guideSprite.setFrame(2);
+        });
+      });
+    });
   }
 
   private triggerOakIntercept(): void {
