@@ -1278,7 +1278,9 @@ export class OverworldScene extends Phaser.Scene {
 
     // Oak's story progression chain
     if (npc.id === 'oak') {
-      soundSystem.startMusic('oaks_theme');
+      if (this.currentMap.id !== 'oaks_lab') {
+        soundSystem.startMusic('oaks_theme');
+      }
       if (!this.playerState.storyFlags['has_pikachu']) {
         // Give Pikachu
         this.textBox.show(
@@ -1332,8 +1334,6 @@ export class OverworldScene extends Phaser.Scene {
             this.playerState.addItem('poke_ball', 5);
             this.playerState.storyFlags['delivered_parcel'] = true;
             this.playerState.storyFlags['has_pokedex'] = true;
-            const musicId = getMusicForMap(this.currentMap);
-            if (musicId) soundSystem.startMusic(musicId);
           }
         );
         return;
@@ -1342,20 +1342,14 @@ export class OverworldScene extends Phaser.Scene {
         this.textBox.show([
           'OAK: Good luck filling\nup that POKeDEX!',
           'The world is full of\namazing POKeMON!',
-        ], () => {
-          const musicId = getMusicForMap(this.currentMap);
-          if (musicId) soundSystem.startMusic(musicId);
-        });
+        ]);
         return;
       }
       // Has Pikachu but no parcel yet
       this.textBox.show([
         'OAK: Go explore the\nworld with PIKACHU!',
         'The VIRIDIAN CITY\nMart might have\nsomething for me...',
-      ], () => {
-        const musicId = getMusicForMap(this.currentMap);
-        if (musicId) soundSystem.startMusic(musicId);
-      });
+      ]);
       return;
     }
 
