@@ -144,6 +144,13 @@ export class OverworldScene extends Phaser.Scene {
       this.playerState.storyFlags['silph_co_complete'] = true;
     }
 
+    // Cerulean Rocket -> give TM28 Dig
+    if (this.playerState.defeatedTrainers.includes('cerulean_rocket') &&
+        !this.playerState.hasItem('tm28_dig') && !this.playerState.storyFlags['got_tm28']) {
+      this.playerState.addItem('tm28_dig');
+      this.playerState.storyFlags['got_tm28'] = true;
+    }
+
     // Tower rockets cleared -> enable Mr. Fuji
     if (this.playerState.defeatedTrainers.includes('tower_rocket1') &&
         this.playerState.defeatedTrainers.includes('tower_rocket2')) {
@@ -360,6 +367,18 @@ export class OverworldScene extends Phaser.Scene {
     }
     // Silph rival disappears after battle
     if (npc.id === 'rival_silph' && this.playerState.defeatedTrainers.includes('rival_silph')) {
+      return true;
+    }
+    // Cerulean rival disappears after battle
+    if (npc.id === 'rival_cerulean' && this.playerState.defeatedTrainers.includes('rival_cerulean')) {
+      return true;
+    }
+    // Cerulean officer disappears after helping Bill
+    if (npc.id === 'cerulean_officer' && this.playerState.storyFlags['bill_helped']) {
+      return true;
+    }
+    // Cerulean rocket disappears after defeat
+    if (npc.id === 'cerulean_rocket' && this.playerState.defeatedTrainers.includes('cerulean_rocket')) {
       return true;
     }
     // Giovanni NPCs disappear after defeat

@@ -667,6 +667,26 @@ export const CERULEAN_CITY: MapData = (() => {
   setTile(W - 1, 13, T.PATH);
   setTile(W - 2, 13, T.PATH);
 
+  // === Story progression gates ===
+
+  // Fence barrier at y:22 blocks south exit (x:2 to x:22)
+  for (let x = 2; x <= 22; x++) {
+    setTile(x, 22, T.FENCE);
+  }
+
+  // Burgled House building (straddles fence line, center-right)
+  fillRect(14, 21, 4, 2, T.BUILDING);
+
+  // Front door on north face of house (one tile above building)
+  setTile(15, 20, T.DOOR);
+
+  // Back door on south face of house (overwrites building tile at fence line)
+  setTile(15, 22, T.DOOR);
+
+  // CUT_TREE blocks east exit until player has Cut
+  setTile(22, 12, T.CUT_TREE);
+  setTile(22, 13, T.CUT_TREE);
+
   return {
     id: 'cerulean_city',
     name: 'CERULEAN CITY',
@@ -695,6 +715,10 @@ export const CERULEAN_CITY: MapData = (() => {
       { x: 18, y: 19, targetMap: 'pokemart_cerulean', targetX: 3, targetY: 7 },
       // Bike Shop door (no interior defined yet, placeholder)
       { x: 5, y: 19, targetMap: 'bike_shop', targetX: 3, targetY: 7 },
+      // Burgled House front door (north face)
+      { x: 15, y: 20, targetMap: 'burgled_house', targetX: 3, targetY: 6 },
+      // Burgled House back door (south face, re-entry from behind)
+      { x: 15, y: 22, targetMap: 'burgled_house', targetX: 3, targetY: 2 },
     ],
     npcs: [
       {
@@ -719,13 +743,37 @@ export const CERULEAN_CITY: MapData = (() => {
       },
       {
         id: 'cerulean_npc3',
-        x: 15, y: 20,
+        x: 9, y: 20,
         spriteColor: 0x80c080,
         direction: Direction.LEFT,
         dialogue: [
           'The NUGGET BRIDGE to\nthe north is famous!',
           'Five trainers in a row\nchallenge all comers!',
         ],
+      },
+      // Police officer blocks burgled house door until bill_helped
+      {
+        id: 'cerulean_officer',
+        x: 15, y: 19,
+        spriteColor: 0x4060c0,
+        direction: Direction.DOWN,
+        dialogue: [
+          'This house was\nburglarized!',
+          'No one may enter.',
+        ],
+      },
+      // Rocket grunt hiding south of fence (left of back door)
+      {
+        id: 'cerulean_rocket',
+        x: 13, y: 23,
+        spriteColor: 0x404040,
+        direction: Direction.RIGHT,
+        dialogue: [
+          'ROCKET: I burglarized\nthat house! Hehe!',
+          "You want to battle?\nBring it on!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
       },
     ],
   };
@@ -939,6 +987,19 @@ export const ROUTE24: MapData = (() => {
       { x: 6, y: 0, targetMap: 'route25', targetX: 2, targetY: 5 },
     ],
     npcs: [
+      // Rival battle at south end of bridge
+      {
+        id: 'rival_cerulean',
+        x: 5, y: 18,
+        spriteColor: 0x4090d0,
+        direction: Direction.UP,
+        dialogue: [
+          '{RIVAL}: Hey {PLAYER}!\nHeading for the\nBRIDGE?',
+          "I'll show you how\nmuch stronger I've\ngotten!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
       // 5 Nugget Bridge trainers, spaced every 3 tiles
       {
         id: 'nugget1',
@@ -1278,6 +1339,71 @@ export const BILLS_HOUSE: MapData = (() => {
 })();
 
 // ─────────────────────────────────────────────────────────────
+// 9. BURGLED HOUSE  (8x8 indoor, pass-through)
+// ─────────────────────────────────────────────────────────────
+export const BURGLED_HOUSE: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+
+  // Walls: top 2 rows and sides
+  for (let x = 0; x < W; x++) {
+    setTile(x, 0, T.WALL);
+    setTile(x, 1, T.WALL);
+  }
+  for (let y = 0; y < H; y++) {
+    setTile(0, y, T.WALL);
+    setTile(W - 1, y, T.WALL);
+  }
+
+  // Back door (burglar's escape hole in north wall)
+  setTile(3, 1, T.DOOR);
+
+  // Front entrance (south, standard building entrance)
+  setTile(3, H - 1, T.DOOR);
+
+  // Furniture
+  setTile(1, 2, T.COUNTER);
+  setTile(2, 2, T.COUNTER);
+  setTile(5, 2, T.COUNTER);
+  setTile(6, 2, T.COUNTER);
+
+  return {
+    id: 'burgled_house',
+    name: 'BURGLED HOUSE',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      // Back door (north) → behind house, south of fence
+      { x: 3, y: 1, targetMap: 'cerulean_city', targetX: 15, targetY: 23 },
+      // Front entrance (south) → back to Cerulean front door
+      { x: 3, y: 7, targetMap: 'cerulean_city', targetX: 15, targetY: 20 },
+    ],
+    npcs: [
+      {
+        id: 'burgled_house_npc',
+        x: 4, y: 4,
+        spriteColor: 0xf08080,
+        direction: Direction.DOWN,
+        dialogue: [
+          'A thief broke in\nthrough the wall!',
+          'He went out the\nback toward ROUTE 5!',
+        ],
+      },
+    ],
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────
 // Combined export
 // ─────────────────────────────────────────────────────────────
 export const CERULEAN_MAPS: Record<string, MapData> = {
@@ -1292,4 +1418,5 @@ export const CERULEAN_MAPS: Record<string, MapData> = {
   route24: ROUTE24,
   route25: ROUTE25,
   bills_house: BILLS_HOUSE,
+  burgled_house: BURGLED_HOUSE,
 };

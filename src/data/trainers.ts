@@ -1238,6 +1238,37 @@ export const TRAINERS: Record<string, TrainerData> = {
     },
   },
 
+  // Cerulean rival
+  rival_cerulean: {
+    id: 'rival_cerulean',
+    name: 'RIVAL',
+    class: 'Rival',
+    team: [
+      { speciesId: 21, level: 16 },  // Spearow
+      { speciesId: 27, level: 15 },  // Sandshrew
+      { speciesId: 133, level: 17 }, // Eevee
+    ],
+    prizeMoney: 595,
+    dialogue: {
+      before: ["{RIVAL}: Hey {PLAYER}!\nHeading for the\nBRIDGE?", "I'll show you how\nmuch stronger I've\ngotten!"],
+      after: ["{RIVAL}: Heh! Not bad!\nBut I'll beat you\nnext time!", "BILL lives at the\nend of ROUTE 25.\nHe's a real POKeMON\nfanatic!"],
+    },
+  },
+  // Cerulean Rocket (burgled house)
+  cerulean_rocket: {
+    id: 'cerulean_rocket',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 66, level: 17 }, // Machop
+    ],
+    prizeMoney: 544,
+    dialogue: {
+      before: ['ROCKET: I burglarized\nthat house! Hehe!', "You want to battle?\nBring it on!"],
+      after: ["ROCKET: Ugh, I lost!\nHere, take this TM!\nI don't need it!", "TM28 teaches DIG!\nNow scram!"],
+    },
+  },
+
   // Viridian Gym
   viridian_gym_trainer1: {
     id: 'viridian_gym_trainer1',

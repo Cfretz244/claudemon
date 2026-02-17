@@ -273,4 +273,13 @@ export const ITEMS: Record<string, ItemData> = {
     category: 'hm',
     moveId: 148,
   },
+  // TM items
+  tm28_dig: {
+    id: 'tm28_dig',
+    name: 'TM28 DIG',
+    description: 'Teaches DIG to a\nPOKeMON. Digs underground\nto attack.',
+    price: 2000,
+    category: 'tm',
+    moveId: 91,
+  },
 };
