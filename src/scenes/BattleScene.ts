@@ -91,6 +91,7 @@ export class BattleScene extends Phaser.Scene {
   private battleOver = false;
   private turnInProgress = false;
   private currentPlayerPokemonIndex = 0;
+  private participantIndices = new Set<number>();
 
   constructor() {
     super({ key: 'BattleScene' });
@@ -129,6 +130,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.battleOver = false;
     this.turnInProgress = false;
+    this.participantIndices = new Set<number>([this.currentPlayerPokemonIndex]);
     this.resetBattleStages('player');
     this.resetBattleStages('opponent');
   }
@@ -1228,51 +1230,65 @@ export class BattleScene extends Phaser.Scene {
       ? `Wild ${oppName}\nfainted!`
       : `Foe ${oppName}\nfainted!`;
 
-    // Calculate EXP
+    // Calculate EXP and split among living participants (Gen 1 behavior)
     const isTrainer = this.battleType !== BattleType.WILD;
-    const expGain = calculateExpGain(this.opponentPokemon, isTrainer);
+    const totalExpGain = calculateExpGain(this.opponentPokemon, isTrainer);
 
     await this.showText([faintMsg]);
 
-    // Award EXP
-    const playerName = this.getSpeciesName(this.playerPokemon.speciesId);
-    await this.showText([`${playerName} gained\n${expGain} EXP. Points!`]);
+    // Collect living participants
+    const livingParticipants = [...this.participantIndices].filter(
+      idx => this.playerState.party[idx] && this.playerState.party[idx].currentHp > 0
+    );
+    const numParticipants = Math.max(1, livingParticipants.length);
+    const splitExp = Math.floor(totalExpGain / numParticipants);
 
-    soundSystem.levelUp();
-    const levelUps = addExperience(this.playerPokemon, expGain);
+    // Award EXP to each living participant
+    for (const partyIdx of livingParticipants) {
+      const pokemon = this.playerState.party[partyIdx];
+      const pokeName = this.getSpeciesName(pokemon.speciesId);
+      await this.showText([`${pokeName} gained\n${splitExp} EXP. Points!`]);
 
-    for (const lu of levelUps) {
-      await this.showText([`${playerName} grew to\nLv. ${lu.newLevel}!`]);
+      soundSystem.levelUp();
+      const levelUps = addExperience(pokemon, splitExp);
 
-      // Check for new moves
-      for (const moveId of lu.newMoves) {
-        const moveData = MOVES_DATA[moveId];
-        if (!moveData) continue;
-        if (this.playerPokemon.moves.length < 4) {
-          learnMove(this.playerPokemon, moveId);
-          await this.showText([`${playerName} learned\n${moveData.name}!`]);
-        } else {
-          await this.promptMoveForget(this.playerPokemon, moveId);
+      for (const lu of levelUps) {
+        await this.showText([`${pokeName} grew to\nLv. ${lu.newLevel}!`]);
+
+        // Check for new moves
+        for (const moveId of lu.newMoves) {
+          const moveData = MOVES_DATA[moveId];
+          if (!moveData) continue;
+          if (pokemon.moves.length < 4) {
+            learnMove(pokemon, moveId);
+            await this.showText([`${pokeName} learned\n${moveData.name}!`]);
+          } else {
+            await this.promptMoveForget(pokemon, moveId);
+          }
+        }
+
+        // Check evolution
+        const evoResult = checkEvolution(pokemon);
+        if (evoResult) {
+          soundSystem.evolution();
+          await this.showText([
+            `What? ${evoResult.fromName}\nis evolving!`,
+            `${evoResult.fromName} evolved\ninto ${evoResult.toName}!`,
+          ]);
+          evolvePokemon(pokemon, evoResult.toSpecies);
         }
       }
-
-      // Check evolution
-      const evoResult = checkEvolution(this.playerPokemon);
-      if (evoResult) {
-        soundSystem.evolution();
-        await this.showText([
-          `What? ${evoResult.fromName}\nis evolving!`,
-          `${evoResult.fromName} evolved\ninto ${evoResult.toName}!`,
-        ]);
-        evolvePokemon(this.playerPokemon, evoResult.toSpecies);
-      }
     }
+
+    // Update HUD in case active Pokemon leveled up or evolved
+    this.hud.updatePlayer(this.playerPokemon);
 
     // Check if trainer has more Pokemon
     if (isTrainer) {
       const nextOpponent = this.opponentParty.find(p => p !== this.opponentPokemon && p.currentHp > 0);
       if (nextOpponent) {
         this.opponentPokemon = nextOpponent;
+        this.participantIndices = new Set<number>([this.currentPlayerPokemonIndex]);
         this.resetBattleStages('opponent');
         this.ensurePokemonSprite(this.opponentPokemon.speciesId);
         const nextName = this.getSpeciesName(this.opponentPokemon.speciesId);
@@ -1346,6 +1362,7 @@ export class BattleScene extends Phaser.Scene {
       // Switch to next Pokemon
       this.currentPlayerPokemonIndex = nextIndex;
       this.playerPokemon = this.playerState.party[nextIndex];
+      this.participantIndices.add(nextIndex);
       this.ensurePokemonSprite(this.playerPokemon.speciesId);
 
       const nextName = this.getSpeciesName(this.playerPokemon.speciesId);
@@ -1550,6 +1567,7 @@ export class BattleScene extends Phaser.Scene {
     // Switch to new Pokemon
     this.currentPlayerPokemonIndex = newIndex;
     this.playerPokemon = this.playerState.party[newIndex];
+    this.participantIndices.add(newIndex);
 
     // Update sprite
     this.ensurePokemonSprite(this.playerPokemon.speciesId);

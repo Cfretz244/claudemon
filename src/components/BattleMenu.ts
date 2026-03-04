@@ -218,7 +218,6 @@ export class BattleMenu {
     this.currentActivePokemonIndex = activePokemonIndex ?? 0;
     this.active = true;
     this.mode = 'main';
-    this.selectedIndex = 0;
     this.container.setVisible(true);
     this.moveContainer.setVisible(false);
     this.bagContainer.setVisible(false);
