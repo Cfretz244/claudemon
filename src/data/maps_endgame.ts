@@ -825,10 +825,11 @@ export const ROUTE22: MapData = (() => {
     wildEncounters: {
       grassRate: 0.2,
       encounters: [
-        { speciesId: 21, minLevel: 3, maxLevel: 5, weight: 30 },   // Spearow
-        { speciesId: 32, minLevel: 3, maxLevel: 6, weight: 25 },   // Nidoran M
-        { speciesId: 29, minLevel: 3, maxLevel: 6, weight: 25 },   // Nidoran F
-        { speciesId: 19, minLevel: 2, maxLevel: 5, weight: 20 },   // Rattata
+        { speciesId: 56, minLevel: 3, maxLevel: 5, weight: 25 },   // Mankey
+        { speciesId: 21, minLevel: 3, maxLevel: 5, weight: 25 },   // Spearow
+        { speciesId: 32, minLevel: 3, maxLevel: 6, weight: 20 },   // Nidoran M
+        { speciesId: 29, minLevel: 3, maxLevel: 6, weight: 20 },   // Nidoran F
+        { speciesId: 19, minLevel: 2, maxLevel: 5, weight: 10 },   // Rattata
       ],
     },
   };
