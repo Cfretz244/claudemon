@@ -398,6 +398,12 @@ export const MT_MOON_B2F: MapData = (() => {
   fillRect(19, 9, 1, 1, T.CAVE_WALL);
   // Opening at bottom (y=9, x=17-18)
 
+  // Extend corridor south from fossil room (forces passage through Jessie & James gate)
+  for (let y = 10; y <= 14; y++) {
+    setTile(16, y, T.CAVE_WALL);  // Left wall (extends existing)
+    setTile(18, y, T.CAVE_WALL);  // Right wall (new)
+  }
+
   // Water pool
   fillRect(3, 13, 2, 2, T.WATER);
   setTile(13, 5, T.WATER);
@@ -473,6 +479,17 @@ export const MT_MOON_B2F: MapData = (() => {
         dialogue: [],
         isItemBall: true,
         itemId: 'dome_fossil',
+      },
+      // Rocket guard - blocks fossil corridor until Jessie & James defeated
+      {
+        id: 'mt_moon_rocket_guard',
+        x: 17, y: 13,
+        spriteColor: 0x404040,
+        direction: Direction.UP,
+        dialogue: [
+          'ROCKET: No one gets\nnear those fossils!',
+          'JESSIE and JAMES\nwill deal with you!',
+        ],
       },
       // Jessie & James - guarding approach to fossil room
       {

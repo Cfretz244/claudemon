@@ -442,6 +442,11 @@ export class OverworldScene extends Phaser.Scene {
         this.playerState.defeatedTrainers.includes('jessie_mtmoon')) {
       return true;
     }
+    // Mt. Moon B2F rocket guard: disappears after Jessie & James defeated
+    if (npc.id === 'mt_moon_rocket_guard' &&
+        this.playerState.defeatedTrainers.includes('jessie_mtmoon')) {
+      return true;
+    }
     // Jessie & James - Game Corner: disappear after defeated or after Giovanni defeated
     if ((npc.id === 'jessie_gamecorner' || npc.id === 'james_gamecorner') &&
         (this.playerState.defeatedTrainers.includes('jessie_gamecorner') ||
@@ -750,6 +755,15 @@ export class OverworldScene extends Phaser.Scene {
         'An old man is lying\nin the road...',
         "He won't let you\npass!",
         "Go deliver OAK's\nPARCEL first!",
+      ]);
+      return;
+    }
+
+    // Mt. Moon exit: can't exit to Route 4 without getting a fossil
+    if (mapId === 'route4' && this.currentMap.id === 'mt_moon' && !this.playerState.storyFlags['got_fossil']) {
+      this.textBox.show([
+        "Boulders block the\npath ahead...",
+        "You'll have to find\nanother way through.",
       ]);
       return;
     }
