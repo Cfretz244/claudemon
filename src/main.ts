@@ -11,7 +11,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: GAME_HEIGHT,
   pixelArt: true,
   zoom: SCALE,
-  parent: document.body,
+  parent: 'game-container',
   backgroundColor: '#000000',
   scene: [BootScene, TitleScene, OverworldScene, BattleScene],
   scale: {
@@ -29,6 +29,10 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 new Phaser.Game(config);
+
+// Mobile touch controls (only appears on touch devices)
+import { setupMobileControls } from './utils/mobileControls';
+setupMobileControls();
 
 // Global music toggle (M key)
 import { soundSystem } from './systems/SoundSystem';
