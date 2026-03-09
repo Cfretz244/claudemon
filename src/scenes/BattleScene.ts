@@ -1197,10 +1197,13 @@ export class BattleScene extends Phaser.Scene {
       const vol = isPlayer ? this.playerVolatile : this.opponentVolatile;
       if (vol.seeded && pokemon.currentHp > 0) {
         const seedDmg = Math.max(1, Math.floor(pokemon.stats.hp / 16));
+        const actualDmg = Math.min(seedDmg, pokemon.currentHp);
         pokemon.currentHp = Math.max(0, pokemon.currentHp - seedDmg);
-        // Heal the other side
+        // Heal the other side (only if alive)
         const other = isPlayer ? this.opponentPokemon : this.playerPokemon;
-        other.currentHp = Math.min(other.stats.hp, other.currentHp + seedDmg);
+        if (other.currentHp > 0) {
+          other.currentHp = Math.min(other.stats.hp, other.currentHp + actualDmg);
+        }
         this.updateHUD();
         this.textBox.show([`${name}'s health is\nsapped by LEECH SEED!`], () => {
           if (pokemon.currentHp <= 0) {
