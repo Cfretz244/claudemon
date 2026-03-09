@@ -2036,17 +2036,28 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   // Menu system
-  private createMenu(): void {
-    this.menuItems = ['POKeDEX', 'POKeMON', 'BAG', this.playerState.name, 'SAVE', 'EXIT'];
+  private getMenuItems(): string[] {
+    const items: string[] = [];
+    if (this.playerState.storyFlags['has_pokedex']) {
+      items.push('POKeDEX');
+    }
+    items.push('POKeMON', 'BAG', this.playerState.name, 'SAVE', 'EXIT');
+    return items;
+  }
+
+  private buildMenuContents(): void {
+    // Remove old children except the container itself
+    this.menuContainer.removeAll(true);
+
+    this.menuItems = this.getMenuItems();
     const menuWidth = 60;
-    const menuX = GAME_WIDTH - menuWidth - 2;
-    const menuY = 2;
+    const menuHeight = this.menuItems.length * 14 + 8;
 
     const bg = this.add.graphics();
     bg.fillStyle(0xf8f8f8, 1);
-    bg.fillRoundedRect(0, 0, menuWidth, this.menuItems.length * 14 + 8, 2);
+    bg.fillRoundedRect(0, 0, menuWidth, menuHeight, 2);
     bg.lineStyle(2, 0x383838, 1);
-    bg.strokeRoundedRect(0, 0, menuWidth, this.menuItems.length * 14 + 8, 2);
+    bg.strokeRoundedRect(0, 0, menuWidth, menuHeight, 2);
 
     const texts = this.menuItems.map((item, i) => {
       return this.add.text(14, 4 + i * 14, item, {
@@ -2062,10 +2073,19 @@ export class OverworldScene extends Phaser.Scene {
       fontFamily: 'monospace',
     });
 
-    this.menuContainer = this.add.container(menuX, menuY, [bg, ...texts, this.menuCursor]);
+    this.menuContainer.add([bg, ...texts, this.menuCursor]);
+  }
+
+  private createMenu(): void {
+    const menuWidth = 60;
+    const menuX = GAME_WIDTH - menuWidth - 2;
+    const menuY = 2;
+
+    this.menuContainer = this.add.container(menuX, menuY);
     this.menuContainer.setDepth(900);
     this.menuContainer.setScrollFactor(0);
     this.menuContainer.setVisible(false);
+    this.buildMenuContents();
   }
 
   private toggleMenu(): void {
@@ -2079,6 +2099,7 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private openMenu(): void {
+    this.buildMenuContents();
     this.menuOpen = true;
     this.menuSelectedIndex = 0;
     this.menuCursor.setY(4);

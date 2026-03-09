@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { POKEMON_DATA } from '../data/pokemon';
+import { POKEDEX_DESCRIPTIONS } from '../data/pokedexDescriptions';
 import { soundSystem } from '../systems/SoundSystem';
 import { generatePokemonSprite, getShapeForSpecies } from '../utils/spriteGenerator';
 
@@ -244,18 +245,30 @@ export class PokedexScreen {
       }
     }
 
-    const lines = [
-      `#${String(dexNum).padStart(3, '0')} ${species.name}`,
-      `Type: ${types}`,
-      `Status: ${status}`,
-      '',
-      'Base Stats:',
-      ` HP:  ${bs.hp}`,
-      ` ATK: ${bs.attack}`,
-      ` DEF: ${bs.defense}`,
-      ` SPC: ${bs.special}`,
-      ` SPD: ${bs.speed}`,
-    ];
+    let lines: string[];
+    if (isCaught) {
+      const desc = POKEDEX_DESCRIPTIONS[dexNum] || '';
+      lines = [
+        `#${String(dexNum).padStart(3, '0')} ${species.name}`,
+        `Type: ${types}`,
+        `Status: ${status}`,
+        '',
+        desc,
+      ];
+    } else {
+      lines = [
+        `#${String(dexNum).padStart(3, '0')} ${species.name}`,
+        `Type: ${types}`,
+        `Status: ${status}`,
+        '',
+        'Base Stats:',
+        ` HP:  ${bs.hp}`,
+        ` ATK: ${bs.attack}`,
+        ` DEF: ${bs.defense}`,
+        ` SPC: ${bs.special}`,
+        ` SPD: ${bs.speed}`,
+      ];
+    }
 
     const detailText = this.detailContainer.getByName('detailText') as Phaser.GameObjects.Text;
     detailText.setY(textY);
