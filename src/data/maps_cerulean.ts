@@ -1012,12 +1012,10 @@ export const ROUTE24: MapData = (() => {
   fillRect(2, 0, 3, H, T.WATER);   // x:2-4 water (west)
   fillRect(W - 4, 0, 2, H, T.WATER); // x:6-7 water (east)
 
-  // Vertical path (the bridge!) at x:5-6
+  // Vertical path (the bridge!) at x:5-6 only
+  fillRect(4, 0, 1, H, T.WATER);  // ensure x:4 is water
   fillRect(5, 0, 2, H, T.PATH);
-
-  // Small grass patches at north and south ends (east side only)
-  fillRect(7, 0, 1, 3, T.TALL_GRASS);
-  fillRect(7, 17, 1, 3, T.TALL_GRASS);
+  fillRect(7, 0, 1, H, T.WATER);  // ensure x:7 is water
 
   return {
     id: 'route24',
@@ -1046,7 +1044,7 @@ export const ROUTE24: MapData = (() => {
           "I'll show you how\nmuch stronger I've\ngotten!",
         ],
         isTrainer: true,
-        sightRange: 1,
+        sightRange: 3,
       },
       // 5 Nugget Bridge trainers - face across bridge to block both columns
       {
@@ -1059,7 +1057,7 @@ export const ROUTE24: MapData = (() => {
           "Beat us five trainers\nand win a prize!",
         ],
         isTrainer: true,
-        sightRange: 1,
+        sightRange: 3,
       },
       {
         id: 'nugget2',
@@ -1070,7 +1068,7 @@ export const ROUTE24: MapData = (() => {
           "LASS: You won't get\npast me easily!",
         ],
         isTrainer: true,
-        sightRange: 1,
+        sightRange: 3,
       },
       {
         id: 'nugget3',
@@ -1082,7 +1080,7 @@ export const ROUTE24: MapData = (() => {
           "Are you getting\ntired yet?",
         ],
         isTrainer: true,
-        sightRange: 1,
+        sightRange: 3,
       },
       {
         id: 'nugget4',
@@ -1093,7 +1091,7 @@ export const ROUTE24: MapData = (() => {
           "LASS: Just two more\ntrainers after me!",
         ],
         isTrainer: true,
-        sightRange: 1,
+        sightRange: 3,
       },
       {
         id: 'nugget5',
@@ -1105,7 +1103,7 @@ export const ROUTE24: MapData = (() => {
           'If you beat me you\nget the NUGGET!',
         ],
         isTrainer: true,
-        sightRange: 1,
+        sightRange: 3,
       },
       {
         id: 'route24_nugget',
