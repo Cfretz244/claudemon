@@ -241,8 +241,13 @@ export class OverworldScene extends Phaser.Scene {
       this.showMapName(this.currentMap.name.replace('{RIVAL}', this.playerState.rivalName));
     }
 
-    // Teleport/Escape Rope landing animation
+    // Teleport/Escape Rope landing animation — stop camera follow until landed
     if (this.teleportLanding) {
+      this.cameras.main.stopFollow();
+      // Center camera on the landing position (not the off-screen player)
+      const landX = this.playerGridX * TILE_SIZE + TILE_SIZE / 2;
+      const landY = this.playerGridY * TILE_SIZE + TILE_SIZE / 2;
+      this.cameras.main.centerOn(landX, landY);
       this.playLandingAnimation();
     }
 
@@ -2778,6 +2783,7 @@ export class OverworldScene extends Phaser.Scene {
           this.pikachu.setPosition(this.player.x, this.player.y);
           this.pikachu.play(`pikachu_idle_${Direction.DOWN}`, true);
         }
+        this.cameras.main.startFollow(this.player, true);
         this.isWarping = false;
       },
     });
