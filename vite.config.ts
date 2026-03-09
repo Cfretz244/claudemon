@@ -16,6 +16,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         sprites: resolve(__dirname, 'sprites.html'),
         sounds: resolve(__dirname, 'sounds.html'),
+        pokedex: resolve(__dirname, 'pokedex.html'),
       },
     },
   },

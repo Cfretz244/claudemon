@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POKeDEX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=DotGothic16&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --shell-red: #c62828;
+      --shell-red-light: #e53935;
+      --shell-red-dark: #8e0000;
+      --shell-red-shadow: #6d0000;
+      --shell-border: #7f1616;
+      --hinge-dark: #5a1010;
+      --lcd-bg: #8bac0f;
+      --lcd-dark: #306230;
+      --lcd-mid: #6a8a2a;
+      --lcd-light: #9bbc0f;
+      --lcd-lightest: #c4d82e;
+      --screen-bezel: #4a4a4a;
+      --screen-bezel-inner: #2a2a2a;
+      --btn-dark: #1a1a1a;
+      --btn-face: #2d2d2d;
+      --btn-highlight: #444;
+      --led-blue: #42a5f5;
+      --led-blue-glow: rgba(66, 165, 245, 0.6);
+      --led-red: #ef5350;
+      --led-yellow: #fdd835;
+      --led-green: #66bb6a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #1a1018;
+      background-image:
+        radial-gradient(ellipse at 50% 0%, rgba(198, 40, 40, 0.15) 0%, transparent 60%),
+        radial-gradient(circle at 20% 80%, rgba(40, 20, 60, 0.3) 0%, transparent 50%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 24px 16px;
+      font-family: 'Silkscreen', monospace;
+    }
+
+    /* ===== POKEDEX DEVICE ===== */
+    .pokedex-device {
+      width: 100%;
+      max-width: 960px;
+      perspective: 1200px;
+    }
+
+    /* --- TOP HALF (lid) --- */
+    .device-top {
+      background: linear-gradient(175deg, var(--shell-red-light) 0%, var(--shell-red) 30%, var(--shell-red-dark) 100%);
+      border-radius: 20px 20px 0 0;
+      padding: 20px 24px 18px;
+      border: 3px solid var(--shell-border);
+      border-bottom: none;
+      position: relative;
+      box-shadow:
+        inset 0 2px 0 rgba(255,255,255,0.15),
+        inset 0 -1px 0 rgba(0,0,0,0.2),
+        0 -4px 20px rgba(0,0,0,0.3);
+    }
+
+    /* Diagonal cut on top-right */
+    .device-top::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 120px; height: 50px;
+      background: linear-gradient(225deg, #1a1018 0%, #1a1018 48%, transparent 50%);
+      border-radius: 0 18px 0 0;
+    }
+
+    /* Big blue lens */
+    .lens-cluster {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .big-lens {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #b3e5fc, var(--led-blue), #0d47a1);
+      border: 4px solid #e0e0e0;
+      box-shadow:
+        0 0 16px var(--led-blue-glow),
+        0 0 40px rgba(66, 165, 245, 0.2),
+        inset 0 -2px 4px rgba(0,0,0,0.3),
+        inset 0 2px 4px rgba(255,255,255,0.4);
+      position: relative;
+      z-index: 1;
+      animation: lens-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes lens-pulse {
+      0%, 100% { box-shadow: 0 0 16px var(--led-blue-glow), 0 0 40px rgba(66,165,245,0.2), inset 0 -2px 4px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4); }
+      50% { box-shadow: 0 0 24px var(--led-blue-glow), 0 0 60px rgba(66,165,245,0.3), inset 0 -2px 4px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4); }
+    }
+
+    .big-lens::after {
+      content: '';
+      position: absolute;
+      top: 6px; left: 8px;
+      width: 12px; height: 8px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      transform: rotate(-30deg);
+    }
+
+    .small-leds {
+      display: flex;
+      gap: 8px;
+    }
+
+    .small-led {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.3);
+    }
+    .small-led.red { background: var(--led-red); box-shadow: 0 0 6px var(--led-red); }
+    .small-led.yellow { background: var(--led-yellow); box-shadow: 0 0 6px var(--led-yellow); }
+    .small-led.green { background: var(--led-green); box-shadow: 0 0 6px var(--led-green); }
+
+    /* --- SCREEN --- */
+    .screen-bezel {
+      background: var(--screen-bezel);
+      border-radius: 8px;
+      padding: 6px;
+      border: 2px solid var(--screen-bezel-inner);
+      box-shadow:
+        inset 0 2px 6px rgba(0,0,0,0.5),
+        0 2px 0 rgba(255,255,255,0.05);
+    }
+
+    .screen-inner {
+      background: var(--lcd-bg);
+      border-radius: 4px;
+      padding: 12px 14px;
+      min-height: 220px;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid var(--lcd-dark);
+      image-rendering: pixelated;
+    }
+
+    /* Scanlines */
+    .screen-inner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 2px,
+        rgba(0,0,0,0.06) 2px,
+        rgba(0,0,0,0.06) 4px
+      );
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Screen glare */
+    .screen-inner::after {
+      content: '';
+      position: absolute;
+      top: -20%;
+      left: -20%;
+      width: 60%;
+      height: 60%;
+      background: radial-gradient(ellipse, rgba(255,255,255,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 11;
+    }
+
+    /* Power LED next to screen */
+    .screen-row {
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .screen-side {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+      padding-bottom: 4px;
+    }
+
+    .power-led {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--led-green);
+      box-shadow: 0 0 8px var(--led-green);
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .screen-bezel-container {
+      flex: 1;
+    }
+
+    /* Detail content inside screen */
+    .detail-layout {
+      display: flex;
+      gap: 12px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .detail-left {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .sprite-frame {
+      border: 2px solid var(--lcd-dark);
+      border-radius: 2px;
+      background: var(--lcd-light);
+      padding: 2px;
+      line-height: 0;
+    }
+
+    .sprite-frame canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+    }
+
+    .dex-number {
+      font-family: 'DotGothic16', 'Silkscreen', monospace;
+      font-size: 10px;
+      color: var(--lcd-dark);
+      letter-spacing: 1px;
+    }
+
+    .detail-right {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .poke-name {
+      font-family: 'Silkscreen', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--lcd-dark);
+      letter-spacing: 1px;
+    }
+
+    .type-row { display: flex; gap: 4px; flex-wrap: wrap; }
+
+    .type-pill {
+      font-family: 'Silkscreen', monospace;
+      font-size: 8px;
+      padding: 2px 8px;
+      border-radius: 2px;
+      color: var(--lcd-lightest);
+      background: var(--lcd-dark);
+      letter-spacing: 1px;
+      border: 1px solid var(--lcd-mid);
+    }
+
+    .desc-text {
+      font-family: 'DotGothic16', monospace;
+      font-size: 10px;
+      color: var(--lcd-dark);
+      line-height: 1.6;
+      margin-top: 2px;
+    }
+
+    .stats-block {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-top: 4px;
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'DotGothic16', monospace;
+      font-size: 9px;
+      color: var(--lcd-dark);
+    }
+
+    .stat-label {
+      width: 28px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .stat-val {
+      width: 24px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .stat-bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--lcd-mid);
+      border-radius: 1px;
+      overflow: hidden;
+    }
+
+    .stat-bar-fill {
+      height: 100%;
+      background: var(--lcd-dark);
+      border-radius: 1px;
+      transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* Screen fade animation */
+    .screen-content {
+      transition: opacity 0.15s;
+    }
+    .screen-content.switching {
+      opacity: 0;
+    }
+
+    /* --- HINGE --- */
+    .device-hinge {
+      height: 10px;
+      background: linear-gradient(to bottom,
+        var(--shell-red-dark),
+        var(--hinge-dark) 30%,
+        var(--hinge-dark) 70%,
+        var(--shell-red-dark)
+      );
+      border-left: 3px solid var(--shell-border);
+      border-right: 3px solid var(--shell-border);
+      position: relative;
+    }
+
+    .device-hinge::before {
+      content: '';
+      position: absolute;
+      left: 20px; right: 20px;
+      top: 4px;
+      height: 2px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 1px;
+    }
+
+    /* --- BOTTOM HALF --- */
+    .device-bottom {
+      background: linear-gradient(175deg, var(--shell-red) 0%, var(--shell-red-dark) 60%, var(--shell-red-shadow) 100%);
+      border-radius: 0 0 20px 20px;
+      padding: 16px 24px 24px;
+      border: 3px solid var(--shell-border);
+      border-top: none;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.05),
+        0 8px 30px rgba(0,0,0,0.4),
+        0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    /* Controls row */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* D-pad */
+    .dpad {
+      display: grid;
+      grid-template-columns: 30px 30px 30px;
+      grid-template-rows: 30px 30px 30px;
+      flex-shrink: 0;
+    }
+
+    .dpad-empty { background: transparent; }
+
+    .dpad-btn {
+      background: linear-gradient(to bottom, var(--btn-highlight), var(--btn-face));
+      border: 2px solid #111;
+      color: #888;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      transition: all 0.08s;
+    }
+    .dpad-btn:hover { background: linear-gradient(to bottom, #555, #3a3a3a); color: #ccc; }
+    .dpad-btn:active {
+      background: linear-gradient(to bottom, #222, #333);
+      transform: scale(0.95);
+    }
+    .dpad-center {
+      background: var(--btn-dark);
+      border: 2px solid #111;
+      border-radius: 2px;
+    }
+    .dpad-up { border-radius: 6px 6px 0 0; }
+    .dpad-down { border-radius: 0 0 6px 6px; }
+    .dpad-left { border-radius: 6px 0 0 6px; }
+    .dpad-right { border-radius: 0 6px 6px 0; }
+
+    /* Counter display */
+    .counter-display {
+      background: #111;
+      border: 2px solid #333;
+      border-radius: 4px;
+      padding: 6px 14px;
+      font-family: 'DotGothic16', monospace;
+      font-size: 12px;
+      color: var(--lcd-light);
+      text-shadow: 0 0 6px var(--lcd-light);
+      letter-spacing: 2px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* Search */
+    .search-box {
+      position: relative;
+    }
+
+    .search-box input {
+      background: #111;
+      border: 2px solid #333;
+      border-radius: 4px;
+      color: var(--lcd-light);
+      font-family: 'DotGothic16', monospace;
+      font-size: 10px;
+      padding: 6px 10px 6px 10px;
+      width: 180px;
+      outline: none;
+      text-shadow: 0 0 4px var(--lcd-light);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+      letter-spacing: 1px;
+    }
+    .search-box input::placeholder {
+      color: #335533;
+      text-shadow: none;
+    }
+    .search-box input:focus { border-color: var(--lcd-mid); }
+
+    /* --- LIST GRID --- */
+    .list-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 6px;
+      max-height: 420px;
+      overflow-y: auto;
+      padding: 8px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+      border: 2px solid rgba(0,0,0,0.3);
+      scrollbar-width: thin;
+      scrollbar-color: var(--shell-red-dark) rgba(0,0,0,0.3);
+    }
+
+    .list-grid::-webkit-scrollbar { width: 8px; }
+    .list-grid::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
+    .list-grid::-webkit-scrollbar-thumb { background: var(--shell-red-dark); border-radius: 4px; }
+    .list-grid::-webkit-scrollbar-thumb:hover { background: var(--shell-red); }
+
+    .list-entry {
+      background: linear-gradient(to bottom, rgba(180,30,30,0.6), rgba(120,15,15,0.6));
+      border: 2px solid rgba(100,10,10,0.5);
+      border-radius: 6px;
+      padding: 8px 4px 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.12s;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .list-entry::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.08), transparent 50%);
+      pointer-events: none;
+      border-radius: 4px;
+    }
+
+    .list-entry:hover {
+      background: linear-gradient(to bottom, rgba(220,50,50,0.7), rgba(160,25,25,0.7));
+      border-color: rgba(255,220,160,0.5);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .list-entry.active {
+      background: linear-gradient(to bottom, rgba(255,80,60,0.8), rgba(200,40,30,0.8));
+      border-color: var(--lcd-lightest);
+      box-shadow: 0 0 12px rgba(196, 216, 46, 0.2), 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .list-entry canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+      margin: 0 auto 4px;
+    }
+
+    .entry-id {
+      font-family: 'DotGothic16', monospace;
+      font-size: 8px;
+      color: rgba(255,200,160,0.7);
+    }
+
+    .entry-name {
+      font-family: 'Silkscreen', monospace;
+      font-size: 7px;
+      color: rgba(255,230,210,0.9);
+      margin-top: 2px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Speaker grille */
+    .speaker-grille {
+      display: flex;
+      gap: 3px;
+      justify-content: flex-end;
+      margin-top: 12px;
+      opacity: 0.3;
+    }
+
+    .speaker-grille span {
+      width: 3px;
+      border-radius: 1px;
+      background: #111;
+    }
+    .speaker-grille span:nth-child(odd) { height: 30px; }
+    .speaker-grille span:nth-child(even) { height: 24px; margin-top: 3px; }
+
+    /* Page load animation */
+    .pokedex-device {
+      animation: device-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes device-in {
+      from { opacity: 0; transform: translateY(20px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .list-entry {
+      animation: entry-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .detail-layout { flex-direction: column; align-items: center; }
+      .detail-right { align-items: center; text-align: center; }
+      .controls-row { justify-content: center; }
+      .search-box input { width: 140px; }
+      .list-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+      .poke-name { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="pokedex-device">
+    <!-- TOP HALF -->
+    <div class="device-top">
+      <div class="lens-cluster">
+        <div class="big-lens"></div>
+        <div class="small-leds">
+          <div class="small-led red"></div>
+          <div class="small-led yellow"></div>
+          <div class="small-led green"></div>
+        </div>
+      </div>
+
+      <div class="screen-row">
+        <div class="screen-side">
+          <div class="power-led"></div>
+        </div>
+        <div class="screen-bezel-container">
+          <div class="screen-bezel">
+            <div class="screen-inner">
+              <div class="screen-content" id="screen-content">
+                <div class="detail-layout">
+                  <div class="detail-left">
+                    <div class="sprite-frame">
+                      <canvas id="detail-canvas" width="128" height="128"></canvas>
+                    </div>
+                    <div class="dex-number" id="detail-num">#001</div>
+                  </div>
+                  <div class="detail-right">
+                    <div class="poke-name" id="detail-name">BULBASAUR</div>
+                    <div class="type-row" id="detail-types"></div>
+                    <div class="desc-text" id="detail-desc"></div>
+                    <div class="stats-block" id="detail-stats"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HINGE -->
+    <div class="device-hinge"></div>
+
+    <!-- BOTTOM HALF -->
+    <div class="device-bottom">
+      <div class="controls-row">
+        <div class="dpad">
+          <div class="dpad-empty"></div>
+          <div class="dpad-btn dpad-up" id="btn-prev10" title="Up one row">&#9650;</div>
+          <div class="dpad-empty"></div>
+          <div class="dpad-btn dpad-left" id="btn-prev" title="Previous">&#9664;</div>
+          <div class="dpad-center"></div>
+          <div class="dpad-btn dpad-right" id="btn-next" title="Next">&#9654;</div>
+          <div class="dpad-empty"></div>
+          <div class="dpad-btn dpad-down" id="btn-next10" title="Down one row">&#9660;</div>
+          <div class="dpad-empty"></div>
+        </div>
+
+        <div class="counter-display" id="counter">001 / 151</div>
+
+        <div class="search-box">
+          <input type="text" id="search" placeholder="SEARCH..." autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+
+      <div class="list-grid" id="list-grid"></div>
+
+      <div class="speaker-grille">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/pokedexViewer.ts"></script>
+</body>
+</html>
