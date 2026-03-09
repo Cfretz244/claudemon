@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claudemon - Save Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gb-darkest: #0f380f;
+      --gb-dark: #306230;
+      --gb-light: #8bac0f;
+      --gb-lightest: #9bbc0f;
+      --bg-deep: #0a0e14;
+      --bg-panel: #111820;
+      --bg-card: #182030;
+      --bg-card-hover: #1e2a3e;
+      --border: #2a3a50;
+      --border-active: #4a8a4a;
+      --text: #c8d0d8;
+      --text-dim: #687888;
+      --text-bright: #e8f0f8;
+      --accent: #58a830;
+      --accent-glow: #78c850;
+      --danger: #c04040;
+      --danger-glow: #e06060;
+      --gold: #f8d030;
+      --gold-dim: #a08020;
+      --type-normal: #a8a878;
+      --type-fire: #f08030;
+      --type-water: #6890f0;
+      --type-electric: #f8d030;
+      --type-grass: #78c850;
+      --type-ice: #98d8d8;
+      --type-fighting: #c03028;
+      --type-poison: #a040a0;
+      --type-ground: #e0c068;
+      --type-flying: #a890f0;
+      --type-psychic: #f85888;
+      --type-bug: #a8b820;
+      --type-rock: #b8a038;
+      --type-ghost: #705898;
+      --type-dragon: #7038f8;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg-deep);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Scanline overlay for retro feel */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      z-index: 9999;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(180deg, #141c28 0%, var(--bg-deep) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header h1 {
+      font-family: 'Silkscreen', monospace;
+      font-size: 20px;
+      color: var(--gb-lightest);
+      text-shadow: 0 0 20px rgba(155, 188, 15, 0.3);
+      letter-spacing: 1px;
+    }
+    .header .tag {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--bg-deep);
+      background: var(--accent);
+      padding: 3px 8px;
+      border-radius: 3px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* Buttons */
+    .btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg-card);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-transform: uppercase;
+    }
+    .btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent);
+      color: var(--text-bright);
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg-deep);
+      border-color: var(--accent);
+    }
+    .btn-primary:hover {
+      background: var(--accent-glow);
+      border-color: var(--accent-glow);
+      box-shadow: 0 0 16px rgba(88, 168, 48, 0.3);
+    }
+    .btn-danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+    .btn-danger:hover {
+      background: var(--danger);
+      color: var(--bg-deep);
+      box-shadow: 0 0 16px rgba(192, 64, 64, 0.3);
+    }
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 10px;
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 32px 80px;
+    }
+
+    /* Status bar */
+    .status-bar {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .status-bar .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 8px rgba(192, 64, 64, 0.5);
+    }
+    .status-bar .status-dot.loaded {
+      background: var(--accent);
+      box-shadow: 0 0 8px rgba(88, 168, 48, 0.5);
+    }
+    .status-bar .status-text { flex: 1; }
+    .status-bar .status-label { color: var(--text); font-weight: 500; }
+
+    /* Sections */
+    .section {
+      margin-bottom: 28px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-title {
+      font-family: 'Silkscreen', monospace;
+      font-size: 13px;
+      color: var(--gb-light);
+      letter-spacing: 1px;
+    }
+
+    /* Two-column layout */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 900px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px 20px;
+    }
+
+    /* Form elements */
+    .field {
+      margin-bottom: 12px;
+    }
+    .field label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+    .field input, .field select {
+      width: 100%;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      padding: 8px 12px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-bright);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .field input:focus, .field select:focus {
+      border-color: var(--accent);
+    }
+    .field input[type="number"] {
+      -moz-appearance: textfield;
+    }
+    .field select {
+      cursor: pointer;
+    }
+    .field-row {
+      display: flex;
+      gap: 12px;
+    }
+    .field-row .field { flex: 1; }
+
+    /* Badges */
+    .badges-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .badge-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 8px;
+      background: var(--bg-deep);
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text-dim);
+    }
+    .badge-btn:hover {
+      border-color: var(--gold-dim);
+      background: var(--bg-card-hover);
+    }
+    .badge-btn.active {
+      border-color: var(--gold);
+      background: rgba(248, 208, 48, 0.08);
+      color: var(--gold);
+      box-shadow: 0 0 12px rgba(248, 208, 48, 0.15);
+    }
+    .badge-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      transition: all 0.2s;
+    }
+    .badge-btn.active .badge-icon {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--bg-deep);
+      box-shadow: 0 0 16px rgba(248, 208, 48, 0.4);
+    }
+    .badge-name {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .badge-leader {
+      font-size: 8px;
+      opacity: 0.6;
+    }
+
+    /* Party */
+    .party-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 700px) {
+      .party-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .party-slot {
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      position: relative;
+      min-height: 140px;
+      transition: border-color 0.2s;
+    }
+    .party-slot:hover {
+      border-color: var(--accent);
+    }
+    .party-slot.empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-style: dashed;
+    }
+    .party-slot.empty:hover {
+      background: var(--bg-card);
+    }
+    .party-slot .empty-label {
+      color: var(--text-dim);
+      font-size: 11px;
+      text-align: center;
+    }
+    .party-slot .slot-remove {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .party-slot .slot-remove:hover {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
+    }
+    .party-sprite {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .party-sprite canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .party-info {
+      text-align: center;
+    }
+    .party-info .poke-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+    .party-info .poke-level {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+    .party-info .poke-types {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .type-tag {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 1px 6px;
+      border-radius: 2px;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+
+    /* Pokemon picker modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 640px;
+      max-width: 90vw;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-header h2 {
+      font-family: 'Silkscreen', monospace;
+      font-size: 14px;
+      color: var(--gb-light);
+    }
+    .modal-close {
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg-card);
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .modal-close:hover {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
+    }
+    .modal-search {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-search input {
+      width: 100%;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      padding: 8px 12px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-bright);
+      outline: none;
+    }
+    .modal-search input:focus { border-color: var(--accent); }
+    .modal-search input::placeholder { color: var(--text-dim); }
+    .modal-body {
+      padding: 12px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .poke-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 6px;
+    }
+    .poke-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 4px;
+      background: var(--bg-card);
+      border: 1px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .poke-option:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent);
+    }
+    .poke-option canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .poke-option .poke-opt-id {
+      font-size: 9px;
+      color: var(--text-dim);
+    }
+    .poke-option .poke-opt-name {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .modal-footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-footer .field {
+      margin-bottom: 0;
+    }
+
+    /* Story flags */
+    .flags-section { }
+    .flag-group {
+      margin-bottom: 16px;
+    }
+    .flag-group-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(42, 58, 80, 0.5);
+    }
+    .flag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .flag-chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      padding: 4px 10px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      cursor: pointer;
+      color: var(--text-dim);
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .flag-chip:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+    .flag-chip.active {
+      background: rgba(88, 168, 48, 0.12);
+      border-color: var(--accent);
+      color: var(--accent-glow);
+    }
+
+    /* Custom flags */
+    .custom-flags {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+    }
+    .custom-flags input {
+      flex: 1;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 6px 10px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-bright);
+      outline: none;
+    }
+    .custom-flags input:focus { border-color: var(--accent); }
+
+    /* Active custom flags display */
+    .active-custom-flags {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .custom-flag-tag {
+      font-size: 10px;
+      padding: 2px 8px;
+      background: rgba(120, 200, 80, 0.08);
+      border: 1px solid var(--accent);
+      border-radius: 3px;
+      color: var(--accent-glow);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .custom-flag-tag button {
+      background: none;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 0 2px;
+      opacity: 0.6;
+    }
+    .custom-flag-tag button:hover { opacity: 1; }
+
+    /* Items section */
+    .items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 6px;
+    }
+    .item-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .item-row .item-name {
+      flex: 1;
+      font-size: 11px;
+      color: var(--text);
+    }
+    .item-row input {
+      width: 52px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 3px 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text-bright);
+      text-align: center;
+      outline: none;
+    }
+    .item-row input:focus { border-color: var(--accent); }
+
+    /* Presets */
+    .presets-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .preset-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--bg-card);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .preset-btn:hover {
+      border-color: var(--gb-light);
+      color: var(--gb-lightest);
+      background: var(--bg-card-hover);
+      box-shadow: 0 0 12px rgba(139, 172, 15, 0.1);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      background: var(--accent);
+      color: var(--bg-deep);
+      font-weight: 700;
+      font-size: 12px;
+      border-radius: 6px;
+      box-shadow: 0 8px 32px rgba(88, 168, 48, 0.4);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 300;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .toast.error {
+      background: var(--danger);
+      box-shadow: 0 8px 32px rgba(192, 64, 64, 0.4);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-deep); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+    /* Map selector styling */
+    .map-group {
+      margin-bottom: 8px;
+    }
+    .map-group optgroup {
+      font-weight: 700;
+      color: var(--text-dim);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <h1>SAVE EDITOR</h1>
+      <span class="tag">PLAYTEST</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-danger" id="btn-delete">DELETE SAVE</button>
+      <button class="btn" id="btn-load">RELOAD</button>
+      <button class="btn btn-primary" id="btn-save">SAVE</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Status -->
+    <div class="status-bar">
+      <div class="status-dot" id="status-dot"></div>
+      <div class="status-text">
+        <span class="status-label" id="status-label">No save data found</span>
+      </div>
+      <span id="status-map"></span>
+    </div>
+
+    <!-- Presets -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">QUICK PRESETS</div>
+      </div>
+      <div class="presets-bar" id="presets-bar"></div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Left Column -->
+      <div>
+        <!-- Player Info -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">PLAYER</div>
+          </div>
+          <div class="card">
+            <div class="field-row">
+              <div class="field">
+                <label>Player Name</label>
+                <input type="text" id="player-name" maxlength="7" value="RED" />
+              </div>
+              <div class="field">
+                <label>Rival Name</label>
+                <input type="text" id="rival-name" maxlength="7" value="BLUE" />
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Money</label>
+                <input type="number" id="money" min="0" max="999999" value="3000" />
+              </div>
+              <div class="field">
+                <label>Play Time (seconds)</label>
+                <input type="number" id="play-time" min="0" value="0" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Location -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">LOCATION</div>
+          </div>
+          <div class="card">
+            <div class="field">
+              <label>Current Map</label>
+              <select id="current-map"></select>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Player X</label>
+                <input type="number" id="player-x" min="0" value="3" />
+              </div>
+              <div class="field">
+                <label>Player Y</label>
+                <input type="number" id="player-y" min="0" value="5" />
+              </div>
+            </div>
+            <div class="field" style="margin-top:4px">
+              <label>Last Heal Location</label>
+              <select id="heal-map"></select>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Heal X</label>
+                <input type="number" id="heal-x" min="0" value="3" />
+              </div>
+              <div class="field">
+                <label>Heal Y</label>
+                <input type="number" id="heal-y" min="0" value="5" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Badges -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">BADGES</div>
+            <div>
+              <button class="btn btn-sm" id="badges-all">ALL</button>
+              <button class="btn btn-sm" id="badges-none">NONE</button>
+            </div>
+          </div>
+          <div class="badges-grid" id="badges-grid"></div>
+        </div>
+
+        <!-- Items -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">BAG</div>
+            <div>
+              <button class="btn btn-sm" id="items-starter">STARTER KIT</button>
+              <button class="btn btn-sm" id="items-full">MAX ALL</button>
+              <button class="btn btn-sm" id="items-clear">CLEAR</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="items-grid" id="items-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div>
+        <!-- Party -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">PARTY</div>
+            <div>
+              <button class="btn btn-sm" id="party-heal">HEAL ALL</button>
+              <button class="btn btn-sm" id="party-clear">CLEAR</button>
+            </div>
+          </div>
+          <div class="party-grid" id="party-grid"></div>
+        </div>
+
+        <!-- Story Flags -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">STORY FLAGS</div>
+            <div>
+              <button class="btn btn-sm" id="flags-clear">CLEAR ALL</button>
+            </div>
+          </div>
+          <div class="card flags-section" id="flags-section"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pokemon Picker Modal -->
+  <div class="modal-overlay" id="poke-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>CHOOSE POKeMON</h2>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-search">
+        <input type="text" id="poke-search" placeholder="Search by name or number..." />
+      </div>
+      <div class="modal-body">
+        <div class="poke-list" id="poke-list"></div>
+      </div>
+      <div class="modal-footer">
+        <div class="field" style="width:100px">
+          <label>Level</label>
+          <input type="number" id="poke-level" min="1" max="100" value="50" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="/src/saveEditor.ts"></script>
+</body>
+</html>
