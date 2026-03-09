@@ -678,9 +678,8 @@ export const CERULEAN_CITY: MapData = (() => {
   fillRect(16, 15, 5, 4, T.BUILDING);
   setTile(18, 19, T.DOOR);
 
-  // Bike Shop (left, lower)
+  // Bike Shop (left, lower) - no interior, door sealed
   fillRect(3, 15, 5, 4, T.BUILDING);
-  setTile(5, 19, T.DOOR);
 
   // Signs near gym and center
   setTile(5, 11, T.SIGN);   // Gym sign
@@ -724,8 +723,11 @@ export const CERULEAN_CITY: MapData = (() => {
   // Burgled House building (straddles fence line, center-right)
   fillRect(14, 21, 4, 2, T.BUILDING);
 
-  // Front door on north face of house (one tile above building)
+  // Building facade around front door (forces approach through officer)
+  setTile(14, 20, T.BUILDING);
   setTile(15, 20, T.DOOR);
+  setTile(16, 20, T.BUILDING);
+  setTile(17, 20, T.BUILDING);
 
   // Back door on south face of house (overwrites building tile at fence line)
   setTile(15, 22, T.DOOR);
@@ -760,8 +762,6 @@ export const CERULEAN_CITY: MapData = (() => {
       { x: 18, y: 9, targetMap: 'pokemon_center_cerulean', targetX: 4, targetY: 7 },
       // Pokemart door (no interior defined yet, placeholder)
       { x: 18, y: 19, targetMap: 'pokemart_cerulean', targetX: 3, targetY: 7 },
-      // Bike Shop door (no interior defined yet, placeholder)
-      { x: 5, y: 19, targetMap: 'bike_shop', targetX: 3, targetY: 7 },
       // Burgled House front door (north face)
       { x: 15, y: 20, targetMap: 'burgled_house', targetX: 3, targetY: 6 },
       // Burgled House back door (south face, re-entry from behind)
@@ -1006,16 +1006,14 @@ export const ROUTE24: MapData = (() => {
   }
 
   // Water on sides between trees and path (bridge feel)
-  fillRect(2, 0, 2, H, T.WATER);
-  fillRect(W - 4, 0, 2, H, T.WATER);
+  fillRect(2, 0, 3, H, T.WATER);   // x:2-4 water (west)
+  fillRect(W - 4, 0, 2, H, T.WATER); // x:6-7 water (east)
 
   // Vertical path (the bridge!) at x:5-6
   fillRect(5, 0, 2, H, T.PATH);
 
-  // Small grass patches at north and south ends
-  fillRect(4, 0, 1, 3, T.TALL_GRASS);
+  // Small grass patches at north and south ends (east side only)
   fillRect(7, 0, 1, 3, T.TALL_GRASS);
-  fillRect(4, 17, 1, 3, T.TALL_GRASS);
   fillRect(7, 17, 1, 3, T.TALL_GRASS);
 
   return {
