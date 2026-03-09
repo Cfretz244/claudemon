@@ -719,6 +719,8 @@ export const FUCHSIA_CITY: MapData = (() => {
       { x: 18, y: 9, targetMap: 'pokemon_center_fuchsia', targetX: 4, targetY: 7 },
       // Pokemart door
       { x: 18, y: 20, targetMap: 'pokemart_fuchsia', targetX: 3, targetY: 7 },
+      // Warden's House
+      { x: 6, y: 20, targetMap: 'warden_house', targetX: 3, targetY: 7 },
     ],
     npcs: [
       {
@@ -1079,6 +1081,33 @@ const POKEMART_FUCHSIA: MapData = (() => {
   };
 })();
 
+// ─── Warden's House ──────────────────────────────────────────────────────────
+export const WARDEN_HOUSE: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(3, 4, T.CARPET); setTile(4, 4, T.CARPET);
+  setTile(3, 5, T.CARPET); setTile(4, 5, T.CARPET);
+  setTile(2, 2, T.MART_SHELF); setTile(5, 2, T.MART_SHELF);
+  setTile(3, H - 1, T.DOOR);
+  return {
+    id: 'warden_house', name: "WARDEN's HOUSE", width: W, height: H, tiles, collision,
+    warps: [{ x: 3, y: H - 1, targetMap: 'fuchsia_city', targetX: 6, targetY: 21 }],
+    npcs: [{
+      id: 'safari_warden', x: 4, y: 3, spriteColor: 0x80a060, direction: Direction.DOWN,
+      dialogue: [
+        "WARDEN: I lost my\nGOLD TEETH in the",
+        "SAFARI ZONE... I can't\ntalk well without them!",
+      ],
+    }],
+  };
+})();
+
 // ─── SOUTH MAPS REGISTRY ──────────────────────────────────────────────────────
 export const SOUTH_MAPS: Record<string, MapData> = {
   route12: ROUTE12,
@@ -1093,4 +1122,5 @@ export const SOUTH_MAPS: Record<string, MapData> = {
   pokemon_center_fuchsia: POKEMON_CENTER_FUCHSIA,
   pokemart_fuchsia: POKEMART_FUCHSIA,
   safari_zone: SAFARI_ZONE,
+  warden_house: WARDEN_HOUSE,
 };

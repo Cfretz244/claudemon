@@ -76,6 +76,8 @@ export const LAVENDER_TOWN: MapData = (() => {
       { x: 5, y: 9, targetMap: 'pokemon_center_lavender', targetX: 4, targetY: 7 },
       // Pokemart door
       { x: 5, y: 17, targetMap: 'pokemart_lavender', targetX: 3, targetY: 7 },
+      // House door
+      { x: 14, y: 17, targetMap: 'lavender_house', targetX: 3, targetY: 7 },
     ],
     npcs: [
       {
@@ -314,8 +316,9 @@ export const ROUTE7: MapData = (() => {
   // Tree borders: top row, bottom row
   for (let x = 0; x < W; x++) { setTile(x, 0, T.TREE); setTile(x, H - 1, T.TREE); }
 
-  // Small guardhouse-style building in middle (aesthetic)
+  // Guardhouse building
   fillRect(9, 2, 3, 2, T.BUILDING);
+  setTile(10, 4, T.DOOR);
 
   // Tall grass patches
   fillRect(2, 2, 4, 2, T.TALL_GRASS);
@@ -335,6 +338,8 @@ export const ROUTE7: MapData = (() => {
       // East exit → Saffron City
       { x: 19, y: 4, targetMap: 'saffron_city', targetX: 2, targetY: 14 },
       { x: 19, y: 5, targetMap: 'saffron_city', targetX: 2, targetY: 15 },
+      // Guardhouse
+      { x: 10, y: 4, targetMap: 'route7_gate', targetX: 3, targetY: 5 },
     ],
     npcs: [],
     wildEncounters: {
@@ -599,6 +604,8 @@ export const CELADON_CITY: MapData = (() => {
       { x: 23, y: 20, targetMap: 'pokemart_celadon', targetX: 3, targetY: 7 },
       // Game Corner basement
       { x: 13, y: 19, targetMap: 'game_corner_basement', targetX: 5, targetY: 12 },
+      // Celadon Mansion
+      { x: 5, y: 19, targetMap: 'celadon_mansion', targetX: 3, targetY: 7 },
     ],
     npcs: [
       {
@@ -862,6 +869,8 @@ export const SAFFRON_CITY: MapData = (() => {
       { x: 24, y: 22, targetMap: 'pokemart_saffron', targetX: 3, targetY: 7 },
       // Silph Co door
       { x: 15, y: 10, targetMap: 'silph_co', targetX: 7, targetY: 14 },
+      // Fighting Dojo
+      { x: 25, y: 9, targetMap: 'fighting_dojo', targetX: 4, targetY: 9 },
     ],
     npcs: [
       {
@@ -1353,6 +1362,120 @@ const DIGLETTS_CAVE: MapData = (() => {
   };
 })();
 
+// ─── Lavender House (generic NPC house) ──────────────────────────────────────
+export const LAVENDER_HOUSE: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(3, 4, T.CARPET); setTile(4, 4, T.CARPET);
+  setTile(3, 5, T.CARPET); setTile(4, 5, T.CARPET);
+  setTile(2, 2, T.MART_SHELF); setTile(5, 2, T.MART_SHELF);
+  setTile(3, H - 1, T.DOOR);
+  return {
+    id: 'lavender_house', name: 'LAVENDER HOUSE', width: W, height: H, tiles, collision,
+    warps: [{ x: 3, y: H - 1, targetMap: 'lavender_town', targetX: 14, targetY: 18 }],
+    npcs: [{
+      id: 'lavender_house_npc', x: 4, y: 3, spriteColor: 0x9070a0, direction: Direction.DOWN,
+      dialogue: ['POKeMON TOWER is the\nfinal resting place', 'for POKeMON that have\npassed on...'],
+    }],
+  };
+})();
+
+// ─── Celadon Mansion ─────────────────────────────────────────────────────────
+export const CELADON_MANSION: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(3, 4, T.CARPET); setTile(4, 4, T.CARPET);
+  setTile(3, 5, T.CARPET); setTile(4, 5, T.CARPET);
+  setTile(2, 2, T.MART_SHELF); setTile(5, 2, T.MART_SHELF);
+  setTile(3, 2, T.MART_SHELF);
+  setTile(3, H - 1, T.DOOR);
+  return {
+    id: 'celadon_mansion', name: 'CELADON MANSION', width: W, height: H, tiles, collision,
+    warps: [{ x: 3, y: H - 1, targetMap: 'celadon_city', targetX: 5, targetY: 20 }],
+    npcs: [{
+      id: 'celadon_mansion_npc', x: 4, y: 3, spriteColor: 0x60a0c0, direction: Direction.DOWN,
+      dialogue: ['I know all about the\nGAME CORNER!', 'There are rumors of a\nsecret hideout below!'],
+    }],
+  };
+})();
+
+// ─── Fighting Dojo ───────────────────────────────────────────────────────────
+export const FIGHTING_DOJO: MapData = (() => {
+  const W = 10, H = 10;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  // Carpet arena
+  for (let dy = 3; dy < 8; dy++) for (let dx = 2; dx < 8; dx++) setTile(dx, dy, T.CARPET);
+  return {
+    id: 'fighting_dojo', name: 'FIGHTING DOJO', width: W, height: H, tiles, collision,
+    warps: [
+      { x: 4, y: H - 1, targetMap: 'saffron_city', targetX: 25, targetY: 10 },
+      { x: 5, y: H - 1, targetMap: 'saffron_city', targetX: 25, targetY: 10 },
+    ],
+    npcs: [
+      {
+        id: 'dojo_master', x: 5, y: 2, spriteColor: 0xc08040, direction: Direction.DOWN,
+        dialogue: [
+          'KARATE MASTER: I am\nthe MASTER of this',
+          "FIGHTING DOJO! We\nwere once a GYM...",
+          'But we lost to\nSABRINA! How humbling!',
+        ],
+      },
+      {
+        id: 'dojo_trainer1', x: 3, y: 5, spriteColor: 0xc08040, direction: Direction.RIGHT,
+        dialogue: ['BLACK BELT: Hwa!\nWant to see real\nfighting power?'],
+        isTrainer: true, sightRange: 2,
+      },
+      {
+        id: 'dojo_trainer2', x: 7, y: 5, spriteColor: 0xc08040, direction: Direction.LEFT,
+        dialogue: ['BLACK BELT: My\nfighting POKeMON will\ncrush you!'],
+        isTrainer: true, sightRange: 2,
+      },
+    ],
+  };
+})();
+
+// ─── Route 7 Gate ────────────────────────────────────────────────────────────
+export const ROUTE7_GATE: MapData = (() => {
+  const W = 8, H = 6;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(2, 2, T.COUNTER); setTile(3, 2, T.COUNTER);
+  return {
+    id: 'route7_gate', name: 'ROUTE 7 GATE', width: W, height: H, tiles, collision,
+    warps: [
+      { x: 3, y: H - 1, targetMap: 'route7', targetX: 10, targetY: 5 },
+      { x: 4, y: H - 1, targetMap: 'route7', targetX: 10, targetY: 5 },
+    ],
+    npcs: [{
+      id: 'route7_guard', x: 4, y: 2, spriteColor: 0x4060b0, direction: Direction.DOWN,
+      dialogue: ['This road connects\nCELADON CITY and', 'SAFFRON CITY.'],
+    }],
+  };
+})();
+
 // ─── Combined export ─────────────────────────────────────────────────────────
 
 export const CENTRAL_MAPS: Record<string, MapData> = {
@@ -1374,4 +1497,8 @@ export const CENTRAL_MAPS: Record<string, MapData> = {
   game_corner_basement: GAME_CORNER_BASEMENT,
   silph_co: SILPH_CO,
   digletts_cave: DIGLETTS_CAVE,
+  lavender_house: LAVENDER_HOUSE,
+  celadon_mansion: CELADON_MANSION,
+  fighting_dojo: FIGHTING_DOJO,
+  route7_gate: ROUTE7_GATE,
 };

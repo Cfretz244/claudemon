@@ -1516,4 +1516,33 @@ export const TRAINERS: Record<string, TrainerData> = {
       after: ["GIOVANNI: ...I see.\nYou are truly\nformidable.", "I will disband\nTEAM ROCKET here!", "But remember my\nname... GIOVANNI!"],
     },
   },
+  // Fighting Dojo
+  dojo_trainer1: {
+    id: 'dojo_trainer1',
+    name: 'BLACK BELT MIKE',
+    class: 'Black Belt',
+    team: [
+      { speciesId: 57, level: 37 },  // Primeape
+      { speciesId: 67, level: 37 },  // Machoke
+    ],
+    prizeMoney: 888,
+    dialogue: {
+      before: ['BLACK BELT: Hwa!\nWant to see real\nfighting power?'],
+      after: ['You have strong\nfighting spirit!'],
+    },
+  },
+  dojo_trainer2: {
+    id: 'dojo_trainer2',
+    name: 'BLACK BELT HIDEKI',
+    class: 'Black Belt',
+    team: [
+      { speciesId: 106, level: 38 }, // Hitmonlee
+      { speciesId: 107, level: 38 }, // Hitmonchan
+    ],
+    prizeMoney: 912,
+    dialogue: {
+      before: ['BLACK BELT: My\nfighting POKeMON will\ncrush you!'],
+      after: ['Your POKeMON are\nwell trained!'],
+    },
+  },
 };

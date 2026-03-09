@@ -924,14 +924,14 @@ export const SS_ANNE: MapData = (() => {
 
   // Captain's room (top-left)
   fillRect(2, 2, 4, 3, T.INDOOR_FLOOR);
-  setTile(4, 5, T.DOOR);
+  setTile(4, 5, T.CARPET);
   // Captain's desk
   setTile(3, 2, T.COUNTER);
   setTile(4, 2, T.COUNTER);
 
   // Cabins (decorative walls)
   fillRect(8, 2, 5, 3, T.INDOOR_FLOOR);
-  setTile(10, 5, T.DOOR);
+  setTile(10, 5, T.CARPET);
   setTile(9, 2, T.COUNTER);
   setTile(11, 2, T.COUNTER);
 

@@ -556,6 +556,8 @@ export const VIRIDIAN_CITY: MapData = (() => {
       { x: 11, y: 1, targetMap: 'route2', targetX: 11, targetY: 28 },
       // Viridian Gym door
       { x: 7, y: 23, targetMap: 'viridian_gym', targetX: 4, targetY: 13 },
+      // House door
+      { x: 20, y: 22, targetMap: 'viridian_house', targetX: 3, targetY: 7 },
       // West to Route 22
       { x: 1, y: 14, targetMap: 'route22', targetX: 23, targetY: 4 },
       { x: 1, y: 15, targetMap: 'route22', targetX: 23, targetY: 5 },
@@ -1129,6 +1131,7 @@ export const PEWTER_CITY: MapData = (() => {
 
   // Museum (top)
   fillRect(14, 10, 7, 3, T.BUILDING);
+  setTile(17, 13, T.DOOR);
 
   // Pokemart
   fillRect(14, 16, 5, 4, T.BUILDING);
@@ -1164,6 +1167,12 @@ export const PEWTER_CITY: MapData = (() => {
       { x: 7, y: 9, targetMap: 'pewter_gym', targetX: 4, targetY: 13 },
       // Pokemon Center
       { x: 16, y: 8, targetMap: 'pokemon_center_pewter', targetX: 4, targetY: 7 },
+      // Pokemart
+      { x: 16, y: 20, targetMap: 'pokemart_pewter', targetX: 3, targetY: 7 },
+      // House
+      { x: 5, y: 20, targetMap: 'pewter_house', targetX: 3, targetY: 7 },
+      // Museum
+      { x: 17, y: 13, targetMap: 'pewter_museum', targetX: 5, targetY: 9 },
       // East to Route 3 (upper lane entry)
       { x: W - 2, y: 12, targetMap: 'route3', targetX: 1, targetY: 3 },
       { x: W - 2, y: 13, targetMap: 'route3', targetX: 1, targetY: 4 },
@@ -1667,6 +1676,115 @@ export const VIRIDIAN_GYM: MapData = (() => {
   };
 })();
 
+// --- Viridian House (generic NPC house) ---
+export const VIRIDIAN_HOUSE: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(3, 4, T.CARPET); setTile(4, 4, T.CARPET);
+  setTile(3, 5, T.CARPET); setTile(4, 5, T.CARPET);
+  setTile(2, 2, T.PC); setTile(5, 2, T.MART_SHELF);
+  setTile(3, H - 1, T.DOOR);
+  return {
+    id: 'viridian_house', name: 'VIRIDIAN HOUSE', width: W, height: H, tiles, collision,
+    warps: [{ x: 3, y: H - 1, targetMap: 'viridian_city', targetX: 20, targetY: 23 }],
+    npcs: [{
+      id: 'viridian_house_npc', x: 4, y: 3, spriteColor: 0xc0a060, direction: Direction.DOWN,
+      dialogue: ['Did you know that you\ncan use CUT outside', 'of battle to chop\ndown small trees?'],
+    }],
+  };
+})();
+
+// --- Pewter Pokemart ---
+export const POKEMART_PEWTER: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
+  setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
+  setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+  return {
+    id: 'pokemart_pewter', name: 'POKeMON MART', width: W, height: H, tiles, collision,
+    warps: [{ x: 3, y: H - 1, targetMap: 'pewter_city', targetX: 16, targetY: 21 }],
+    npcs: [{
+      id: 'mart_clerk_pewter', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
+      dialogue: ['Welcome! How may I\nserve you?'],
+      shopStock: ['poke_ball', 'potion', 'escape_rope', 'antidote', 'burn_heal', 'awakening', 'paralyze_heal'],
+    }],
+  };
+})();
+
+// --- Pewter House (generic NPC house) ---
+export const PEWTER_HOUSE: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(3, 4, T.CARPET); setTile(4, 4, T.CARPET);
+  setTile(3, 5, T.CARPET); setTile(4, 5, T.CARPET);
+  setTile(2, 2, T.MART_SHELF); setTile(5, 2, T.MART_SHELF);
+  setTile(3, H - 1, T.DOOR);
+  return {
+    id: 'pewter_house', name: 'PEWTER HOUSE', width: W, height: H, tiles, collision,
+    warps: [{ x: 3, y: H - 1, targetMap: 'pewter_city', targetX: 5, targetY: 21 }],
+    npcs: [{
+      id: 'pewter_house_npc', x: 4, y: 3, spriteColor: 0xa080c0, direction: Direction.DOWN,
+      dialogue: ["BROCK's POKeMON are\nall ROCK-type.", 'Use WATER or GRASS\ntype moves to win!'],
+    }],
+  };
+})();
+
+// --- Pewter Museum ---
+export const PEWTER_MUSEUM: MapData = (() => {
+  const W = 12, H = 10;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  // Exhibit cases
+  setTile(2, 2, T.COUNTER); setTile(3, 2, T.COUNTER);
+  setTile(5, 2, T.COUNTER); setTile(6, 2, T.COUNTER);
+  setTile(8, 2, T.COUNTER); setTile(9, 2, T.COUNTER);
+  setTile(2, 5, T.COUNTER); setTile(3, 5, T.COUNTER);
+  setTile(8, 5, T.COUNTER); setTile(9, 5, T.COUNTER);
+  // Carpet aisle
+  for (let y = 3; y < H; y++) { setTile(5, y, T.CARPET); setTile(6, y, T.CARPET); }
+  return {
+    id: 'pewter_museum', name: 'PEWTER MUSEUM', width: W, height: H, tiles, collision,
+    warps: [
+      { x: 5, y: H - 1, targetMap: 'pewter_city', targetX: 17, targetY: 14 },
+      { x: 6, y: H - 1, targetMap: 'pewter_city', targetX: 17, targetY: 14 },
+    ],
+    npcs: [
+      {
+        id: 'museum_guide', x: 6, y: 3, spriteColor: 0x4060b0, direction: Direction.DOWN,
+        dialogue: ['Welcome to PEWTER\nMUSEUM OF SCIENCE!', 'We have a fine\ncollection of fossils.'],
+      },
+      {
+        id: 'museum_npc1', x: 3, y: 3, spriteColor: 0x80c080, direction: Direction.UP,
+        dialogue: ['This is a fossil of\nan ancient POKeMON.', "It's millions of\nyears old!"],
+      },
+    ],
+  };
+})();
+
 // Map registry
 export const ALL_MAPS: Record<string, MapData> = {
   // Pallet Town - Pewter City area
@@ -1685,6 +1803,10 @@ export const ALL_MAPS: Record<string, MapData> = {
   pewter_city: PEWTER_CITY,
   pewter_gym: PEWTER_GYM,
   pokemon_center_pewter: POKEMON_CENTER_PEWTER,
+  pokemart_pewter: POKEMART_PEWTER,
+  pewter_house: PEWTER_HOUSE,
+  pewter_museum: PEWTER_MUSEUM,
+  viridian_house: VIRIDIAN_HOUSE,
   route3: ROUTE3,
   pokemon_center_route3: POKEMON_CENTER_ROUTE3,
   // All remaining Kanto maps
