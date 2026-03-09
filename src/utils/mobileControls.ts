@@ -1,6 +1,8 @@
 // Mobile touch controls - Game Boy inspired layout
 // Dispatches synthetic KeyboardEvents so all existing input handling works unchanged
 
+import { soundSystem } from '../systems/SoundSystem';
+
 function isMobile(): boolean {
   return window.matchMedia('(pointer: coarse)').matches;
 }
@@ -34,6 +36,7 @@ function createButton(parent: HTMLElement, def: ButtonDef): HTMLElement {
 
   btn.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    soundSystem.resumeOnInteraction();
     btn.classList.add('pressed');
     dispatchKey('keydown', def.key, def.code, def.keyCode);
   }, { passive: false });

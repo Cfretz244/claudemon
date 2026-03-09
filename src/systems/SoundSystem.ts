@@ -45,6 +45,12 @@ export class SoundSystem {
     return this.ctx;
   }
 
+  resumeOnInteraction(): void {
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
     if (!enabled) {
