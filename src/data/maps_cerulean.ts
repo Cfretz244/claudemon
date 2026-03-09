@@ -678,8 +678,9 @@ export const CERULEAN_CITY: MapData = (() => {
   fillRect(16, 15, 5, 4, T.BUILDING);
   setTile(18, 19, T.DOOR);
 
-  // Bike Shop (left, lower) - no interior, door sealed
+  // Bike Shop (left, lower)
   fillRect(3, 15, 5, 4, T.BUILDING);
+  setTile(5, 19, T.DOOR);
 
   // Signs near gym and center
   setTile(5, 11, T.SIGN);   // Gym sign
@@ -762,6 +763,8 @@ export const CERULEAN_CITY: MapData = (() => {
       { x: 18, y: 9, targetMap: 'pokemon_center_cerulean', targetX: 4, targetY: 7 },
       // Pokemart door (no interior defined yet, placeholder)
       { x: 18, y: 19, targetMap: 'pokemart_cerulean', targetX: 3, targetY: 7 },
+      // Bike Shop door
+      { x: 5, y: 19, targetMap: 'bike_shop', targetX: 3, targetY: 7 },
       // Burgled House front door (north face)
       { x: 15, y: 20, targetMap: 'burgled_house', targetX: 3, targetY: 6 },
       // Burgled House back door (south face, re-entry from behind)
@@ -1037,72 +1040,72 @@ export const ROUTE24: MapData = (() => {
         id: 'rival_cerulean',
         x: 5, y: 18,
         spriteColor: 0x4090d0,
-        direction: Direction.UP,
+        direction: Direction.RIGHT,
         dialogue: [
           '{RIVAL}: Hey {PLAYER}!\nHeading for the\nBRIDGE?',
           "I'll show you how\nmuch stronger I've\ngotten!",
         ],
         isTrainer: true,
-        sightRange: 3,
+        sightRange: 1,
       },
-      // 5 Nugget Bridge trainers, spaced every 3 tiles
+      // 5 Nugget Bridge trainers - face across bridge to block both columns
       {
         id: 'nugget1',
         x: 5, y: 16,
         spriteColor: 0xd09040,
-        direction: Direction.UP,
+        direction: Direction.RIGHT,
         dialogue: [
           'BUG CATCHER: Welcome\nto NUGGET BRIDGE!',
           "Beat us five trainers\nand win a prize!",
         ],
         isTrainer: true,
-        sightRange: 2,
+        sightRange: 1,
       },
       {
         id: 'nugget2',
         x: 6, y: 13,
         spriteColor: 0x90c060,
-        direction: Direction.UP,
+        direction: Direction.LEFT,
         dialogue: [
           "LASS: You won't get\npast me easily!",
         ],
         isTrainer: true,
-        sightRange: 2,
+        sightRange: 1,
       },
       {
         id: 'nugget3',
         x: 5, y: 10,
         spriteColor: 0xc06060,
-        direction: Direction.DOWN,
+        direction: Direction.RIGHT,
         dialogue: [
           "YOUNGSTER: I'm the\nthird challenger!",
           "Are you getting\ntired yet?",
         ],
         isTrainer: true,
-        sightRange: 2,
+        sightRange: 1,
       },
       {
         id: 'nugget4',
         x: 6, y: 7,
         spriteColor: 0x6060c0,
-        direction: Direction.DOWN,
+        direction: Direction.LEFT,
         dialogue: [
           "LASS: Just two more\ntrainers after me!",
         ],
         isTrainer: true,
-        sightRange: 2,
+        sightRange: 1,
       },
       {
         id: 'nugget5',
         x: 5, y: 4,
         spriteColor: 0xc0c060,
-        direction: Direction.DOWN,
+        direction: Direction.RIGHT,
         dialogue: [
           "JR. TRAINER: I'm the\nlast one on the bridge!",
           'If you beat me you\nget the NUGGET!',
         ],
         isTrainer: true,
-        sightRange: 2,
+        sightRange: 1,
       },
       {
         id: 'route24_nugget',
@@ -1449,6 +1452,62 @@ export const BURGLED_HOUSE: MapData = (() => {
 })();
 
 // ─────────────────────────────────────────────────────────────
+// 11. BIKE SHOP  (8x8 indoor)
+// ─────────────────────────────────────────────────────────────
+export const BIKE_SHOP: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+
+  // Walls
+  for (let x = 0; x < W; x++) {
+    setTile(x, 0, T.WALL);
+    setTile(x, 1, T.WALL);
+  }
+  for (let y = 0; y < H; y++) {
+    setTile(0, y, T.WALL);
+    setTile(W - 1, y, T.WALL);
+  }
+
+  // Counter
+  setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
+
+  // Bike display shelves
+  setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
+  setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+
+  return {
+    id: 'bike_shop',
+    name: 'BIKE SHOP',
+    width: W, height: H,
+    tiles, collision,
+    warps: [
+      { x: 3, y: H - 1, targetMap: 'cerulean_city', targetX: 5, targetY: 20 },
+    ],
+    npcs: [
+      {
+        id: 'bike_shop_owner',
+        x: 2, y: 2,
+        spriteColor: 0xd08030,
+        direction: Direction.DOWN,
+        dialogue: [
+          'Welcome to the\nCERULEAN BIKE SHOP!',
+          'Our bicycles cost\n1,000,000! ...Sorry,\nwe only have one model.',
+          "If you have a BIKE\nVOUCHER I can give\nyou one for free!",
+        ],
+      },
+    ],
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────
 // Combined export
 // ─────────────────────────────────────────────────────────────
 export const CERULEAN_MAPS: Record<string, MapData> = {
@@ -1464,4 +1523,5 @@ export const CERULEAN_MAPS: Record<string, MapData> = {
   route25: ROUTE25,
   bills_house: BILLS_HOUSE,
   burgled_house: BURGLED_HOUSE,
+  bike_shop: BIKE_SHOP,
 };
