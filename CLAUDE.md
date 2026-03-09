@@ -258,6 +258,26 @@ Cut, Surf, Strength, Flash, and Fly are invoked through the PartyScreen's move s
 2. Add NPC to the map with `id` matching the trainer key, `isTrainer: true`
 3. Their `dialogue` array is shown before battle; first entry's text before `:` is used as display name
 
+### Adding a New Music Track
+
+Music tracks are converted from MIDI files using `tools/midi2track.mjs` (requires `midi-file` npm package).
+
+**Sourcing MIDIs**: Existing tracks come from [nayuki.io](https://www.nayuki.io/page/transcription-of-pokemon-game-boy-music) (files named `pokemon-rgby-*-music.mid`). Download new MIDIs to `tools/midi/`.
+
+**Conversion workflow**:
+1. Dump MIDI to explore tracks/channels: `node tools/midi2track.mjs <file.mid> --dump`
+2. Convert with chosen tracks: `node tools/midi2track.mjs <file.mid> --track 2 --track 3 --id my_track`
+   - The tool auto-detects melody (highest avg pitch) and bass (lowest avg pitch)
+   - Use `--track <n>` to select specific MIDI tracks (0-indexed, repeatable)
+   - Other options: `--bpm <n>`, `--transpose <n>`, `--maxbeats <n>`, `--quantize <n>`
+3. Save conversion output: pipe to `tools/midi/<track_name>.txt` for reference
+4. Paste the generated `const` into `src/data/musicTracks.ts`
+5. Add to the `MUSIC_TRACKS` registry at the bottom of the file
+6. Add a display name in `src/soundTest.ts` `TRACK_DISPLAY_NAMES`
+7. For map BGM: add to `MAP_MUSIC` in `musicTracks.ts`; for encounter/event music: call `soundSystem.startMusic(trackId)` in the appropriate scene code
+
+**Trainer encounter themes**: `OverworldScene.getEncounterTheme()` selects by trainer class — evil (Team Rocket/Boss), female (Lass/Beauty/Jr. Trainer/Channeler/Cooltrainer/Swimmer), rival, or default male.
+
 ### Adding a New Pokemon Move
 
 Add to `MOVES_DATA` in `moves.ts`. Physical types (Normal, Fighting, Flying, Poison, Ground, Rock, Bug, Ghost) use `MoveCategory.PHYSICAL`; special types (Fire, Water, Electric, Grass, Ice, Psychic, Dragon) use `MoveCategory.SPECIAL`.
