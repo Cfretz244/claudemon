@@ -8,6 +8,10 @@ import { CUSTOM_POKEMON_SPRITES } from './sprites/index';
 import { createPokemon, healPokemon } from './entities/Pokemon';
 import { PokemonInstance, StatusCondition } from './types/pokemon.types';
 
+// ── Sorted moves list for dropdowns ─────────────────────────────────────────────
+
+const SORTED_MOVES = Object.values(MOVES_DATA).sort((a, b) => a.name.localeCompare(b.name));
+
 // ── State ──────────────────────────────────────────────────────────────────────
 
 let currentSave: SaveData | null = null;
@@ -594,17 +598,61 @@ function populateParty(save: SaveData) {
         `<span class="type-tag" style="background:${getTypeColor(t)}">${t}</span>`
       ).join('');
 
-      const moveNames = poke.moves.map(m => {
-        const move = MOVES_DATA[m.moveId];
-        return move ? move.name : `Move #${m.moveId}`;
-      }).join(', ');
-
       info.innerHTML = `
         <div class="poke-name">${species?.name || `#${poke.speciesId}`}</div>
         <div class="poke-level">Lv.${poke.level} &middot; HP ${poke.currentHp}/${poke.stats.hp}</div>
         <div class="poke-types">${typeTags}</div>
-        <div style="font-size:9px;color:var(--text-dim);margin-top:4px">${moveNames}</div>
       `;
+
+      // Editable move slots
+      const movesContainer = document.createElement('div');
+      movesContainer.className = 'party-moves';
+      const pokeIndex = i;
+      for (let m = 0; m < 4; m++) {
+        const moveSlot = poke.moves[m];
+        const row = document.createElement('div');
+        row.className = 'move-slot-row';
+
+        const sel = document.createElement('select');
+        sel.className = 'move-select';
+
+        // Empty / no-move option
+        const emptyOpt = document.createElement('option');
+        emptyOpt.value = '0';
+        emptyOpt.textContent = m === 0 ? '(select move)' : '—';
+        sel.appendChild(emptyOpt);
+
+        for (const md of SORTED_MOVES) {
+          const opt = document.createElement('option');
+          opt.value = String(md.id);
+          opt.textContent = md.name;
+          if (moveSlot && moveSlot.moveId === md.id) opt.selected = true;
+          sel.appendChild(opt);
+        }
+
+        const moveIndex = m;
+        sel.addEventListener('change', () => {
+          const newId = parseInt(sel.value);
+          const p = save.party[pokeIndex];
+          if (!p) return;
+          if (newId === 0) {
+            // Remove this move slot
+            p.moves.splice(moveIndex, 1);
+            populateParty(save);
+          } else {
+            const moveData = MOVES_DATA[newId];
+            const pp = moveData?.pp ?? 20;
+            if (moveIndex < p.moves.length) {
+              p.moves[moveIndex] = { moveId: newId, currentPp: pp, maxPp: pp };
+            } else {
+              p.moves.push({ moveId: newId, currentPp: pp, maxPp: pp });
+            }
+          }
+        });
+
+        row.appendChild(sel);
+        movesContainer.appendChild(row);
+      }
 
       const removeBtn = document.createElement('button');
       removeBtn.className = 'slot-remove';
@@ -617,11 +665,17 @@ function populateParty(save: SaveData) {
 
       slot.appendChild(spriteEl);
       slot.appendChild(info);
+      slot.appendChild(movesContainer);
       slot.appendChild(removeBtn);
 
-      // Click to replace
-      slot.style.cursor = 'pointer';
-      slot.addEventListener('click', () => {
+      // Click sprite/name area to replace Pokemon
+      spriteEl.style.cursor = 'pointer';
+      spriteEl.addEventListener('click', () => {
+        pickerSlotIndex = i;
+        openPokemonPicker();
+      });
+      info.style.cursor = 'pointer';
+      info.addEventListener('click', () => {
         pickerSlotIndex = i;
         openPokemonPicker();
       });
