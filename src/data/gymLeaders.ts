@@ -23,6 +23,7 @@ export const GYM_LEADERS: Record<string, GymLeaderData> = {
       { speciesId: 95, level: 12 },  // Onix
     ],
     prizeMoney: 1386,
+    tmReward: 'tm34_bide',
     dialogue: {
       before: [
         "BROCK: I'm BROCK!",
@@ -47,6 +48,7 @@ export const GYM_LEADERS: Record<string, GymLeaderData> = {
       { speciesId: 121, level: 21 }, // Starmie
     ],
     prizeMoney: 2079,
+    tmReward: 'tm11_bubblebeam',
     dialogue: {
       before: [
         "MISTY: I'm MISTY,",
@@ -69,6 +71,7 @@ export const GYM_LEADERS: Record<string, GymLeaderData> = {
       { speciesId: 26, level: 24 },  // Raichu
     ],
     prizeMoney: 2376,
+    tmReward: 'tm24_thunderbolt',
     dialogue: {
       before: [
         "LT. SURGE: Hey kid!",
@@ -93,6 +96,7 @@ export const GYM_LEADERS: Record<string, GymLeaderData> = {
       { speciesId: 3, level: 32 },   // Venusaur (sub for Vileplume)
     ],
     prizeMoney: 3168,
+    tmReward: 'tm21_mega_drain',
     dialogue: {
       before: [
         'ERIKA: Hello...',
@@ -118,6 +122,7 @@ export const GYM_LEADERS: Record<string, GymLeaderData> = {
       { speciesId: 110, level: 43 }, // Weezing
     ],
     prizeMoney: 4257,
+    tmReward: 'tm06_toxic',
     dialogue: {
       before: [
         "KOGA: Fwahahaha!",
@@ -142,6 +147,7 @@ export const GYM_LEADERS: Record<string, GymLeaderData> = {
       { speciesId: 65, level: 43 },  // Alakazam
     ],
     prizeMoney: 4257,
+    tmReward: 'tm46_psywave',
     dialogue: {
       before: [
         'SABRINA: I knew you\nwould come.',
@@ -166,6 +172,7 @@ export const GYM_LEADERS: Record<string, GymLeaderData> = {
       { speciesId: 59, level: 47 },  // Arcanine
     ],
     prizeMoney: 4653,
+    tmReward: 'tm38_fire_blast',
     dialogue: {
       before: [
         "BLAINE: Hah! I'm\nBLAINE, the hot-",
@@ -191,6 +198,7 @@ export const GYM_LEADERS: Record<string, GymLeaderData> = {
       { speciesId: 112, level: 50 }, // Rhydon
     ],
     prizeMoney: 4950,
+    tmReward: 'tm27_fissure',
     dialogue: {
       before: [
         "GIOVANNI: So! You've\ncome this far!",

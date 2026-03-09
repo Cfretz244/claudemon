@@ -1322,11 +1322,20 @@ export class BattleScene extends Phaser.Scene {
       if (gymLeader && !this.playerState.badges.includes(gymLeader.badge)) {
         this.playerState.badges.push(gymLeader.badge);
         soundSystem.victory();
-        await this.showText([
+        const messages = [
           `${this.trainerName} was\ndefeated!`,
           `Got $${prizeMoney} for winning!`,
           `${this.playerState.name} received\nthe ${gymLeader.badge} BADGE!`,
-        ]);
+        ];
+        // Give TM reward
+        if (gymLeader.tmReward) {
+          const tmItem = ITEMS[gymLeader.tmReward];
+          if (tmItem) {
+            this.playerState.addItem(gymLeader.tmReward);
+            messages.push(`${this.playerState.name} received\n${tmItem.name}!`);
+          }
+        }
+        await this.showText(messages);
       } else {
         soundSystem.victory();
         await this.showText([
