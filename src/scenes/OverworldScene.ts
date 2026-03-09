@@ -2717,6 +2717,8 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private shootUp(): void {
+    // Stop camera from following the player off screen
+    this.cameras.main.stopFollow();
     const targetY = -40; // off screen above
     soundSystem.menuSelect(); // quick SFX for launch
 
