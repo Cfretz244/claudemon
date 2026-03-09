@@ -223,6 +223,8 @@ export class BattleScene extends Phaser.Scene {
       soundSystem.startMusic('elite_four');
     } else if (this.trainerId && this.trainerId in GYM_LEADERS) {
       soundSystem.startMusic('gym_leader_battle');
+    } else if (this.trainerId && this.trainerId.startsWith('rival_')) {
+      soundSystem.startMusic('rival_theme');
     } else if (this.battleType === BattleType.TRAINER) {
       soundSystem.startMusic('trainer_battle');
     } else {

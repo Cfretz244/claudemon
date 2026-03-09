@@ -2013,7 +2013,8 @@ export class OverworldScene extends Phaser.Scene {
         returnY: this.playerGridY,
       });
     }, () => {
-      const track = npc.id in GYM_LEADERS ? 'gym_leader_battle' : 'trainer_battle';
+      const track = npc.id.startsWith('rival_') ? 'rival_theme'
+        : npc.id in GYM_LEADERS ? 'gym_leader_battle' : 'trainer_battle';
       soundSystem.startMusic(track);
     });
   }
