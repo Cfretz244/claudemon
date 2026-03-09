@@ -619,6 +619,12 @@ export class OverworldScene extends Phaser.Scene {
         // Check for warp
         const warp = this.currentMap.warps.find(w => w.x === newX && w.y === newY);
         if (warp) {
+          // Rival intercepts when trying to leave Oak's lab after getting Pikachu
+          if (this.currentMap.id === 'oaks_lab' && this.playerState.storyFlags['has_pikachu']
+              && !this.playerState.storyFlags['rival_battle_lab']) {
+            this.triggerRivalLabBattle();
+            return;
+          }
           soundSystem.doorOpen();
           this.warpTo(warp.targetMap, warp.targetX, warp.targetY);
           return;
@@ -1585,11 +1591,6 @@ export class OverworldScene extends Phaser.Scene {
               this.pikachuGridX * TILE_SIZE + TILE_SIZE / 2,
               this.pikachuGridY * TILE_SIZE + TILE_SIZE / 2
             );
-
-            // After a brief pause, rival challenges
-            this.time.delayedCall(500, () => {
-              this.triggerRivalLabBattle();
-            });
           }
         );
         return;
