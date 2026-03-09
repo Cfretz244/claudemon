@@ -1080,6 +1080,7 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
+    soundSystem.startMusic('rival_theme');
     this.textBox.show(
       [
         `${this.playerState.rivalName}: Wait,\n${this.playerState.name}!`,
@@ -1648,6 +1649,7 @@ export class OverworldScene extends Phaser.Scene {
         return;
       }
       // Rival wants to battle (triggered automatically after getting Pikachu)
+      soundSystem.startMusic('rival_theme');
       this.textBox.show([
         `${this.playerState.rivalName}: Wait,\n{PLAYER}!`.replace('{PLAYER}', this.playerState.name),
         "Let's check out our\nnew POKeMON!",
