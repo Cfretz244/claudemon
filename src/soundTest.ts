@@ -14,6 +14,9 @@ const TRACK_DISPLAY_NAMES: Record<string, string> = {
   lavender: 'Lavender Town',
   wild_battle: 'Wild Battle',
   trainer_battle: 'Trainer Battle',
+  trainer_encounter: 'Trainer Encounter (Male)',
+  female_encounter: 'Trainer Encounter (Female)',
+  evil_encounter: 'Trainer Encounter (Evil)',
   elite_four: 'Elite Four',
   victory: 'Victory',
 };

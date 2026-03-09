@@ -922,6 +922,17 @@ export class OverworldScene extends Phaser.Scene {
     return false;
   }
 
+  private getEncounterTheme(npc: NPCData): string {
+    if (npc.id.startsWith('rival_')) return 'rival_theme';
+    const trainerData = TRAINERS[npc.id];
+    const trainerClass = trainerData?.class || '';
+    const EVIL_CLASSES = ['Team Rocket', 'Boss'];
+    if (EVIL_CLASSES.includes(trainerClass)) return 'evil_encounter';
+    const FEMALE_CLASSES = ['Lass', 'Beauty', 'Jr. Trainer', 'Channeler', 'Cooltrainer', 'Swimmer'];
+    if (FEMALE_CLASSES.includes(trainerClass)) return 'female_encounter';
+    return 'trainer_encounter';
+  }
+
   private triggerTrainerEncounter(npc: NPCData, distance: number): void {
     const sprite = this.npcSprites.get(npc.id);
     if (!sprite) return;
@@ -961,6 +972,8 @@ export class OverworldScene extends Phaser.Scene {
     exclamation.setDepth(21);
 
     soundSystem.bump(); // Alert sound
+
+    soundSystem.startMusic(this.getEncounterTheme(npc));
 
     // After a brief pause showing "!", trainer walks toward player
     this.time.delayedCall(600, () => {
@@ -1951,8 +1964,9 @@ export class OverworldScene extends Phaser.Scene {
 
     // Trainer battle check
     if (npc.isTrainer && !this.playerState.defeatedTrainers.includes(npc.id)) {
-      if (npc.id.startsWith('rival_')) {
-        soundSystem.startMusic('rival_theme');
+      // Play encounter music for trainers the player walks up to (not spotted by sight)
+      if (!this.isWarping) {
+        soundSystem.startMusic(this.getEncounterTheme(npc));
       }
       const dialogue = npc.dialogue.map(d =>
         d.replace('{PLAYER}', this.playerState.name).replace('{RIVAL}', this.playerState.rivalName)
