@@ -474,6 +474,36 @@ export const MT_MOON_B2F: MapData = (() => {
         isItemBall: true,
         itemId: 'dome_fossil',
       },
+      // Jessie & James - guarding approach to fossil room
+      {
+        id: 'jessie_mtmoon',
+        x: 13, y: 10,
+        spriteColor: 0xd02070,
+        direction: Direction.LEFT,
+        dialogue: [
+          'JESSIE & JAMES: Prepare\nfor trouble!',
+          'And make it double!',
+          'To protect the world\nfrom devastation!',
+          'To unite all peoples\nwithin our nation!',
+          'JESSIE!',
+          'JAMES!',
+          'TEAM ROCKET blasts off\nat the speed of light!',
+          'Surrender now or\nprepare to fight!',
+          'MEOWTH: Meowth,\nthat\'s right!',
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'james_mtmoon',
+        x: 14, y: 10,
+        spriteColor: 0x6060d0,
+        direction: Direction.LEFT,
+        dialogue: [
+          'JAMES: We\'re here on\nbehalf of the boss!',
+          'These fossils are the\nproperty of TEAM\nROCKET!',
+        ],
+      },
       // Items
       {
         id: 'mt_moon_b2f_super_potion',

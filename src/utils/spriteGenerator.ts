@@ -338,6 +338,129 @@ export function generateNPCSprite(scene: Phaser.Scene, key: string, color: numbe
   addCanvasSpriteSheet(scene, key, canvas, TILE_SIZE, TILE_SIZE);
 }
 
+export function generateJessieSprite(scene: Phaser.Scene, key: string): void {
+  const canvas = document.createElement('canvas');
+  canvas.width = TILE_SIZE * 4;
+  canvas.height = TILE_SIZE * 2;
+  const ctx = canvas.getContext('2d')!;
+
+  const directions = ['down', 'up', 'left', 'right'];
+  directions.forEach((dir, dirIndex) => {
+    for (let frame = 0; frame < 2; frame++) {
+      ctx.save();
+      ctx.translate(dirIndex * TILE_SIZE, frame * TILE_SIZE);
+
+      // Jessie - magenta hair, white Team Rocket uniform
+      // Long magenta hair
+      ctx.fillStyle = '#d02070';
+      ctx.fillRect(3, 0, 10, 4);
+      // Hair flowing down on sides
+      if (dir !== 'up') {
+        ctx.fillRect(2, 2, 2, 5);
+        ctx.fillRect(12, 2, 2, 5);
+      }
+      if (dir === 'up') {
+        ctx.fillRect(2, 2, 2, 4);
+        ctx.fillRect(12, 2, 2, 4);
+      }
+      // Face
+      ctx.fillStyle = '#f0c8a0';
+      ctx.fillRect(4, 3, 8, 5);
+      // Eyes
+      if (dir === 'down') {
+        ctx.fillStyle = '#4040a0';
+        ctx.fillRect(5, 5, 2, 2);
+        ctx.fillRect(9, 5, 2, 2);
+      } else if (dir === 'left') {
+        ctx.fillStyle = '#4040a0';
+        ctx.fillRect(5, 5, 2, 2);
+      } else if (dir === 'right') {
+        ctx.fillStyle = '#4040a0';
+        ctx.fillRect(9, 5, 2, 2);
+      }
+      // White uniform body
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(4, 8, 8, 4);
+      // Red R on chest
+      ctx.fillStyle = '#d02020';
+      ctx.fillRect(6, 9, 2, 2);
+      ctx.fillRect(8, 9, 1, 1);
+      // Black boots
+      ctx.fillStyle = '#303030';
+      if (frame === 0) {
+        ctx.fillRect(5, 12, 3, 4);
+        ctx.fillRect(9, 12, 3, 4);
+      } else {
+        ctx.fillRect(4, 12, 3, 4);
+        ctx.fillRect(10, 12, 3, 4);
+      }
+
+      ctx.restore();
+    }
+  });
+
+  addCanvasSpriteSheet(scene, key, canvas, TILE_SIZE, TILE_SIZE);
+}
+
+export function generateJamesSprite(scene: Phaser.Scene, key: string): void {
+  const canvas = document.createElement('canvas');
+  canvas.width = TILE_SIZE * 4;
+  canvas.height = TILE_SIZE * 2;
+  const ctx = canvas.getContext('2d')!;
+
+  const directions = ['down', 'up', 'left', 'right'];
+  directions.forEach((dir, dirIndex) => {
+    for (let frame = 0; frame < 2; frame++) {
+      ctx.save();
+      ctx.translate(dirIndex * TILE_SIZE, frame * TILE_SIZE);
+
+      // James - blue/lavender hair, white Team Rocket uniform
+      // Short styled blue hair
+      ctx.fillStyle = '#6060d0';
+      ctx.fillRect(3, 0, 10, 4);
+      // Hair styled with volume
+      ctx.fillRect(4, 0, 3, 1);
+      if (dir === 'right') ctx.fillRect(12, 1, 2, 3);
+      if (dir === 'left') ctx.fillRect(2, 1, 2, 3);
+      // Face
+      ctx.fillStyle = '#f0c8a0';
+      ctx.fillRect(4, 3, 8, 5);
+      // Eyes
+      if (dir === 'down') {
+        ctx.fillStyle = '#408040';
+        ctx.fillRect(5, 5, 2, 2);
+        ctx.fillRect(9, 5, 2, 2);
+      } else if (dir === 'left') {
+        ctx.fillStyle = '#408040';
+        ctx.fillRect(5, 5, 2, 2);
+      } else if (dir === 'right') {
+        ctx.fillStyle = '#408040';
+        ctx.fillRect(9, 5, 2, 2);
+      }
+      // White uniform body
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(4, 8, 8, 4);
+      // Red R on chest
+      ctx.fillStyle = '#d02020';
+      ctx.fillRect(6, 9, 2, 2);
+      ctx.fillRect(8, 9, 1, 1);
+      // Black boots
+      ctx.fillStyle = '#303030';
+      if (frame === 0) {
+        ctx.fillRect(5, 12, 3, 4);
+        ctx.fillRect(9, 12, 3, 4);
+      } else {
+        ctx.fillRect(4, 12, 3, 4);
+        ctx.fillRect(10, 12, 3, 4);
+      }
+
+      ctx.restore();
+    }
+  });
+
+  addCanvasSpriteSheet(scene, key, canvas, TILE_SIZE, TILE_SIZE);
+}
+
 // Per-shape eye positioning
 const SHAPE_EYE_POSITIONS: Record<string, { leftX: number; rightX: number; y: number }> = {
   round:   { leftX: 10, rightX: 18, y: 8 },

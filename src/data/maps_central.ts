@@ -218,6 +218,31 @@ export const POKEMON_TOWER: MapData = (() => {
         isTrainer: true,
         sightRange: 3,
       },
+      // Jessie & James - blocking the path to Mr. Fuji
+      {
+        id: 'jessie_tower',
+        x: 5, y: 9,
+        spriteColor: 0xd02070,
+        direction: Direction.DOWN,
+        dialogue: [
+          'JESSIE & JAMES: Stop\nright there, twerp!',
+          'Prepare for trouble,\nthis tower is ours!',
+          'And make it double,\nwe have ghostly powers!',
+          'MEOWTH: Hand over\nyour POKeMON or\nMR. FUJI gets it!',
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'james_tower',
+        x: 6, y: 9,
+        spriteColor: 0x6060d0,
+        direction: Direction.DOWN,
+        dialogue: [
+          'JAMES: These ghosts\nare really creepy...',
+          'But we must complete\nour mission for the\nboss!',
+        ],
+      },
       {
         id: 'mr_fuji',
         x: 5, y: 3,
@@ -1185,6 +1210,32 @@ const GAME_CORNER_BASEMENT: MapData = (() => {
         isTrainer: true,
         sightRange: 3,
       },
+      // Jessie & James - guarding the hideout
+      {
+        id: 'jessie_gamecorner',
+        x: 9, y: 12,
+        spriteColor: 0xd02070,
+        direction: Direction.UP,
+        dialogue: [
+          'JESSIE & JAMES: You!\nWe remember you from\nMT. MOON!',
+          'Prepare for trouble!',
+          'And make it double!',
+          "This time we won't\ngo easy on you!",
+          'MEOWTH: Yeah! We\'ve\nbeen training hard!',
+        ],
+        isTrainer: true,
+        sightRange: 4,
+      },
+      {
+        id: 'james_gamecorner',
+        x: 10, y: 12,
+        spriteColor: 0x6060d0,
+        direction: Direction.UP,
+        dialogue: [
+          "JAMES: The boss's\nhideout is just ahead!",
+          "You'll never get\npast us!",
+        ],
+      },
       {
         id: 'giovanni_game_corner',
         x: 6, y: 3,
@@ -1292,6 +1343,33 @@ const SILPH_CO: MapData = (() => {
         ],
         isTrainer: true,
         sightRange: 3,
+      },
+      // Jessie & James - in the lower office area
+      {
+        id: 'jessie_silph',
+        x: 11, y: 12,
+        spriteColor: 0xd02070,
+        direction: Direction.LEFT,
+        dialogue: [
+          'JESSIE & JAMES: Well,\nwell, well...',
+          "If it isn't the\ntwerp who keeps\nruining our plans!",
+          'Prepare for trouble,\nfor the very last time!',
+          'And make it double,\nthis will be sublime!',
+          "MEOWTH: The boss\nwon't be happy if we\nlose again!",
+          "Then let's not lose!\nGo, ARBOK! Go, WEEZING!",
+        ],
+        isTrainer: true,
+        sightRange: 4,
+      },
+      {
+        id: 'james_silph',
+        x: 12, y: 12,
+        spriteColor: 0x6060d0,
+        direction: Direction.LEFT,
+        dialogue: [
+          "JAMES: This is our\nbiggest operation yet!",
+          "SILPH CO. will soon\nbelong to TEAM ROCKET!",
+        ],
       },
       {
         id: 'silph_president',

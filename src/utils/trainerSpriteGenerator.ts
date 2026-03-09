@@ -65,6 +65,11 @@ const TRAINER_ID_SPRITES: Record<string, string> = {
   'rival_tower': 'trainer_rival',
   'rival_silph': 'trainer_rival',
   'rival_route22_2': 'trainer_rival',
+  // Jessie & James variants (Jessie is the trainer NPC)
+  'jessie_mtmoon': 'trainer_jessie_james',
+  'jessie_gamecorner': 'trainer_jessie_james',
+  'jessie_tower': 'trainer_jessie_james',
+  'jessie_silph': 'trainer_jessie_james',
 };
 
 /**

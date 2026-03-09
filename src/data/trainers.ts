@@ -1545,4 +1545,96 @@ export const TRAINERS: Record<string, TrainerData> = {
       after: ['Your POKeMON are\nwell trained!'],
     },
   },
+
+  // Jessie & James - Team Rocket duo (recurring)
+  // Trainer IDs match Jessie's NPC ID; James is a companion NPC.
+  // Both Jessie and James NPCs disappear when the trainer is defeated.
+  jessie_mtmoon: {
+    id: 'jessie_mtmoon',
+    name: 'JESSIE & JAMES',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 52, level: 14 },  // Meowth
+      { speciesId: 23, level: 14 },  // Ekans
+      { speciesId: 109, level: 14 }, // Koffing
+    ],
+    prizeMoney: 448,
+    dialogue: {
+      before: [
+        'JESSIE & JAMES: Prepare\nfor trouble!',
+        'And make it double!',
+        'To protect the world\nfrom devastation!',
+        'To unite all peoples\nwithin our nation!',
+        'JESSIE!',
+        'JAMES!',
+        'TEAM ROCKET blasts off\nat the speed of light!',
+        'Surrender now or\nprepare to fight!',
+        'MEOWTH: Meowth,\nthat\'s right!',
+      ],
+      after: ['Looks like TEAM ROCKET\nis blasting off again!'],
+    },
+  },
+  jessie_gamecorner: {
+    id: 'jessie_gamecorner',
+    name: 'JESSIE & JAMES',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 52, level: 25 },  // Meowth
+      { speciesId: 24, level: 25 },  // Arbok
+      { speciesId: 110, level: 25 }, // Weezing
+    ],
+    prizeMoney: 1000,
+    dialogue: {
+      before: [
+        'JESSIE & JAMES: You!\nWe remember you from\nMT. MOON!',
+        'Prepare for trouble!',
+        'And make it double!',
+        "This time we won't\ngo easy on you!",
+        'MEOWTH: Yeah! We\'ve\nbeen training hard!',
+      ],
+      after: ["We're blasting off\nagain!"],
+    },
+  },
+  jessie_tower: {
+    id: 'jessie_tower',
+    name: 'JESSIE & JAMES',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 52, level: 30 },  // Meowth
+      { speciesId: 24, level: 30 },  // Arbok
+      { speciesId: 110, level: 30 }, // Weezing
+    ],
+    prizeMoney: 1200,
+    dialogue: {
+      before: [
+        'JESSIE & JAMES: Stop\nright there, twerp!',
+        'Prepare for trouble,\nthis tower is ours!',
+        'And make it double,\nwe have ghostly powers!',
+        'MEOWTH: Hand over\nyour POKeMON or\nMR. FUJI gets it!',
+      ],
+      after: ["We're blasting off\nagain! This isn't\nover, twerp!"],
+    },
+  },
+  jessie_silph: {
+    id: 'jessie_silph',
+    name: 'JESSIE & JAMES',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 52, level: 36 },  // Meowth
+      { speciesId: 24, level: 36 },  // Arbok
+      { speciesId: 110, level: 36 }, // Weezing
+    ],
+    prizeMoney: 1440,
+    dialogue: {
+      before: [
+        'JESSIE & JAMES: Well,\nwell, well...',
+        "If it isn't the\ntwerp who keeps\nruining our plans!",
+        'Prepare for trouble,\nfor the very last time!',
+        'And make it double,\nthis will be sublime!',
+        "MEOWTH: The boss\nwon't be happy if we\nlose again!",
+        "Then let's not lose!\nGo, ARBOK! Go, WEEZING!",
+      ],
+      after: ["We're blasting off\nagaaaain!"],
+    },
+  },
 };

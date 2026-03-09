@@ -9,7 +9,7 @@ import { BagScreen } from '../components/BagScreen';
 import { ShopScreen } from '../components/ShopScreen';
 import { PCScreen } from '../components/PCScreen';
 import { TrainerCard } from '../components/TrainerCard';
-import { generateNPCSprite, generateItemBallSprite } from '../utils/spriteGenerator';
+import { generateNPCSprite, generateItemBallSprite, generateJessieSprite, generateJamesSprite } from '../utils/spriteGenerator';
 import { ITEMS } from '../data/items';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
@@ -153,7 +153,8 @@ export class OverworldScene extends Phaser.Scene {
 
     // Tower rockets cleared -> enable Mr. Fuji
     if (this.playerState.defeatedTrainers.includes('tower_rocket1') &&
-        this.playerState.defeatedTrainers.includes('tower_rocket2')) {
+        this.playerState.defeatedTrainers.includes('tower_rocket2') &&
+        this.playerState.defeatedTrainers.includes('jessie_tower')) {
       this.playerState.storyFlags['tower_rockets_cleared'] = true;
     }
 
@@ -411,6 +412,30 @@ export class OverworldScene extends Phaser.Scene {
     if (npc.id === 'mt_moon_fossil_nerd' && this.playerState.defeatedTrainers.includes('mt_moon_fossil_nerd')) {
       return true;
     }
+    // Jessie & James - Mt. Moon: both disappear after defeated
+    if ((npc.id === 'jessie_mtmoon' || npc.id === 'james_mtmoon') &&
+        this.playerState.defeatedTrainers.includes('jessie_mtmoon')) {
+      return true;
+    }
+    // Jessie & James - Game Corner: disappear after defeated or after Giovanni defeated
+    if ((npc.id === 'jessie_gamecorner' || npc.id === 'james_gamecorner') &&
+        (this.playerState.defeatedTrainers.includes('jessie_gamecorner') ||
+         this.playerState.defeatedTrainers.includes('giovanni_game_corner'))) {
+      return true;
+    }
+    // Jessie & James - Tower: require Silph Scope, disappear when defeated or tower cleared
+    if ((npc.id === 'jessie_tower' || npc.id === 'james_tower') &&
+        (!this.playerState.hasItem('silph_scope') ||
+         this.playerState.storyFlags['tower_rockets_cleared'] ||
+         this.playerState.defeatedTrainers.includes('jessie_tower'))) {
+      return true;
+    }
+    // Jessie & James - Silph Co: disappear after defeated or after Giovanni defeated
+    if ((npc.id === 'jessie_silph' || npc.id === 'james_silph') &&
+        (this.playerState.defeatedTrainers.includes('jessie_silph') ||
+         this.playerState.defeatedTrainers.includes('giovanni_silph'))) {
+      return true;
+    }
     return false;
   }
 
@@ -428,6 +453,10 @@ export class OverworldScene extends Phaser.Scene {
       if (!this.textures.exists(spriteKey)) {
         if (npc.isItemBall) {
           generateItemBallSprite(this, spriteKey);
+        } else if (npc.id.startsWith('jessie_')) {
+          generateJessieSprite(this, spriteKey);
+        } else if (npc.id.startsWith('james_')) {
+          generateJamesSprite(this, spriteKey);
         } else {
           generateNPCSprite(this, spriteKey, npc.spriteColor);
         }

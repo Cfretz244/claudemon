@@ -1451,4 +1451,175 @@ export const TRAINER_SPRITES_INDIVIDUALS: Array<{
       ctx.fillRect(21, 51, 10, 2);
     },
   },
+
+  // ============================================================
+  // 16. JESSIE & JAMES - Team Rocket duo, both in frame
+  // Jessie (left): long magenta hair, white uniform with red R
+  // James (right): short blue hair, white uniform with red R
+  // ============================================================
+  {
+    key: 'trainer_jessie_james',
+    draw: (ctx, w, h) => {
+      // === JESSIE (left side, centered around x:10) ===
+
+      // Long magenta hair - swoops up and curves down
+      ctx.fillStyle = '#d02070';
+      ctx.fillRect(4, 2, 12, 4);
+      ctx.fillRect(3, 4, 14, 4);
+      ctx.fillRect(5, 0, 8, 3);
+      // Hair swoops up to the left
+      ctx.fillRect(3, 0, 4, 2);
+      ctx.fillRect(2, 1, 3, 3);
+      // Long hair flowing down behind
+      ctx.fillRect(2, 8, 4, 16);
+      ctx.fillRect(1, 12, 3, 10);
+      ctx.fillRect(3, 20, 3, 6);
+
+      // Face
+      ctx.fillStyle = '#f0c8a0';
+      ctx.fillRect(6, 6, 10, 8);
+      ctx.fillRect(7, 5, 8, 1);
+
+      // Eyes - sharp, feminine
+      ctx.fillStyle = '#4040a0';
+      ctx.fillRect(7, 9, 3, 2);
+      ctx.fillRect(12, 9, 3, 2);
+      // Pupils
+      ctx.fillStyle = '#202060';
+      ctx.fillRect(8, 9, 2, 2);
+      ctx.fillRect(13, 9, 2, 2);
+
+      // Mouth
+      ctx.fillStyle = '#d06080';
+      ctx.fillRect(9, 12, 4, 1);
+
+      // Earrings
+      ctx.fillStyle = '#40d040';
+      ctx.fillRect(5, 10, 2, 2);
+
+      // Neck
+      ctx.fillStyle = '#f0c8a0';
+      ctx.fillRect(8, 14, 6, 2);
+
+      // White Team Rocket uniform top
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(4, 16, 14, 14);
+      ctx.fillRect(2, 18, 16, 10);
+
+      // Red R on chest
+      ctx.fillStyle = '#d02020';
+      ctx.fillRect(8, 18, 2, 6);
+      ctx.fillRect(10, 18, 3, 2);
+      ctx.fillRect(10, 20, 3, 2);
+      ctx.fillRect(12, 22, 2, 2);
+
+      // Belt
+      ctx.fillStyle = '#303030';
+      ctx.fillRect(4, 30, 14, 2);
+
+      // White skirt
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(4, 32, 14, 8);
+      ctx.fillRect(3, 34, 16, 4);
+
+      // Black boots
+      ctx.fillStyle = '#303030';
+      ctx.fillRect(4, 40, 6, 8);
+      ctx.fillRect(12, 40, 6, 8);
+      // Boot tops
+      ctx.fillStyle = '#404040';
+      ctx.fillRect(4, 40, 6, 2);
+      ctx.fillRect(12, 40, 6, 2);
+      // Boot soles
+      ctx.fillStyle = '#202020';
+      ctx.fillRect(3, 47, 7, 2);
+      ctx.fillRect(12, 47, 7, 2);
+
+      // Arms (white sleeves)
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(1, 20, 3, 8);
+      ctx.fillRect(16, 20, 3, 8);
+      // Gloves
+      ctx.fillStyle = '#303030';
+      ctx.fillRect(1, 26, 3, 4);
+      ctx.fillRect(16, 26, 3, 4);
+
+      // === JAMES (right side, centered around x:30) ===
+
+      // Short blue/lavender hair
+      ctx.fillStyle = '#6060d0';
+      ctx.fillRect(24, 2, 12, 4);
+      ctx.fillRect(23, 4, 14, 4);
+      ctx.fillRect(26, 0, 8, 3);
+      // Hair styled up
+      ctx.fillRect(28, 0, 4, 2);
+      ctx.fillRect(33, 1, 3, 3);
+      ctx.fillRect(35, 2, 2, 4);
+
+      // Face
+      ctx.fillStyle = '#f0c8a0';
+      ctx.fillRect(25, 6, 10, 8);
+      ctx.fillRect(26, 5, 8, 1);
+
+      // Eyes - sharper
+      ctx.fillStyle = '#408040';
+      ctx.fillRect(26, 9, 3, 2);
+      ctx.fillRect(31, 9, 3, 2);
+      // Pupils
+      ctx.fillStyle = '#204020';
+      ctx.fillRect(27, 9, 2, 2);
+      ctx.fillRect(32, 9, 2, 2);
+
+      // Mouth
+      ctx.fillStyle = '#c08070';
+      ctx.fillRect(29, 12, 3, 1);
+
+      // Neck
+      ctx.fillStyle = '#f0c8a0';
+      ctx.fillRect(27, 14, 6, 2);
+
+      // White Team Rocket uniform top
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(22, 16, 16, 14);
+      ctx.fillRect(21, 18, 18, 10);
+
+      // Red R on chest
+      ctx.fillStyle = '#d02020';
+      ctx.fillRect(27, 18, 2, 6);
+      ctx.fillRect(29, 18, 3, 2);
+      ctx.fillRect(29, 20, 3, 2);
+      ctx.fillRect(31, 22, 2, 2);
+
+      // Belt
+      ctx.fillStyle = '#303030';
+      ctx.fillRect(22, 30, 16, 2);
+
+      // White pants
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(22, 32, 7, 10);
+      ctx.fillRect(31, 32, 7, 10);
+
+      // Black boots
+      ctx.fillStyle = '#303030';
+      ctx.fillRect(22, 42, 7, 6);
+      ctx.fillRect(31, 42, 7, 6);
+      // Boot tops
+      ctx.fillStyle = '#404040';
+      ctx.fillRect(22, 42, 7, 2);
+      ctx.fillRect(31, 42, 7, 2);
+      // Boot soles
+      ctx.fillStyle = '#202020';
+      ctx.fillRect(22, 47, 7, 2);
+      ctx.fillRect(31, 47, 7, 2);
+
+      // Arms (white sleeves)
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(19, 20, 3, 8);
+      ctx.fillRect(37, 20, 3, 8);
+      // Gloves
+      ctx.fillStyle = '#303030';
+      ctx.fillRect(19, 26, 3, 4);
+      ctx.fillRect(37, 26, 3, 4);
+    },
+  },
 ];
