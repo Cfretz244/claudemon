@@ -508,7 +508,7 @@ export class TitleScene extends Phaser.Scene {
     this.state = 'oak_intro';
     this.introPageIndex = 0;
     soundSystem.stopMusic();
-    soundSystem.startMusic('oaks_theme');
+    soundSystem.startMusic('route24');
 
     this.introContainer = this.add.container(0, 0);
     this.introContainer.setDepth(200);
