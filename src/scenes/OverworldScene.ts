@@ -21,6 +21,7 @@ import { ELITE_FOUR, CHAMPION } from '../data/eliteFour';
 import { GYM_LEADERS } from '../data/gymLeaders';
 import { TRAINERS } from '../data/trainers';
 import { playBattleTransition, playTrainerBattleTransition } from '../utils/battleTransition';
+import { resyncMobileInput } from '../utils/mobileControls';
 
 interface SceneData {
   mapId: string;
@@ -213,6 +214,8 @@ export class OverworldScene extends Phaser.Scene {
     this.actionKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
     this.startKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
     this.cancelKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.X);
+    // Re-sync mobile input so held d-pad buttons carry over after scene transitions
+    resyncMobileInput();
 
     // UI
     this.textBox = new TextBox(this);

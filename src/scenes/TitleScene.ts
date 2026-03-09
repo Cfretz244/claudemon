@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { SaveSystem } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
+import { resyncMobileInput } from '../utils/mobileControls';
 
 type TitleState = 'menu' | 'name_player' | 'name_rival' | 'oak_intro' | 'shrinking';
 
@@ -200,6 +201,7 @@ export class TitleScene extends Phaser.Scene {
 
     // Input
     this.cursors = this.input.keyboard!.createCursorKeys();
+    resyncMobileInput();
 
     const confirmKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
     const enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);

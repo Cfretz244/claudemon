@@ -3,6 +3,26 @@
 
 import { soundSystem } from '../systems/SoundSystem';
 
+// Track all currently-pressed mobile buttons so we can re-sync after scene transitions
+const activeKeys = new Map<string, { key: string; code: string; keyCode: number }>();
+
+/** Re-dispatch keydown events for any mobile buttons currently held.
+ *  Call this after Phaser recreates keyboard input (scene restart/transition)
+ *  so the new Key objects pick up the held state. */
+export function resyncMobileInput(): void {
+  for (const [, def] of activeKeys) {
+    const event = new KeyboardEvent('keydown', {
+      key: def.key,
+      code: def.code,
+      bubbles: true,
+      cancelable: true,
+    });
+    Object.defineProperty(event, 'keyCode', { value: def.keyCode });
+    Object.defineProperty(event, 'which', { value: def.keyCode });
+    window.dispatchEvent(event);
+  }
+}
+
 function isMobile(): boolean {
   return window.matchMedia('(pointer: coarse)').matches;
 }
@@ -38,18 +58,21 @@ function createButton(parent: HTMLElement, def: ButtonDef): HTMLElement {
     e.preventDefault();
     soundSystem.resumeOnInteraction();
     btn.classList.add('pressed');
+    activeKeys.set(def.className, { key: def.key, code: def.code, keyCode: def.keyCode });
     dispatchKey('keydown', def.key, def.code, def.keyCode);
   }, { passive: false });
 
   btn.addEventListener('touchend', (e) => {
     e.preventDefault();
     btn.classList.remove('pressed');
+    activeKeys.delete(def.className);
     dispatchKey('keyup', def.key, def.code, def.keyCode);
   }, { passive: false });
 
   btn.addEventListener('touchcancel', (e) => {
     e.preventDefault();
     btn.classList.remove('pressed');
+    activeKeys.delete(def.className);
     dispatchKey('keyup', def.key, def.code, def.keyCode);
   }, { passive: false });
 
@@ -77,12 +100,14 @@ function setupDpadSlide(dpad: HTMLElement, buttons: Map<HTMLElement, ButtonDef>)
     activeBtn = btn;
     activeDef = def;
     btn.classList.add('pressed');
+    activeKeys.set(def.className, { key: def.key, code: def.code, keyCode: def.keyCode });
     dispatchKey('keydown', def.key, def.code, def.keyCode);
   }
 
   function releaseActive(): void {
     if (activeBtn && activeDef) {
       activeBtn.classList.remove('pressed');
+      activeKeys.delete(activeDef.className);
       dispatchKey('keyup', activeDef.key, activeDef.code, activeDef.keyCode);
       activeBtn = null;
       activeDef = null;

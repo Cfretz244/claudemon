@@ -26,6 +26,7 @@ import { ELITE_FOUR, CHAMPION, HALL_OF_FAME_TEXT } from '../data/eliteFour';
 import { playMoveAnimation, AnimationContext } from '../systems/MoveAnimations';
 import '../systems/animations';
 import { getTrainerSpriteKey } from '../utils/trainerSpriteGenerator';
+import { resyncMobileInput } from '../utils/mobileControls';
 
 interface BattleSceneData {
   type: string;
@@ -230,6 +231,9 @@ export class BattleScene extends Phaser.Scene {
     }
 
     soundSystem.pokemonCry(300 + this.opponentPokemon.speciesId * 3);
+
+    // Re-sync mobile input so held buttons carry over after scene transition
+    resyncMobileInput();
 
     // Handle Z/Enter for text box advancement
     const zKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
