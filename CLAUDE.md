@@ -15,7 +15,7 @@ No test framework is configured. Verify changes with `npx tsc --noEmit`.
 
 - **Phaser 3** game framework (v3.90+)
 - **TypeScript** with strict mode (ES2020 target)
-- **Vite** bundler (v7.3+) with 3 entry points: game (`index.html`), sprite viewer (`sprites.html`), sound tester (`sounds.html`)
+- **Vite** bundler (v7.3+) with 5 entry points: game (`index.html`), sprite viewer (`sprites.html`), sound tester (`sounds.html`), Pokedex (`pokedex.html`), save editor (`editor.html`)
 - No external asset files - all sprites/sounds generated programmatically at runtime
 
 ## Architecture
@@ -43,6 +43,8 @@ src/
   main.ts                           # Phaser config, scene registration, music toggle
   spriteViewer.ts                   # Sprite debugging/preview tool
   soundTest.ts                      # Sound/music testing tool
+  pokedexViewer.ts                  # Pokedex browser tool
+  saveEditor.ts                     # Save editor for playtesting (edit party, badges, flags, items, location)
   scenes/
     BootScene.ts                    # Programmatic sprite/texture generation
     TitleScene.ts                   # Title screen, NEW GAME/CONTINUE, naming, Oak intro
@@ -218,7 +220,7 @@ When all party Pokemon faint, the player is sent to `playerState.lastHealMap` at
 
 ## Story Progression System
 
-The game follows Pokemon Yellow's story structure using `playerState.storyFlags` (a `Set<string>`) and conditional NPC logic:
+The game follows Pokemon Yellow's story structure using `playerState.storyFlags` (a `Record<string, boolean>`) and conditional NPC logic:
 
 - **`shouldSkipNPC()`**: Controls NPC visibility based on story flags (e.g., Snorlax disappears after caught, Giovanni disappears after defeated)
 - **`interactWithNPC()`**: Special handlers for story NPCs (Oak, Bill, SS Anne Captain, Mr. Fuji, Giovanni, badge check gates, etc.)
@@ -281,6 +283,19 @@ Music tracks are converted from MIDI files using `tools/midi2track.mjs` (require
 ### Adding a New Pokemon Move
 
 Add to `MOVES_DATA` in `moves.ts`. Physical types (Normal, Fighting, Flying, Poison, Ground, Rock, Bug, Ghost) use `MoveCategory.PHYSICAL`; special types (Fire, Water, Electric, Grass, Ice, Psychic, Dragon) use `MoveCategory.SPECIAL`.
+
+### Using the Save Editor for Playtesting
+
+Access via `editor.html` (e.g. `http://localhost:5173/editor.html`). Features:
+- **Quick presets**: Fresh Start, Pre-Brock, Pre-Misty, Pre-Surge, Mid-Game, Pre-E4, Maxed Out — one click to jump to any game stage
+- **Player info**: Name, rival name, money, play time
+- **Location**: Map selector (grouped by region), player coordinates, last heal location
+- **Badges**: Click-to-toggle grid, auto-syncs gym leader defeat flags
+- **Party**: Add/replace Pokemon via sprite picker with search, editable move selectors (all 165 moves), heal all button
+- **Story flags**: Organized by category with custom flag input for runtime flags
+- **Bag**: Full item editor with quantity fields, starter kit / max all / clear buttons
+
+The editor reads/writes directly to `localStorage` using the same `SaveSystem` as the game. Changes take effect on next game load (refresh the game page after saving).
 
 ## Known Patterns
 
