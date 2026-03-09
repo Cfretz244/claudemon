@@ -516,14 +516,14 @@ export class TitleScene extends Phaser.Scene {
     bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     this.introContainer.add(bg);
 
-    // Oak portrait sprite
+    // Oak full-body trainer-style sprite
     const oakPortrait = this.add.image(GAME_WIDTH / 2, 2, 'oak_portrait');
     oakPortrait.setOrigin(0.5, 0);
-    oakPortrait.setScale(2);
+    oakPortrait.setScale(1.35);
     this.introContainer.add(oakPortrait);
 
-    // Nidorino - hidden initially, appears on page 2
-    this.introNidorino = this.add.image(GAME_WIDTH / 2 + 40, 45, 'nidorino_portrait');
+    // Pikachu - hidden initially, appears on page 2
+    this.introNidorino = this.add.image(GAME_WIDTH / 2 + 42, 42, 'nidorino_portrait');
     this.introNidorino.setScale(1.5);
     this.introNidorino.setAlpha(0);
     this.introContainer.add(this.introNidorino);
@@ -588,7 +588,7 @@ export class TitleScene extends Phaser.Scene {
     this.introText.setText(this.getIntroPageText());
     soundSystem.menuSelect();
 
-    // Show Nidorino on page 2, hide on page 4
+    // Show Pikachu on page 2, hide on page 4
     if (this.introNidorino) {
       if (this.introPageIndex === 2) {
         this.tweens.add({

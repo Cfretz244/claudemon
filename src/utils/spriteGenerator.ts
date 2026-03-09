@@ -800,107 +800,259 @@ export function generateSurfSprite(scene: Phaser.Scene): void {
 }
 
 export function generateOakPortrait(scene: Phaser.Scene): void {
-  // 32x40 portrait of Professor Oak for the intro sequence
-  const w = 32, h = 40;
+  // Full-body trainer-style Oak sprite (40x56, same as trainer sprites)
+  const w = 40, h = 56;
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext('2d')!;
 
-  // Hair (gray-brown)
-  ctx.fillStyle = '#908070';
-  ctx.fillRect(9, 2, 14, 6);
-  ctx.fillRect(8, 3, 16, 4);
-  ctx.fillRect(7, 5, 18, 3);
+  // Gray-white hair - distinguished, slightly tousled
+  ctx.fillStyle = '#a8a098';
+  ctx.fillRect(13, 1, 14, 5);
+  ctx.fillRect(11, 3, 18, 4);
+  ctx.fillRect(10, 5, 20, 3);
+  // Hair tuft sticking up
+  ctx.fillRect(15, 0, 4, 3);
+  ctx.fillRect(22, 0, 3, 2);
+  // Sideburns
+  ctx.fillRect(10, 7, 3, 3);
+  ctx.fillRect(27, 7, 3, 3);
+  // Darker hair highlights
+  ctx.fillStyle = '#908880';
+  ctx.fillRect(12, 2, 3, 3);
+  ctx.fillRect(25, 2, 3, 3);
+  ctx.fillRect(16, 0, 2, 2);
 
   // Face
-  ctx.fillStyle = '#f8c888';
-  ctx.fillRect(10, 7, 12, 10);
-  ctx.fillRect(9, 8, 14, 8);
+  ctx.fillStyle = '#f0c080';
+  ctx.fillRect(13, 7, 14, 11);
+  ctx.fillRect(11, 9, 18, 7);
+  // Forehead
+  ctx.fillRect(14, 6, 12, 2);
+
+  // Eyebrows - bushy
+  ctx.fillStyle = '#706860';
+  ctx.fillRect(14, 9, 4, 1);
+  ctx.fillRect(22, 9, 4, 1);
 
   // Eyes
   ctx.fillStyle = '#302020';
-  ctx.fillRect(12, 10, 3, 3);
-  ctx.fillRect(18, 10, 3, 3);
+  ctx.fillRect(15, 11, 3, 3);
+  ctx.fillRect(22, 11, 3, 3);
   // Eye whites
   ctx.fillStyle = '#f8f8f8';
-  ctx.fillRect(12, 10, 2, 2);
-  ctx.fillRect(18, 10, 2, 2);
+  ctx.fillRect(15, 11, 2, 2);
+  ctx.fillRect(22, 11, 2, 2);
   // Pupils
   ctx.fillStyle = '#302020';
-  ctx.fillRect(13, 11, 1, 1);
-  ctx.fillRect(19, 11, 1, 1);
+  ctx.fillRect(16, 12, 1, 1);
+  ctx.fillRect(23, 12, 1, 1);
 
-  // Mouth
+  // Nose
+  ctx.fillStyle = '#d8a868';
+  ctx.fillRect(19, 13, 2, 2);
+
+  // Mouth - friendly smile
   ctx.fillStyle = '#c08060';
-  ctx.fillRect(14, 14, 4, 1);
+  ctx.fillRect(17, 16, 6, 1);
+  ctx.fillStyle = '#d89870';
+  ctx.fillRect(18, 16, 4, 1);
 
-  // Lab coat (white)
+  // Neck
+  ctx.fillStyle = '#f0c080';
+  ctx.fillRect(17, 18, 6, 2);
+
+  // Lab coat - white, full body
   ctx.fillStyle = '#f0f0f0';
-  ctx.fillRect(7, 17, 18, 16);
-  ctx.fillRect(5, 18, 22, 14);
-  ctx.fillRect(4, 20, 24, 12);
+  ctx.fillRect(10, 20, 20, 16);
+  ctx.fillRect(8, 22, 24, 12);
+  ctx.fillRect(6, 24, 28, 8);
+  // Coat lower half extending down
+  ctx.fillRect(10, 36, 20, 4);
+  ctx.fillRect(11, 40, 18, 2);
 
-  // Lab coat collar/lapels
+  // Lab coat shoulders/sleeves
+  ctx.fillStyle = '#e8e8e8';
+  ctx.fillRect(6, 22, 5, 10);
+  ctx.fillRect(29, 22, 5, 10);
+  // Sleeve cuffs
   ctx.fillStyle = '#d8d8d8';
-  ctx.fillRect(11, 17, 2, 4);
-  ctx.fillRect(19, 17, 2, 4);
+  ctx.fillRect(6, 30, 5, 2);
+  ctx.fillRect(29, 30, 5, 2);
 
-  // Shirt underneath (dark red/brown)
-  ctx.fillStyle = '#a06040';
-  ctx.fillRect(13, 17, 6, 5);
+  // Collar / lapels
+  ctx.fillStyle = '#d8d8d8';
+  ctx.fillRect(13, 20, 3, 5);
+  ctx.fillRect(24, 20, 3, 5);
+  // Lapel fold line
+  ctx.fillStyle = '#c8c8c8';
+  ctx.fillRect(14, 20, 1, 4);
+  ctx.fillRect(25, 20, 1, 4);
 
-  // Coat buttons
+  // Shirt underneath (dark red/brown polo)
+  ctx.fillStyle = '#a05040';
+  ctx.fillRect(16, 20, 8, 6);
+  ctx.fillStyle = '#904838';
+  ctx.fillRect(18, 20, 4, 2);
+
+  // Coat center line / opening
   ctx.fillStyle = '#d0d0d0';
-  ctx.fillRect(15, 24, 2, 2);
-  ctx.fillRect(15, 28, 2, 2);
+  ctx.fillRect(19, 26, 2, 14);
 
-  // Coat outline
-  ctx.strokeStyle = '#808080';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(5.5, 17.5, 21, 15);
+  // Coat pockets
+  ctx.fillStyle = '#d8d8d8';
+  ctx.fillRect(12, 30, 5, 3);
+  ctx.fillRect(23, 30, 5, 3);
+  ctx.fillStyle = '#c8c8c8';
+  ctx.fillRect(12, 30, 5, 1);
+  ctx.fillRect(23, 30, 5, 1);
+
+  // Hands
+  ctx.fillStyle = '#f0c080';
+  ctx.fillRect(5, 32, 4, 4);
+  ctx.fillRect(31, 32, 4, 4);
+  // Fingers
+  ctx.fillStyle = '#e0b070';
+  ctx.fillRect(5, 35, 1, 1);
+  ctx.fillRect(34, 35, 1, 1);
+
+  // Brown pants
+  ctx.fillStyle = '#806848';
+  ctx.fillRect(12, 42, 7, 8);
+  ctx.fillRect(21, 42, 7, 8);
+  // Pant crease
+  ctx.fillStyle = '#705838';
+  ctx.fillRect(15, 44, 1, 6);
+  ctx.fillRect(24, 44, 1, 6);
+
+  // Shoes - brown leather
+  ctx.fillStyle = '#504030';
+  ctx.fillRect(11, 50, 8, 4);
+  ctx.fillRect(21, 50, 8, 4);
+  // Shoe soles
+  ctx.fillStyle = '#382818';
+  ctx.fillRect(11, 53, 8, 2);
+  ctx.fillRect(21, 53, 8, 2);
+  // Shoe highlights
+  ctx.fillStyle = '#605040';
+  ctx.fillRect(12, 50, 3, 1);
+  ctx.fillRect(22, 50, 3, 1);
 
   scene.textures.addCanvas('oak_portrait', canvas);
 }
 
 export function generateNidorinoPortrait(scene: Phaser.Scene): void {
-  // 24x24 Nidorino silhouette for intro
-  const w = 24, h = 24;
+  // 32x32 Pikachu portrait for intro (replaces Nidorino)
+  const w = 32, h = 32;
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext('2d')!;
 
-  // Purple body
-  ctx.fillStyle = '#a060c0';
-  ctx.fillRect(6, 10, 14, 8);
-  ctx.fillRect(4, 12, 18, 5);
+  // Ears - tall pointed with black tips
+  ctx.fillStyle = '#f8d030';
+  ctx.fillRect(6, 1, 5, 12);
+  ctx.fillRect(7, 0, 3, 1);
+  ctx.fillRect(21, 1, 5, 12);
+  ctx.fillRect(22, 0, 3, 1);
+  // Black ear tips
+  ctx.fillStyle = '#302020';
+  ctx.fillRect(6, 1, 5, 4);
+  ctx.fillRect(7, 0, 3, 1);
+  ctx.fillRect(21, 1, 5, 4);
+  ctx.fillRect(22, 0, 3, 1);
+  // Inner ear
+  ctx.fillStyle = '#e8c020';
+  ctx.fillRect(8, 5, 2, 4);
+  ctx.fillRect(22, 5, 2, 4);
 
   // Head
-  ctx.fillRect(14, 6, 8, 8);
+  ctx.fillStyle = '#f8d030';
+  ctx.fillRect(7, 8, 18, 10);
+  ctx.fillRect(6, 10, 20, 6);
+  ctx.fillRect(9, 7, 14, 2);
 
-  // Horn
-  ctx.fillStyle = '#d0d0d0';
-  ctx.fillRect(19, 3, 2, 4);
-  ctx.fillRect(20, 2, 1, 2);
+  // Eyes - large and expressive
+  ctx.fillStyle = '#302020';
+  ctx.fillRect(10, 11, 4, 5);
+  ctx.fillRect(18, 11, 4, 5);
+  // Eye whites / highlights
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fillRect(10, 11, 3, 3);
+  ctx.fillRect(18, 11, 3, 3);
+  // Pupils
+  ctx.fillStyle = '#302020';
+  ctx.fillRect(11, 12, 2, 2);
+  ctx.fillRect(19, 12, 2, 2);
+  // Eye shine
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fillRect(12, 12, 1, 1);
+  ctx.fillRect(20, 12, 1, 1);
 
-  // Ear
-  ctx.fillStyle = '#a060c0';
-  ctx.fillRect(16, 4, 3, 3);
+  // Red cheeks
+  ctx.fillStyle = '#e03030';
+  ctx.fillRect(6, 14, 4, 3);
+  ctx.fillRect(22, 14, 4, 3);
+  // Cheek highlight
+  ctx.fillStyle = '#f04848';
+  ctx.fillRect(7, 14, 2, 1);
+  ctx.fillRect(23, 14, 2, 1);
 
-  // Eye
-  ctx.fillStyle = '#e02020';
-  ctx.fillRect(18, 8, 2, 2);
+  // Nose
+  ctx.fillStyle = '#302020';
+  ctx.fillRect(15, 14, 2, 1);
 
-  // Legs
-  ctx.fillStyle = '#8050a0';
-  ctx.fillRect(6, 17, 3, 4);
-  ctx.fillRect(13, 17, 3, 4);
-  ctx.fillRect(17, 17, 3, 4);
+  // Mouth - happy smile
+  ctx.fillStyle = '#302020';
+  ctx.fillRect(14, 16, 4, 1);
+  ctx.fillStyle = '#c08060';
+  ctx.fillRect(15, 16, 2, 1);
 
-  // Tail
-  ctx.fillRect(2, 11, 5, 2);
-  ctx.fillRect(1, 10, 2, 2);
+  // Body
+  ctx.fillStyle = '#f8d030';
+  ctx.fillRect(9, 18, 14, 8);
+  ctx.fillRect(8, 19, 16, 5);
+
+  // Belly / lighter patch
+  ctx.fillStyle = '#f8e878';
+  ctx.fillRect(12, 19, 8, 5);
+
+  // Brown back stripes
+  ctx.fillStyle = '#c0a020';
+  ctx.fillRect(10, 19, 2, 4);
+  ctx.fillRect(20, 19, 2, 4);
+
+  // Arms
+  ctx.fillStyle = '#f8d030';
+  ctx.fillRect(6, 20, 3, 4);
+  ctx.fillRect(23, 20, 3, 4);
+  // Arm tips
+  ctx.fillStyle = '#e8c020';
+  ctx.fillRect(6, 23, 2, 1);
+  ctx.fillRect(24, 23, 2, 1);
+
+  // Feet
+  ctx.fillStyle = '#e8c020';
+  ctx.fillRect(9, 26, 5, 3);
+  ctx.fillRect(18, 26, 5, 3);
+  // Toes
+  ctx.fillStyle = '#c0a020';
+  ctx.fillRect(9, 28, 2, 1);
+  ctx.fillRect(12, 28, 2, 1);
+  ctx.fillRect(18, 28, 2, 1);
+  ctx.fillRect(21, 28, 2, 1);
+
+  // Tail - lightning bolt shape
+  ctx.fillStyle = '#c0a020';
+  ctx.fillRect(25, 12, 3, 3);
+  ctx.fillRect(27, 9, 3, 4);
+  ctx.fillRect(25, 7, 3, 3);
+  ctx.fillRect(27, 5, 3, 3);
+  ctx.fillRect(26, 4, 2, 2);
+  ctx.fillStyle = '#f8d030';
+  ctx.fillRect(24, 14, 3, 3);
+  ctx.fillRect(25, 16, 2, 2);
 
   scene.textures.addCanvas('nidorino_portrait', canvas);
 }
