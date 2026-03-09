@@ -2041,7 +2041,10 @@ export class OverworldScene extends Phaser.Scene {
     if (this.playerState.storyFlags['has_pokedex']) {
       items.push('POKeDEX');
     }
-    items.push('POKeMON', 'BAG', this.playerState.name, 'SAVE', 'EXIT');
+    if (this.playerState.party.length > 0) {
+      items.push('POKeMON');
+    }
+    items.push('BAG', this.playerState.name, 'SAVE', 'EXIT');
     return items;
   }
 
