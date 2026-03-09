@@ -57,6 +57,75 @@ function createButton(parent: HTMLElement, def: ButtonDef): HTMLElement {
   return btn;
 }
 
+// D-pad with slide support: tracks finger movement across direction buttons
+function setupDpadSlide(dpad: HTMLElement, buttons: Map<HTMLElement, ButtonDef>): void {
+  let activeBtn: HTMLElement | null = null;
+  let activeDef: ButtonDef | null = null;
+
+  function getBtnAt(x: number, y: number): { btn: HTMLElement; def: ButtonDef } | null {
+    const el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    // Check if it's a d-pad button or inside one
+    const target = (el as HTMLElement).closest?.('.dpad-up, .dpad-down, .dpad-left, .dpad-right') as HTMLElement | null;
+    if (target && buttons.has(target)) {
+      return { btn: target, def: buttons.get(target)! };
+    }
+    return null;
+  }
+
+  function pressBtn(btn: HTMLElement, def: ButtonDef): void {
+    activeBtn = btn;
+    activeDef = def;
+    btn.classList.add('pressed');
+    dispatchKey('keydown', def.key, def.code, def.keyCode);
+  }
+
+  function releaseActive(): void {
+    if (activeBtn && activeDef) {
+      activeBtn.classList.remove('pressed');
+      dispatchKey('keyup', activeDef.key, activeDef.code, activeDef.keyCode);
+      activeBtn = null;
+      activeDef = null;
+    }
+  }
+
+  dpad.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    soundSystem.resumeOnInteraction();
+    const touch = e.touches[0];
+    const hit = getBtnAt(touch.clientX, touch.clientY);
+    if (hit) {
+      releaseActive();
+      pressBtn(hit.btn, hit.def);
+    }
+  }, { passive: false });
+
+  dpad.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const hit = getBtnAt(touch.clientX, touch.clientY);
+    if (hit) {
+      if (hit.btn !== activeBtn) {
+        releaseActive();
+        pressBtn(hit.btn, hit.def);
+      }
+    } else {
+      // Finger slid off all d-pad buttons
+      releaseActive();
+    }
+  }, { passive: false });
+
+  dpad.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    releaseActive();
+  }, { passive: false });
+
+  dpad.addEventListener('touchcancel', (e) => {
+    e.preventDefault();
+    releaseActive();
+  }, { passive: false });
+}
+
 const MOBILE_CSS = `
 #mobile-controls {
   display: none;
@@ -213,13 +282,25 @@ export function setupMobileControls(): void {
   controls.id = 'mobile-controls';
   controls.className = 'visible';
 
-  // D-pad
+  // D-pad with slide support
   const dpad = document.createElement('div');
   dpad.className = 'dpad-container';
-  createButton(dpad, { label: '\u25B2', key: 'ArrowUp', code: 'ArrowUp', keyCode: 38, className: 'dpad-up' });
-  createButton(dpad, { label: '\u25C0', key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37, className: 'dpad-left' });
-  createButton(dpad, { label: '\u25B6', key: 'ArrowRight', code: 'ArrowRight', keyCode: 39, className: 'dpad-right' });
-  createButton(dpad, { label: '\u25BC', key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, className: 'dpad-down' });
+  const dpadDefs: ButtonDef[] = [
+    { label: '\u25B2', key: 'ArrowUp', code: 'ArrowUp', keyCode: 38, className: 'dpad-up' },
+    { label: '\u25C0', key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37, className: 'dpad-left' },
+    { label: '\u25B6', key: 'ArrowRight', code: 'ArrowRight', keyCode: 39, className: 'dpad-right' },
+    { label: '\u25BC', key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, className: 'dpad-down' },
+  ];
+  const dpadButtons = new Map<HTMLElement, ButtonDef>();
+  for (const def of dpadDefs) {
+    const btn = document.createElement('button');
+    btn.className = `mobile-btn ${def.className}`;
+    btn.textContent = def.label;
+    btn.setAttribute('aria-label', def.label);
+    dpad.appendChild(btn);
+    dpadButtons.set(btn, def);
+  }
+  setupDpadSlide(dpad, dpadButtons);
   controls.appendChild(dpad);
 
   // Center buttons (START + Music)
