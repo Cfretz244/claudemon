@@ -14,6 +14,7 @@ export class BagScreen {
   private container: Phaser.GameObjects.Container;
   private visible = false;
   private onClose: (() => void) | null = null;
+  private onEscapeRope: (() => void) | null = null;
 
   // State
   private playerState!: PlayerState;
@@ -183,9 +184,10 @@ export class BagScreen {
     this.container.setVisible(false);
   }
 
-  show(playerState: PlayerState, onClose: () => void): void {
+  show(playerState: PlayerState, onClose: () => void, onEscapeRope?: () => void): void {
     this.playerState = playerState;
     this.onClose = onClose;
+    this.onEscapeRope = onEscapeRope || null;
     this.mode = 'list';
     this.cursorIndex = 0;
     this.scrollOffset = 0;
@@ -340,6 +342,21 @@ export class BagScreen {
   private tryUseItem(): void {
     const item = this.itemList[this.cursorIndex];
     const itemData = ITEMS[item.id];
+
+    // Escape Rope: delegate to overworld
+    if (item.id === 'escape_rope') {
+      if (this.onEscapeRope) {
+        this.playerState.useItem(item.id);
+        this.hide();
+        if (this.onClose) this.onClose();
+        this.onEscapeRope();
+      } else {
+        this.mode = 'list';
+        this.optionsContainer.setVisible(false);
+        this.showMessage("Can't use that here!");
+      }
+      return;
+    }
 
     if (!itemData || (itemData.category !== 'medicine' && itemData.category !== 'hm')) {
       this.mode = 'list';

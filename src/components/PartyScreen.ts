@@ -11,6 +11,7 @@ const FIELD_MOVES: Record<number, { name: string; fieldName: string }> = {
   19: { name: 'FLY', fieldName: 'fly' },
   57: { name: 'SURF', fieldName: 'surf' },
   70: { name: 'STRENGTH', fieldName: 'strength' },
+  100: { name: 'TELEPORT', fieldName: 'teleport' },
   148: { name: 'FLASH', fieldName: 'flash' },
 };
 

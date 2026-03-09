@@ -31,6 +31,7 @@ interface SceneData {
   rivalName?: string;
   saveData?: SaveData;
   introTransition?: boolean;
+  teleportLanding?: boolean;
 }
 
 export class OverworldScene extends Phaser.Scene {
@@ -96,6 +97,7 @@ export class OverworldScene extends Phaser.Scene {
 
   // Intro transition
   private introTransition = false;
+  private teleportLanding = false;
 
   // HM field states
   private isSurfing = false;
@@ -110,6 +112,7 @@ export class OverworldScene extends Phaser.Scene {
     this.isWarping = false;
     this.isMoving = false;
     this.introTransition = data.introTransition || false;
+    this.teleportLanding = data.teleportLanding || false;
     const mapId = data.mapId || 'pallet_town';
     this.currentMap = ALL_MAPS[mapId];
     this.playerGridX = data.playerX ?? 9;
@@ -238,6 +241,11 @@ export class OverworldScene extends Phaser.Scene {
       this.showMapName(this.currentMap.name.replace('{RIVAL}', this.playerState.rivalName));
     }
 
+    // Teleport/Escape Rope landing animation
+    if (this.teleportLanding) {
+      this.playLandingAnimation();
+    }
+
     // Action key handler
     this.actionKey.on('down', () => this.handleAction());
     this.startKey.on('down', () => this.toggleMenu());
@@ -273,6 +281,18 @@ export class OverworldScene extends Phaser.Scene {
     for (const y of [0, map.height - 1]) {
       for (let x = 0; x < map.width; x++) {
         if (outdoorTiles.has(map.tiles[y][x])) return true;
+      }
+    }
+    return false;
+  }
+
+  private isCaveMap(): boolean {
+    const map = this.currentMap;
+    for (let y = 0; y < map.height; y++) {
+      for (let x = 0; x < map.width; x++) {
+        if (map.tiles[y][x] === TileType.CAVE_FLOOR || map.tiles[y][x] === TileType.CAVE_WALL) {
+          return true;
+        }
       }
     }
     return false;
@@ -2195,6 +2215,13 @@ export class OverworldScene extends Phaser.Scene {
         }
         break;
       }
+      case 100: // TELEPORT
+        if (!this.isOutdoorMap()) {
+          this.textBox.show(["Can't use TELEPORT\nhere!"]);
+        } else {
+          this.playTeleportAnimation();
+        }
+        break;
       case 148: // FLASH
         this.useFlash();
         break;
@@ -2204,9 +2231,13 @@ export class OverworldScene extends Phaser.Scene {
   private showBagScreen(): void {
     this.closeMenu();
     this.screenOpen = true;
+    const escapeRopeCb = this.isCaveMap() ? () => {
+      this.screenOpen = false;
+      this.playTeleportAnimation();
+    } : undefined;
     this.bagScreen.show(this.playerState, () => {
       this.screenOpen = false;
-    });
+    }, escapeRopeCb);
   }
 
   private showTrainerCard(): void {
@@ -2652,6 +2683,102 @@ export class OverworldScene extends Phaser.Scene {
     this.darkOverlay.setBlendMode(Phaser.BlendModes.ERASE);
     this.darkOverlay.fillCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2, radius);
     this.darkOverlay.setBlendMode(Phaser.BlendModes.NORMAL);
+  }
+
+  private playTeleportAnimation(): void {
+    this.isWarping = true;
+    this.closeMenu();
+
+    // Spin the player in place (cycle through directions rapidly)
+    const directions: Direction[] = [Direction.DOWN, Direction.LEFT, Direction.UP, Direction.RIGHT];
+    let spinIndex = 0;
+    let spinCount = 0;
+    const totalSpins = 12; // 3 full rotations
+    let spinDelay = 150;
+
+    const doSpin = () => {
+      this.player.play(`player_idle_${directions[spinIndex % 4]}`, true);
+      if (this.pikachuVisible) {
+        this.pikachu.play(`pikachu_idle_${directions[spinIndex % 4]}`, true);
+      }
+      spinIndex++;
+      spinCount++;
+      // Speed up the spin
+      spinDelay = Math.max(40, spinDelay - 10);
+      if (spinCount < totalSpins) {
+        this.time.delayedCall(spinDelay, doSpin);
+      } else {
+        // Shoot up into the sky
+        this.shootUp();
+      }
+    };
+
+    doSpin();
+  }
+
+  private shootUp(): void {
+    const targetY = -40; // off screen above
+    soundSystem.menuSelect(); // quick SFX for launch
+
+    const targets: Phaser.GameObjects.Sprite[] = [this.player];
+    if (this.pikachuVisible) targets.push(this.pikachu);
+
+    this.tweens.add({
+      targets,
+      y: targetY,
+      duration: 400,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        // Warp to last heal location
+        const mapId = this.playerState.lastHealMap || 'pallet_town';
+        const px = this.playerState.lastHealX ?? 9;
+        const py = this.playerState.lastHealY ?? 8;
+
+        this.scene.restart({
+          mapId,
+          playerX: px,
+          playerY: py,
+          saveData: this.playerState.toSave(),
+          teleportLanding: true,
+        } as SceneData);
+      },
+    });
+  }
+
+  private playLandingAnimation(): void {
+    this.isWarping = true;
+
+    // Start the player and pikachu way above
+    const landY = this.playerGridY * TILE_SIZE + TILE_SIZE / 2;
+    this.player.setY(-40);
+    this.player.play(`player_idle_${Direction.DOWN}`, true);
+
+    if (this.pikachuVisible) {
+      this.pikachu.setY(-40);
+      this.pikachu.play(`pikachu_idle_${Direction.DOWN}`, true);
+    }
+
+    const targets: Phaser.GameObjects.Sprite[] = [this.player];
+    if (this.pikachuVisible) targets.push(this.pikachu);
+
+    // Fall down
+    this.tweens.add({
+      targets,
+      y: landY,
+      duration: 500,
+      ease: 'Bounce.easeOut',
+      onComplete: () => {
+        this.playerDirection = Direction.DOWN;
+        this.player.play(`player_idle_${Direction.DOWN}`, true);
+        if (this.pikachuVisible) {
+          this.pikachuGridX = this.playerGridX;
+          this.pikachuGridY = this.playerGridY;
+          this.pikachu.setPosition(this.player.x, this.player.y);
+          this.pikachu.play(`pikachu_idle_${Direction.DOWN}`, true);
+        }
+        this.isWarping = false;
+      },
+    });
   }
 
   private showFlyMap(): void {
