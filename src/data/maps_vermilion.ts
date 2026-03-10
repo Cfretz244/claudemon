@@ -366,7 +366,7 @@ export const VERMILION_CITY: MapData = (() => {
 // VERMILION GYM -- Lt. Surge's electric gym (indoor)
 // ---------------------------------------------------------------------------
 export const VERMILION_GYM: MapData = (() => {
-  const W = 10, H = 14;
+  const W = 10, H = 16;
   const tiles = fill2D(W, H, T.INDOOR_FLOOR);
   const collision = fill2D(W, H, false);
 
@@ -384,16 +384,23 @@ export const VERMILION_GYM: MapData = (() => {
     setTile(W - 1, y, T.WALL);
   }
 
-  // Trash cans (COUNTER tiles) scattered around as obstacles
-  setTile(2, 5, T.COUNTER);
-  setTile(4, 6, T.COUNTER);
-  setTile(6, 5, T.COUNTER);
-  setTile(3, 8, T.COUNTER);
-  setTile(5, 9, T.COUNTER);
-  setTile(7, 7, T.COUNTER);
-  setTile(2, 10, T.COUNTER);
-  setTile(6, 10, T.COUNTER);
-  setTile(7, 11, T.COUNTER);
+  // Electric gate (FENCE row) blocks path to Lt. Surge at row 5
+  // Columns 1-8 (the full interior width)
+  for (let x = 1; x < W - 1; x++) {
+    setTile(x, 5, T.FENCE);
+  }
+
+  // Trash cans in rows — player walks in aisles between rows
+  // 3 rows of 5 cans each, with walkable aisles between rows
+  // Row cans are horizontally adjacent for the puzzle's second switch
+  const trashPositions = [
+    [2, 7],  [3, 7],  [4, 7],  [5, 7],  [6, 7],   // row 1
+    [2, 9],  [3, 9],  [4, 9],  [5, 9],  [6, 9],   // row 2
+    [2, 11], [3, 11], [4, 11], [5, 11], [6, 11],  // row 3
+  ];
+  for (const [tx, ty] of trashPositions) {
+    setTile(tx, ty, T.COUNTER);
+  }
 
   return {
     id: 'vermilion_gym',
@@ -403,8 +410,8 @@ export const VERMILION_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 13, targetMap: 'vermilion_city', targetX: 7, targetY: 20 },
-      { x: 5, y: 13, targetMap: 'vermilion_city', targetX: 7, targetY: 20 },
+      { x: 4, y: 15, targetMap: 'vermilion_city', targetX: 7, targetY: 20 },
+      { x: 5, y: 15, targetMap: 'vermilion_city', targetX: 7, targetY: 20 },
     ],
     npcs: [
       {
@@ -418,16 +425,40 @@ export const VERMILION_GYM: MapData = (() => {
           "I'll show you the\npower of electricity!",
         ],
         isTrainer: true,
-        sightRange: 4,
+        sightRange: 1,
       },
       {
-        id: 'vermilion_gym_trainer',
-        x: 7, y: 9,
+        id: 'vermilion_gym_trainer1',
+        x: 8, y: 8,
         spriteColor: 0xc0a040,
         direction: Direction.LEFT,
         dialogue: [
           "SAILOR: LT. SURGE is\nmy commanding officer!",
           "You won't get past\nme!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'vermilion_gym_trainer2',
+        x: 1, y: 10,
+        spriteColor: 0xa08030,
+        direction: Direction.RIGHT,
+        dialogue: [
+          "GENTLEMAN: I came\nhere to test the",
+          "power of my prized\nelectric POKeMON!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'vermilion_gym_trainer3',
+        x: 8, y: 12,
+        spriteColor: 0xd0b050,
+        direction: Direction.LEFT,
+        dialogue: [
+          "ROCKER: LT. SURGE\nis totally radical!",
+          "His RAICHU will\nshock you!",
         ],
         isTrainer: true,
         sightRange: 3,

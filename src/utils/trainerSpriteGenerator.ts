@@ -35,6 +35,8 @@ const TRAINER_CLASS_SPRITES: Record<string, string> = {
   'Boss': 'trainer_boss',
   'Rival': 'trainer_rival',
   'Elite Four': 'trainer_default',
+  'Gentleman': 'trainer_gentleman',
+  'Rocker': 'trainer_rocker',
 };
 
 // Map specific trainer IDs to texture keys (gym leaders, E4, Giovanni, rival)

@@ -108,6 +108,12 @@ export class OverworldScene extends Phaser.Scene {
   private darkOverlay: Phaser.GameObjects.Graphics | null = null;
   private flashUsed = false;
 
+  // Vermilion Gym trash can puzzle
+  private surgeTrashCans: Array<[number, number]> = [];
+  private surgeFirstSwitch: [number, number] | null = null;
+  private surgeSecondSwitch: [number, number] | null = null;
+  private surgeFirstFound = false;
+
   constructor() {
     super({ key: 'OverworldScene' });
   }
@@ -223,6 +229,9 @@ export class OverworldScene extends Phaser.Scene {
 
     // Create NPCs
     this.createNPCs();
+
+    // Initialize Vermilion Gym trash can puzzle
+    this.initSurgeTrashPuzzle();
 
     // Draw healing machine if this map has a nurse
     this.drawHealingMachine();
@@ -1729,6 +1738,9 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
+    // Vermilion Gym trash can puzzle
+    if (this.handleSurgeTrashCan(targetX, targetY)) return;
+
     // HM field effects: Cut, Surf, Strength
     if (this.handleCut(targetX, targetY)) return;
     if (this.handleSurf(targetX, targetY)) return;
@@ -3104,6 +3116,136 @@ export class OverworldScene extends Phaser.Scene {
       soundSystem.bump();
     });
     return true;
+  }
+
+  // ---- Vermilion Gym Trash Can Puzzle ----
+
+  private initSurgeTrashPuzzle(): void {
+    if (this.currentMap.id !== 'vermilion_gym') return;
+
+    // If the gate is already open (badge obtained), remove the fence
+    if (this.playerState.storyFlags['surge_gate_open']) {
+      this.openSurgeGate();
+      return;
+    }
+
+    // Collect all trash can positions from the map
+    this.surgeTrashCans = [];
+    for (let y = 0; y < this.currentMap.height; y++) {
+      for (let x = 0; x < this.currentMap.width; x++) {
+        if (this.currentMap.tiles[y][x] === TileType.COUNTER) {
+          this.surgeTrashCans.push([x, y]);
+        }
+      }
+    }
+
+    this.surgeFirstFound = false;
+    this.randomizeSurgeSwitches();
+  }
+
+  private randomizeSurgeSwitches(): void {
+    if (this.surgeTrashCans.length < 2) return;
+
+    // Pick a random first switch
+    const firstIdx = Math.floor(Math.random() * this.surgeTrashCans.length);
+    this.surgeFirstSwitch = this.surgeTrashCans[firstIdx];
+
+    // Second switch must be adjacent (up/down/left/right) to the first
+    const [fx, fy] = this.surgeFirstSwitch;
+    const adjacent = this.surgeTrashCans.filter(([x, y]) => {
+      if (x === fx && y === fy) return false;
+      return (Math.abs(x - fx) + Math.abs(y - fy)) === 1;
+    });
+
+    // If no adjacent cans, just pick any other can (fallback)
+    if (adjacent.length > 0) {
+      this.surgeSecondSwitch = adjacent[Math.floor(Math.random() * adjacent.length)];
+    } else {
+      const others = this.surgeTrashCans.filter(([x, y]) => x !== fx || y !== fy);
+      this.surgeSecondSwitch = others[Math.floor(Math.random() * others.length)];
+    }
+  }
+
+  private handleSurgeTrashCan(targetX: number, targetY: number): boolean {
+    if (this.currentMap.id !== 'vermilion_gym') return false;
+    const tileType = this.currentMap.tiles[targetY]?.[targetX];
+    if (tileType !== TileType.COUNTER) return false;
+
+    // Gate already open - just show empty trash
+    if (this.playerState.storyFlags['surge_gate_open']) {
+      this.textBox.show(['There\'s nothing in\nthe trash can.']);
+      return true;
+    }
+
+    const isFirst = this.surgeFirstSwitch &&
+      targetX === this.surgeFirstSwitch[0] && targetY === this.surgeFirstSwitch[1];
+    const isSecond = this.surgeSecondSwitch &&
+      targetX === this.surgeSecondSwitch[0] && targetY === this.surgeSecondSwitch[1];
+
+    if (!this.surgeFirstFound) {
+      // Looking for the first switch
+      if (isFirst) {
+        this.surgeFirstFound = true;
+        soundSystem.bump();
+        this.textBox.show([
+          'Hey! There\'s a\nswitch under the',
+          'trash! Turn it on!',
+          'The first lock was\nopened!',
+        ]);
+      } else {
+        this.textBox.show(['There\'s nothing in\nthe trash can.']);
+      }
+    } else {
+      // First switch was found, looking for the second
+      if (isSecond) {
+        // Success! Open the gate
+        this.playerState.storyFlags['surge_gate_open'] = true;
+        soundSystem.bump();
+        this.textBox.show([
+          'Hey! There\'s another\nswitch under the',
+          'trash! Turn it on!',
+          'The second lock was\nopened!',
+          'The electric gate\nopened!',
+        ], () => {
+          this.openSurgeGate();
+        });
+      } else {
+        // Wrong can! Reset the puzzle
+        this.surgeFirstFound = false;
+        this.randomizeSurgeSwitches();
+        soundSystem.bump();
+        this.textBox.show([
+          'Nope, there\'s only\ntrash here.',
+          'Hey! The electric\nlock was reset!',
+        ]);
+      }
+    }
+
+    return true;
+  }
+
+  private openSurgeGate(): void {
+    // Remove the fence row at y=5 (columns 1-8)
+    for (let x = 1; x < this.currentMap.width - 1; x++) {
+      if (this.currentMap.tiles[5][x] === TileType.FENCE) {
+        this.currentMap.tiles[5][x] = TileType.INDOOR_FLOOR;
+        this.currentMap.collision[5][x] = false;
+
+        // Update visual
+        const oldSprite = this.tileSprites[5]?.[x];
+        if (oldSprite) oldSprite.destroy();
+
+        const newSprite = this.add.image(
+          x * TILE_SIZE + TILE_SIZE / 2,
+          5 * TILE_SIZE + TILE_SIZE / 2,
+          this.getTileKey(TileType.INDOOR_FLOOR)
+        );
+        newSprite.setDepth(0);
+        if (this.tileSprites[5]) {
+          this.tileSprites[5][x] = newSprite;
+        }
+      }
+    }
   }
 
   private handleSurf(targetX: number, targetY: number): boolean {

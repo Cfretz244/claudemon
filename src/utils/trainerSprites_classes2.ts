@@ -1209,4 +1209,214 @@ export const TRAINER_SPRITES_CLASSES2: Array<{
       ctx.fillRect(22, 51, 9, 4);
     },
   },
+
+  // 15. trainer_gentleman - Top hat, monocle, suit with bow tie, cane
+  {
+    key: 'trainer_gentleman',
+    draw: (ctx: CanvasRenderingContext2D, _w: number, _h: number) => {
+      const skin = '#f8c888';
+      const hat = '#282828';
+      const suit = '#303030';
+      const suitLight = '#484848';
+      const shirt = '#f0f0f0';
+      const bow = '#c02020';
+      const hair = '#707070';
+      const cane = '#806020';
+      const caneTop = '#f0d050';
+      const shoe = '#282828';
+
+      // Top hat
+      ctx.fillStyle = hat;
+      ctx.fillRect(12, 0, 16, 3);  // hat brim
+      ctx.fillRect(14, 0, 12, 1);
+      ctx.fillRect(15, -6, 10, 8); // hat crown (tall)
+      // Hat band
+      ctx.fillStyle = '#c08020';
+      ctx.fillRect(15, 1, 10, 1);
+
+      // Hair (gray, peeking below hat)
+      ctx.fillStyle = hair;
+      ctx.fillRect(12, 7, 3, 4);
+      ctx.fillRect(25, 7, 3, 4);
+
+      // Face
+      ctx.fillStyle = skin;
+      ctx.fillRect(14, 7, 12, 12);
+      // Eyes
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(16, 11, 2, 2);
+      ctx.fillRect(22, 11, 2, 2);
+      // Monocle (right eye)
+      ctx.fillStyle = '#c0c0d0';
+      ctx.fillRect(21, 10, 4, 4);
+      ctx.fillStyle = skin;
+      ctx.fillRect(22, 11, 2, 2);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(22, 11, 2, 2);
+      // Monocle chain
+      ctx.fillStyle = '#c0c0d0';
+      ctx.fillRect(24, 14, 1, 6);
+      // Mustache
+      ctx.fillStyle = hair;
+      ctx.fillRect(16, 15, 3, 2);
+      ctx.fillRect(21, 15, 3, 2);
+      ctx.fillRect(18, 16, 4, 1);
+
+      // Neck
+      ctx.fillStyle = skin;
+      ctx.fillRect(17, 19, 6, 2);
+
+      // Suit jacket
+      ctx.fillStyle = suit;
+      ctx.fillRect(10, 21, 20, 16);
+      // Suit lapels
+      ctx.fillStyle = suitLight;
+      ctx.fillRect(12, 21, 3, 10);
+      ctx.fillRect(25, 21, 3, 10);
+      // White shirt showing
+      ctx.fillStyle = shirt;
+      ctx.fillRect(17, 21, 6, 12);
+      // Bow tie
+      ctx.fillStyle = bow;
+      ctx.fillRect(17, 21, 2, 2);
+      ctx.fillRect(21, 21, 2, 2);
+      ctx.fillRect(19, 22, 2, 1);
+
+      // Arms
+      ctx.fillStyle = suit;
+      ctx.fillRect(6, 23, 5, 12);   // left arm
+      ctx.fillRect(29, 23, 5, 12);  // right arm
+      // Left hand holds cane
+      ctx.fillStyle = skin;
+      ctx.fillRect(6, 34, 5, 3);
+
+      // Cane
+      ctx.fillStyle = cane;
+      ctx.fillRect(7, 30, 2, 24);
+      // Cane gold top
+      ctx.fillStyle = caneTop;
+      ctx.fillRect(6, 28, 4, 3);
+
+      // Pants
+      ctx.fillStyle = '#383838';
+      ctx.fillRect(12, 37, 7, 12);
+      ctx.fillRect(21, 37, 7, 12);
+      // Gap between legs
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(19, 40, 2, 9);
+
+      // Shoes
+      ctx.fillStyle = shoe;
+      ctx.fillRect(10, 49, 8, 4);
+      ctx.fillRect(22, 49, 8, 4);
+      // Shoe shine
+      ctx.fillStyle = '#404040';
+      ctx.fillRect(11, 50, 6, 1);
+      ctx.fillRect(23, 50, 6, 1);
+    },
+  },
+
+  // 16. trainer_rocker - Spiky hair, band t-shirt, ripped jeans, electric guitar
+  {
+    key: 'trainer_rocker',
+    draw: (ctx: CanvasRenderingContext2D, _w: number, _h: number) => {
+      const skin = '#f8c888';
+      const hair = '#e02020';
+      const shirt = '#101010';
+      const shirtDesign = '#e0c020';
+      const jeans = '#4060b0';
+      const jeansTear = skin;
+      const guitar = '#c04020';
+      const guitarNeck = '#806040';
+      const shoe = '#202020';
+
+      // Spiky red hair
+      ctx.fillStyle = hair;
+      ctx.fillRect(12, 2, 16, 8);
+      // Spikes
+      ctx.fillRect(10, 0, 3, 5);
+      ctx.fillRect(15, -2, 3, 6);
+      ctx.fillRect(20, -1, 3, 5);
+      ctx.fillRect(25, 0, 3, 5);
+      ctx.fillRect(28, 2, 2, 4);
+
+      // Face
+      ctx.fillStyle = skin;
+      ctx.fillRect(14, 8, 12, 12);
+      // Eyes (intense)
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(16, 12, 3, 2);
+      ctx.fillRect(22, 12, 3, 2);
+      // Eye whites
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(16, 12, 1, 1);
+      ctx.fillRect(22, 12, 1, 1);
+      // Mouth (grinning)
+      ctx.fillStyle = '#d08060';
+      ctx.fillRect(17, 17, 6, 1);
+
+      // Neck
+      ctx.fillStyle = skin;
+      ctx.fillRect(17, 20, 6, 2);
+
+      // Black band t-shirt
+      ctx.fillStyle = shirt;
+      ctx.fillRect(10, 22, 20, 14);
+      // Lightning bolt design on shirt
+      ctx.fillStyle = shirtDesign;
+      ctx.fillRect(18, 24, 4, 2);
+      ctx.fillRect(16, 26, 4, 2);
+      ctx.fillRect(18, 28, 4, 2);
+      ctx.fillRect(20, 30, 4, 2);
+
+      // Arms
+      ctx.fillStyle = shirt;
+      ctx.fillRect(6, 23, 5, 6);    // left sleeve
+      ctx.fillRect(29, 23, 5, 6);   // right sleeve
+      // Bare arms below sleeve
+      ctx.fillStyle = skin;
+      ctx.fillRect(6, 29, 5, 6);
+      ctx.fillRect(29, 29, 5, 6);
+      // Hands
+      ctx.fillRect(6, 34, 5, 3);
+      ctx.fillRect(29, 34, 5, 3);
+
+      // Electric guitar (held diagonally across body)
+      ctx.fillStyle = guitar;
+      ctx.fillRect(26, 28, 8, 10);  // guitar body
+      ctx.fillRect(28, 30, 4, 6);   // sound hole area
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(29, 31, 2, 4);   // sound hole
+      // Guitar neck
+      ctx.fillStyle = guitarNeck;
+      ctx.fillRect(31, 18, 3, 12);
+      // Guitar head
+      ctx.fillStyle = '#202020';
+      ctx.fillRect(30, 15, 5, 4);
+      // Strings
+      ctx.fillStyle = '#c0c0c0';
+      ctx.fillRect(32, 19, 1, 20);
+
+      // Ripped jeans
+      ctx.fillStyle = jeans;
+      ctx.fillRect(12, 36, 7, 12);
+      ctx.fillRect(21, 36, 7, 12);
+      // Rips/tears
+      ctx.fillStyle = jeansTear;
+      ctx.fillRect(14, 40, 3, 2);
+      ctx.fillRect(23, 43, 3, 2);
+      // Gap between legs
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(19, 39, 2, 9);
+
+      // Boots
+      ctx.fillStyle = shoe;
+      ctx.fillRect(10, 48, 8, 5);
+      ctx.fillRect(22, 48, 8, 5);
+      // Boot buckle
+      ctx.fillStyle = '#c0c0c0';
+      ctx.fillRect(13, 49, 2, 1);
+      ctx.fillRect(25, 49, 2, 1);
+    },
+  },
 ];

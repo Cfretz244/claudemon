@@ -601,8 +601,8 @@ export const TRAINERS: Record<string, TrainerData> = {
   },
 
   // Vermilion Gym
-  vermilion_gym_trainer: {
-    id: 'vermilion_gym_trainer',
+  vermilion_gym_trainer1: {
+    id: 'vermilion_gym_trainer1',
     name: 'SAILOR DWAYNE',
     class: 'Sailor',
     team: [
@@ -613,6 +613,34 @@ export const TRAINERS: Record<string, TrainerData> = {
     dialogue: {
       before: ['SAILOR: LT. SURGE is\nthe real deal!'],
       after: ['Electrifying loss!'],
+    },
+  },
+  vermilion_gym_trainer2: {
+    id: 'vermilion_gym_trainer2',
+    name: 'GENTLEMAN TUCKER',
+    class: 'Gentleman',
+    team: [
+      { speciesId: 25, level: 23 }, // Pikachu
+    ],
+    prizeMoney: 1656,
+    dialogue: {
+      before: ['GENTLEMAN: My prized\nPIKACHU will beat you!'],
+      after: ['Quite the battler!'],
+    },
+  },
+  vermilion_gym_trainer3: {
+    id: 'vermilion_gym_trainer3',
+    name: 'ROCKER JEFF',
+    class: 'Rocker',
+    team: [
+      { speciesId: 100, level: 20 }, // Voltorb
+      { speciesId: 100, level: 20 }, // Voltorb
+      { speciesId: 81, level: 20 },  // Magnemite
+    ],
+    prizeMoney: 640,
+    dialogue: {
+      before: ['ROCKER: LT. SURGE\nrocks!'],
+      after: ['That was electric!'],
     },
   },
 
