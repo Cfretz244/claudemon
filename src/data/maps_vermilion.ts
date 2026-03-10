@@ -660,26 +660,40 @@ export const ROUTE10: MapData = (() => {
     setTile(W - 2, y, T.TREE);
   }
 
-  // Rock Tunnel entrance (cave mouth)
-  setTile(10, 12, T.DOOR);
-
-  // Pokemon Center near tunnel entrance
-  fillRect(14, 10, 5, 1, T.ROOF);
-  fillRect(14, 11, 5, 3, T.BUILDING);
-  setTile(16, 13, T.DOOR);
+  // --- North section (above mountain) ---
 
   // Tall grass patches
   fillRect(3, 3, 4, 3, T.TALL_GRASS);
-  fillRect(13, 4, 4, 3, T.TALL_GRASS);
+  fillRect(13, 1, 4, 3, T.TALL_GRASS);
+
+  // Pokemon Center (above the mountain, clear of trees and grass)
+  fillRect(12, 4, 5, 1, T.ROOF);
+  fillRect(12, 5, 5, 3, T.BUILDING);
+  setTile(14, 7, T.DOOR);
+
+  // Sign near north entrance
+  setTile(8, 8, T.SIGN);
+  // Scattered tree
+  setTile(6, 7, T.TREE);
+
+  // --- Mountain formation blocking passage (y=9 to y=14) ---
+  // Spans full width between tree borders; extends into east/west borders
+  // so the mountain looks like it continues beyond the visible area
+  fillRect(2, 9, 18, 6, T.CAVE_WALL);
+
+  // North cave entrance (walk into mountain from above)
+  setTile(9, 9, T.CAVE_ENTRANCE);
+  // South cave exit (walk into mountain from below)
+  setTile(9, 14, T.CAVE_ENTRANCE);
+
+  // --- South section (below mountain) ---
+
+  // Tall grass patches
   fillRect(3, 16, 5, 3, T.TALL_GRASS);
   fillRect(13, 18, 4, 4, T.TALL_GRASS);
 
-  // Scattered trees
-  setTile(6, 8, T.TREE);
+  // Scattered tree
   setTile(7, 20, T.TREE);
-
-  // Sign near tunnel
-  setTile(9, 11, T.SIGN);
 
   return {
     id: 'route10',
@@ -692,10 +706,12 @@ export const ROUTE10: MapData = (() => {
       // North entrance -> Route 9
       { x: 9, y: 0, targetMap: 'route9', targetX: 23, targetY: 5 },
       { x: 10, y: 0, targetMap: 'route9', targetX: 23, targetY: 5 },
-      // Rock Tunnel entrance
-      { x: 10, y: 12, targetMap: 'rock_tunnel', targetX: 9, targetY: 19 },
+      // Rock Tunnel north entrance (enter from above, arrive at south end of cave)
+      { x: 9, y: 9, targetMap: 'rock_tunnel', targetX: 9, targetY: 17 },
+      // Rock Tunnel south exit (enter from below, arrive at north end of cave)
+      { x: 9, y: 14, targetMap: 'rock_tunnel', targetX: 9, targetY: 2 },
       // Pokemon Center door
-      { x: 16, y: 13, targetMap: 'pokemon_center_route10', targetX: 4, targetY: 7 },
+      { x: 14, y: 7, targetMap: 'pokemon_center_route10', targetX: 4, targetY: 7 },
       // South exit -> Lavender Town
       { x: 9, y: 24, targetMap: 'lavender_town', targetX: 11, targetY: 2 },
       { x: 10, y: 24, targetMap: 'lavender_town', targetX: 11, targetY: 2 },
@@ -760,8 +776,8 @@ export const ROCK_TUNNEL: MapData = (() => {
   // East vertical corridor
   fillRect(14, 5, 3, 9, T.CAVE_FLOOR);
 
-  // North exit corridor
-  fillRect(8, 2, 4, 4, T.CAVE_FLOOR);
+  // North exit corridor (carve to y=1 so the edge warp at y=0 is reachable)
+  fillRect(8, 1, 4, 5, T.CAVE_FLOOR);
 
   // Connecting corridor upper-east to center
   fillRect(10, 3, 7, 3, T.CAVE_FLOOR);
@@ -784,10 +800,10 @@ export const ROCK_TUNNEL: MapData = (() => {
     collision,
     isDark: true,
     warps: [
-      // South entrance -> Route 10 (near tunnel mouth)
-      { x: 9, y: 19, targetMap: 'route10', targetX: 10, targetY: 13 },
-      // North exit -> Route 10 (different spot)
-      { x: 9, y: 0, targetMap: 'route10', targetX: 10, targetY: 11 },
+      // South edge -> Route 10 north section (above mountain)
+      { x: 9, y: 19, targetMap: 'route10', targetX: 9, targetY: 8 },
+      // North edge -> Route 10 south section (below mountain)
+      { x: 9, y: 0, targetMap: 'route10', targetX: 9, targetY: 15 },
     ],
     npcs: [
       {
@@ -909,8 +925,8 @@ export const POKEMON_CENTER_ROUTE10: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'route10', targetX: 16, targetY: 14 },
-      { x: 5, y: 7, targetMap: 'route10', targetX: 16, targetY: 14 },
+      { x: 4, y: 7, targetMap: 'route10', targetX: 14, targetY: 8 },
+      { x: 5, y: 7, targetMap: 'route10', targetX: 14, targetY: 8 },
     ],
     npcs: [
       {
