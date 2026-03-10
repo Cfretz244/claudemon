@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { PokemonInstance, PokemonMove } from '../types/pokemon.types';
 import { MOVES_DATA } from '../data/moves';
 import { POKEMON_DATA } from '../data/pokemon';
+import { ITEMS } from '../data/items';
 import { soundSystem } from '../systems/SoundSystem';
 
 export interface BagItem {
@@ -17,6 +18,7 @@ export type MenuSelection = {
 } | {
   type: 'bag';
   itemId: string;
+  targetIndex?: number;
 } | {
   type: 'pokemon';
   partyIndex: number;
@@ -30,7 +32,8 @@ export class BattleMenu {
   private mainMenuItems: Phaser.GameObjects.Text[] = [];
   private mainCursor: Phaser.GameObjects.Text;
   private selectedIndex = 0;
-  private mode: 'main' | 'fight' | 'bag' | 'pokemon' = 'main';
+  private mode: 'main' | 'fight' | 'bag' | 'pokemon' | 'item_target' = 'main';
+  private pendingItemId = '';
   private moveTexts: Phaser.GameObjects.Text[] = [];
   private movePPTexts: Phaser.GameObjects.Text[] = [];
   private moveContainer: Phaser.GameObjects.Container;
@@ -307,7 +310,7 @@ export class BattleMenu {
           this.updateBagCursor();
         }
       }
-    } else if (this.mode === 'pokemon') {
+    } else if (this.mode === 'pokemon' || this.mode === 'item_target') {
       if (dir === 'up') {
         if (this.partySelectedIndex > 0) {
           this.partySelectedIndex--;
@@ -358,8 +361,25 @@ export class BattleMenu {
     } else if (this.mode === 'bag') {
       const item = this.bagItems[this.bagSelectedIndex];
       if (item) {
-        this.onSelect({ type: 'bag', itemId: item.id });
+        const itemData = ITEMS[item.id];
+        if (itemData?.category === 'ball') {
+          this.onSelect({ type: 'bag', itemId: item.id });
+        } else {
+          // Show party selector to pick a target
+          this.pendingItemId = item.id;
+          this.showItemTargetMenu();
+        }
       }
+    } else if (this.mode === 'item_target') {
+      const pokemon = this.partyPokemon[this.partySelectedIndex];
+      if (!pokemon) return;
+      const isRevive = this.pendingItemId === 'revive';
+      if (isRevive) {
+        if (pokemon.currentHp > 0) return; // Can only revive fainted
+      } else {
+        if (pokemon.currentHp <= 0) return; // Can't heal fainted
+      }
+      this.onSelect({ type: 'bag', itemId: this.pendingItemId, targetIndex: this.partySelectedIndex });
     } else if (this.mode === 'pokemon') {
       const pokemon = this.partyPokemon[this.partySelectedIndex];
       if (!pokemon) return;
@@ -381,6 +401,11 @@ export class BattleMenu {
       this.mode = 'main';
       this.container.setVisible(true);
       this.bagContainer.setVisible(false);
+      soundSystem.menuMove();
+    } else if (this.mode === 'item_target') {
+      this.mode = 'bag';
+      this.bagContainer.setVisible(true);
+      this.partyContainer.setVisible(false);
       soundSystem.menuMove();
     } else if (this.mode === 'pokemon') {
       this.mode = 'main';
@@ -462,6 +487,19 @@ export class BattleMenu {
     this.partySelectedIndex = 0;
     this.partyScrollOffset = 0;
     this.container.setVisible(false);
+    this.partyContainer.setVisible(true);
+
+    this.updatePartyTexts();
+    this.updatePartyCursor();
+  }
+
+  private showItemTargetMenu(): void {
+    if (this.partyPokemon.length === 0) return;
+
+    this.mode = 'item_target';
+    this.partySelectedIndex = 0;
+    this.partyScrollOffset = 0;
+    this.bagContainer.setVisible(false);
     this.partyContainer.setVisible(true);
 
     this.updatePartyTexts();

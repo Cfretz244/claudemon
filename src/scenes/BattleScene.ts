@@ -377,7 +377,7 @@ export class BattleScene extends Phaser.Scene {
           this.textBox.show(["No usable items!"], () => this.showBattleMenu());
           return;
         }
-        this.handleBagSelection(selection.itemId);
+        this.handleBagSelection(selection.itemId, selection.targetIndex);
         break;
       case 'pokemon':
         this.switchPlayerPokemon(selection.partyIndex);
@@ -388,7 +388,7 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private handleBagSelection(itemId: string): void {
+  private handleBagSelection(itemId: string, targetIndex?: number): void {
     const itemData = ITEMS[itemId];
     const isBall = itemData?.category === 'ball';
 
@@ -418,9 +418,9 @@ export class BattleScene extends Phaser.Scene {
     if (isBall) {
       this.useBall(itemId);
     } else if (itemId === 'revive') {
-      this.useRevive();
+      this.useRevive(targetIndex ?? 0);
     } else {
-      this.usePotion(itemId);
+      this.usePotion(itemId, targetIndex);
     }
   }
 
@@ -1531,7 +1531,12 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private usePotion(potionType: string): void {
+  private usePotion(potionType: string, targetIndex?: number): void {
+    // Pre-select AI move before applying item (AI shouldn't react to healing)
+    const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+    const aiMove = this.opponentPokemon.moves[aiMoveIndex];
+    const aiMoveData = MOVES_DATA[aiMove?.moveId];
+
     if (!this.playerState.useItem(potionType)) {
       this.textBox.show(["No potions left!"], () => this.showBattleMenu());
       return;
@@ -1543,24 +1548,26 @@ export class BattleScene extends Phaser.Scene {
     else if (potionType === 'max_potion') healAmount = 999;
     else if (potionType === 'full_restore') healAmount = 999;
 
-    this.playerPokemon.currentHp = Math.min(
-      this.playerPokemon.stats.hp,
-      this.playerPokemon.currentHp + healAmount
+    const target = targetIndex !== undefined ? this.playerState.party[targetIndex] : this.playerPokemon;
+    target.currentHp = Math.min(
+      target.stats.hp,
+      target.currentHp + healAmount
     );
 
     if (potionType === 'full_restore') {
-      this.playerPokemon.status = StatusCondition.NONE;
+      target.status = StatusCondition.NONE;
     }
 
-    this.hud.updatePlayer(this.playerPokemon);
+    // Update HUD if the active Pokemon was healed
+    if (target === this.playerPokemon) {
+      this.hud.updatePlayer(this.playerPokemon);
+    }
     soundSystem.heal();
 
-    const name = this.getSpeciesName(this.playerPokemon.speciesId);
-    this.textBox.show([`Used POTION on\n${name}!`], () => {
-      // Opponent attacks
-      const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
-      const aiMove = this.opponentPokemon.moves[aiMoveIndex];
-      const aiMoveData = MOVES_DATA[aiMove?.moveId];
+    const itemName = ITEMS[potionType]?.name || 'POTION';
+    const name = this.getSpeciesName(target.speciesId);
+    this.textBox.show([`Used ${itemName} on\n${name}!`], () => {
+      // Opponent attacks with pre-selected move
       if (aiMove && aiMoveData) {
         this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false).then(() => {
           if (this.playerPokemon.currentHp <= 0) {
@@ -1577,13 +1584,14 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  private useRevive(): void {
-    // Find first fainted party Pokemon
-    const faintedIdx = this.playerState.party.findIndex(
-      (p, i) => p.currentHp <= 0 && i !== this.currentPlayerPokemonIndex
-    );
+  private useRevive(targetIndex: number): void {
+    // Pre-select AI move before applying item
+    const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+    const aiMove = this.opponentPokemon.moves[aiMoveIndex];
+    const aiMoveData = MOVES_DATA[aiMove?.moveId];
 
-    if (faintedIdx === -1) {
+    const target = this.playerState.party[targetIndex];
+    if (!target || target.currentHp > 0) {
       this.textBox.show(["It won't have any\neffect!"], () => this.showBattleMenu());
       return;
     }
@@ -1593,16 +1601,12 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
-    const target = this.playerState.party[faintedIdx];
     target.currentHp = Math.floor(target.stats.hp / 2);
 
     const name = this.getSpeciesName(target.speciesId);
     soundSystem.heal();
     this.textBox.show([`${name} was revived!`], () => {
-      // Opponent gets a free attack
-      const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
-      const aiMove = this.opponentPokemon.moves[aiMoveIndex];
-      const aiMoveData = MOVES_DATA[aiMove?.moveId];
+      // Opponent attacks with pre-selected move
       if (aiMove && aiMoveData) {
         this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false).then(() => {
           if (this.playerPokemon.currentHp <= 0) {
@@ -1620,6 +1624,11 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private switchPlayerPokemon(newIndex: number): void {
+    // Pre-select AI move BEFORE switching — AI shouldn't see the incoming Pokemon
+    const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+    const aiMove = this.opponentPokemon.moves[aiMoveIndex];
+    const aiMoveData = MOVES_DATA[aiMove?.moveId];
+
     // Save current Pokemon state back to party
     this.playerState.party[this.currentPlayerPokemonIndex] = this.playerPokemon;
 
@@ -1643,10 +1652,7 @@ export class BattleScene extends Phaser.Scene {
 
     const name = this.getSpeciesName(this.playerPokemon.speciesId);
     this.textBox.show([`Go! ${name}!`], () => {
-      // Opponent gets a free attack turn after switching
-      const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
-      const aiMove = this.opponentPokemon.moves[aiMoveIndex];
-      const aiMoveData = MOVES_DATA[aiMove?.moveId];
+      // Opponent attacks with pre-selected move (chosen before seeing the switch)
       if (aiMove && aiMoveData) {
         this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false).then(() => {
           if (this.playerPokemon.currentHp <= 0) {
