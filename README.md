@@ -1,6 +1,6 @@
-# Pokemon Yellow Clone
+# Claudemon
 
-A faithful recreation of Pokemon Yellow built entirely in the browser with **Phaser 3** and **TypeScript**. Every sprite, sound effect, and music track is generated programmatically at runtime — no external asset files.
+A faithful recreation of Pokemon Yellow built entirely in the browser with **Phaser 3** and **TypeScript**. Every sprite, sound effect, and music track is generated programmatically at runtime — no external asset files. The entire game was built by Claude.
 
 ## Features
 
@@ -37,24 +37,31 @@ Open `http://localhost:5173` in your browser.
 | Enter | Open/close start menu (overworld) |
 | M | Toggle music and sound |
 
-## Building
+## Building & Testing
 
 ```bash
-npm run build    # Type-check + production build
-npm run preview  # Preview the production build
+npm run build          # Type-check + production build
+npm test               # Run tests (187 tests across 16 files)
+npm run test:coverage  # Tests + V8 coverage report
+npm run preview        # Preview the production build
 ```
+
+All changes go through pull requests. The `main` branch requires passing CI (type-check + tests) before merging.
 
 ## Tech Stack
 
 - **Phaser 3** (v3.90+) — game framework
 - **TypeScript** — strict mode, ES2020 target
 - **Vite** (v7.3+) — bundler with HMR
+- **Vitest** — test framework with V8 coverage
 - **Web Audio API** — all audio synthesized at runtime
 
 ## Dev Tools
 
 - `http://localhost:5173/sprites.html` — sprite viewer for previewing all Pokemon sprites
 - `http://localhost:5173/sounds.html` — sound/music tester
+- `http://localhost:5173/pokedex.html` — Pokedex browser
+- `http://localhost:5173/editor.html` — save editor for playtesting (edit party, badges, flags, items, location)
 
 ## Project Structure
 
@@ -65,8 +72,10 @@ src/
   components/   # TextBox, BattleHUD, PartyScreen, BagScreen, PC, Shop, etc.
   data/         # Pokemon, moves, trainers, gym leaders, maps, music
   entities/     # Player state, Pokemon factory, NPC definitions
+  logic/        # Extracted pure-logic modules (NPC visibility)
   utils/        # Sprite generation, battle transitions, constants
   sprites/      # 151 individual Pokemon sprite definitions
+tests/          # Vitest test suite (systems, entities, data integrity, story logic)
 ```
 
 See [CLAUDE.md](CLAUDE.md) for detailed architecture documentation.
