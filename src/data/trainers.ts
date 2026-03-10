@@ -720,6 +720,108 @@ export const TRAINERS: Record<string, TrainerData> = {
     },
   },
 
+  rock_tunnel_trainer4: {
+    id: 'rock_tunnel_trainer4',
+    name: 'HIKER DUDLEY',
+    class: 'Hiker',
+    team: [
+      { speciesId: 74, level: 21 }, // Geodude
+      { speciesId: 95, level: 21 }, // Onix
+    ],
+    prizeMoney: 756,
+    dialogue: {
+      before: ["HIKER: The rocks\nhere are amazing!"],
+      after: ['You rock harder\nthan I do!'],
+    },
+  },
+  rock_tunnel_trainer5: {
+    id: 'rock_tunnel_trainer5',
+    name: 'LASS SHANNON',
+    class: 'Lass',
+    team: [
+      { speciesId: 35, level: 21 }, // Clefairy
+      { speciesId: 39, level: 21 }, // Jigglypuff
+    ],
+    prizeMoney: 315,
+    dialogue: {
+      before: ["LASS: I'm not\nafraid of the dark!"],
+      after: ['Maybe I should have\nbrought a light...'],
+    },
+  },
+  rock_tunnel_trainer6: {
+    id: 'rock_tunnel_trainer6',
+    name: 'HIKER ALLEN',
+    class: 'Hiker',
+    team: [
+      { speciesId: 74, level: 20 }, // Geodude
+      { speciesId: 66, level: 20 }, // Machop
+      { speciesId: 74, level: 20 }, // Geodude
+      { speciesId: 95, level: 20 }, // Onix
+    ],
+    prizeMoney: 720,
+    dialogue: {
+      before: ["HIKER: I've been\nlost for days!"],
+      after: ['Maybe you can show\nme the way out...'],
+    },
+  },
+  rock_tunnel_b1f_trainer1: {
+    id: 'rock_tunnel_b1f_trainer1',
+    name: 'POKEMANIAC ASHTON',
+    class: 'Pokemaniac',
+    team: [
+      { speciesId: 104, level: 21 }, // Cubone
+      { speciesId: 79, level: 21 },  // Slowpoke
+    ],
+    prizeMoney: 1008,
+    dialogue: {
+      before: ["POKEMANIAC: The lower\nlevels have rare ones!"],
+      after: ['I should explore\nmore carefully...'],
+    },
+  },
+  rock_tunnel_b1f_trainer2: {
+    id: 'rock_tunnel_b1f_trainer2',
+    name: 'JR. TRAINER MIRA',
+    class: 'Jr. Trainer',
+    team: [
+      { speciesId: 52, level: 21 },  // Meowth
+      { speciesId: 16, level: 21 },  // Pidgey
+      { speciesId: 43, level: 21 },  // Oddish
+    ],
+    prizeMoney: 420,
+    dialogue: {
+      before: ["JR. TRAINER: I came\nhere to train!"],
+      after: ["You're too strong\nfor me!"],
+    },
+  },
+  rock_tunnel_b1f_trainer3: {
+    id: 'rock_tunnel_b1f_trainer3',
+    name: 'HIKER ERIC',
+    class: 'Hiker',
+    team: [
+      { speciesId: 74, level: 21 }, // Geodude
+      { speciesId: 95, level: 22 }, // Onix
+    ],
+    prizeMoney: 792,
+    dialogue: {
+      before: ["HIKER: You made it\ndown here too?"],
+      after: ['The deeper floors\nare tougher!'],
+    },
+  },
+  rock_tunnel_b1f_trainer4: {
+    id: 'rock_tunnel_b1f_trainer4',
+    name: 'LASS DANA',
+    class: 'Lass',
+    team: [
+      { speciesId: 30, level: 22 }, // Nidorina
+      { speciesId: 33, level: 22 }, // Nidorino
+    ],
+    prizeMoney: 330,
+    dialogue: {
+      before: ["LASS: My POKeMON\naren't afraid!"],
+      after: ['We need more\ntraining...'],
+    },
+  },
+
   // Pokemon Tower
   tower_trainer1: {
     id: 'tower_trainer1',

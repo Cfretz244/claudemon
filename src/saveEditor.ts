@@ -132,7 +132,7 @@ const MAP_GROUPS: { label: string; maps: string[] }[] = [
   },
   {
     label: 'Routes 9-10 / Rock Tunnel',
-    maps: ['route9', 'route10', 'rock_tunnel', 'pokemon_center_route10'],
+    maps: ['route9', 'route10', 'rock_tunnel', 'rock_tunnel_b1f', 'pokemon_center_route10'],
   },
   {
     label: 'Lavender Town',
