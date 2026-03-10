@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { generateTileset, generatePlayerSprite, generatePikachuFollowerSprite, generatePokeballSprite, generateOakPortrait, generateNidorinoPortrait, generateSurfSprite, generatePlayerPortrait, generatePlayerPortraitMid } from '../utils/spriteGenerator';
+import { generateTileset, generatePlayerSprite, generatePikachuFollowerSprite, generatePikachuSurfSprite, generatePokeballSprite, generateOakPortrait, generateNidorinoPortrait, generateSurfSprite, generatePlayerPortrait, generatePlayerPortraitMid } from '../utils/spriteGenerator';
 import { generateAllTrainerSprites } from '../utils/trainerSpriteGenerator';
 
 export class BootScene extends Phaser.Scene {
@@ -34,6 +34,7 @@ export class BootScene extends Phaser.Scene {
     generateTileset(this);
     generatePlayerSprite(this);
     generatePikachuFollowerSprite(this);
+    generatePikachuSurfSprite(this);
     generatePokeballSprite(this);
     generateOakPortrait(this);
     generateNidorinoPortrait(this);
@@ -135,6 +136,28 @@ export class BootScene extends Phaser.Scene {
       key: 'pikachu_idle_right',
       frames: [{ key: 'pikachu_follower', frame: 3 }],
       frameRate: 1,
+    });
+
+    // Pikachu surf animations
+    this.anims.create({
+      key: 'pikachu_surf_down',
+      frames: [{ key: 'pikachu_surf', frame: 0 }, { key: 'pikachu_surf', frame: 4 }],
+      frameRate: 4, repeat: -1,
+    });
+    this.anims.create({
+      key: 'pikachu_surf_up',
+      frames: [{ key: 'pikachu_surf', frame: 1 }, { key: 'pikachu_surf', frame: 5 }],
+      frameRate: 4, repeat: -1,
+    });
+    this.anims.create({
+      key: 'pikachu_surf_left',
+      frames: [{ key: 'pikachu_surf', frame: 2 }, { key: 'pikachu_surf', frame: 6 }],
+      frameRate: 4, repeat: -1,
+    });
+    this.anims.create({
+      key: 'pikachu_surf_right',
+      frames: [{ key: 'pikachu_surf', frame: 3 }, { key: 'pikachu_surf', frame: 7 }],
+      frameRate: 4, repeat: -1,
     });
 
     // Surf sprite animations

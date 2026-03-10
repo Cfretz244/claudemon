@@ -1862,32 +1862,144 @@ export const TRAINERS: Record<string, TrainerData> = {
   },
 
   // Silph Co Rockets + Giovanni
-  silph_rocket1: {
-    id: 'silph_rocket1',
+  silph_1f_grunt1: {
+    id: 'silph_1f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 19, level: 30 },  // Rattata
+      { speciesId: 41, level: 30 },  // Zubat
+    ],
+    prizeMoney: 1200,
+    dialogue: {
+      before: ['ROCKET: SILPH CO. is\nunder our control!', 'No one gets in\nor out!'],
+      after: ['How are you this\nstrong?!'],
+    },
+  },
+  silph_2f_grunt1: {
+    id: 'silph_2f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 20, level: 32 },  // Raticate
+      { speciesId: 42, level: 32 },  // Golbat
+    ],
+    prizeMoney: 1280,
+    dialogue: {
+      before: ['ROCKET: This floor\nis off limits!'],
+      after: ['You got lucky, kid!'],
+    },
+  },
+  silph_2f_grunt2: {
+    id: 'silph_2f_grunt2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 109, level: 32 }, // Koffing
+      { speciesId: 96, level: 32 },  // Drowzee
+    ],
+    prizeMoney: 1280,
+    dialogue: {
+      before: ['ROCKET: You think you\ncan stop us?'],
+      after: ['The boss won\'t be\nhappy about this...'],
+    },
+  },
+  silph_3f_grunt1: {
+    id: 'silph_3f_grunt1',
     name: 'ROCKET GRUNT',
     class: 'Team Rocket',
     team: [
       { speciesId: 24, level: 33 },  // Arbok
-      { speciesId: 97, level: 33 },  // Hypno
+      { speciesId: 28, level: 33 },  // Sandslash
     ],
     prizeMoney: 1320,
     dialogue: {
-      before: ['ROCKET: SILPH CO. is\nunder our control!'],
-      after: ['How are you this\nstrong?!'],
+      before: ['ROCKET: The lab\nequipment is ours now!'],
+      after: ['This can\'t be\nhappening!'],
     },
   },
-  silph_rocket2: {
-    id: 'silph_rocket2',
+  silph_3f_grunt2: {
+    id: 'silph_3f_grunt2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 88, level: 33 },  // Grimer
+      { speciesId: 66, level: 33 },  // Machop
+    ],
+    prizeMoney: 1320,
+    dialogue: {
+      before: ['ROCKET: Get out of\nhere, kid!'],
+      after: ['I need backup!'],
+    },
+  },
+  silph_4f_grunt1: {
+    id: 'silph_4f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 97, level: 34 },  // Hypno
+      { speciesId: 20, level: 34 },  // Raticate
+    ],
+    prizeMoney: 1360,
+    dialogue: {
+      before: ['ROCKET: The servers\ncontain valuable\ndata!'],
+      after: ['How did you get\nthis far?!'],
+    },
+  },
+  silph_4f_grunt2: {
+    id: 'silph_4f_grunt2',
     name: 'ROCKET GRUNT',
     class: 'Team Rocket',
     team: [
       { speciesId: 110, level: 34 }, // Weezing
-      { speciesId: 89, level: 34 },  // Muk
+      { speciesId: 42, level: 34 },  // Golbat
     ],
     prizeMoney: 1360,
     dialogue: {
-      before: ['ROCKET: No one gets\npast me!'],
-      after: ['The boss won\'t be\nhappy about this...'],
+      before: ['ROCKET: You made it\nthis far? Impressive!'],
+      after: ['You\'re tougher than\nI thought...'],
+    },
+  },
+  silph_5f_grunt1: {
+    id: 'silph_5f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 89, level: 35 },  // Muk
+      { speciesId: 67, level: 35 },  // Machoke
+    ],
+    prizeMoney: 1400,
+    dialogue: {
+      before: ['ROCKET: The boss is\nupstairs! You will\nnever reach him!'],
+      after: ['No way... the boss\nwill crush you!'],
+    },
+  },
+  silph_6f_grunt1: {
+    id: 'silph_6f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 104, level: 35 }, // Cubone
+      { speciesId: 24, level: 35 },  // Arbok
+    ],
+    prizeMoney: 1400,
+    dialogue: {
+      before: ['ROCKET: Ha! You fell\nfor the trap!'],
+      after: ['Okay maybe the trap\ndidn\'t work...'],
+    },
+  },
+  silph_7f_grunt1: {
+    id: 'silph_7f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 110, level: 36 }, // Weezing
+      { speciesId: 97, level: 36 },  // Hypno
+    ],
+    prizeMoney: 1440,
+    dialogue: {
+      before: ['ROCKET: The boss is\nright here! You will\nnot pass!'],
+      after: ['The boss will\navenge me!'],
     },
   },
   giovanni_silph: {

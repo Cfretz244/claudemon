@@ -423,6 +423,16 @@ export class SoundSystem {
     ], 'square', 0.06);
   }
 
+  teleportWarp(): void {
+    this.playNotes([
+      { freq: 1200, dur: 0.06, delay: 0 },
+      { freq: 800, dur: 0.06, delay: 0.06 },
+      { freq: 1400, dur: 0.06, delay: 0.12 },
+      { freq: 600, dur: 0.08, delay: 0.18 },
+      { freq: 1600, dur: 0.1, delay: 0.26 },
+    ], 'sine', 0.07);
+  }
+
   bump(): void {
     this.playTone(80, 0.1, 'square', 0.05);
   }

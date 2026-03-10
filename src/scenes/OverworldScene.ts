@@ -123,6 +123,12 @@ export class OverworldScene extends Phaser.Scene {
       data.playerX = 7;
       data.playerY = 10;
     }
+    // Legacy save migration: silph_co → silph_co_1f
+    if (mapId === 'silph_co') {
+      mapId = 'silph_co_1f';
+      data.playerX = 7;
+      data.playerY = 12;
+    }
     this.currentMap = ALL_MAPS[mapId];
     this.playerGridX = data.playerX ?? 9;
     this.playerGridY = data.playerY ?? 8;
@@ -206,7 +212,7 @@ export class OverworldScene extends Phaser.Scene {
     this.pikachu = this.add.sprite(
       this.pikachuGridX * TILE_SIZE + TILE_SIZE / 2,
       this.pikachuGridY * TILE_SIZE + TILE_SIZE / 2,
-      'pikachu_follower',
+      this.isSurfing ? 'pikachu_surf' : 'pikachu_follower',
       0
     );
     this.pikachu.setDepth(9);
@@ -454,7 +460,7 @@ export class OverworldScene extends Phaser.Scene {
       return true;
     }
     // Silph rockets disappear after Giovanni defeated
-    if ((npc.id === 'silph_rocket1' || npc.id === 'silph_rocket2') &&
+    if (npc.id.startsWith('silph_') && npc.id.includes('grunt') &&
         this.playerState.defeatedTrainers.includes('giovanni_silph')) {
       return true;
     }
@@ -620,7 +626,11 @@ export class OverworldScene extends Phaser.Scene {
         // If the blocked tile has a warp, trigger it (handles tree-bordered exits)
         const warp = this.currentMap.warps.find(w => w.x === newX && w.y === newY);
         if (warp) {
-          soundSystem.doorOpen();
+          if (this.currentMap.tiles[this.playerGridY]?.[this.playerGridX] === TileType.TELEPORT_PAD) {
+            soundSystem.teleportWarp();
+          } else {
+            soundSystem.doorOpen();
+          }
           this.warpTo(warp.targetMap, warp.targetX, warp.targetY);
           return;
         }
@@ -634,6 +644,9 @@ export class OverworldScene extends Phaser.Scene {
       this.isSurfing = false;
       this.player.setTexture('player', 0);
       this.player.play(`player_idle_${this.playerDirection}`, true);
+      if (this.pikachuVisible) {
+        this.pikachu.setTexture('pikachu_follower', 0);
+      }
       // Restore map music
       const musicId = getMusicForMap(this.currentMap);
       if (musicId) soundSystem.startMusic(musicId);
@@ -689,7 +702,11 @@ export class OverworldScene extends Phaser.Scene {
             this.triggerRivalLabBattle();
             return;
           }
-          soundSystem.doorOpen();
+          if (this.currentMap.tiles[newY]?.[newX] === TileType.TELEPORT_PAD) {
+            soundSystem.teleportWarp();
+          } else {
+            soundSystem.doorOpen();
+          }
           this.warpTo(warp.targetMap, warp.targetX, warp.targetY);
           return;
         }
@@ -752,7 +769,11 @@ export class OverworldScene extends Phaser.Scene {
 
         const warp = this.currentMap.warps.find(w => w.x === landX && w.y === landY);
         if (warp) {
-          soundSystem.doorOpen();
+          if (this.currentMap.tiles[landY]?.[landX] === TileType.TELEPORT_PAD) {
+            soundSystem.teleportWarp();
+          } else {
+            soundSystem.doorOpen();
+          }
           this.warpTo(warp.targetMap, warp.targetX, warp.targetY);
           return;
         }
@@ -769,7 +790,11 @@ export class OverworldScene extends Phaser.Scene {
     this.pikachuGridY = targetY;
     this.pikachuDirection = dir;
 
-    this.pikachu.play(`pikachu_walk_${dir}`, true);
+    if (this.isSurfing) {
+      this.pikachu.play(`pikachu_surf_${dir}`, true);
+    } else {
+      this.pikachu.play(`pikachu_walk_${dir}`, true);
+    }
 
     this.tweens.add({
       targets: this.pikachu,
@@ -777,7 +802,11 @@ export class OverworldScene extends Phaser.Scene {
       y: targetY * TILE_SIZE + TILE_SIZE / 2,
       duration: MOVE_DURATION,
       onComplete: () => {
-        this.pikachu.play(`pikachu_idle_${this.pikachuDirection}`, true);
+        if (this.isSurfing) {
+          this.pikachu.play(`pikachu_surf_${this.pikachuDirection}`, true);
+        } else {
+          this.pikachu.play(`pikachu_idle_${this.pikachuDirection}`, true);
+        }
       },
     });
   }
@@ -841,7 +870,11 @@ export class OverworldScene extends Phaser.Scene {
           this.isMoving = false;
           this.playerDirection = dir;
           this.player.play(`player_idle_${this.playerDirection}`, true);
-          soundSystem.doorOpen();
+          if (this.currentMap.tiles[nextY]?.[nextX] === TileType.TELEPORT_PAD) {
+            soundSystem.teleportWarp();
+          } else {
+            soundSystem.doorOpen();
+          }
           this.warpTo(warp.targetMap, warp.targetX, warp.targetY);
           return;
         }
@@ -936,6 +969,10 @@ export class OverworldScene extends Phaser.Scene {
         this.isSurfing = true;
         this.player.setTexture('player_surf', 0);
         this.player.play(`surf_${this.playerDirection}`, true);
+        if (this.pikachuVisible) {
+          this.pikachu.setTexture('pikachu_surf', 0);
+          this.pikachu.play(`pikachu_surf_${this.pikachuDirection}`, true);
+        }
         soundSystem.startMusic('surf');
       } else {
         this.textBox.show([
@@ -986,7 +1023,7 @@ export class OverworldScene extends Phaser.Scene {
     }
 
     // Silph Co: locked after completion
-    if (mapId === 'silph_co' && this.playerState.storyFlags['silph_co_complete']) {
+    if (mapId.startsWith('silph_co_') && this.playerState.storyFlags['silph_co_complete']) {
       this.textBox.show([
         "SILPH CO. has resumed\nnormal operations.",
         "Thank you for saving\nus!",
@@ -1091,7 +1128,10 @@ export class OverworldScene extends Phaser.Scene {
       for (let i = 1; i < distance; i++) {
         const checkX = npc.x + vec.x * i;
         const checkY = npc.y + vec.y * i;
-        if (this.currentMap.collision[checkY]?.[checkX]) {
+        const tileBlocked = this.currentMap.collision[checkY]?.[checkX];
+        // Water tiles are not obstacles when surfing
+        const isWater = this.currentMap.tiles[checkY]?.[checkX] === TileType.WATER;
+        if (tileBlocked && !(this.isSurfing && isWater)) {
           blocked = true;
           break;
         }
@@ -2889,6 +2929,10 @@ export class OverworldScene extends Phaser.Scene {
       this.isSurfing = true;
       this.player.setTexture('player_surf', 0);
       this.player.play(`surf_${this.playerDirection}`, true);
+      if (this.pikachuVisible) {
+        this.pikachu.setTexture('pikachu_surf', 0);
+        this.pikachu.play(`pikachu_surf_${this.pikachuDirection}`, true);
+      }
       soundSystem.startMusic('surf');
     });
     return true;

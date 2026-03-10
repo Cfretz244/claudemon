@@ -61,7 +61,7 @@ export const ROUTE19: MapData = (() => {
           "Don't let it sweep\nyou away!",
         ],
         isTrainer: true,
-        sightRange: 3,
+        sightRange: 5,
       },
       {
         id: 'route19_swimmer2',
@@ -73,7 +73,7 @@ export const ROUTE19: MapData = (() => {
           "Think you can\nbeat me?",
         ],
         isTrainer: true,
-        sightRange: 3,
+        sightRange: 5,
       },
     ],
     wildEncounters: {
@@ -137,7 +137,7 @@ export const ROUTE20: MapData = (() => {
           'You should check\nit out!',
         ],
         isTrainer: true,
-        sightRange: 3,
+        sightRange: 5,
       },
       {
         id: 'route20_swimmer2',
@@ -149,7 +149,7 @@ export const ROUTE20: MapData = (() => {
           "Let's battle before\nyou go!",
         ],
         isTrainer: true,
-        sightRange: 3,
+        sightRange: 5,
       },
       {
         id: 'route20_swimmer3',
@@ -161,7 +161,7 @@ export const ROUTE20: MapData = (() => {
           "It's so refreshing!",
         ],
         isTrainer: true,
-        sightRange: 3,
+        sightRange: 5,
       },
     ],
     wildEncounters: {
@@ -272,7 +272,7 @@ export const SEAFOAM_ISLANDS: MapData = (() => {
           'make this cave\ntreacherous!',
         ],
         isTrainer: true,
-        sightRange: 3,
+        sightRange: 5,
       },
     ],
     wildEncounters: {
@@ -715,7 +715,7 @@ export const ROUTE21: MapData = (() => {
           'to CINNABAR ISLAND!',
         ],
         isTrainer: true,
-        sightRange: 3,
+        sightRange: 5,
       },
       {
         id: 'route21_swimmer2',
@@ -727,7 +727,7 @@ export const ROUTE21: MapData = (() => {
           "BLAINE's GYM is\ntough!",
         ],
         isTrainer: true,
-        sightRange: 3,
+        sightRange: 5,
       },
     ],
     wildEncounters: {

@@ -893,7 +893,7 @@ export const SAFFRON_CITY: MapData = (() => {
       // Pokemart door
       { x: 24, y: 22, targetMap: 'pokemart_saffron', targetX: 3, targetY: 7 },
       // Silph Co door
-      { x: 15, y: 10, targetMap: 'silph_co', targetX: 7, targetY: 14 },
+      { x: 15, y: 10, targetMap: 'silph_co_1f', targetX: 7, targetY: 12 },
       // Fighting Dojo
       { x: 25, y: 9, targetMap: 'fighting_dojo', targetX: 4, targetY: 9 },
     ],
@@ -1625,136 +1625,7 @@ const ROCKET_HIDEOUT_B4F: MapData = (() => {
 
 // ─── SILPH CO. ──────────────────────────────────────────────────────────────
 
-const SILPH_CO: MapData = (() => {
-  const W = 15, H = 16;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
-
-  // Walls: top 2 rows, sides
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
-  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
-
-  // Office partitions
-  fillRect(5, 4, 1, 4, T.WALL);
-  fillRect(9, 4, 1, 4, T.WALL);
-  fillRect(3, 10, 9, 1, T.WALL);
-  // Gaps in partitions
-  setTile(5, 6, T.INDOOR_FLOOR);
-  setTile(9, 6, T.INDOOR_FLOOR);
-  setTile(7, 10, T.INDOOR_FLOOR);
-
-  // Desks
-  setTile(3, 2, T.COUNTER);
-  setTile(4, 2, T.COUNTER);
-  setTile(10, 2, T.COUNTER);
-  setTile(11, 2, T.COUNTER);
-
-  // President's desk (top center)
-  setTile(7, 2, T.COUNTER);
-
-  // Carpet paths
-  fillRect(6, 11, 3, 4, T.CARPET);
-
-  return {
-    id: 'silph_co',
-    name: 'SILPH CO.',
-    width: W, height: H,
-    tiles, collision,
-    warps: [
-      { x: 7, y: 15, targetMap: 'saffron_city', targetX: 15, targetY: 11 },
-    ],
-    npcs: [
-      {
-        id: 'silph_rocket1',
-        x: 3, y: 6,
-        spriteColor: 0x383838,
-        direction: Direction.RIGHT,
-        dialogue: ['ROCKET: SILPH CO. is\nunder our control!'],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'silph_rocket2',
-        x: 11, y: 8,
-        spriteColor: 0x383838,
-        direction: Direction.LEFT,
-        dialogue: ['ROCKET: No one gets\npast me!'],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'rival_silph',
-        x: 7, y: 7,
-        spriteColor: 0x6080c0,
-        direction: Direction.DOWN,
-        dialogue: [
-          "{RIVAL}: {PLAYER}!\nWhat a surprise!",
-          "TEAM ROCKET is all\nover SILPH CO.!",
-          "But first, let's\nhave a battle!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'giovanni_silph',
-        x: 7, y: 3,
-        spriteColor: 0x604020,
-        direction: Direction.DOWN,
-        dialogue: [
-          "GIOVANNI: We meet\nagain, child!",
-          "You have interfered\nwith TEAM ROCKET\nfor the last time!",
-          "Prepare to feel my\nwrath!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      // Jessie & James - in the lower office area
-      {
-        id: 'jessie_silph',
-        x: 11, y: 12,
-        spriteColor: 0xd02070,
-        direction: Direction.LEFT,
-        dialogue: [
-          'JESSIE & JAMES: Well,\nwell, well...',
-          "If it isn't the\ntwerp who keeps\nruining our plans!",
-          'Prepare for trouble,\nfor the very last time!',
-          'And make it double,\nthis will be sublime!',
-          "MEOWTH: The boss\nwon't be happy if we\nlose again!",
-          "Then let's not lose!\nGo, ARBOK! Go, WEEZING!",
-        ],
-        isTrainer: true,
-        sightRange: 4,
-      },
-      {
-        id: 'james_silph',
-        x: 12, y: 12,
-        spriteColor: 0x6060d0,
-        direction: Direction.LEFT,
-        dialogue: [
-          "JAMES: This is our\nbiggest operation yet!",
-          "SILPH CO. will soon\nbelong to TEAM ROCKET!",
-        ],
-      },
-      {
-        id: 'silph_president',
-        x: 8, y: 2,
-        spriteColor: 0xc0a060,
-        direction: Direction.DOWN,
-        dialogue: [
-          "PRESIDENT: Thank\ngoodness you're here!",
-          "TEAM ROCKET has taken\nover our company!",
-          "Please, defeat their\nboss!",
-        ],
-      },
-    ],
-  };
-})();
+// SILPH CO. maps moved to maps_silph.ts
 
 // ─── DIGLETT'S CAVE ─────────────────────────────────────────────────────────
 
@@ -1947,7 +1818,6 @@ export const CENTRAL_MAPS: Record<string, MapData> = {
   rocket_hideout_b2f: ROCKET_HIDEOUT_B2F,
   rocket_hideout_b3f: ROCKET_HIDEOUT_B3F,
   rocket_hideout_b4f: ROCKET_HIDEOUT_B4F,
-  silph_co: SILPH_CO,
   digletts_cave: DIGLETTS_CAVE,
   lavender_house: LAVENDER_HOUSE,
   celadon_mansion: CELADON_MANSION,

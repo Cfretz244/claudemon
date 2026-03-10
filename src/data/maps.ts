@@ -5,6 +5,7 @@ import { VERMILION_MAPS } from './maps_vermilion';
 import { CENTRAL_MAPS } from './maps_central';
 import { SOUTH_MAPS } from './maps_south';
 import { ENDGAME_MAPS } from './maps_endgame';
+import { SILPH_MAPS } from './maps_silph';
 
 const T = TileType;
 
@@ -1815,4 +1816,5 @@ export const ALL_MAPS: Record<string, MapData> = {
   ...CENTRAL_MAPS,
   ...SOUTH_MAPS,
   ...ENDGAME_MAPS,
+  ...SILPH_MAPS,
 };

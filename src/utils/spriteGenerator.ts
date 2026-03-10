@@ -253,6 +253,26 @@ export function generateTileset(scene: Phaser.Scene): void {
       ctx.fillRect(5, 5, 6, 2);
       ctx.fillRect(6, 4, 4, 2);
     },
+    [TileType.TELEPORT_PAD]: (ctx) => {
+      // Cyan/blue glowing teleport pad on indoor floor
+      ctx.fillStyle = '#f8f0d0';
+      ctx.fillRect(0, 0, 16, 16);
+      // Outer pad ring
+      ctx.fillStyle = '#2080b0';
+      ctx.fillRect(2, 2, 12, 12);
+      // Inner pad
+      ctx.fillStyle = '#40c0e0';
+      ctx.fillRect(4, 4, 8, 8);
+      // Bright center glow
+      ctx.fillStyle = '#80e0ff';
+      ctx.fillRect(6, 6, 4, 4);
+      // Corner accents
+      ctx.fillStyle = '#106090';
+      ctx.fillRect(2, 2, 2, 2);
+      ctx.fillRect(12, 2, 2, 2);
+      ctx.fillRect(2, 12, 2, 2);
+      ctx.fillRect(12, 12, 2, 2);
+    },
   };
 
   // Generate individual tile textures
@@ -757,6 +777,138 @@ export function generatePikachuFollowerSprite(scene: Phaser.Scene): void {
   });
 
   addCanvasSpriteSheet(scene, 'pikachu_follower', canvas, TILE_SIZE, TILE_SIZE);
+}
+
+export function generatePikachuSurfSprite(scene: Phaser.Scene): void {
+  // Surfing Pikachu! Standing on a surfboard riding waves
+  const canvas = document.createElement('canvas');
+  canvas.width = TILE_SIZE * 4;  // 4 directions
+  canvas.height = TILE_SIZE * 2;  // 2 frames per direction
+  const ctx = canvas.getContext('2d')!;
+
+  const directions = ['down', 'up', 'left', 'right'];
+  directions.forEach((dir, dirIndex) => {
+    for (let frame = 0; frame < 2; frame++) {
+      ctx.save();
+      ctx.translate(dirIndex * TILE_SIZE, frame * TILE_SIZE);
+
+      // Water/wave base
+      ctx.fillStyle = '#58a8f8';
+      ctx.fillRect(1, 11, 14, 5);
+      ctx.fillStyle = '#78c0f8';
+      ctx.fillRect(2, 12, 12, 3);
+      // Animated wave crests
+      ctx.fillStyle = '#3890f8';
+      const wo = frame * 3;
+      ctx.fillRect(1 + wo, 14, 3, 1);
+      ctx.fillRect(9 - wo, 15, 4, 1);
+      // White foam
+      ctx.fillStyle = '#f0f8ff';
+      ctx.fillRect(2 + wo, 11, 2, 1);
+      ctx.fillRect(10 - wo, 11, 2, 1);
+
+      // Surfboard
+      ctx.fillStyle = '#e85820';  // Orange-red board
+      if (dir === 'left' || dir === 'right') {
+        // Side view: longer, thinner
+        ctx.fillRect(2, 9, 12, 2);
+        ctx.fillRect(1, 10, 14, 1);
+        // Stripe
+        ctx.fillStyle = '#f8d030';
+        ctx.fillRect(4, 9, 8, 1);
+      } else {
+        // Front/back view: shorter, wider
+        ctx.fillRect(3, 9, 10, 2);
+        ctx.fillRect(2, 10, 12, 1);
+        // Stripe
+        ctx.fillStyle = '#f8d030';
+        ctx.fillRect(5, 9, 6, 1);
+      }
+
+      // Pikachu standing on the board
+      // Body (shifted up to stand on board)
+      ctx.fillStyle = '#f8d030';
+      ctx.fillRect(5, 3, 6, 6);
+      ctx.fillRect(4, 5, 8, 4);
+
+      // Ears
+      ctx.fillStyle = '#f8d030';
+      if (dir === 'left') {
+        ctx.fillRect(5, 0, 2, 4);
+        ctx.fillRect(9, 0, 2, 4);
+        // Black ear tips
+        ctx.fillStyle = '#302020';
+        ctx.fillRect(5, 0, 2, 1);
+        ctx.fillRect(9, 0, 2, 1);
+      } else if (dir === 'right') {
+        ctx.fillRect(5, 0, 2, 4);
+        ctx.fillRect(9, 0, 2, 4);
+        ctx.fillStyle = '#302020';
+        ctx.fillRect(5, 0, 2, 1);
+        ctx.fillRect(9, 0, 2, 1);
+      } else {
+        ctx.fillRect(4, 0, 2, 4);
+        ctx.fillRect(10, 0, 2, 4);
+        ctx.fillStyle = '#302020';
+        ctx.fillRect(4, 0, 2, 1);
+        ctx.fillRect(10, 0, 2, 1);
+      }
+
+      // Direction-aware face
+      if (dir === 'down') {
+        // Red cheeks
+        ctx.fillStyle = '#e03030';
+        ctx.fillRect(4, 6, 2, 2);
+        ctx.fillRect(10, 6, 2, 2);
+        // Eyes - happy squint
+        ctx.fillStyle = '#302020';
+        ctx.fillRect(6, 4, 2, 1);
+        ctx.fillRect(8, 4, 2, 1);
+        // Smile
+        ctx.fillRect(7, 7, 2, 1);
+      } else if (dir === 'up') {
+        // Back of head - no face features
+        // Ear backs visible
+        ctx.fillStyle = '#d8b828';
+        ctx.fillRect(5, 3, 6, 2);
+      } else if (dir === 'left') {
+        ctx.fillStyle = '#e03030';
+        ctx.fillRect(4, 6, 2, 2);
+        ctx.fillStyle = '#302020';
+        ctx.fillRect(5, 4, 2, 2);
+      } else { // right
+        ctx.fillStyle = '#e03030';
+        ctx.fillRect(10, 6, 2, 2);
+        ctx.fillStyle = '#302020';
+        ctx.fillRect(9, 4, 2, 2);
+      }
+
+      // Tail - lightning bolt shape, raised triumphantly
+      ctx.fillStyle = '#c0a020';
+      if (dir === 'up' || dir === 'down') {
+        // Tail sticking up behind
+        ctx.fillRect(7, 0, 2, 2);
+        ctx.fillRect(8, 1, 2, 2);
+      } else if (dir === 'left') {
+        // Tail to the right, raised
+        ctx.fillRect(11, 2, 3, 2);
+        ctx.fillRect(13, 1, 2, 2);
+      } else {
+        // Tail to the left, raised
+        ctx.fillRect(2, 2, 3, 2);
+        ctx.fillRect(1, 1, 2, 2);
+      }
+
+      // Feet on board
+      ctx.fillStyle = '#c0a020';
+      ctx.fillRect(5, 9, 2, 1);
+      ctx.fillRect(9, 9, 2, 1);
+
+      ctx.restore();
+    }
+  });
+
+  addCanvasSpriteSheet(scene, 'pikachu_surf', canvas, TILE_SIZE, TILE_SIZE);
 }
 
 export function generatePokeballSprite(scene: Phaser.Scene): void {

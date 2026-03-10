@@ -2517,7 +2517,13 @@ const MAP_MUSIC: Record<string, string> = {
   rocket_hideout_b2f: 'rocket_hideout',
   rocket_hideout_b3f: 'rocket_hideout',
   rocket_hideout_b4f: 'rocket_hideout',
-  silph_co: 'rocket_hideout',
+  silph_co_1f: 'rocket_hideout',
+  silph_co_2f: 'rocket_hideout',
+  silph_co_3f: 'rocket_hideout',
+  silph_co_4f: 'rocket_hideout',
+  silph_co_5f: 'rocket_hideout',
+  silph_co_6f: 'rocket_hideout',
+  silph_co_7f: 'rocket_hideout',
 };
 
 /**
