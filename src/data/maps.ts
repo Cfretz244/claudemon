@@ -796,7 +796,7 @@ export const ROUTE2: MapData = (() => {
       // Oak's Aide house door
       { x: 15, y: 17, targetMap: 'oaks_aide_house', targetX: 3, targetY: 6 },
       // Diglett's Cave entrance door
-      { x: 15, y: 24, targetMap: 'digletts_cave', targetX: 6, targetY: 1 },
+      { x: 15, y: 24, targetMap: 'digletts_cave', targetX: 6, targetY: 2 },
     ],
     npcs: [],
     wildEncounters: {

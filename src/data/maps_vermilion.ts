@@ -246,14 +246,16 @@ export const VERMILION_CITY: MapData = (() => {
   fillRect(4, 5, 5, 4, T.BUILDING);
   setTile(6, 9, T.DOOR);
 
-  // SS Anne dock building (far right, lower)
-  fillRect(20, 18, 6, 4, T.BUILDING);
-  setTile(23, 22, T.DOOR);
+  // SS Anne pier - path from road south to dock
+  fillRect(22, 14, 2, 8, T.PATH);
 
   // Harbor water along southern edge
   fillRect(2, 22, 26, 3, T.WATER);
-  // Re-place the dock door on top of water area
-  setTile(23, 22, T.DOOR);
+  // SS Anne pier extends over water
+  fillRect(22, 22, 2, 2, T.PATH);
+  // SS Anne boarding point at end of pier
+  setTile(22, 24, T.DOOR);
+  setTile(23, 24, T.DOOR);
 
   // CUT trees blocking path to gym
   setTile(5, 14, T.CUT_TREE);
@@ -281,16 +283,17 @@ export const VERMILION_CITY: MapData = (() => {
       { x: 11, y: 1, targetMap: 'route6', targetX: 9, targetY: 18 },
       { x: 12, y: 1, targetMap: 'route6', targetX: 9, targetY: 18 },
       // East exit -> Route 11
-      { x: 29, y: 12, targetMap: 'route11', targetX: 1, targetY: 5 },
-      { x: 29, y: 13, targetMap: 'route11', targetX: 1, targetY: 5 },
+      { x: 28, y: 12, targetMap: 'route11', targetX: 2, targetY: 5 },
+      { x: 28, y: 13, targetMap: 'route11', targetX: 2, targetY: 5 },
       // Gym door
       { x: 7, y: 20, targetMap: 'vermilion_gym', targetX: 4, targetY: 13 },
       // Pokemon Center
       { x: 18, y: 9, targetMap: 'pokemon_center_vermilion', targetX: 4, targetY: 7 },
       // Pokemart door
       { x: 6, y: 9, targetMap: 'pokemart_vermilion', targetX: 3, targetY: 7 },
-      // SS Anne dock
-      { x: 23, y: 22, targetMap: 'ss_anne', targetX: 5, targetY: 1 },
+      // SS Anne pier
+      { x: 22, y: 24, targetMap: 'ss_anne', targetX: 5, targetY: 10 },
+      { x: 23, y: 24, targetMap: 'ss_anne', targetX: 5, targetY: 10 },
     ],
     npcs: [
       {
@@ -305,9 +308,9 @@ export const VERMILION_CITY: MapData = (() => {
       },
       {
         id: 'vermilion_sailor',
-        x: 22, y: 17,
+        x: 21, y: 14,
         spriteColor: 0x4060b0,
-        direction: Direction.DOWN,
+        direction: Direction.RIGHT,
         dialogue: [
           "SAILOR: The S.S. ANNE\nis docked at the port!",
           "You need a ticket to\nget on board, though.",
@@ -947,8 +950,8 @@ export const SS_ANNE: MapData = (() => {
     tiles,
     collision,
     warps: [
-      // Exit back to Vermilion dock
-      { x: 5, y: 11, targetMap: 'vermilion_city', targetX: 23, targetY: 21 },
+      // Exit back to Vermilion pier
+      { x: 5, y: 11, targetMap: 'vermilion_city', targetX: 22, targetY: 23 },
     ],
     npcs: [
       {

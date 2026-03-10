@@ -2497,6 +2497,7 @@ const MAP_MUSIC: Record<string, string> = {
   mt_moon_b1f: 'cave',
   mt_moon_b2f: 'cave',
   rock_tunnel: 'cave',
+  digletts_cave: 'cave',
   seafoam_islands: 'cave',
   victory_road: 'cave',
   cerulean_cave: 'cave',

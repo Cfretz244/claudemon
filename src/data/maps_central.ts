@@ -508,8 +508,8 @@ export const ROUTE11: MapData = (() => {
     collision,
     warps: [
       // West entrance → Vermilion City
-      { x: 0, y: 4, targetMap: 'vermilion_city', targetX: 28, targetY: 12 },
-      { x: 0, y: 5, targetMap: 'vermilion_city', targetX: 28, targetY: 13 },
+      { x: 0, y: 4, targetMap: 'vermilion_city', targetX: 27, targetY: 12 },
+      { x: 0, y: 5, targetMap: 'vermilion_city', targetX: 27, targetY: 13 },
       // Diglett's Cave entrance
       { x: 22, y: 4, targetMap: 'digletts_cave', targetX: 6, targetY: 18 },
     ],
