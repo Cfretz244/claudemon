@@ -36,6 +36,7 @@ interface SceneData {
   introTransition?: boolean;
   teleportLanding?: boolean;
   isSurfing?: boolean;
+  flashUsed?: boolean;
 }
 
 export class OverworldScene extends Phaser.Scene {
@@ -125,6 +126,7 @@ export class OverworldScene extends Phaser.Scene {
     this.introTransition = data.introTransition || false;
     this.teleportLanding = data.teleportLanding || false;
     this.isSurfing = data.isSurfing || false;
+    this.flashUsed = data.flashUsed || false;
     let mapId = data.mapId || 'pallet_town';
     // Legacy save migration: game_corner_basement → game_corner
     if (mapId === 'game_corner_basement') {
@@ -980,6 +982,7 @@ export class OverworldScene extends Phaser.Scene {
         playerY: targetY,
         saveData: this.playerState.toSave(),
         isSurfing: this.isSurfing,
+        flashUsed: this.flashUsed,
       } as SceneData);
     });
   }
@@ -1006,6 +1009,7 @@ export class OverworldScene extends Phaser.Scene {
         returnY: 6,
         eliteFourQueue: queue,
         hallOfFame: false,
+        flashUsed: this.flashUsed,
       });
     }, () => {
       soundSystem.startMusic('elite_four');
@@ -1232,6 +1236,7 @@ export class OverworldScene extends Phaser.Scene {
             returnX: this.playerGridX,
             returnY: this.playerGridY,
             isSurfing: this.isSurfing,
+            flashUsed: this.flashUsed,
           });
         }, () => {
           soundSystem.startMusic('wild_battle');
@@ -1277,6 +1282,7 @@ export class OverworldScene extends Phaser.Scene {
         returnX: this.playerGridX,
         returnY: this.playerGridY,
         isSurfing: this.isSurfing,
+        flashUsed: this.flashUsed,
       });
     }, () => {
       soundSystem.startMusic('trainer_battle');
@@ -1915,6 +1921,7 @@ export class OverworldScene extends Phaser.Scene {
                 returnX: this.playerGridX,
                 returnY: this.playerGridY,
                 isSurfing: this.isSurfing,
+                flashUsed: this.flashUsed,
               });
             }, () => {
               soundSystem.startMusic('wild_battle');
@@ -2499,6 +2506,7 @@ export class OverworldScene extends Phaser.Scene {
         returnX: this.playerGridX,
         returnY: this.playerGridY,
         isSurfing: this.isSurfing,
+        flashUsed: this.flashUsed,
       });
     }, () => {
       const track = npc.id in GYM_LEADERS ? 'gym_leader_battle' : 'trainer_battle';
@@ -3246,7 +3254,8 @@ export class OverworldScene extends Phaser.Scene {
 
   private setupDarkOverlay(): void {
     if (!this.currentMap.isDark) return;
-    this.flashUsed = false;
+    // flashUsed is preserved from scene data (survives battle round-trips)
+    // but resets when entering the cave fresh (no flashUsed in warp data)
 
     this.darkOverlay = this.add.graphics();
     this.darkOverlay.setDepth(850);

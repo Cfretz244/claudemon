@@ -346,6 +346,30 @@ export function generateTileset(scene: Phaser.Scene): void {
       ctx.fillRect(1, 4, 1, 9);
       ctx.fillRect(14, 4, 1, 9);
     },
+    [TileType.CAVE_ENTRANCE]: (ctx) => {
+      // Rocky mountain base with dark cave opening
+      ctx.fillStyle = '#706050';
+      ctx.fillRect(0, 0, 16, 16);
+      // Rocky texture stripes (same as CAVE_WALL)
+      ctx.fillStyle = '#605040';
+      ctx.fillRect(0, 0, 16, 2);
+      ctx.fillRect(0, 8, 16, 2);
+      ctx.fillStyle = '#807060';
+      ctx.fillRect(4, 4, 4, 4);
+      // Dark cave opening — arched shape
+      ctx.fillStyle = '#1a1410';
+      ctx.fillRect(3, 4, 10, 12);
+      ctx.fillStyle = '#100c08';
+      ctx.fillRect(4, 5, 8, 11);
+      // Arch top (rounded)
+      ctx.fillStyle = '#1a1410';
+      ctx.fillRect(5, 3, 6, 2);
+      ctx.fillStyle = '#100c08';
+      ctx.fillRect(6, 4, 4, 1);
+      // Subtle ground at bottom of opening
+      ctx.fillStyle = '#302820';
+      ctx.fillRect(4, 14, 8, 2);
+    },
   };
 
   // Generate individual tile textures
