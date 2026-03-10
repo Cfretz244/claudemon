@@ -2411,6 +2411,7 @@ const MAP_MUSIC: Record<string, string> = {
   pokemart_cerulean: 'pokemon_center',
   pokemon_center_vermilion: 'pokemon_center',
   pokemart_vermilion: 'pokemon_center',
+  pokemon_fan_club: 'pokemon_center',
   pokemon_center_route10: 'pokemon_center',
   pokemon_center_lavender: 'pokemon_center',
   pokemart_lavender: 'pokemon_center',

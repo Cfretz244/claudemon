@@ -282,6 +282,11 @@ export const VERMILION_CITY: MapData = (() => {
   setTile(5, 14, T.CUT_TREE);
   setTile(6, 14, T.CUT_TREE);
 
+  // Pokemon Fan Club (east side, upper)
+  fillRect(22, 5, 5, 1, T.ROOF);
+  fillRect(22, 6, 5, 3, T.BUILDING);
+  setTile(24, 8, T.DOOR);
+
   // Flowers
   setTile(14, 6, T.FLOWER);
   setTile(15, 6, T.FLOWER);
@@ -291,6 +296,7 @@ export const VERMILION_CITY: MapData = (() => {
 
   // Signs
   setTile(9, 12, T.SIGN);
+  setTile(23, 9, T.SIGN); // Fan Club sign
 
   return {
     id: 'vermilion_city',
@@ -312,6 +318,8 @@ export const VERMILION_CITY: MapData = (() => {
       { x: 18, y: 8, targetMap: 'pokemon_center_vermilion', targetX: 4, targetY: 7 },
       // Pokemart door
       { x: 6, y: 8, targetMap: 'pokemart_vermilion', targetX: 3, targetY: 7 },
+      // Pokemon Fan Club
+      { x: 24, y: 8, targetMap: 'pokemon_fan_club', targetX: 3, targetY: 7 },
       // SS Anne pier
       { x: 22, y: 24, targetMap: 'ss_anne', targetX: 10, targetY: 12 },
       { x: 23, y: 24, targetMap: 'ss_anne', targetX: 10, targetY: 12 },
@@ -347,6 +355,16 @@ export const VERMILION_CITY: MapData = (() => {
           "He's an expert on\nELECTRIC-type POKeMON!",
           "Watch out for his\nRAICHU!",
         ],
+      },
+      {
+        id: 'vermilion_fan_club_sign',
+        x: 23, y: 9,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [
+          'POKeMON FAN CLUB',
+        ],
+        isSign: true,
       },
       // Officer Jenny - gives Squirtle after Thunder Badge
       {
@@ -1737,6 +1755,72 @@ export const SS_ANNE_DECK: MapData = (() => {
   };
 })();
 
+// ---------------------------------------------------------------------------
+// POKEMON FAN CLUB -- chairman gives BIKE VOUCHER (indoor, 8x8)
+// ---------------------------------------------------------------------------
+export const POKEMON_FAN_CLUB: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+
+  // Walls
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+
+  // Table / counter for the chairman
+  setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
+
+  // Carpet runner
+  setTile(3, 4, T.CARPET); setTile(3, 5, T.CARPET); setTile(3, 6, T.CARPET);
+
+  // Entrance mat
+  setTile(3, H - 1, T.DOORMAT);
+
+  return {
+    id: 'pokemon_fan_club',
+    name: 'POKeMON FAN CLUB',
+    width: W, height: H,
+    tiles, collision,
+    warps: [
+      { x: 3, y: H - 1, targetMap: 'vermilion_city', targetX: 24, targetY: 9 },
+    ],
+    npcs: [
+      {
+        id: 'fan_club_chairman',
+        x: 2, y: 2,
+        spriteColor: 0xc0a060,
+        direction: Direction.DOWN,
+        dialogue: [
+          "CHAIRMAN: Welcome to\nthe POKeMON FAN CLUB!",
+          "I'm the chairman!\nLet me tell you about\nmy darling RAPIDASH!",
+        ],
+      },
+      {
+        id: 'fan_club_member1',
+        x: 5, y: 4,
+        spriteColor: 0x60a060,
+        direction: Direction.LEFT,
+        dialogue: [
+          "I love EEVEE!\nIt's so cute!",
+        ],
+      },
+      {
+        id: 'fan_club_member2',
+        x: 5, y: 6,
+        spriteColor: 0xe06080,
+        direction: Direction.UP,
+        dialogue: [
+          "My PIKACHU is the\nbest in the world!",
+        ],
+      },
+    ],
+  };
+})();
+
 export const VERMILION_MAPS: Record<string, MapData> = {
   route5: ROUTE5,
   route6: ROUTE6,
@@ -1744,6 +1828,7 @@ export const VERMILION_MAPS: Record<string, MapData> = {
   vermilion_gym: VERMILION_GYM,
   pokemon_center_vermilion: POKEMON_CENTER_VERMILION,
   pokemart_vermilion: POKEMART_VERMILION,
+  pokemon_fan_club: POKEMON_FAN_CLUB,
   route9: ROUTE9,
   route10: ROUTE10,
   rock_tunnel: ROCK_TUNNEL,

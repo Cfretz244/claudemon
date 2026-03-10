@@ -36,6 +36,7 @@ interface SceneData {
   introTransition?: boolean;
   teleportLanding?: boolean;
   isSurfing?: boolean;
+  isRidingBike?: boolean;
   flashUsed?: boolean;
 }
 
@@ -107,6 +108,7 @@ export class OverworldScene extends Phaser.Scene {
 
   // HM field states
   private isSurfing = false;
+  private isRidingBike = false;
   private darkOverlay: Phaser.GameObjects.Graphics | null = null;
   private flashUsed = false;
 
@@ -126,6 +128,7 @@ export class OverworldScene extends Phaser.Scene {
     this.introTransition = data.introTransition || false;
     this.teleportLanding = data.teleportLanding || false;
     this.isSurfing = data.isSurfing || false;
+    this.isRidingBike = data.isRidingBike || false;
     this.flashUsed = data.flashUsed || false;
     let mapId = data.mapId || 'pallet_town';
     // Legacy save migration: game_corner_basement → game_corner
@@ -218,6 +221,10 @@ export class OverworldScene extends Phaser.Scene {
       this.player.setTexture('player_surf', 0);
       this.player.play(`surf_${this.playerDirection}`, true);
       soundSystem.startMusic('surf');
+    } else if (this.isRidingBike) {
+      this.player.setTexture('player_bike', 0);
+      this.player.play(`bike_idle_${this.playerDirection}`, true);
+      soundSystem.startMusic('bicycle');
     }
 
     // Pikachu follower - starts hidden on player tile, appears after first step
@@ -227,7 +234,7 @@ export class OverworldScene extends Phaser.Scene {
     this.pikachu = this.add.sprite(
       this.pikachuGridX * TILE_SIZE + TILE_SIZE / 2,
       this.pikachuGridY * TILE_SIZE + TILE_SIZE / 2,
-      this.isSurfing ? 'pikachu_surf' : 'pikachu_follower',
+      this.isSurfing ? 'pikachu_surf' : this.isRidingBike ? 'pikachu_bike' : 'pikachu_follower',
       0
     );
     this.pikachu.setDepth(9);
@@ -316,20 +323,24 @@ export class OverworldScene extends Phaser.Scene {
     });
   }
 
-  private isOutdoorMap(): boolean {
-    const map = this.currentMap;
-    const outdoorTiles = new Set([
-      TileType.TREE, TileType.GRASS, TileType.TALL_GRASS,
-      TileType.WATER, TileType.SAND, TileType.FLOWER,
-      TileType.BUILDING, TileType.FENCE, TileType.ROOF,
-    ]);
+  private static readonly OUTDOOR_TILES = new Set([
+    TileType.TREE, TileType.GRASS, TileType.TALL_GRASS,
+    TileType.WATER, TileType.SAND, TileType.FLOWER,
+    TileType.BUILDING, TileType.FENCE, TileType.ROOF,
+  ]);
+
+  private isMapOutdoor(map: { width: number; height: number; tiles: number[][] }): boolean {
     // Check top and bottom edges for outdoor tile types
     for (const y of [0, map.height - 1]) {
       for (let x = 0; x < map.width; x++) {
-        if (outdoorTiles.has(map.tiles[y][x])) return true;
+        if (OverworldScene.OUTDOOR_TILES.has(map.tiles[y][x])) return true;
       }
     }
     return false;
+  }
+
+  private isOutdoorMap(): boolean {
+    return this.isMapOutdoor(this.currentMap);
   }
 
   private isCaveMap(): boolean {
@@ -473,7 +484,7 @@ export class OverworldScene extends Phaser.Scene {
         this.lastDir = dir;
         this.dirHeldFrames = 0;
         this.playerDirection = dir;
-        this.player.play(this.isSurfing ? `surf_${dir}` : `player_idle_${dir}`, true);
+        this.player.play(this.isSurfing ? `surf_${dir}` : this.isRidingBike ? `bike_idle_${dir}` : `player_idle_${dir}`, true);
       } else if (dir === this.playerDirection) {
         // Already facing this way — walk immediately (no delay on continuation)
         this.tryMove(dir);
@@ -487,7 +498,7 @@ export class OverworldScene extends Phaser.Scene {
     } else {
       this.lastDir = null;
       this.dirHeldFrames = 0;
-      this.player.play(this.isSurfing ? `surf_${this.playerDirection}` : `player_idle_${this.playerDirection}`, true);
+      this.player.play(this.isSurfing ? `surf_${this.playerDirection}` : this.isRidingBike ? `bike_idle_${this.playerDirection}` : `player_idle_${this.playerDirection}`, true);
     }
   }
 
@@ -582,20 +593,25 @@ export class OverworldScene extends Phaser.Scene {
 
     if (this.isSurfing) {
       this.player.play(`surf_${dir}`, true);
+    } else if (this.isRidingBike) {
+      this.player.play(`bike_walk_${dir}`, true);
     } else {
       this.player.play(`player_walk_${dir}`, true);
     }
 
+    const moveDuration = this.isRidingBike ? Math.floor(MOVE_DURATION * 0.5) : MOVE_DURATION;
     this.tweens.add({
       targets: this.player,
       x: newX * TILE_SIZE + TILE_SIZE / 2,
       y: newY * TILE_SIZE + TILE_SIZE / 2,
-      duration: MOVE_DURATION,
+      duration: moveDuration,
       onComplete: () => {
         this.isMoving = false;
         this.tickWalkHappiness();
         if (this.isSurfing) {
           this.player.play(`surf_${this.playerDirection}`, true);
+        } else if (this.isRidingBike) {
+          this.player.play(`bike_idle_${this.playerDirection}`, true);
         } else {
           this.player.play(`player_idle_${this.playerDirection}`, true);
         }
@@ -650,7 +666,7 @@ export class OverworldScene extends Phaser.Scene {
     const prevY = this.playerGridY;
     this.playerGridX = landX;
     this.playerGridY = landY;
-    this.player.play(`player_walk_${dir}`, true);
+    this.player.play(this.isRidingBike ? `bike_walk_${dir}` : `player_walk_${dir}`, true);
     soundSystem.bump();
 
     const startPixelX = this.player.x;
@@ -662,7 +678,7 @@ export class OverworldScene extends Phaser.Scene {
     this.tweens.add({
       targets: hopData,
       progress: 1,
-      duration: MOVE_DURATION * 2,
+      duration: this.isRidingBike ? MOVE_DURATION : MOVE_DURATION * 2,
       onUpdate: () => {
         const p = hopData.progress;
         this.player.x = startPixelX + (endPixelX - startPixelX) * p;
@@ -673,7 +689,7 @@ export class OverworldScene extends Phaser.Scene {
         this.isMoving = false;
         this.player.x = endPixelX;
         this.player.y = endPixelY;
-        this.player.play(`player_idle_${this.playerDirection}`, true);
+        this.player.play(this.isRidingBike ? `bike_idle_${this.playerDirection}` : `player_idle_${this.playerDirection}`, true);
 
         if (this.pikachuVisible) {
           if (!this.pikachu.visible) this.pikachu.setVisible(true);
@@ -705,6 +721,8 @@ export class OverworldScene extends Phaser.Scene {
 
     if (this.isSurfing) {
       this.pikachu.play(`pikachu_surf_${dir}`, true);
+    } else if (this.isRidingBike) {
+      this.pikachu.play(`pikachu_bike_walk_${dir}`, true);
     } else {
       this.pikachu.play(`pikachu_walk_${dir}`, true);
     }
@@ -713,10 +731,12 @@ export class OverworldScene extends Phaser.Scene {
       targets: this.pikachu,
       x: targetX * TILE_SIZE + TILE_SIZE / 2,
       y: targetY * TILE_SIZE + TILE_SIZE / 2,
-      duration: MOVE_DURATION,
+      duration: this.isRidingBike ? Math.floor(MOVE_DURATION * 0.5) : MOVE_DURATION,
       onComplete: () => {
         if (this.isSurfing) {
           this.pikachu.play(`pikachu_surf_${this.pikachuDirection}`, true);
+        } else if (this.isRidingBike) {
+          this.pikachu.play(`pikachu_bike_idle_${this.pikachuDirection}`, true);
         } else {
           this.pikachu.play(`pikachu_idle_${this.pikachuDirection}`, true);
         }
@@ -954,6 +974,19 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
+    // Cycling Road: need bicycle to enter Route 16/17
+    if ((mapId === 'route16' || mapId === 'route17') && !this.playerState.hasItem('bicycle')) {
+      this.textBox.show([
+        "You can't go onto\nCYCLING ROAD without\na BICYCLE!",
+      ]);
+      return;
+    }
+
+    // Auto-mount bike when entering Cycling Road
+    if ((mapId === 'route16' || mapId === 'route17') && this.playerState.hasItem('bicycle') && !this.isRidingBike) {
+      this.isRidingBike = true;
+    }
+
     // Special Elite Four trigger
     if (mapId === 'elite_four') {
       if (this.playerState.badges.length < 8) {
@@ -974,6 +1007,11 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
+    // Auto-dismount bike when entering indoor maps
+    if (this.isRidingBike && !this.isMapOutdoor(map)) {
+      this.isRidingBike = false;
+    }
+
     this.isWarping = true;
 
     // Fade out and in
@@ -986,6 +1024,7 @@ export class OverworldScene extends Phaser.Scene {
         playerY: targetY,
         saveData: this.playerState.toSave(),
         isSurfing: this.isSurfing,
+        isRidingBike: this.isRidingBike,
         flashUsed: this.flashUsed,
       } as SceneData);
     });
@@ -1148,7 +1187,7 @@ export class OverworldScene extends Phaser.Scene {
           [Direction.RIGHT]: Direction.LEFT,
         };
         this.playerDirection = oppositeDir[npc.direction];
-        this.player.play(this.isSurfing ? `surf_${this.playerDirection}` : `player_idle_${this.playerDirection}`, true);
+        this.player.play(this.isSurfing ? `surf_${this.playerDirection}` : this.isRidingBike ? `bike_idle_${this.playerDirection}` : `player_idle_${this.playerDirection}`, true);
         this.isWarping = false; // Allow dialogue input
         this.interactWithNPC(npc);
         return;
@@ -1249,6 +1288,7 @@ export class OverworldScene extends Phaser.Scene {
             returnX: this.playerGridX,
             returnY: this.playerGridY,
             isSurfing: this.isSurfing,
+            isRidingBike: this.isRidingBike,
             flashUsed: this.flashUsed,
           });
         }, () => {
@@ -1295,6 +1335,7 @@ export class OverworldScene extends Phaser.Scene {
         returnX: this.playerGridX,
         returnY: this.playerGridY,
         isSurfing: this.isSurfing,
+        isRidingBike: this.isRidingBike,
         flashUsed: this.flashUsed,
       });
     }, () => {
@@ -1934,6 +1975,7 @@ export class OverworldScene extends Phaser.Scene {
                 returnX: this.playerGridX,
                 returnY: this.playerGridY,
                 isSurfing: this.isSurfing,
+                isRidingBike: this.isRidingBike,
                 flashUsed: this.flashUsed,
               });
             }, () => {
@@ -1998,6 +2040,56 @@ export class OverworldScene extends Phaser.Scene {
         "He loves a good cup\nof TEA!",
       ]);
       return;
+    }
+
+    // Pokemon Fan Club Chairman gives Bike Voucher
+    if (npc.id === 'fan_club_chairman') {
+      if (!this.playerState.storyFlags['got_bike_voucher']) {
+        this.textBox.show(
+          [
+            "CHAIRMAN: Welcome to\nthe POKeMON FAN CLUB!",
+            "I'm the chairman!\nLet me tell you about\nmy darling RAPIDASH!",
+            "It gallops at\n150 mph! Isn't that\namazing?!",
+            "...Oh, you listened\nto my story!",
+            "Here, take this\nBIKE VOUCHER as\nmy thanks!",
+            `${this.playerState.name} received\nBIKE VOUCHER!`,
+          ],
+          () => {
+            this.playerState.addItem('bike_voucher');
+            this.playerState.storyFlags['got_bike_voucher'] = true;
+          }
+        );
+        return;
+      }
+      this.textBox.show([
+        "CHAIRMAN: Did you get\na BICYCLE yet?",
+        "Take the voucher to\nthe BIKE SHOP in\nCERULEAN CITY!",
+      ]);
+      return;
+    }
+
+    // Bike Shop Owner redeems Bike Voucher for Bicycle
+    if (npc.id === 'bike_shop_owner') {
+      if (this.playerState.hasItem('bicycle')) {
+        this.textBox.show(["How's that BICYCLE\nworking out for you?"]);
+        return;
+      }
+      if (this.playerState.hasItem('bike_voucher')) {
+        this.textBox.show(
+          [
+            "Oh! You have a\nBIKE VOUCHER!",
+            "Here you go!\nEnjoy your new\nBICYCLE!",
+            `${this.playerState.name} received\nBICYCLE!`,
+          ],
+          () => {
+            this.playerState.useItem('bike_voucher');
+            this.playerState.addItem('bicycle');
+            this.playerState.storyFlags['got_bicycle'] = true;
+          }
+        );
+        return;
+      }
+      // Fall through to default dialogue from NPC data
     }
 
     // Oak's Aide on Route 2 gives HM05 Flash
@@ -2519,6 +2611,7 @@ export class OverworldScene extends Phaser.Scene {
         returnX: this.playerGridX,
         returnY: this.playerGridY,
         isSurfing: this.isSurfing,
+        isRidingBike: this.isRidingBike,
         flashUsed: this.flashUsed,
       });
     }, () => {
@@ -2711,9 +2804,13 @@ export class OverworldScene extends Phaser.Scene {
       this.screenOpen = false;
       this.playTeleportAnimation();
     } : undefined;
+    const bicycleCb = this.canRideBike() || this.isRidingBike ? () => {
+      this.screenOpen = false;
+      this.toggleBicycle();
+    } : undefined;
     this.bagScreen.show(this.playerState, () => {
       this.screenOpen = false;
-    }, escapeRopeCb);
+    }, escapeRopeCb, bicycleCb);
   }
 
   private showTrainerCard(): void {
@@ -2989,9 +3086,43 @@ export class OverworldScene extends Phaser.Scene {
     saveData.playerX = this.playerGridX;
     saveData.playerY = this.playerGridY;
     saveData.isSurfing = this.isSurfing;
+    saveData.isRidingBike = this.isRidingBike;
     SaveSystem.save(saveData);
     soundSystem.save();
     this.textBox.show([`${this.playerState.name} saved\nthe game!`]);
+  }
+
+  // Bicycle helpers
+  private canRideBike(): boolean {
+    return this.isOutdoorMap() && !this.isSurfing && !this.isCaveMap();
+  }
+
+  private toggleBicycle(): void {
+    if (this.isRidingBike) {
+      // Dismount
+      this.isRidingBike = false;
+      this.player.setTexture('player', 0);
+      this.player.play(`player_idle_${this.playerDirection}`, true);
+      if (this.pikachuVisible) {
+        this.pikachu.setTexture('pikachu_follower', 0);
+        this.pikachu.play(`pikachu_idle_${this.pikachuDirection}`, true);
+      }
+      const musicId = getMusicForMap(this.currentMap);
+      if (musicId) soundSystem.startMusic(musicId);
+    } else {
+      if (!this.canRideBike()) {
+        this.textBox.show(["Can't use that here!"]);
+        return;
+      }
+      this.isRidingBike = true;
+      this.player.setTexture('player_bike', 0);
+      this.player.play(`bike_idle_${this.playerDirection}`, true);
+      if (this.pikachuVisible) {
+        this.pikachu.setTexture('pikachu_bike', 0);
+        this.pikachu.play(`pikachu_bike_idle_${this.pikachuDirection}`, true);
+      }
+      soundSystem.startMusic('bicycle');
+    }
   }
 
   // HM field helpers

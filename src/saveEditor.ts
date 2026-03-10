@@ -241,7 +241,7 @@ const PRESETS: Preset[] = [
       save.party = [pika, createPokemon(1, 22, save.playerName), createPokemon(7, 22, save.playerName)];
       save.badges = ['BOULDER', 'CASCADE'];
       save.money = 8000;
-      save.bag = { poke_ball: 15, great_ball: 5, super_potion: 5, hm01_cut: 1, ss_ticket: 1 };
+      save.bag = { poke_ball: 15, great_ball: 5, super_potion: 5, hm01_cut: 1, ss_ticket: 1, bicycle: 1 };
     },
   },
   {
@@ -255,6 +255,7 @@ const PRESETS: Preset[] = [
         intro_complete: true, has_pikachu: true, has_pokedex: true, rival_battle_lab: true,
         delivered_parcel: true, brock_cleared: true, misty_cleared: true, lt_surge_cleared: true,
         bill_helped: true, got_hm01: true, got_hm05: true, ss_anne_departed: true, got_fossil: true,
+        got_bike_voucher: true, got_bicycle: true,
       };
       save.party = [
         createPokemon(25, 30, save.playerName),
@@ -264,7 +265,7 @@ const PRESETS: Preset[] = [
       ];
       save.badges = ['BOULDER', 'CASCADE', 'THUNDER'];
       save.money = 10000;
-      save.bag = { great_ball: 15, super_potion: 10, revive: 3, hm01_cut: 1, hm05_flash: 1, escape_rope: 5 };
+      save.bag = { great_ball: 15, super_potion: 10, revive: 3, hm01_cut: 1, hm05_flash: 1, escape_rope: 5, bicycle: 1 };
     },
   },
   {
@@ -289,7 +290,7 @@ const PRESETS: Preset[] = [
       ];
       save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW'];
       save.money = 18000;
-      save.bag = { great_ball: 20, ultra_ball: 5, super_potion: 10, hyper_potion: 5, revive: 3, hm01_cut: 1, hm02_fly: 1, hm05_flash: 1, escape_rope: 5 };
+      save.bag = { great_ball: 20, ultra_ball: 5, super_potion: 10, hyper_potion: 5, revive: 3, hm01_cut: 1, hm02_fly: 1, hm05_flash: 1, escape_rope: 5, bicycle: 1 };
     },
   },
   {
@@ -317,7 +318,7 @@ const PRESETS: Preset[] = [
       ];
       save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW', 'SOUL'];
       save.money = 25000;
-      save.bag = { great_ball: 15, ultra_ball: 10, hyper_potion: 10, revive: 5, master_ball: 1, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, escape_rope: 5 };
+      save.bag = { great_ball: 15, ultra_ball: 10, hyper_potion: 10, revive: 5, master_ball: 1, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, escape_rope: 5, bicycle: 1 };
     },
   },
   {
@@ -347,7 +348,7 @@ const PRESETS: Preset[] = [
       ];
       save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW', 'SOUL', 'MARSH'];
       save.money = 35000;
-      save.bag = { ultra_ball: 20, hyper_potion: 10, max_potion: 5, full_restore: 3, revive: 5, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, escape_rope: 5 };
+      save.bag = { ultra_ball: 20, hyper_potion: 10, max_potion: 5, full_restore: 3, revive: 5, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, escape_rope: 5, bicycle: 1 };
     },
   },
   {
@@ -378,7 +379,7 @@ const PRESETS: Preset[] = [
       ];
       save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW', 'SOUL', 'MARSH', 'VOLCANO'];
       save.money = 40000;
-      save.bag = { ultra_ball: 25, max_potion: 15, full_restore: 5, revive: 10, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1 };
+      save.bag = { ultra_ball: 25, max_potion: 15, full_restore: 5, revive: 10, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, bicycle: 1 };
     },
   },
   {
@@ -408,7 +409,7 @@ const PRESETS: Preset[] = [
       ];
       save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW', 'SOUL', 'MARSH', 'VOLCANO', 'EARTH'];
       save.money = 50000;
-      save.bag = { ultra_ball: 30, master_ball: 1, max_potion: 20, full_restore: 10, revive: 10, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1 };
+      save.bag = { ultra_ball: 30, master_ball: 1, max_potion: 20, full_restore: 10, revive: 10, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, bicycle: 1 };
     },
   },
   {

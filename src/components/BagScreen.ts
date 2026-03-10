@@ -15,6 +15,7 @@ export class BagScreen {
   private visible = false;
   private onClose: (() => void) | null = null;
   private onEscapeRope: (() => void) | null = null;
+  private onBicycle: (() => void) | null = null;
 
   // State
   private playerState!: PlayerState;
@@ -184,10 +185,11 @@ export class BagScreen {
     this.container.setVisible(false);
   }
 
-  show(playerState: PlayerState, onClose: () => void, onEscapeRope?: () => void): void {
+  show(playerState: PlayerState, onClose: () => void, onEscapeRope?: () => void, onBicycle?: () => void): void {
     this.playerState = playerState;
     this.onClose = onClose;
     this.onEscapeRope = onEscapeRope || null;
+    this.onBicycle = onBicycle || null;
     this.mode = 'list';
     this.cursorIndex = 0;
     this.scrollOffset = 0;
@@ -342,6 +344,20 @@ export class BagScreen {
   private tryUseItem(): void {
     const item = this.itemList[this.cursorIndex];
     const itemData = ITEMS[item.id];
+
+    // Bicycle: toggle riding
+    if (item.id === 'bicycle') {
+      if (this.onBicycle) {
+        this.hide();
+        if (this.onClose) this.onClose();
+        this.onBicycle();
+      } else {
+        this.mode = 'list';
+        this.optionsContainer.setVisible(false);
+        this.showMessage("Can't use that here!");
+      }
+      return;
+    }
 
     // Escape Rope: delegate to overworld
     if (item.id === 'escape_rope') {

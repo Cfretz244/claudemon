@@ -43,6 +43,7 @@ interface BattleSceneData {
   eliteFourQueue?: Array<{ trainerId: string; trainerName: string }>;
   hallOfFame?: boolean;
   isSurfing?: boolean;
+  isRidingBike?: boolean;
   flashUsed?: boolean;
 }
 
@@ -61,6 +62,7 @@ export class BattleScene extends Phaser.Scene {
   private eliteFourQueue: Array<{ trainerId: string; trainerName: string }> = [];
   private hallOfFame = false;
   private isSurfing = false;
+  private isRidingBike = false;
   private flashUsed = false;
 
   // Sprites
@@ -113,6 +115,7 @@ export class BattleScene extends Phaser.Scene {
     this.eliteFourQueue = data.eliteFourQueue || [];
     this.hallOfFame = data.hallOfFame || false;
     this.isSurfing = data.isSurfing || false;
+    this.isRidingBike = data.isRidingBike || false;
     this.flashUsed = data.flashUsed || false;
 
     if (data.type === 'wild') {
@@ -1725,6 +1728,7 @@ export class BattleScene extends Phaser.Scene {
         playerY: this.returnY,
         saveData: this.playerState.toSave(),
         isSurfing: this.isSurfing,
+        isRidingBike: this.isRidingBike,
         flashUsed: this.flashUsed,
       });
     });
