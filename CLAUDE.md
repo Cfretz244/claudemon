@@ -6,16 +6,28 @@
 npm run dev      # Start dev server (Vite HMR)
 npm run build    # Type-check + production build
 npx tsc --noEmit # Type-check only (fast)
+npm test         # Run tests (vitest)
+npm run test:coverage  # Tests + coverage report
 npm run preview  # Preview production build
 ```
 
-No test framework is configured. Verify changes with `npx tsc --noEmit`.
+Verify changes with `npx tsc --noEmit` and `npm test`.
+
+## Workflow
+
+**All changes go through pull requests.** The `main` branch is protected:
+- Direct pushes to `main` are blocked (including admins)
+- The `test` CI job must pass before merging (type-check + all tests)
+- Auto-merge is enabled — once checks pass, approved PRs merge automatically
+
+Create a branch, push, open a PR with `gh pr create`, and let CI validate.
 
 ## Tech Stack
 
 - **Phaser 3** game framework (v3.90+)
 - **TypeScript** with strict mode (ES2020 target)
 - **Vite** bundler (v7.3+) with 5 entry points: game (`index.html`), sprite viewer (`sprites.html`), sound tester (`sounds.html`), Pokedex (`pokedex.html`), save editor (`editor.html`)
+- **Vitest** test framework with V8 coverage
 - No external asset files - all sprites/sounds generated programmatically at runtime
 
 ## Architecture
@@ -81,6 +93,8 @@ src/
     Player.ts                       # PlayerState class (party, bag, badges, storyFlags)
     Pokemon.ts                      # createPokemon() factory, stat calculation
     NPC.ts                          # NPC type definitions
+  logic/
+    npcVisibility.ts                # shouldSkipNPC() — pure function for NPC show/hide logic
   components/
     TextBox.ts                      # Typewriter text display
     BattleHUD.ts                    # HP bars, battle info
@@ -127,7 +141,28 @@ src/
     batch01_starters.ts             # Sprite data batches (01-10), organized by Pokedex order
     ...batch10_legends.ts
     pokemon/                        # 151 individual hand-drawn Pokemon sprite files
+tests/
+  helpers/
+    pokemon.factory.ts              # Shared fixtures (createTestPokemon, mockPokemon, mockMove)
+  systems/                          # Tests for battle math, AI, catch, encounter, evolution, exp, save
+  entities/                         # Tests for Pokemon stat calc, Player state management
+  data/                             # Data integrity tests (pokemon, moves, trainers, maps)
+  logic/                            # Tests for shouldSkipNPC story visibility logic
 ```
+
+## Testing
+
+187 tests across 16 files covering all pure-logic systems. Run with `npm test`.
+
+- **Battle math**: TypeChart, DamageCalculator, BattleEngine
+- **Game systems**: ExperienceSystem, EvolutionSystem, CatchSystem, EncounterSystem, AISystem
+- **State & persistence**: Player, SaveSystem
+- **Data integrity**: All 151 Pokemon, moves, trainers, and maps validated for consistency
+- **Story logic**: `shouldSkipNPC` (extracted to `src/logic/npcVisibility.ts`)
+
+Tests use `mockPokemon()` and `mockMove()` from `tests/helpers/pokemon.factory.ts` for deterministic test data. Mock `Math.random` with `vi.spyOn` when testing randomized systems.
+
+Coverage is scoped to `src/systems/`, `src/entities/`, `src/data/`, and `src/logic/`. Run `npm run test:coverage` for a full report.
 
 ## Map System
 
@@ -222,7 +257,7 @@ When all party Pokemon faint, the player is sent to `playerState.lastHealMap` at
 
 The game follows Pokemon Yellow's story structure using `playerState.storyFlags` (a `Record<string, boolean>`) and conditional NPC logic:
 
-- **`shouldSkipNPC()`**: Controls NPC visibility based on story flags (e.g., Snorlax disappears after caught, Giovanni disappears after defeated)
+- **`shouldSkipNPC()`**: Controls NPC visibility based on story flags (extracted to `src/logic/npcVisibility.ts`, called from OverworldScene)
 - **`interactWithNPC()`**: Special handlers for story NPCs (Oak, Bill, SS Anne Captain, Mr. Fuji, Giovanni, badge check gates, etc.)
 - **`checkTrainerSight()`**: Respects `shouldSkipNPC()` so invisible NPCs don't trigger battles
 - **Warp gates**: SS Anne requires `ss_ticket`, Viridian Gym requires `giovanni_silph` flag, etc.
