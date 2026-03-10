@@ -33,6 +33,7 @@ interface SceneData {
   saveData?: SaveData;
   introTransition?: boolean;
   teleportLanding?: boolean;
+  isSurfing?: boolean;
 }
 
 export class OverworldScene extends Phaser.Scene {
@@ -114,6 +115,7 @@ export class OverworldScene extends Phaser.Scene {
     this.isMoving = false;
     this.introTransition = data.introTransition || false;
     this.teleportLanding = data.teleportLanding || false;
+    this.isSurfing = data.isSurfing || false;
     let mapId = data.mapId || 'pallet_town';
     // Legacy save migration: game_corner_basement → game_corner
     if (mapId === 'game_corner_basement') {
@@ -190,6 +192,12 @@ export class OverworldScene extends Phaser.Scene {
       0
     );
     this.player.setDepth(10);
+
+    if (this.isSurfing) {
+      this.player.setTexture('player_surf', 0);
+      this.player.play(`surf_${this.playerDirection}`, true);
+      soundSystem.startMusic('surf');
+    }
 
     // Pikachu follower - starts hidden on player tile, appears after first step
     this.pikachuVisible = this.playerState.party.some(p => p.speciesId === 25);
@@ -547,7 +555,7 @@ export class OverworldScene extends Phaser.Scene {
         this.lastDir = dir;
         this.dirHeldFrames = 0;
         this.playerDirection = dir;
-        this.player.play(`player_idle_${dir}`, true);
+        this.player.play(this.isSurfing ? `surf_${dir}` : `player_idle_${dir}`, true);
       } else if (dir === this.playerDirection) {
         // Already facing this way — walk immediately (no delay on continuation)
         this.tryMove(dir);
@@ -561,7 +569,7 @@ export class OverworldScene extends Phaser.Scene {
     } else {
       this.lastDir = null;
       this.dirHeldFrames = 0;
-      this.player.play(`player_idle_${this.playerDirection}`, true);
+      this.player.play(this.isSurfing ? `surf_${this.playerDirection}` : `player_idle_${this.playerDirection}`, true);
     }
   }
 
@@ -1017,6 +1025,7 @@ export class OverworldScene extends Phaser.Scene {
         playerX: targetX,
         playerY: targetY,
         saveData: this.playerState.toSave(),
+        isSurfing: this.isSurfing,
       } as SceneData);
     });
   }
@@ -1174,7 +1183,7 @@ export class OverworldScene extends Phaser.Scene {
           [Direction.RIGHT]: Direction.LEFT,
         };
         this.playerDirection = oppositeDir[npc.direction];
-        this.player.play(`player_idle_${this.playerDirection}`, true);
+        this.player.play(this.isSurfing ? `surf_${this.playerDirection}` : `player_idle_${this.playerDirection}`, true);
         this.isWarping = false; // Allow dialogue input
         this.interactWithNPC(npc);
         return;
@@ -1196,7 +1205,7 @@ export class OverworldScene extends Phaser.Scene {
             [Direction.RIGHT]: Direction.LEFT,
           };
           this.playerDirection = oppositeDir[npc.direction];
-          this.player.play(`player_idle_${this.playerDirection}`, true);
+          this.player.play(this.isSurfing ? `surf_${this.playerDirection}` : `player_idle_${this.playerDirection}`, true);
           this.isWarping = false; // Allow dialogue input
           this.interactWithNPC(npc);
           return;
@@ -1265,6 +1274,7 @@ export class OverworldScene extends Phaser.Scene {
             returnMap: this.currentMap.id,
             returnX: this.playerGridX,
             returnY: this.playerGridY,
+            isSurfing: this.isSurfing,
           });
         }, () => {
           soundSystem.startMusic('wild_battle');
@@ -1309,6 +1319,7 @@ export class OverworldScene extends Phaser.Scene {
         returnMap: this.currentMap.id,
         returnX: this.playerGridX,
         returnY: this.playerGridY,
+        isSurfing: this.isSurfing,
       });
     }, () => {
       soundSystem.startMusic('trainer_battle');
@@ -1923,6 +1934,7 @@ export class OverworldScene extends Phaser.Scene {
                 returnMap: this.currentMap.id,
                 returnX: this.playerGridX,
                 returnY: this.playerGridY,
+                isSurfing: this.isSurfing,
               });
             }, () => {
               soundSystem.startMusic('wild_battle');
@@ -2348,6 +2360,7 @@ export class OverworldScene extends Phaser.Scene {
         returnMap: this.currentMap.id,
         returnX: this.playerGridX,
         returnY: this.playerGridY,
+        isSurfing: this.isSurfing,
       });
     }, () => {
       const track = npc.id in GYM_LEADERS ? 'gym_leader_battle' : 'trainer_battle';
@@ -2498,11 +2511,15 @@ export class OverworldScene extends Phaser.Scene {
         }
         break;
       case 57: { // SURF
-        const vec = DIR_VECTORS[this.playerDirection];
-        const tx = this.playerGridX + vec.x;
-        const ty = this.playerGridY + vec.y;
-        if (!this.handleSurf(tx, ty)) {
-          this.textBox.show(["You can't SURF here!"]);
+        if (!this.playerState.badges.includes('SOUL')) {
+          this.textBox.show(["You need the SOUL\nBADGE to use SURF!"]);
+        } else {
+          const vec = DIR_VECTORS[this.playerDirection];
+          const tx = this.playerGridX + vec.x;
+          const ty = this.playerGridY + vec.y;
+          if (!this.handleSurf(tx, ty)) {
+            this.textBox.show(["You can't SURF here!"]);
+          }
         }
         break;
       }
@@ -2811,6 +2828,7 @@ export class OverworldScene extends Phaser.Scene {
     saveData.currentMap = this.currentMap.id;
     saveData.playerX = this.playerGridX;
     saveData.playerY = this.playerGridY;
+    saveData.isSurfing = this.isSurfing;
     SaveSystem.save(saveData);
     soundSystem.save();
     this.textBox.show([`${this.playerState.name} saved\nthe game!`]);

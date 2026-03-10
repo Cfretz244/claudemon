@@ -42,6 +42,7 @@ interface BattleSceneData {
   // Elite Four chain support
   eliteFourQueue?: Array<{ trainerId: string; trainerName: string }>;
   hallOfFame?: boolean;
+  isSurfing?: boolean;
 }
 
 export class BattleScene extends Phaser.Scene {
@@ -58,6 +59,7 @@ export class BattleScene extends Phaser.Scene {
   private returnY!: number;
   private eliteFourQueue: Array<{ trainerId: string; trainerName: string }> = [];
   private hallOfFame = false;
+  private isSurfing = false;
 
   // Sprites
   private playerSprite!: Phaser.GameObjects.Sprite;
@@ -108,6 +110,7 @@ export class BattleScene extends Phaser.Scene {
     this.trainerClass = data.trainerClass;
     this.eliteFourQueue = data.eliteFourQueue || [];
     this.hallOfFame = data.hallOfFame || false;
+    this.isSurfing = data.isSurfing || false;
 
     if (data.type === 'wild') {
       this.battleType = BattleType.WILD;
@@ -1711,6 +1714,7 @@ export class BattleScene extends Phaser.Scene {
         playerX: this.returnX,
         playerY: this.returnY,
         saveData: this.playerState.toSave(),
+        isSurfing: this.isSurfing,
       });
     });
   }

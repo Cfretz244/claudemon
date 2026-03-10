@@ -18,7 +18,7 @@ const SOLID_TILES = new Set([
 export const ROUTE19: MapData = (() => {
   const W = 15, H = 20;
   const tiles = fill2D(W, H, T.WATER);
-  const collision = fill2D(W, H, false);
+  const collision = fill2D(W, H, true);
 
   function setTile(x: number, y: number, type: TileType) {
     if (x >= 0 && x < W && y >= 0 && y < H) {
@@ -31,14 +31,11 @@ export const ROUTE19: MapData = (() => {
     for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
   }
 
-  // Sand beach at top
+  // Sand beach at top (enter from Fuchsia City)
   fillRect(0, 0, 15, 4, T.SAND);
 
   // PATH through the sand area
   fillRect(5, 1, 5, 2, T.PATH);
-
-  // Walkable pier/bridge through water
-  fillRect(6, 4, 3, 16, T.PATH);
 
   return {
     id: 'route19',
@@ -96,7 +93,7 @@ export const ROUTE19: MapData = (() => {
 export const ROUTE20: MapData = (() => {
   const W = 30, H = 10;
   const tiles = fill2D(W, H, T.WATER);
-  const collision = fill2D(W, H, false);
+  const collision = fill2D(W, H, true);
 
   function setTile(x: number, y: number, type: TileType) {
     if (x >= 0 && x < W && y >= 0 && y < H) {
@@ -108,9 +105,6 @@ export const ROUTE20: MapData = (() => {
   function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
     for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
   }
-
-  // PATH bridge running east-west
-  fillRect(0, 4, 30, 2, T.PATH);
 
   // Small island in middle for Seafoam Islands entrance
   fillRect(12, 2, 5, 6, T.SAND);
@@ -680,7 +674,7 @@ export const POKEMON_CENTER_CINNABAR: MapData = (() => {
 export const ROUTE21: MapData = (() => {
   const W = 15, H = 25;
   const tiles = fill2D(W, H, T.WATER);
-  const collision = fill2D(W, H, false);
+  const collision = fill2D(W, H, true);
 
   function setTile(x: number, y: number, type: TileType) {
     if (x >= 0 && x < W && y >= 0 && y < H) {

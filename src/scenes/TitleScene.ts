@@ -327,6 +327,7 @@ export class TitleScene extends Phaser.Scene {
           playerX: save.playerX,
           playerY: save.playerY,
           saveData: save,
+          isSurfing: save.isSurfing,
         });
       }
     }

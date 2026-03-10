@@ -20,6 +20,7 @@ export interface SaveData {
   pokedexCaught: number[];
   storyFlags: Record<string, boolean>;
   playTime: number;
+  isSurfing?: boolean;
 }
 
 const SAVE_KEY = 'pokemon_yellow_save';

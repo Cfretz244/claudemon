@@ -1117,6 +1117,113 @@ export const TRAINERS: Record<string, TrainerData> = {
     },
   },
 
+  // Route 20 (Water route)
+  route20_swimmer1: {
+    id: 'route20_swimmer1',
+    name: 'SWIMMER BARRY',
+    class: 'Swimmer',
+    team: [
+      { speciesId: 116, level: 30 }, // Horsea
+      { speciesId: 117, level: 30 }, // Seadra
+    ],
+    prizeMoney: 600,
+    dialogue: {
+      before: ['SWIMMER: SEAFOAM\nISLANDS is nearby!'],
+      after: ['You beat me while\nswimming!'],
+    },
+  },
+  route20_swimmer2: {
+    id: 'route20_swimmer2',
+    name: 'SWIMMER GLENDA',
+    class: 'Swimmer',
+    team: [
+      { speciesId: 120, level: 30 }, // Staryu
+      { speciesId: 121, level: 30 }, // Starmie
+    ],
+    prizeMoney: 600,
+    dialogue: {
+      before: ["SWIMMER: CINNABAR\nISLAND isn't far!"],
+      after: ['I should have\ntrained more...'],
+    },
+  },
+  route20_swimmer3: {
+    id: 'route20_swimmer3',
+    name: 'SWIMMER DEAN',
+    class: 'Swimmer',
+    team: [
+      { speciesId: 72, level: 28 },  // Tentacool
+      { speciesId: 72, level: 28 },  // Tentacool
+      { speciesId: 73, level: 32 },  // Tentacruel
+    ],
+    prizeMoney: 640,
+    dialogue: {
+      before: ['SWIMMER: I love\nswimming in the sea!'],
+      after: ['The sea is vast...'],
+    },
+  },
+
+  // Route 21 (Water route)
+  route21_swimmer1: {
+    id: 'route21_swimmer1',
+    name: 'SWIMMER SPENCER',
+    class: 'Swimmer',
+    team: [
+      { speciesId: 86, level: 32 },  // Seel
+      { speciesId: 87, level: 32 },  // Dewgong
+    ],
+    prizeMoney: 640,
+    dialogue: {
+      before: ['SWIMMER: This route\nconnects PALLET TOWN'],
+      after: ['You swim well!'],
+    },
+  },
+  route21_swimmer2: {
+    id: 'route21_swimmer2',
+    name: 'SWIMMER JACK',
+    class: 'Swimmer',
+    team: [
+      { speciesId: 118, level: 30 }, // Goldeen
+      { speciesId: 119, level: 30 }, // Seaking
+      { speciesId: 130, level: 32 }, // Gyarados
+    ],
+    prizeMoney: 640,
+    dialogue: {
+      before: ["SWIMMER: You're going\nto CINNABAR?"],
+      after: ["BLAINE's GYM is\nno joke!"],
+    },
+  },
+
+  // Seafoam Islands
+  seafoam_trainer1: {
+    id: 'seafoam_trainer1',
+    name: 'HIKER WADE',
+    class: 'Hiker',
+    team: [
+      { speciesId: 75, level: 34 },  // Graveler
+      { speciesId: 95, level: 34 },  // Onix
+    ],
+    prizeMoney: 1224,
+    dialogue: {
+      before: ['HIKER: This cave is\nfreezing cold!'],
+      after: ['Brrrr... I need to\nget out of here!'],
+    },
+  },
+  seafoam_trainer2: {
+    id: 'seafoam_trainer2',
+    name: 'SWIMMER NORA',
+    class: 'Swimmer',
+    team: [
+      { speciesId: 86, level: 33 },  // Seel
+      { speciesId: 87, level: 33 },  // Dewgong
+      { speciesId: 131, level: 35 }, // Lapras
+    ],
+    prizeMoney: 700,
+    dialogue: {
+      before: ['SWIMMER: The\nunderground rivers'],
+      after: ['The ice POKeMON\nhere are amazing...'],
+    },
+  },
+
   // Cinnabar Gym
   cinnabar_gym_trainer1: {
     id: 'cinnabar_gym_trainer1',
