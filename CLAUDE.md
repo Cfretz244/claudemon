@@ -20,7 +20,7 @@ Verify changes with `npx tsc --noEmit` and `npm test`.
 - The `test` CI job must pass before merging (type-check + all tests)
 - Auto-merge is enabled — once checks pass, approved PRs merge automatically
 
-Create a branch, push, open a PR with `gh pr create`, and let CI validate.
+Create a branch, push, open a PR with `gh pr create`, and enable auto-merge with `gh pr merge --auto --squash`. Always enable auto-merge on PRs so they land as soon as CI passes.
 
 ## Tech Stack
 
