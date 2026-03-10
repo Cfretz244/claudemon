@@ -1211,6 +1211,15 @@ export class OverworldScene extends Phaser.Scene {
     const encounters = this.currentMap.wildEncounters;
     if (!encounters) return;
 
+    // Repel: decrement and block encounters while active
+    if (this.playerState.repelSteps > 0) {
+      this.playerState.repelSteps--;
+      if (this.playerState.repelSteps === 0) {
+        this.textBox.show(['REPEL\'s effect wore off!']);
+      }
+      return;
+    }
+
     // Minimum steps between encounters to prevent back-to-back fights
     const MIN_STEPS_BETWEEN = 4;
     if (this.stepCounter - this.lastEncounterStep < MIN_STEPS_BETWEEN) return;

@@ -19,6 +19,7 @@ export class PlayerState {
   lastHealMap: string;
   lastHealX: number;
   lastHealY: number;
+  repelSteps: number;
 
   constructor() {
     this.name = 'RED';
@@ -37,6 +38,7 @@ export class PlayerState {
     this.lastHealMap = 'player_house';
     this.lastHealX = 3;
     this.lastHealY = 5;
+    this.repelSteps = 0;
   }
 
   static fromSave(save: SaveData): PlayerState {
@@ -57,6 +59,7 @@ export class PlayerState {
     state.lastHealMap = save.lastHealMap || 'player_house';
     state.lastHealX = save.lastHealX ?? 3;
     state.lastHealY = save.lastHealY ?? 5;
+    state.repelSteps = save.repelSteps ?? 0;
     return state;
   }
 
@@ -81,6 +84,7 @@ export class PlayerState {
       lastHealMap: this.lastHealMap,
       lastHealX: this.lastHealX,
       lastHealY: this.lastHealY,
+      repelSteps: this.repelSteps,
     };
   }
 

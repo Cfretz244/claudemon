@@ -367,8 +367,8 @@ export const ROUTE7: MapData = (() => {
     collision,
     warps: [
       // West exit → Celadon City
-      { x: 0, y: 4, targetMap: 'celadon_city', targetX: 28, targetY: 12 },
-      { x: 0, y: 5, targetMap: 'celadon_city', targetX: 28, targetY: 13 },
+      { x: 0, y: 4, targetMap: 'celadon_city', targetX: 27, targetY: 12 },
+      { x: 0, y: 5, targetMap: 'celadon_city', targetX: 27, targetY: 13 },
       // East exit → Route 7 Gate (guard checks for Tea)
       { x: 19, y: 4, targetMap: 'route7_gate', targetX: 1, targetY: 2 },
       { x: 19, y: 5, targetMap: 'route7_gate', targetX: 1, targetY: 3 },
@@ -640,11 +640,14 @@ export const CELADON_CITY: MapData = (() => {
     collision,
     warps: [
       // East exit → Route 7
-      { x: 29, y: 12, targetMap: 'route7', targetX: 1, targetY: 4 },
-      { x: 29, y: 13, targetMap: 'route7', targetX: 1, targetY: 5 },
+      { x: 28, y: 12, targetMap: 'route7', targetX: 1, targetY: 4 },
+      { x: 28, y: 13, targetMap: 'route7', targetX: 1, targetY: 5 },
+      // West exit → Route 16 (Cycling Road)
+      { x: 1, y: 12, targetMap: 'route16', targetX: 12, targetY: 2 },
+      { x: 1, y: 13, targetMap: 'route16', targetX: 12, targetY: 3 },
       // South exit → Route 16 (Cycling Road)
-      { x: 14, y: 24, targetMap: 'route16', targetX: 9, targetY: 1 },
-      { x: 15, y: 24, targetMap: 'route16', targetX: 10, targetY: 1 },
+      { x: 14, y: 24, targetMap: 'route16', targetX: 7, targetY: 1 },
+      { x: 15, y: 24, targetMap: 'route16', targetX: 7, targetY: 2 },
       // Gym door
       { x: 6, y: 9, targetMap: 'celadon_gym', targetX: 4, targetY: 13 },
       // Pokemon Center door

@@ -21,6 +21,7 @@ export interface SaveData {
   storyFlags: Record<string, boolean>;
   playTime: number;
   isSurfing?: boolean;
+  repelSteps?: number;
 }
 
 const SAVE_KEY = 'pokemon_yellow_save';

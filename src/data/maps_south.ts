@@ -427,6 +427,12 @@ export const ROUTE16: MapData = (() => {
     setTile(9, y, T.FENCE);
   }
 
+  // Gap in east fence for Celadon City entrance
+  setTile(9, 2, T.PATH);
+  setTile(9, 3, T.PATH);
+  // Path connecting cycling road to east entrance
+  fillRect(9, 2, 4, 2, T.PATH);
+
   // Ledges on the cycling road (one-way jumps going south)
   fillRect(6, 6, 3, 1, T.LEDGE);
   fillRect(6, 12, 3, 1, T.LEDGE);
@@ -447,6 +453,9 @@ export const ROUTE16: MapData = (() => {
     warps: [
       // North entrance from Celadon City
       { x: 7, y: 0, targetMap: 'celadon_city', targetX: 14, targetY: 23 },
+      // East exit → Celadon City
+      { x: 13, y: 2, targetMap: 'celadon_city', targetX: 2, targetY: 12 },
+      { x: 13, y: 3, targetMap: 'celadon_city', targetX: 2, targetY: 13 },
       // South exit to Route 17
       { x: 7, y: 19, targetMap: 'route17', targetX: 7, targetY: 1 },
     ],
