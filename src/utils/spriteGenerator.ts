@@ -1056,6 +1056,110 @@ export function generatePikachuFollowerSprite(scene: Phaser.Scene): void {
   addCanvasSpriteSheet(scene, 'pikachu_follower', canvas, TILE_SIZE, TILE_SIZE);
 }
 
+export function generatePikachuBikeSprite(scene: Phaser.Scene): void {
+  // Pikachu riding its own tiny bicycle!
+  const canvas = document.createElement('canvas');
+  canvas.width = TILE_SIZE * 4;
+  canvas.height = TILE_SIZE * 2;
+  const ctx = canvas.getContext('2d')!;
+
+  function drawPikaBikeSide(ctx: CanvasRenderingContext2D, frame: number): void {
+    // Side view (facing left; caller flips for right)
+    ctx.fillStyle = '#6080c0';
+    ctx.fillRect(3, 9, 10, 1);  // Crossbar
+    ctx.fillRect(4, 7, 1, 3);   // Seat post
+    ctx.fillRect(11, 7, 1, 3);  // Handlebars
+    // Wheels
+    ctx.fillStyle = '#404060';
+    ctx.fillRect(2, 11, 3, 3);
+    ctx.fillRect(11, 11, 3, 3);
+    ctx.fillStyle = '#506080';
+    ctx.fillRect(3, 12, 1, 1);
+    ctx.fillRect(12, 12, 1, 1);
+    // Pedal
+    ctx.fillStyle = '#5070a0';
+    const po = frame * 2;
+    ctx.fillRect(6 + po, 10, 2, 2);
+    // Pikachu body on top (seated)
+    ctx.fillStyle = '#f8d030';
+    ctx.fillRect(5, 3, 6, 5);
+    ctx.fillRect(4, 5, 8, 3);
+    // Ears
+    ctx.fillStyle = '#f8d030';
+    ctx.fillRect(4, 0, 2, 4);
+    ctx.fillRect(10, 0, 2, 4);
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(4, 0, 2, 1);
+    ctx.fillRect(10, 0, 2, 1);
+    // Left-facing cheek + eye
+    ctx.fillStyle = '#e03030';
+    ctx.fillRect(4, 6, 2, 2);
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(5, 4, 2, 2);
+    // Tail (behind)
+    ctx.fillStyle = '#c0a020';
+    ctx.fillRect(12, 4, 4, 2);
+  }
+
+  function drawPikaBikeFront(ctx: CanvasRenderingContext2D, dir: string, frame: number): void {
+    // Front/back view
+    ctx.fillStyle = '#6080c0';
+    ctx.fillRect(5, 9, 6, 1);
+    ctx.fillRect(7, 7, 2, 3);
+    ctx.fillStyle = '#404060';
+    ctx.fillRect(6, 11, 4, 3);
+    ctx.fillStyle = '#506080';
+    ctx.fillRect(7, 12, 2, 1);
+    ctx.fillStyle = '#5070a0';
+    const po = frame * 2;
+    ctx.fillRect(4 + po, 10, 2, 2);
+    // Pikachu body
+    ctx.fillStyle = '#f8d030';
+    ctx.fillRect(5, 3, 6, 5);
+    ctx.fillRect(4, 5, 8, 3);
+    // Ears
+    ctx.fillStyle = '#f8d030';
+    ctx.fillRect(4, 0, 2, 4);
+    ctx.fillRect(10, 0, 2, 4);
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(4, 0, 2, 1);
+    ctx.fillRect(10, 0, 2, 1);
+    if (dir === 'down') {
+      ctx.fillStyle = '#e03030';
+      ctx.fillRect(4, 6, 2, 2);
+      ctx.fillRect(10, 6, 2, 2);
+      ctx.fillStyle = '#302020';
+      ctx.fillRect(6, 4, 1, 2);
+      ctx.fillRect(9, 4, 1, 2);
+    }
+    // Tail
+    ctx.fillStyle = '#c0a020';
+    ctx.fillRect(7, 0, 2, 3);
+  }
+
+  const directions = ['down', 'up', 'left', 'right'];
+  directions.forEach((dir, dirIndex) => {
+    for (let frame = 0; frame < 2; frame++) {
+      ctx.save();
+      ctx.translate(dirIndex * TILE_SIZE, frame * TILE_SIZE);
+
+      if (dir === 'right') {
+        ctx.translate(TILE_SIZE, 0);
+        ctx.scale(-1, 1);
+        drawPikaBikeSide(ctx, frame);
+      } else if (dir === 'left') {
+        drawPikaBikeSide(ctx, frame);
+      } else {
+        drawPikaBikeFront(ctx, dir, frame);
+      }
+
+      ctx.restore();
+    }
+  });
+
+  addCanvasSpriteSheet(scene, 'pikachu_bike', canvas, TILE_SIZE, TILE_SIZE);
+}
+
 export function generatePikachuSurfSprite(scene: Phaser.Scene): void {
   // Surfing Pikachu! Standing on a surfboard riding waves
   const canvas = document.createElement('canvas');
@@ -1296,6 +1400,92 @@ export function generateSurfSprite(scene: Phaser.Scene): void {
   });
 
   addCanvasSpriteSheet(scene, 'player_surf', canvas, TILE_SIZE, TILE_SIZE);
+}
+
+export function generateBikeSprite(scene: Phaser.Scene): void {
+  // Player riding a bicycle, 4 directions x 2 animation frames
+  const canvas = document.createElement('canvas');
+  canvas.width = TILE_SIZE * 4;
+  canvas.height = TILE_SIZE * 2;
+  const ctx = canvas.getContext('2d')!;
+
+  function drawBikeSide(ctx: CanvasRenderingContext2D, frame: number): void {
+    // Side view: frame + wheels (facing left; caller flips for right)
+    ctx.fillStyle = '#a0a0b0';
+    ctx.fillRect(2, 9, 12, 2);  // Crossbar
+    ctx.fillRect(3, 7, 2, 4);   // Seat post
+    ctx.fillRect(11, 6, 2, 5);  // Handlebars
+    // Wheels
+    ctx.fillStyle = '#505060';
+    ctx.fillRect(1, 12, 4, 3);  // Rear wheel
+    ctx.fillRect(11, 12, 4, 3); // Front wheel
+    ctx.fillStyle = '#707080';
+    ctx.fillRect(2, 13, 2, 1);
+    ctx.fillRect(12, 13, 2, 1);
+    // Pedal animation
+    ctx.fillStyle = '#808090';
+    const pedalOff = frame * 2;
+    ctx.fillRect(6 + pedalOff, 11, 2, 2);
+    // Player on top (small, seated)
+    ctx.fillStyle = '#e03030'; // Hat
+    ctx.fillRect(5, 1, 6, 2);
+    ctx.fillStyle = '#f8c888'; // Face
+    ctx.fillRect(6, 3, 4, 3);
+    ctx.fillStyle = '#3030a0'; // Shirt
+    ctx.fillRect(6, 6, 4, 2);
+  }
+
+  function drawBikeFront(ctx: CanvasRenderingContext2D, dir: string, frame: number): void {
+    // Front/back view: narrower frame
+    ctx.fillStyle = '#a0a0b0';
+    ctx.fillRect(5, 9, 6, 2);   // Crossbar
+    ctx.fillRect(7, 7, 2, 4);   // Seat/handlebar post
+    // Wheels (seen from front/back - thin)
+    ctx.fillStyle = '#505060';
+    ctx.fillRect(6, 12, 4, 3);
+    ctx.fillStyle = '#707080';
+    ctx.fillRect(7, 13, 2, 1);
+    // Pedals
+    ctx.fillStyle = '#808090';
+    const po = frame * 2;
+    ctx.fillRect(4 + po, 11, 2, 2);
+    // Player on top (small, seated)
+    ctx.fillStyle = '#e03030'; // Hat
+    ctx.fillRect(5, 1, 6, 2);
+    ctx.fillStyle = '#f8c888'; // Face
+    ctx.fillRect(6, 3, 4, 3);
+    ctx.fillStyle = '#3030a0'; // Shirt
+    ctx.fillRect(6, 6, 4, 2);
+    // Eyes for down-facing
+    if (dir === 'down') {
+      ctx.fillStyle = '#302020';
+      ctx.fillRect(6, 4, 1, 1);
+      ctx.fillRect(9, 4, 1, 1);
+    }
+  }
+
+  const directions = ['down', 'up', 'left', 'right'];
+  directions.forEach((dir, dirIndex) => {
+    for (let frame = 0; frame < 2; frame++) {
+      ctx.save();
+      ctx.translate(dirIndex * TILE_SIZE, frame * TILE_SIZE);
+
+      if (dir === 'right') {
+        // Mirror the left-facing sprite horizontally
+        ctx.translate(TILE_SIZE, 0);
+        ctx.scale(-1, 1);
+        drawBikeSide(ctx, frame);
+      } else if (dir === 'left') {
+        drawBikeSide(ctx, frame);
+      } else {
+        drawBikeFront(ctx, dir, frame);
+      }
+
+      ctx.restore();
+    }
+  });
+
+  addCanvasSpriteSheet(scene, 'player_bike', canvas, TILE_SIZE, TILE_SIZE);
 }
 
 export function generateOakPortrait(scene: Phaser.Scene): void {

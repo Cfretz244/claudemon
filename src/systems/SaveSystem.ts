@@ -21,6 +21,7 @@ export interface SaveData {
   storyFlags: Record<string, boolean>;
   playTime: number;
   isSurfing?: boolean;
+  isRidingBike?: boolean;
   repelSteps?: number;
 }
 

@@ -204,6 +204,13 @@ export const ITEMS: Record<string, ItemData> = {
     price: 0,
     category: 'key',
   },
+  bicycle: {
+    id: 'bicycle',
+    name: 'BICYCLE',
+    description: 'A folding bicycle\nfor fast travel.',
+    price: 0,
+    category: 'key',
+  },
   tea: {
     id: 'tea',
     name: 'TEA',

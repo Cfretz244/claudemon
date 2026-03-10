@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { generateTileset, generatePlayerSprite, generatePikachuFollowerSprite, generatePikachuSurfSprite, generatePokeballSprite, generateOakPortrait, generateNidorinoPortrait, generateSurfSprite, generatePlayerPortrait, generatePlayerPortraitMid, generatePikachuFacePortraits } from '../utils/spriteGenerator';
+import { generateTileset, generatePlayerSprite, generatePikachuFollowerSprite, generatePikachuSurfSprite, generatePikachuBikeSprite, generatePokeballSprite, generateOakPortrait, generateNidorinoPortrait, generateSurfSprite, generateBikeSprite, generatePlayerPortrait, generatePlayerPortraitMid, generatePikachuFacePortraits } from '../utils/spriteGenerator';
 import { generateAllTrainerSprites } from '../utils/trainerSpriteGenerator';
 
 export class BootScene extends Phaser.Scene {
@@ -35,6 +35,7 @@ export class BootScene extends Phaser.Scene {
     generatePlayerSprite(this);
     generatePikachuFollowerSprite(this);
     generatePikachuSurfSprite(this);
+    generatePikachuBikeSprite(this);
     generatePikachuFacePortraits(this);
     generatePokeballSprite(this);
     generateOakPortrait(this);
@@ -42,6 +43,7 @@ export class BootScene extends Phaser.Scene {
     generatePlayerPortrait(this);
     generatePlayerPortraitMid(this);
     generateSurfSprite(this);
+    generateBikeSprite(this);
     generateAllTrainerSprites(this);
 
     // Create player animations
@@ -161,6 +163,48 @@ export class BootScene extends Phaser.Scene {
       frameRate: 4, repeat: -1,
     });
 
+    // Pikachu bike animations (walk = pedaling, idle = static)
+    this.anims.create({
+      key: 'pikachu_bike_walk_down',
+      frames: [{ key: 'pikachu_bike', frame: 0 }, { key: 'pikachu_bike', frame: 4 }],
+      frameRate: 20, repeat: -1,
+    });
+    this.anims.create({
+      key: 'pikachu_bike_walk_up',
+      frames: [{ key: 'pikachu_bike', frame: 1 }, { key: 'pikachu_bike', frame: 5 }],
+      frameRate: 20, repeat: -1,
+    });
+    this.anims.create({
+      key: 'pikachu_bike_walk_left',
+      frames: [{ key: 'pikachu_bike', frame: 2 }, { key: 'pikachu_bike', frame: 6 }],
+      frameRate: 20, repeat: -1,
+    });
+    this.anims.create({
+      key: 'pikachu_bike_walk_right',
+      frames: [{ key: 'pikachu_bike', frame: 3 }, { key: 'pikachu_bike', frame: 7 }],
+      frameRate: 20, repeat: -1,
+    });
+    this.anims.create({
+      key: 'pikachu_bike_idle_down',
+      frames: [{ key: 'pikachu_bike', frame: 0 }],
+      frameRate: 1,
+    });
+    this.anims.create({
+      key: 'pikachu_bike_idle_up',
+      frames: [{ key: 'pikachu_bike', frame: 1 }],
+      frameRate: 1,
+    });
+    this.anims.create({
+      key: 'pikachu_bike_idle_left',
+      frames: [{ key: 'pikachu_bike', frame: 2 }],
+      frameRate: 1,
+    });
+    this.anims.create({
+      key: 'pikachu_bike_idle_right',
+      frames: [{ key: 'pikachu_bike', frame: 3 }],
+      frameRate: 1,
+    });
+
     // Surf sprite animations
     this.anims.create({
       key: 'surf_down',
@@ -181,6 +225,49 @@ export class BootScene extends Phaser.Scene {
       key: 'surf_right',
       frames: [{ key: 'player_surf', frame: 3 }, { key: 'player_surf', frame: 7 }],
       frameRate: 4, repeat: -1,
+    });
+
+    // Bike sprite animations (walk = pedaling, idle = static)
+    // High frameRate (20) so pedaling is visible during the fast 100ms bike movement
+    this.anims.create({
+      key: 'bike_walk_down',
+      frames: [{ key: 'player_bike', frame: 0 }, { key: 'player_bike', frame: 4 }],
+      frameRate: 20, repeat: -1,
+    });
+    this.anims.create({
+      key: 'bike_walk_up',
+      frames: [{ key: 'player_bike', frame: 1 }, { key: 'player_bike', frame: 5 }],
+      frameRate: 20, repeat: -1,
+    });
+    this.anims.create({
+      key: 'bike_walk_left',
+      frames: [{ key: 'player_bike', frame: 2 }, { key: 'player_bike', frame: 6 }],
+      frameRate: 20, repeat: -1,
+    });
+    this.anims.create({
+      key: 'bike_walk_right',
+      frames: [{ key: 'player_bike', frame: 3 }, { key: 'player_bike', frame: 7 }],
+      frameRate: 20, repeat: -1,
+    });
+    this.anims.create({
+      key: 'bike_idle_down',
+      frames: [{ key: 'player_bike', frame: 0 }],
+      frameRate: 1,
+    });
+    this.anims.create({
+      key: 'bike_idle_up',
+      frames: [{ key: 'player_bike', frame: 1 }],
+      frameRate: 1,
+    });
+    this.anims.create({
+      key: 'bike_idle_left',
+      frames: [{ key: 'player_bike', frame: 2 }],
+      frameRate: 1,
+    });
+    this.anims.create({
+      key: 'bike_idle_right',
+      frames: [{ key: 'player_bike', frame: 3 }],
+      frameRate: 1,
     });
 
     this.scene.start('TitleScene');

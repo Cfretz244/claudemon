@@ -19,6 +19,7 @@ const TRACK_DISPLAY_NAMES: Record<string, string> = {
   evil_encounter: 'Trainer Encounter (Evil)',
   elite_four: 'Elite Four',
   victory: 'Victory',
+  bicycle: 'Bicycle',
 };
 
 let playingCard: HTMLElement | null = null;
