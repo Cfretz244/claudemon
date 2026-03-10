@@ -1537,6 +1537,7 @@ export class BattleScene extends Phaser.Scene {
     let healAmount = 20;
     if (potionType === 'super_potion') healAmount = 50;
     else if (potionType === 'hyper_potion') healAmount = 200;
+    else if (potionType === 'max_potion') healAmount = 999;
     else if (potionType === 'full_restore') healAmount = 999;
 
     this.playerPokemon.currentHp = Math.min(
