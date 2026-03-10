@@ -23,6 +23,7 @@ import { GYM_LEADERS } from '../data/gymLeaders';
 import { TRAINERS } from '../data/trainers';
 import { playBattleTransition, playTrainerBattleTransition } from '../utils/battleTransition';
 import { resyncMobileInput } from '../utils/mobileControls';
+import { shouldSkipNPC as shouldSkipNPCLogic } from '../logic/npcVisibility';
 
 interface SceneData {
   mapId: string;
@@ -403,130 +404,13 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private shouldSkipNPC(npc: NPCData): boolean {
-    // Item balls disappear once picked up
-    if (npc.isItemBall && this.playerState.storyFlags[`picked_up_${npc.id}`]) {
-      return true;
-    }
-    // Pewter guide disappears after getting Boulder badge
-    if (npc.id === 'pewter_guide' && this.playerState.badges.includes('BOULDER')) {
-      return true;
-    }
-    // Snorlax NPCs disappear after being cleared
-    if (npc.id === 'snorlax_route12' && this.playerState.storyFlags['snorlax_route12_cleared']) {
-      return true;
-    }
-    if (npc.id === 'snorlax_route16' && this.playerState.storyFlags['snorlax_route16_cleared']) {
-      return true;
-    }
-    // Mr. Fuji only appears after clearing tower rockets
-    if (npc.id === 'mr_fuji' && !this.playerState.storyFlags['tower_rockets_cleared']) {
-      return true;
-    }
-    // Tower rockets only appear with Silph Scope and before being cleared
-    if ((npc.id === 'tower_rocket1' || npc.id === 'tower_rocket2') &&
-        (!this.playerState.hasItem('silph_scope') || this.playerState.storyFlags['tower_rockets_cleared'])) {
-      return true;
-    }
-    // Silph Co president dialogue changes after clearing
-    if (npc.id === 'silph_president' && this.playerState.storyFlags['silph_co_complete']) {
-      return false; // Still visible but dialogue changes in interactWithNPC
-    }
-    // SS Anne rival disappears after battle
-    if (npc.id === 'rival_ss_anne' && this.playerState.defeatedTrainers.includes('rival_ss_anne')) {
-      return true;
-    }
-    // Tower rival disappears after battle
-    if (npc.id === 'rival_tower' && this.playerState.defeatedTrainers.includes('rival_tower')) {
-      return true;
-    }
-    // Silph rival disappears after battle
-    if (npc.id === 'rival_silph' && this.playerState.defeatedTrainers.includes('rival_silph')) {
-      return true;
-    }
-    // Cerulean rival disappears after battle
-    if (npc.id === 'rival_cerulean' && this.playerState.defeatedTrainers.includes('rival_cerulean')) {
-      return true;
-    }
-    // Cerulean officer disappears after helping Bill
-    if (npc.id === 'cerulean_officer' && this.playerState.storyFlags['bill_helped']) {
-      return true;
-    }
-    // Cerulean rocket disappears after defeat
-    if (npc.id === 'cerulean_rocket' && this.playerState.defeatedTrainers.includes('cerulean_rocket')) {
-      return true;
-    }
-    // Giovanni NPCs disappear after defeat
-    if (npc.id === 'giovanni_game_corner' && this.playerState.defeatedTrainers.includes('giovanni_game_corner')) {
-      return true;
-    }
-    if (npc.id === 'giovanni_silph' && this.playerState.defeatedTrainers.includes('giovanni_silph')) {
-      return true;
-    }
-    // Game corner rockets disappear after Giovanni defeated
-    if ((npc.id === 'game_corner_rocket1' || npc.id === 'game_corner_rocket2' ||
-         npc.id === 'game_corner_poster_rocket') &&
-        this.playerState.defeatedTrainers.includes('giovanni_game_corner')) {
-      return true;
-    }
-    // Rocket hideout grunts disappear after Giovanni defeated
-    if (npc.id.startsWith('rocket_hideout_b') && npc.isTrainer &&
-        this.playerState.defeatedTrainers.includes('giovanni_game_corner')) {
-      return true;
-    }
-    // Elevator NPCs stay visible but Lift Key check is in interaction handler
-    // Rocket hideout B4F grunt disappears after Giovanni defeated
-    if (npc.id === 'rocket_hideout_b4f_grunt1' &&
-        this.playerState.defeatedTrainers.includes('giovanni_game_corner')) {
-      return true;
-    }
-    // Silph rockets disappear after Giovanni defeated
-    if (npc.id.startsWith('silph_') && npc.id.includes('grunt') &&
-        this.playerState.defeatedTrainers.includes('giovanni_silph')) {
-      return true;
-    }
-    // Mt. Moon fossils: hidden until fossil nerd defeated, disappear once one is taken
-    if ((npc.id === 'mt_moon_helix_fossil' || npc.id === 'mt_moon_dome_fossil')) {
-      if (!this.playerState.defeatedTrainers.includes('mt_moon_fossil_nerd')) {
-        return true; // Can't see fossils until nerd is beaten
-      }
-      if (this.playerState.storyFlags['got_fossil']) {
-        return true; // Both disappear once one is taken
-      }
-    }
-    // Fossil nerd disappears after defeat
-    if (npc.id === 'mt_moon_fossil_nerd' && this.playerState.defeatedTrainers.includes('mt_moon_fossil_nerd')) {
-      return true;
-    }
-    // Jessie & James - Mt. Moon: both disappear after defeated
-    if ((npc.id === 'jessie_mtmoon' || npc.id === 'james_mtmoon') &&
-        this.playerState.defeatedTrainers.includes('jessie_mtmoon')) {
-      return true;
-    }
-    // Mt. Moon B2F rocket guard: disappears after Jessie & James defeated
-    if (npc.id === 'mt_moon_rocket_guard' &&
-        this.playerState.defeatedTrainers.includes('jessie_mtmoon')) {
-      return true;
-    }
-    // Jessie & James - Game Corner: disappear after defeated or after Giovanni defeated
-    if ((npc.id === 'jessie_gamecorner' || npc.id === 'james_gamecorner') &&
-        (this.playerState.defeatedTrainers.includes('jessie_gamecorner') ||
-         this.playerState.defeatedTrainers.includes('giovanni_game_corner'))) {
-      return true;
-    }
-    // Jessie & James - Tower: require Silph Scope, disappear when defeated or tower cleared
-    if ((npc.id === 'jessie_tower' || npc.id === 'james_tower') &&
-        (!this.playerState.hasItem('silph_scope') ||
-         this.playerState.storyFlags['tower_rockets_cleared'] ||
-         this.playerState.defeatedTrainers.includes('jessie_tower'))) {
-      return true;
-    }
-    // Jessie & James - Silph Co: disappear after defeated or after Giovanni defeated
-    if ((npc.id === 'jessie_silph' || npc.id === 'james_silph') &&
-        (this.playerState.defeatedTrainers.includes('jessie_silph') ||
-         this.playerState.defeatedTrainers.includes('giovanni_silph'))) {
-      return true;
-    }
-    return false;
+    return shouldSkipNPCLogic(
+      npc,
+      this.playerState.storyFlags,
+      this.playerState.badges,
+      this.playerState.defeatedTrainers,
+      (id: string) => this.playerState.hasItem(id),
+    );
   }
 
   private createNPCs(): void {
