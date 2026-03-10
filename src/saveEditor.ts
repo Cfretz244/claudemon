@@ -186,7 +186,13 @@ const PRESETS: Preset[] = [
       save.playerX = 10;
       save.playerY = 10;
       save.storyFlags = { intro_complete: true, has_pikachu: true, has_pokedex: true, rival_battle_lab: true, delivered_parcel: true };
-      save.party = [createPokemon(25, 12, save.playerName)];
+      const pika = createPokemon(25, 12, save.playerName);
+      // Ensure Thunder Shock (84) stays — it gets pushed out by later moves
+      if (!pika.moves.some(m => m.moveId === 84 || m.moveId === 85 || m.moveId === 87)) {
+        const twIdx = pika.moves.findIndex(m => m.moveId === 39); // replace Tail Whip
+        if (twIdx >= 0) pika.moves[twIdx] = { moveId: 84, currentPp: 30, maxPp: 30 };
+      }
+      save.party = [pika];
       save.badges = [];
       save.money = 3000;
       save.bag = { poke_ball: 10, potion: 5 };
@@ -200,7 +206,13 @@ const PRESETS: Preset[] = [
       save.playerX = 10;
       save.playerY = 10;
       save.storyFlags = { intro_complete: true, has_pikachu: true, has_pokedex: true, rival_battle_lab: true, delivered_parcel: true, brock_cleared: true, bill_helped: true };
-      save.party = [createPokemon(25, 20, save.playerName), createPokemon(1, 18, save.playerName)];
+      const pika = createPokemon(25, 20, save.playerName);
+      // Ensure an offensive electric move — Thunder Shock (84) gets pushed out by L20
+      if (!pika.moves.some(m => m.moveId === 84 || m.moveId === 85 || m.moveId === 87)) {
+        const dtIdx = pika.moves.findIndex(m => m.moveId === 104); // replace Double Team
+        if (dtIdx >= 0) pika.moves[dtIdx] = { moveId: 84, currentPp: 30, maxPp: 30 };
+      }
+      save.party = [pika, createPokemon(1, 18, save.playerName)];
       save.badges = ['BOULDER'];
       save.money = 5000;
       save.bag = { poke_ball: 15, potion: 5, super_potion: 3 };
@@ -213,16 +225,20 @@ const PRESETS: Preset[] = [
       save.currentMap = 'vermilion_city';
       save.playerX = 10;
       save.playerY = 10;
-      save.storyFlags = { intro_complete: true, has_pikachu: true, has_pokedex: true, rival_battle_lab: true, delivered_parcel: true, brock_cleared: true, misty_cleared: true, bill_helped: true, got_hm01: true };
-      save.party = [createPokemon(25, 25, save.playerName), createPokemon(1, 22, save.playerName), createPokemon(7, 22, save.playerName)];
+      save.storyFlags = { intro_complete: true, has_pikachu: true, has_pokedex: true, rival_battle_lab: true, delivered_parcel: true, brock_cleared: true, misty_cleared: true, bill_helped: true, got_hm01: true, ss_anne_departed: true };
+      const pika = createPokemon(25, 25, save.playerName);
+      // Replace Quick Attack (98) with Thunderbolt (85)
+      const qaIdx = pika.moves.findIndex(m => m.moveId === 98);
+      if (qaIdx >= 0) pika.moves[qaIdx] = { moveId: 85, currentPp: 15, maxPp: 15 };
+      save.party = [pika, createPokemon(1, 22, save.playerName), createPokemon(7, 22, save.playerName)];
       save.badges = ['BOULDER', 'CASCADE'];
       save.money = 8000;
-      save.bag = { poke_ball: 15, great_ball: 5, super_potion: 5, hm01_cut: 1 };
+      save.bag = { poke_ball: 15, great_ball: 5, super_potion: 5, hm01_cut: 1, ss_ticket: 1 };
     },
   },
   {
-    name: 'Mid-Game',
-    description: '4 badges, Celadon area',
+    name: 'Pre-Erika',
+    description: 'Ready for Celadon Gym',
     apply: (save) => {
       save.currentMap = 'celadon_city';
       save.playerX = 10;
@@ -230,18 +246,131 @@ const PRESETS: Preset[] = [
       save.storyFlags = {
         intro_complete: true, has_pikachu: true, has_pokedex: true, rival_battle_lab: true,
         delivered_parcel: true, brock_cleared: true, misty_cleared: true, lt_surge_cleared: true,
+        bill_helped: true, got_hm01: true, got_hm05: true, ss_anne_departed: true, got_fossil: true,
+      };
+      save.party = [
+        createPokemon(25, 30, save.playerName),
+        createPokemon(5, 28, save.playerName),  // Charmeleon
+        createPokemon(8, 28, save.playerName),  // Wartortle
+        createPokemon(33, 27, save.playerName), // Nidorino
+      ];
+      save.badges = ['BOULDER', 'CASCADE', 'THUNDER'];
+      save.money = 10000;
+      save.bag = { great_ball: 15, super_potion: 10, revive: 3, hm01_cut: 1, hm05_flash: 1, escape_rope: 5 };
+    },
+  },
+  {
+    name: 'Pre-Koga',
+    description: 'Ready for Fuchsia Gym',
+    apply: (save) => {
+      save.currentMap = 'fuchsia_city';
+      save.playerX = 10;
+      save.playerY = 10;
+      save.storyFlags = {
+        intro_complete: true, has_pikachu: true, has_pokedex: true, rival_battle_lab: true,
+        delivered_parcel: true, brock_cleared: true, misty_cleared: true, lt_surge_cleared: true,
         erika_cleared: true, bill_helped: true, got_hm01: true, got_hm02: true, got_hm05: true,
-        ss_anne_departed: true, got_fossil: true,
+        ss_anne_departed: true, got_fossil: true, got_silph_scope: true,
+        tower_rockets_cleared: true, got_poke_flute: true,
       };
       save.party = [
         createPokemon(25, 36, save.playerName),
-        createPokemon(6, 34, save.playerName),
-        createPokemon(31, 32, save.playerName),
-        createPokemon(59, 33, save.playerName),
+        createPokemon(6, 34, save.playerName),  // Charizard
+        createPokemon(31, 32, save.playerName),  // Nidoqueen
+        createPokemon(59, 33, save.playerName),  // Arcanine
       ];
       save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW'];
-      save.money = 20000;
+      save.money = 18000;
       save.bag = { great_ball: 20, ultra_ball: 5, super_potion: 10, hyper_potion: 5, revive: 3, hm01_cut: 1, hm02_fly: 1, hm05_flash: 1, escape_rope: 5 };
+    },
+  },
+  {
+    name: 'Pre-Sabrina',
+    description: 'Ready for Saffron Gym',
+    apply: (save) => {
+      save.currentMap = 'saffron_city';
+      save.playerX = 10;
+      save.playerY = 10;
+      save.storyFlags = {
+        intro_complete: true, has_pikachu: true, has_pokedex: true, rival_battle_lab: true,
+        delivered_parcel: true, brock_cleared: true, misty_cleared: true, lt_surge_cleared: true,
+        erika_cleared: true, koga_cleared: true, bill_helped: true,
+        got_hm01: true, got_hm02: true, got_hm03: true, got_hm04: true, got_hm05: true,
+        ss_anne_departed: true, got_fossil: true, got_silph_scope: true,
+        tower_rockets_cleared: true, got_poke_flute: true,
+        saffron_open: true, silph_co_complete: true, giovanni_silph: true, got_master_ball: true,
+      };
+      save.party = [
+        createPokemon(25, 40, save.playerName),
+        createPokemon(6, 38, save.playerName),   // Charizard
+        createPokemon(131, 36, save.playerName),  // Lapras
+        createPokemon(31, 37, save.playerName),   // Nidoqueen
+        createPokemon(59, 37, save.playerName),   // Arcanine
+      ];
+      save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW', 'SOUL'];
+      save.money = 25000;
+      save.bag = { great_ball: 15, ultra_ball: 10, hyper_potion: 10, revive: 5, master_ball: 1, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, escape_rope: 5 };
+    },
+  },
+  {
+    name: 'Pre-Blaine',
+    description: 'Ready for Cinnabar Gym',
+    apply: (save) => {
+      save.currentMap = 'cinnabar_island';
+      save.playerX = 10;
+      save.playerY = 10;
+      save.storyFlags = {
+        intro_complete: true, has_pikachu: true, has_pokedex: true, rival_battle_lab: true,
+        delivered_parcel: true, brock_cleared: true, misty_cleared: true, lt_surge_cleared: true,
+        erika_cleared: true, koga_cleared: true, sabrina_cleared: true, bill_helped: true,
+        got_hm01: true, got_hm02: true, got_hm03: true, got_hm04: true, got_hm05: true,
+        ss_anne_departed: true, got_fossil: true, got_silph_scope: true,
+        tower_rockets_cleared: true, got_poke_flute: true,
+        saffron_open: true, silph_co_complete: true, giovanni_silph: true, got_master_ball: true,
+        snorlax_route12_cleared: true, snorlax_route16_cleared: true,
+      };
+      save.party = [
+        createPokemon(25, 45, save.playerName),
+        createPokemon(6, 43, save.playerName),   // Charizard
+        createPokemon(131, 41, save.playerName),  // Lapras
+        createPokemon(65, 42, save.playerName),   // Alakazam
+        createPokemon(31, 41, save.playerName),   // Nidoqueen
+        createPokemon(59, 42, save.playerName),   // Arcanine
+      ];
+      save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW', 'SOUL', 'MARSH'];
+      save.money = 35000;
+      save.bag = { ultra_ball: 20, hyper_potion: 10, max_potion: 5, full_restore: 3, revive: 5, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, escape_rope: 5 };
+    },
+  },
+  {
+    name: 'Pre-Giovanni',
+    description: 'Ready for Viridian Gym',
+    apply: (save) => {
+      save.currentMap = 'viridian_city';
+      save.playerX = 10;
+      save.playerY = 10;
+      save.storyFlags = {
+        intro_complete: true, has_pikachu: true, has_pokedex: true, rival_battle_lab: true,
+        delivered_parcel: true, brock_cleared: true, misty_cleared: true, lt_surge_cleared: true,
+        erika_cleared: true, koga_cleared: true, sabrina_cleared: true, blaine_cleared: true,
+        bill_helped: true,
+        got_hm01: true, got_hm02: true, got_hm03: true, got_hm04: true, got_hm05: true,
+        ss_anne_departed: true, got_fossil: true, got_silph_scope: true,
+        tower_rockets_cleared: true, got_poke_flute: true,
+        saffron_open: true, silph_co_complete: true, giovanni_silph: true, got_master_ball: true,
+        snorlax_route12_cleared: true, snorlax_route16_cleared: true,
+      };
+      save.party = [
+        createPokemon(25, 50, save.playerName),
+        createPokemon(6, 48, save.playerName),   // Charizard
+        createPokemon(131, 46, save.playerName),  // Lapras
+        createPokemon(65, 47, save.playerName),   // Alakazam
+        createPokemon(31, 46, save.playerName),   // Nidoqueen
+        createPokemon(59, 47, save.playerName),   // Arcanine
+      ];
+      save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW', 'SOUL', 'MARSH', 'VOLCANO'];
+      save.money = 40000;
+      save.bag = { ultra_ball: 25, max_potion: 15, full_restore: 5, revive: 10, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1 };
     },
   },
   {
