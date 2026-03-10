@@ -14,6 +14,7 @@ import { ITEMS } from '../data/items';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
 import { getMusicForMap } from '../data/musicTracks';
+import { MAP_THEMES } from '../data/townThemes';
 import { StatusCondition } from '../types/pokemon.types';
 import { createPokemon } from '../entities/Pokemon';
 import { PlayerState } from '../entities/Player';
@@ -303,7 +304,7 @@ export class OverworldScene extends Phaser.Scene {
     const outdoorTiles = new Set([
       TileType.TREE, TileType.GRASS, TileType.TALL_GRASS,
       TileType.WATER, TileType.SAND, TileType.FLOWER,
-      TileType.BUILDING, TileType.FENCE,
+      TileType.BUILDING, TileType.FENCE, TileType.ROOF,
     ]);
     // Check top and bottom edges for outdoor tile types
     for (const y of [0, map.height - 1]) {
@@ -326,6 +327,15 @@ export class OverworldScene extends Phaser.Scene {
     return false;
   }
 
+  private getTileKey(tileType: number): string {
+    const theme = MAP_THEMES[this.currentMap.id];
+    if (theme) {
+      const key = `tile_${theme}_${tileType}`;
+      if (this.textures.exists(key)) return key;
+    }
+    return `tile_${tileType}`;
+  }
+
   private drawMap(): void {
     // Clear existing tiles
     for (const row of this.tileSprites) {
@@ -340,7 +350,7 @@ export class OverworldScene extends Phaser.Scene {
       const row: Phaser.GameObjects.Image[] = [];
       for (let x = 0; x < this.currentMap.width; x++) {
         const tileType = this.currentMap.tiles[y][x];
-        let key = `tile_${tileType}`;
+        let key = this.getTileKey(tileType);
         // Spin tiles use directional textures
         if (tileType === TileType.SPIN_TILE && this.currentMap.spinTiles) {
           const dir = this.currentMap.spinTiles[`${x},${y}`];
@@ -374,7 +384,7 @@ export class OverworldScene extends Phaser.Scene {
           const sprite = this.add.image(
             x * TILE_SIZE + TILE_SIZE / 2,
             y * TILE_SIZE + TILE_SIZE / 2,
-            `tile_${tileType}`
+            this.getTileKey(tileType)
           );
           sprite.setDepth(0);
         }
@@ -2901,7 +2911,7 @@ export class OverworldScene extends Phaser.Scene {
       const newSprite = this.add.image(
         targetX * TILE_SIZE + TILE_SIZE / 2,
         targetY * TILE_SIZE + TILE_SIZE / 2,
-        `tile_${TileType.GRASS}`
+        this.getTileKey(TileType.GRASS)
       );
       newSprite.setDepth(0);
       if (this.tileSprites[targetY]) {

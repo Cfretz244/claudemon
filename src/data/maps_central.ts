@@ -9,7 +9,7 @@ function fill2D<V>(w: number, h: number, v: V): V[][] {
 
 const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
-  T.CUT_TREE, T.BOULDER,
+  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN,
 ]);
 
 // ─── 1. LAVENDER TOWN ────────────────────────────────────────────────────────
@@ -34,20 +34,20 @@ export const LAVENDER_TOWN: MapData = (() => {
   fillRect(2, 10, 16, 2, T.PATH);   // horizontal
 
   // Pokemon Tower (large building)
-  fillRect(12, 3, 5, 5, T.BUILDING);
-  setTile(14, 8, T.DOOR);
+  fillRect(12, 3, 5, 1, T.ROOF); fillRect(12, 4, 5, 4, T.BUILDING);
+  setTile(14, 7, T.DOOR);
 
   // Pokemon Center
-  fillRect(3, 5, 5, 4, T.BUILDING);
-  setTile(5, 9, T.DOOR);
+  fillRect(3, 5, 5, 1, T.ROOF); fillRect(3, 6, 5, 3, T.BUILDING);
+  setTile(5, 8, T.DOOR);
 
   // Pokemart
-  fillRect(3, 13, 5, 4, T.BUILDING);
-  setTile(5, 17, T.DOOR);
+  fillRect(3, 13, 5, 1, T.ROOF); fillRect(3, 14, 5, 3, T.BUILDING);
+  setTile(5, 16, T.DOOR);
 
   // House
-  fillRect(12, 13, 5, 4, T.BUILDING);
-  setTile(14, 17, T.DOOR);
+  fillRect(12, 13, 5, 1, T.ROOF); fillRect(12, 14, 5, 3, T.BUILDING);
+  setTile(14, 16, T.DOOR);
 
   // Signs
   setTile(7, 10, T.SIGN);
@@ -71,13 +71,13 @@ export const LAVENDER_TOWN: MapData = (() => {
       { x: 9, y: 19, targetMap: 'route12', targetX: 7, targetY: 1 },
       { x: 10, y: 19, targetMap: 'route12', targetX: 7, targetY: 1 },
       // Pokemon Tower door
-      { x: 14, y: 8, targetMap: 'pokemon_tower', targetX: 5, targetY: 13 },
+      { x: 14, y: 7, targetMap: 'pokemon_tower', targetX: 5, targetY: 13 },
       // Pokemon Center door
-      { x: 5, y: 9, targetMap: 'pokemon_center_lavender', targetX: 4, targetY: 7 },
+      { x: 5, y: 8, targetMap: 'pokemon_center_lavender', targetX: 4, targetY: 7 },
       // Pokemart door
-      { x: 5, y: 17, targetMap: 'pokemart_lavender', targetX: 3, targetY: 7 },
+      { x: 5, y: 16, targetMap: 'pokemart_lavender', targetX: 3, targetY: 7 },
       // House door
-      { x: 14, y: 17, targetMap: 'lavender_house', targetX: 3, targetY: 7 },
+      { x: 14, y: 16, targetMap: 'lavender_house', targetX: 3, targetY: 7 },
     ],
     npcs: [
       {
@@ -155,7 +155,7 @@ export const POKEMON_TOWER: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 5, y: 13, targetMap: 'lavender_town', targetX: 14, targetY: 9 },
+      { x: 5, y: 13, targetMap: 'lavender_town', targetX: 14, targetY: 8 },
     ],
     npcs: [
       {
@@ -303,8 +303,8 @@ export const POKEMON_CENTER_LAVENDER: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'lavender_town', targetX: 5, targetY: 10 },
-      { x: 5, y: 7, targetMap: 'lavender_town', targetX: 5, targetY: 10 },
+      { x: 4, y: 7, targetMap: 'lavender_town', targetX: 5, targetY: 9 },
+      { x: 5, y: 7, targetMap: 'lavender_town', targetX: 5, targetY: 9 },
     ],
     npcs: [
       {
@@ -343,7 +343,7 @@ export const ROUTE7: MapData = (() => {
 
   // Guardhouse building
   fillRect(9, 2, 3, 2, T.BUILDING);
-  setTile(10, 4, T.DOOR);
+  setTile(10, 3, T.DOOR);
 
   // Tall grass patches
   fillRect(2, 2, 4, 2, T.TALL_GRASS);
@@ -364,7 +364,7 @@ export const ROUTE7: MapData = (() => {
       { x: 19, y: 4, targetMap: 'saffron_city', targetX: 2, targetY: 14 },
       { x: 19, y: 5, targetMap: 'saffron_city', targetX: 2, targetY: 15 },
       // Guardhouse
-      { x: 10, y: 4, targetMap: 'route7_gate', targetX: 3, targetY: 5 },
+      { x: 10, y: 3, targetMap: 'route7_gate', targetX: 3, targetY: 5 },
     ],
     npcs: [],
     wildEncounters: {
@@ -497,7 +497,7 @@ export const ROUTE11: MapData = (() => {
 
   // Diglett's Cave entrance
   fillRect(21, 2, 3, 2, T.BUILDING);
-  setTile(22, 4, T.DOOR);
+  setTile(22, 3, T.DOOR);
 
   return {
     id: 'route11',
@@ -511,7 +511,7 @@ export const ROUTE11: MapData = (() => {
       { x: 0, y: 4, targetMap: 'vermilion_city', targetX: 27, targetY: 12 },
       { x: 0, y: 5, targetMap: 'vermilion_city', targetX: 27, targetY: 13 },
       // Diglett's Cave entrance
-      { x: 22, y: 4, targetMap: 'digletts_cave', targetX: 6, targetY: 18 },
+      { x: 22, y: 3, targetMap: 'digletts_cave', targetX: 6, targetY: 18 },
     ],
     npcs: [
       {
@@ -574,24 +574,27 @@ export const CELADON_CITY: MapData = (() => {
   fillRect(2, 12, 26, 2, T.PATH);  // horizontal
 
   // Celadon Gym
-  fillRect(3, 5, 6, 5, T.BUILDING);
-  setTile(6, 10, T.DOOR);
+  fillRect(3, 5, 6, 1, T.ROOF); fillRect(3, 6, 6, 4, T.BUILDING);
+  setTile(6, 9, T.DOOR);
 
   // Pokemon Center
-  fillRect(20, 5, 5, 4, T.BUILDING);
-  setTile(22, 9, T.DOOR);
+  fillRect(20, 5, 5, 1, T.ROOF); fillRect(20, 6, 5, 3, T.BUILDING);
+  setTile(22, 8, T.DOOR);
 
   // Department Store (large)
-  fillRect(20, 15, 6, 5, T.BUILDING);
-  setTile(23, 20, T.DOOR);
+  fillRect(20, 15, 6, 1, T.ROOF); fillRect(20, 16, 6, 4, T.BUILDING);
+  setTile(23, 19, T.DOOR);
 
   // Game Corner
-  fillRect(10, 15, 6, 4, T.BUILDING);
-  setTile(13, 19, T.DOOR);
+  fillRect(10, 15, 6, 1, T.ROOF); fillRect(10, 16, 6, 3, T.BUILDING);
+  setTile(13, 18, T.DOOR);
 
   // Celadon Mansion
-  fillRect(3, 15, 5, 4, T.BUILDING);
-  setTile(5, 19, T.DOOR);
+  fillRect(3, 15, 5, 1, T.ROOF); fillRect(3, 16, 5, 3, T.BUILDING);
+  setTile(5, 18, T.DOOR);
+
+  // Garden fountain
+  setTile(14, 8, T.FOUNTAIN); setTile(15, 8, T.FOUNTAIN);
 
   // Flowers everywhere (it's the garden city!)
   setTile(10, 5, T.FLOWER); setTile(11, 5, T.FLOWER); setTile(12, 5, T.FLOWER);
@@ -622,15 +625,15 @@ export const CELADON_CITY: MapData = (() => {
       { x: 14, y: 24, targetMap: 'route16', targetX: 9, targetY: 1 },
       { x: 15, y: 24, targetMap: 'route16', targetX: 10, targetY: 1 },
       // Gym door
-      { x: 6, y: 10, targetMap: 'celadon_gym', targetX: 4, targetY: 13 },
+      { x: 6, y: 9, targetMap: 'celadon_gym', targetX: 4, targetY: 13 },
       // Pokemon Center door
-      { x: 22, y: 9, targetMap: 'pokemon_center_celadon', targetX: 4, targetY: 7 },
+      { x: 22, y: 8, targetMap: 'pokemon_center_celadon', targetX: 4, targetY: 7 },
       // Department Store (Pokemart)
-      { x: 23, y: 20, targetMap: 'pokemart_celadon', targetX: 3, targetY: 7 },
+      { x: 23, y: 19, targetMap: 'pokemart_celadon', targetX: 3, targetY: 7 },
       // Game Corner
-      { x: 13, y: 19, targetMap: 'game_corner', targetX: 7, targetY: 10 },
+      { x: 13, y: 18, targetMap: 'game_corner', targetX: 7, targetY: 10 },
       // Celadon Mansion
-      { x: 5, y: 19, targetMap: 'celadon_mansion', targetX: 3, targetY: 7 },
+      { x: 5, y: 18, targetMap: 'celadon_mansion', targetX: 3, targetY: 7 },
     ],
     npcs: [
       {
@@ -720,8 +723,8 @@ export const CELADON_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 13, targetMap: 'celadon_city', targetX: 6, targetY: 11 },
-      { x: 5, y: 13, targetMap: 'celadon_city', targetX: 6, targetY: 11 },
+      { x: 4, y: 13, targetMap: 'celadon_city', targetX: 6, targetY: 10 },
+      { x: 5, y: 13, targetMap: 'celadon_city', targetX: 6, targetY: 10 },
     ],
     npcs: [
       {
@@ -801,8 +804,8 @@ export const POKEMON_CENTER_CELADON: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'celadon_city', targetX: 22, targetY: 10 },
-      { x: 5, y: 7, targetMap: 'celadon_city', targetX: 22, targetY: 10 },
+      { x: 4, y: 7, targetMap: 'celadon_city', targetX: 22, targetY: 9 },
+      { x: 5, y: 7, targetMap: 'celadon_city', targetX: 22, targetY: 9 },
     ],
     npcs: [
       {
@@ -842,24 +845,29 @@ export const SAFFRON_CITY: MapData = (() => {
   fillRect(2, 14, 26, 2, T.PATH);  // horizontal
 
   // Silph Co (large building)
-  fillRect(12, 4, 6, 6, T.BUILDING);
-  setTile(15, 10, T.DOOR);
+  fillRect(12, 4, 6, 1, T.ROOF); fillRect(12, 5, 6, 5, T.BUILDING);
+  setTile(15, 9, T.DOOR);
 
   // Saffron Gym
-  fillRect(4, 4, 6, 5, T.BUILDING);
-  setTile(7, 9, T.DOOR);
+  fillRect(4, 4, 6, 1, T.ROOF); fillRect(4, 5, 6, 4, T.BUILDING);
+  setTile(7, 8, T.DOOR);
 
   // Fighting Dojo
-  fillRect(22, 4, 6, 5, T.BUILDING);
-  setTile(25, 9, T.DOOR);
+  fillRect(22, 4, 6, 1, T.ROOF); fillRect(22, 5, 6, 4, T.BUILDING);
+  setTile(25, 8, T.DOOR);
 
   // Pokemon Center
-  fillRect(4, 18, 5, 4, T.BUILDING);
-  setTile(6, 22, T.DOOR);
+  fillRect(4, 18, 5, 1, T.ROOF); fillRect(4, 19, 5, 3, T.BUILDING);
+  setTile(6, 21, T.DOOR);
 
   // Pokemart
-  fillRect(22, 18, 5, 4, T.BUILDING);
-  setTile(24, 22, T.DOOR);
+  fillRect(22, 18, 5, 1, T.ROOF); fillRect(22, 19, 5, 3, T.BUILDING);
+  setTile(24, 21, T.DOOR);
+
+  // Urban plaza cobblestone (central crossroads)
+  setTile(14, 13, T.COBBLESTONE); setTile(15, 13, T.COBBLESTONE);
+  setTile(14, 16, T.COBBLESTONE); setTile(15, 16, T.COBBLESTONE);
+  setTile(13, 12, T.COBBLESTONE); setTile(16, 12, T.COBBLESTONE);
 
   // Signs
   setTile(12, 14, T.SIGN);
@@ -887,15 +895,15 @@ export const SAFFRON_CITY: MapData = (() => {
       { x: 29, y: 14, targetMap: 'route8', targetX: 1, targetY: 4 },
       { x: 29, y: 15, targetMap: 'route8', targetX: 1, targetY: 5 },
       // Gym door
-      { x: 7, y: 9, targetMap: 'saffron_gym', targetX: 4, targetY: 13 },
+      { x: 7, y: 8, targetMap: 'saffron_gym', targetX: 4, targetY: 13 },
       // Pokemon Center door
-      { x: 6, y: 22, targetMap: 'pokemon_center_saffron', targetX: 4, targetY: 7 },
+      { x: 6, y: 21, targetMap: 'pokemon_center_saffron', targetX: 4, targetY: 7 },
       // Pokemart door
-      { x: 24, y: 22, targetMap: 'pokemart_saffron', targetX: 3, targetY: 7 },
+      { x: 24, y: 21, targetMap: 'pokemart_saffron', targetX: 3, targetY: 7 },
       // Silph Co door
-      { x: 15, y: 10, targetMap: 'silph_co_1f', targetX: 7, targetY: 12 },
+      { x: 15, y: 9, targetMap: 'silph_co_1f', targetX: 7, targetY: 12 },
       // Fighting Dojo
-      { x: 25, y: 9, targetMap: 'fighting_dojo', targetX: 4, targetY: 9 },
+      { x: 25, y: 8, targetMap: 'fighting_dojo', targetX: 4, targetY: 9 },
     ],
     npcs: [
       {
@@ -977,8 +985,8 @@ export const SAFFRON_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 13, targetMap: 'saffron_city', targetX: 7, targetY: 10 },
-      { x: 5, y: 13, targetMap: 'saffron_city', targetX: 7, targetY: 10 },
+      { x: 4, y: 13, targetMap: 'saffron_city', targetX: 7, targetY: 9 },
+      { x: 5, y: 13, targetMap: 'saffron_city', targetX: 7, targetY: 9 },
     ],
     npcs: [
       {
@@ -1057,8 +1065,8 @@ export const POKEMON_CENTER_SAFFRON: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'saffron_city', targetX: 6, targetY: 23 },
-      { x: 5, y: 7, targetMap: 'saffron_city', targetX: 6, targetY: 23 },
+      { x: 4, y: 7, targetMap: 'saffron_city', targetX: 6, targetY: 22 },
+      { x: 5, y: 7, targetMap: 'saffron_city', targetX: 6, targetY: 22 },
     ],
     npcs: [
       {
@@ -1094,7 +1102,7 @@ const POKEMART_LAVENDER: MapData = (() => {
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
   return {
     id: 'pokemart_lavender', name: 'POKeMON MART', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'lavender_town', targetX: 5, targetY: 18 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'lavender_town', targetX: 5, targetY: 17 }],
     npcs: [{
       id: 'mart_clerk', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
       dialogue: ['Welcome! How may I\nserve you?'],
@@ -1121,7 +1129,7 @@ const POKEMART_CELADON: MapData = (() => {
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
   return {
     id: 'pokemart_celadon', name: 'CELADON DEPT STORE', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'celadon_city', targetX: 23, targetY: 21 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'celadon_city', targetX: 23, targetY: 20 }],
     npcs: [{
       id: 'mart_clerk', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
       dialogue: ['Welcome to CELADON\nDEPT STORE!'],
@@ -1148,7 +1156,7 @@ const POKEMART_SAFFRON: MapData = (() => {
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
   return {
     id: 'pokemart_saffron', name: 'POKeMON MART', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'saffron_city', targetX: 24, targetY: 23 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'saffron_city', targetX: 24, targetY: 22 }],
     npcs: [{
       id: 'mart_clerk', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
       dialogue: ['Welcome! How may I\nserve you?'],
@@ -1201,7 +1209,7 @@ const GAME_CORNER: MapData = (() => {
     tiles, collision,
     warps: [
       // Exit to Celadon City
-      { x: 7, y: 11, targetMap: 'celadon_city', targetX: 13, targetY: 20 },
+      { x: 7, y: 11, targetMap: 'celadon_city', targetX: 13, targetY: 19 },
       // Hidden stairs to B1F (behind poster, x=11 y=2 is the sign/poster)
       { x: 12, y: 2, targetMap: 'rocket_hideout_b1f', targetX: 14, targetY: 2 },
     ],
@@ -1662,13 +1670,13 @@ const DIGLETTS_CAVE: MapData = (() => {
     tiles, collision,
     warps: [
       // North exit → Route 2
-      { x: 5, y: 0, targetMap: 'route2', targetX: 15, targetY: 25 },
-      { x: 6, y: 0, targetMap: 'route2', targetX: 15, targetY: 25 },
-      { x: 7, y: 0, targetMap: 'route2', targetX: 15, targetY: 25 },
+      { x: 5, y: 0, targetMap: 'route2', targetX: 15, targetY: 24 },
+      { x: 6, y: 0, targetMap: 'route2', targetX: 15, targetY: 24 },
+      { x: 7, y: 0, targetMap: 'route2', targetX: 15, targetY: 24 },
       // South exit → Route 11
-      { x: 5, y: 19, targetMap: 'route11', targetX: 22, targetY: 5 },
-      { x: 6, y: 19, targetMap: 'route11', targetX: 22, targetY: 5 },
-      { x: 7, y: 19, targetMap: 'route11', targetX: 22, targetY: 5 },
+      { x: 5, y: 19, targetMap: 'route11', targetX: 22, targetY: 4 },
+      { x: 6, y: 19, targetMap: 'route11', targetX: 22, targetY: 4 },
+      { x: 7, y: 19, targetMap: 'route11', targetX: 22, targetY: 4 },
     ],
     npcs: [],
     wildEncounters: {
@@ -1697,7 +1705,7 @@ export const LAVENDER_HOUSE: MapData = (() => {
   setTile(3, H - 1, T.DOOR);
   return {
     id: 'lavender_house', name: 'LAVENDER HOUSE', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'lavender_town', targetX: 14, targetY: 18 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'lavender_town', targetX: 14, targetY: 17 }],
     npcs: [{
       id: 'lavender_house_npc', x: 4, y: 3, spriteColor: 0x9070a0, direction: Direction.DOWN,
       dialogue: ['POKeMON TOWER is the\nfinal resting place', 'for POKeMON that have\npassed on...'],
@@ -1722,7 +1730,7 @@ export const CELADON_MANSION: MapData = (() => {
   setTile(3, H - 1, T.DOOR);
   return {
     id: 'celadon_mansion', name: 'CELADON MANSION', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'celadon_city', targetX: 5, targetY: 20 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'celadon_city', targetX: 5, targetY: 19 }],
     npcs: [{
       id: 'celadon_mansion_npc', x: 4, y: 3, spriteColor: 0x60a0c0, direction: Direction.DOWN,
       dialogue: ['I know all about the\nGAME CORNER!', 'There are rumors of a\nsecret hideout below!'],
@@ -1745,8 +1753,8 @@ export const FIGHTING_DOJO: MapData = (() => {
   return {
     id: 'fighting_dojo', name: 'FIGHTING DOJO', width: W, height: H, tiles, collision,
     warps: [
-      { x: 4, y: H - 1, targetMap: 'saffron_city', targetX: 25, targetY: 10 },
-      { x: 5, y: H - 1, targetMap: 'saffron_city', targetX: 25, targetY: 10 },
+      { x: 4, y: H - 1, targetMap: 'saffron_city', targetX: 25, targetY: 9 },
+      { x: 5, y: H - 1, targetMap: 'saffron_city', targetX: 25, targetY: 9 },
     ],
     npcs: [
       {
@@ -1785,8 +1793,8 @@ export const ROUTE7_GATE: MapData = (() => {
   return {
     id: 'route7_gate', name: 'ROUTE 7 GATE', width: W, height: H, tiles, collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'route7', targetX: 10, targetY: 5 },
-      { x: 4, y: H - 1, targetMap: 'route7', targetX: 10, targetY: 5 },
+      { x: 3, y: H - 1, targetMap: 'route7', targetX: 10, targetY: 4 },
+      { x: 4, y: H - 1, targetMap: 'route7', targetX: 10, targetY: 4 },
     ],
     npcs: [{
       id: 'route7_guard', x: 4, y: 2, spriteColor: 0x4060b0, direction: Direction.DOWN,

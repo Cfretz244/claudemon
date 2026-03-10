@@ -9,7 +9,7 @@ function fill2D<V>(w: number, h: number, v: V): V[][] {
 
 const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
-  T.CUT_TREE, T.BOULDER,
+  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN,
 ]);
 
 // ─────────────────────────────────────────────────────────────
@@ -320,20 +320,24 @@ export const CINNABAR_ISLAND: MapData = (() => {
   fillRect(9, 0, 2, 18, T.PATH);
 
   // Cinnabar Gym
-  fillRect(3, 5, 6, 5, T.BUILDING);
-  setTile(6, 10, T.DOOR);
+  fillRect(3, 5, 6, 1, T.ROOF);
+  fillRect(3, 6, 6, 4, T.BUILDING);
+  setTile(6, 9, T.DOOR);
 
   // Pokemon Center
-  fillRect(12, 5, 5, 4, T.BUILDING);
-  setTile(14, 9, T.DOOR);
+  fillRect(12, 5, 5, 1, T.ROOF);
+  fillRect(12, 6, 5, 3, T.BUILDING);
+  setTile(14, 8, T.DOOR);
 
   // Pokemon Mansion
-  fillRect(3, 12, 5, 5, T.BUILDING);
-  setTile(5, 17, T.DOOR);
+  fillRect(3, 12, 5, 1, T.ROOF);
+  fillRect(3, 13, 5, 4, T.BUILDING);
+  setTile(5, 16, T.DOOR);
 
   // Pokemart
-  fillRect(12, 12, 5, 4, T.BUILDING);
-  setTile(14, 16, T.DOOR);
+  fillRect(12, 12, 5, 1, T.ROOF);
+  fillRect(12, 13, 5, 3, T.BUILDING);
+  setTile(14, 15, T.DOOR);
 
   // Signs
   setTile(7, 10, T.SIGN);  // Near gym
@@ -360,13 +364,13 @@ export const CINNABAR_ISLAND: MapData = (() => {
       // West water entrance → Route 20
       { x: 2, y: 9, targetMap: 'route20', targetX: 28, targetY: 4 },
       // Gym warp
-      { x: 6, y: 10, targetMap: 'cinnabar_gym', targetX: 4, targetY: 13 },
+      { x: 6, y: 9, targetMap: 'cinnabar_gym', targetX: 4, targetY: 13 },
       // Pokemon Center warp
-      { x: 14, y: 9, targetMap: 'pokemon_center_cinnabar', targetX: 4, targetY: 7 },
+      { x: 14, y: 8, targetMap: 'pokemon_center_cinnabar', targetX: 4, targetY: 7 },
       // Pokemon Mansion warp
-      { x: 5, y: 17, targetMap: 'pokemon_mansion', targetX: 7, targetY: 14 },
+      { x: 5, y: 16, targetMap: 'pokemon_mansion', targetX: 7, targetY: 14 },
       // Pokemart
-      { x: 14, y: 16, targetMap: 'pokemart_cinnabar', targetX: 3, targetY: 7 },
+      { x: 14, y: 15, targetMap: 'pokemart_cinnabar', targetX: 3, targetY: 7 },
     ],
     npcs: [
       {
@@ -438,8 +442,8 @@ export const CINNABAR_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 13, targetMap: 'cinnabar_island', targetX: 6, targetY: 11 },
-      { x: 5, y: 13, targetMap: 'cinnabar_island', targetX: 6, targetY: 11 },
+      { x: 4, y: 13, targetMap: 'cinnabar_island', targetX: 6, targetY: 10 },
+      { x: 5, y: 13, targetMap: 'cinnabar_island', targetX: 6, targetY: 10 },
     ],
     npcs: [
       {
@@ -542,7 +546,7 @@ export const POKEMON_MANSION: MapData = (() => {
     collision,
     warps: [
       // Entry → Cinnabar Island
-      { x: 7, y: 14, targetMap: 'cinnabar_island', targetX: 5, targetY: 18 },
+      { x: 7, y: 14, targetMap: 'cinnabar_island', targetX: 5, targetY: 17 },
     ],
     npcs: [
       {
@@ -649,8 +653,8 @@ export const POKEMON_CENTER_CINNABAR: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'cinnabar_island', targetX: 14, targetY: 10 },
-      { x: 5, y: 7, targetMap: 'cinnabar_island', targetX: 14, targetY: 10 },
+      { x: 4, y: 7, targetMap: 'cinnabar_island', targetX: 14, targetY: 9 },
+      { x: 5, y: 7, targetMap: 'cinnabar_island', targetX: 14, targetY: 9 },
     ],
     npcs: [
       {
@@ -1122,12 +1126,14 @@ export const INDIGO_PLATEAU: MapData = (() => {
   }
 
   // Champion Hall entrance (Elite Four)
-  fillRect(5, 2, 5, 3, T.BUILDING);
-  setTile(7, 5, T.DOOR);
+  fillRect(5, 2, 5, 1, T.ROOF);
+  fillRect(5, 3, 5, 2, T.BUILDING);
+  setTile(7, 4, T.DOOR);
 
   // Pokemon Center
-  fillRect(5, 8, 5, 4, T.BUILDING);
-  setTile(7, 12, T.DOOR);
+  fillRect(5, 8, 5, 1, T.ROOF);
+  fillRect(5, 9, 5, 3, T.BUILDING);
+  setTile(7, 11, T.DOOR);
 
   // Signs
   setTile(5, 6, T.SIGN);   // Champion Hall sign
@@ -1144,9 +1150,9 @@ export const INDIGO_PLATEAU: MapData = (() => {
       // South entrance → Victory Road
       { x: 7, y: 14, targetMap: 'victory_road', targetX: 9, targetY: 1 },
       // Pokemon Center warp
-      { x: 7, y: 12, targetMap: 'pokemon_center_indigo', targetX: 4, targetY: 7 },
+      { x: 7, y: 11, targetMap: 'pokemon_center_indigo', targetX: 4, targetY: 7 },
       // Champion Hall (Elite Four entrance - special trigger)
-      { x: 7, y: 5, targetMap: 'elite_four', targetX: 7, targetY: 6 },
+      { x: 7, y: 4, targetMap: 'elite_four', targetX: 7, targetY: 6 },
     ],
     npcs: [
       {
@@ -1241,8 +1247,8 @@ export const POKEMON_CENTER_INDIGO: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'indigo_plateau', targetX: 7, targetY: 13 },
-      { x: 5, y: 7, targetMap: 'indigo_plateau', targetX: 7, targetY: 13 },
+      { x: 4, y: 7, targetMap: 'indigo_plateau', targetX: 7, targetY: 12 },
+      { x: 5, y: 7, targetMap: 'indigo_plateau', targetX: 7, targetY: 12 },
     ],
     npcs: [
       {
@@ -1413,7 +1419,7 @@ const POKEMART_CINNABAR: MapData = (() => {
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
   return {
     id: 'pokemart_cinnabar', name: 'POKeMON MART', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'cinnabar_island', targetX: 14, targetY: 17 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'cinnabar_island', targetX: 14, targetY: 16 }],
     npcs: [{
       id: 'mart_clerk', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
       dialogue: ['Welcome! How may I\nserve you?'],

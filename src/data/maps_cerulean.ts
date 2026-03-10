@@ -9,7 +9,7 @@ function fill2D<V>(w: number, h: number, v: V): V[][] {
 
 const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
-  T.CUT_TREE, T.BOULDER,
+  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN,
 ]);
 
 // ─────────────────────────────────────────────────────────────
@@ -667,20 +667,20 @@ export const CERULEAN_CITY: MapData = (() => {
   fillRect(2, 12, 21, 2, T.PATH);
 
   // Cerulean Gym (left area)
-  fillRect(3, 5, 6, 5, T.BUILDING);
-  setTile(6, 10, T.DOOR);
+  fillRect(3, 5, 6, 1, T.ROOF); fillRect(3, 6, 6, 4, T.BUILDING);
+  setTile(6, 9, T.DOOR);
 
   // Pokemon Center (right area)
-  fillRect(16, 5, 5, 4, T.BUILDING);
-  setTile(18, 9, T.DOOR);
+  fillRect(16, 5, 5, 1, T.ROOF); fillRect(16, 6, 5, 3, T.BUILDING);
+  setTile(18, 8, T.DOOR);
 
   // Pokemart (right, lower)
-  fillRect(16, 15, 5, 4, T.BUILDING);
-  setTile(18, 19, T.DOOR);
+  fillRect(16, 15, 5, 1, T.ROOF); fillRect(16, 16, 5, 3, T.BUILDING);
+  setTile(18, 18, T.DOOR);
 
   // Bike Shop (left, lower)
-  fillRect(3, 15, 5, 4, T.BUILDING);
-  setTile(5, 19, T.DOOR);
+  fillRect(3, 15, 5, 1, T.ROOF); fillRect(3, 16, 5, 3, T.BUILDING);
+  setTile(5, 18, T.DOOR);
 
   // Signs near gym and center
   setTile(5, 11, T.SIGN);   // Gym sign
@@ -696,6 +696,7 @@ export const CERULEAN_CITY: MapData = (() => {
 
   // Water feature (pond near center of town)
   fillRect(6, 20, 3, 2, T.WATER);
+  setTile(5, 20, T.FOUNTAIN);
 
   // Open gaps for exits in tree borders
   // North exit
@@ -758,13 +759,13 @@ export const CERULEAN_CITY: MapData = (() => {
       { x: 24, y: 12, targetMap: 'route9', targetX: 1, targetY: 5 },
       { x: 24, y: 13, targetMap: 'route9', targetX: 1, targetY: 6 },
       // Cerulean Gym door
-      { x: 6, y: 10, targetMap: 'cerulean_gym', targetX: 4, targetY: 13 },
+      { x: 6, y: 9, targetMap: 'cerulean_gym', targetX: 4, targetY: 13 },
       // Pokemon Center door
-      { x: 18, y: 9, targetMap: 'pokemon_center_cerulean', targetX: 4, targetY: 7 },
+      { x: 18, y: 8, targetMap: 'pokemon_center_cerulean', targetX: 4, targetY: 7 },
       // Pokemart door (no interior defined yet, placeholder)
-      { x: 18, y: 19, targetMap: 'pokemart_cerulean', targetX: 3, targetY: 7 },
+      { x: 18, y: 18, targetMap: 'pokemart_cerulean', targetX: 3, targetY: 7 },
       // Bike Shop door
-      { x: 5, y: 19, targetMap: 'bike_shop', targetX: 3, targetY: 7 },
+      { x: 5, y: 18, targetMap: 'bike_shop', targetX: 3, targetY: 7 },
       // Burgled House front door (north face)
       { x: 15, y: 20, targetMap: 'burgled_house', targetX: 3, targetY: 6 },
       // Burgled House back door (south face, re-entry from behind)
@@ -878,8 +879,8 @@ export const CERULEAN_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 13, targetMap: 'cerulean_city', targetX: 6, targetY: 11 },
-      { x: 5, y: 13, targetMap: 'cerulean_city', targetX: 6, targetY: 11 },
+      { x: 4, y: 13, targetMap: 'cerulean_city', targetX: 6, targetY: 10 },
+      { x: 5, y: 13, targetMap: 'cerulean_city', targetX: 6, targetY: 10 },
     ],
     npcs: [
       {
@@ -962,8 +963,8 @@ export const POKEMON_CENTER_CERULEAN: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'cerulean_city', targetX: 18, targetY: 10 },
-      { x: 5, y: 7, targetMap: 'cerulean_city', targetX: 18, targetY: 10 },
+      { x: 4, y: 7, targetMap: 'cerulean_city', targetX: 18, targetY: 9 },
+      { x: 5, y: 7, targetMap: 'cerulean_city', targetX: 18, targetY: 9 },
     ],
     npcs: [
       {
@@ -1302,7 +1303,7 @@ export const POKEMART_CERULEAN: MapData = (() => {
     width: W, height: H,
     tiles, collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'cerulean_city', targetX: 18, targetY: 20 },
+      { x: 3, y: H - 1, targetMap: 'cerulean_city', targetX: 18, targetY: 19 },
     ],
     npcs: [
       {
@@ -1487,7 +1488,7 @@ export const BIKE_SHOP: MapData = (() => {
     width: W, height: H,
     tiles, collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'cerulean_city', targetX: 5, targetY: 20 },
+      { x: 3, y: H - 1, targetMap: 'cerulean_city', targetX: 5, targetY: 19 },
     ],
     npcs: [
       {

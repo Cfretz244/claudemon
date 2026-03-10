@@ -26,6 +26,9 @@ export enum TileType {
   SPIN_TILE = 22,
   STOP_TILE = 23,
   TELEPORT_PAD = 24,
+  ROOF = 25,
+  FOUNTAIN = 26,
+  COBBLESTONE = 27,
 }
 
 export interface WarpPoint {

@@ -17,7 +17,7 @@ function fill2D<V>(width: number, height: number, value: V): V[][] {
 // Collision lookup: which tiles block movement
 export const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
-  T.CUT_TREE, T.BOULDER,
+  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN,
 ]);
 
 export const PALLET_TOWN: MapData = (() => {
@@ -46,16 +46,19 @@ export const PALLET_TOWN: MapData = (() => {
   fillRect(2, 8, 16, 2, T.PATH);
 
   // Player's house (top-left area)
-  fillRect(2, 3, 5, 4, T.BUILDING);
-  setTile(4, 7, T.DOOR);
+  fillRect(2, 3, 5, 1, T.ROOF);
+  fillRect(2, 4, 5, 3, T.BUILDING);
+  setTile(4, 6, T.DOOR);
 
   // Rival's house (top-right area)
-  fillRect(12, 3, 5, 4, T.BUILDING);
-  setTile(14, 7, T.DOOR);
+  fillRect(12, 3, 5, 1, T.ROOF);
+  fillRect(12, 4, 5, 3, T.BUILDING);
+  setTile(14, 6, T.DOOR);
 
   // Oak's Lab (bottom center)
-  fillRect(7, 12, 6, 4, T.BUILDING);
-  setTile(10, 16, T.DOOR);
+  fillRect(7, 12, 6, 1, T.ROOF);
+  fillRect(7, 13, 6, 3, T.BUILDING);
+  setTile(10, 15, T.DOOR);
   // Sign
   setTile(11, 16, T.SIGN);
 
@@ -107,11 +110,11 @@ export const PALLET_TOWN: MapData = (() => {
     collision,
     warps: [
       // Player's house door
-      { x: 4, y: 7, targetMap: 'player_house', targetX: 3, targetY: 7 },
+      { x: 4, y: 6, targetMap: 'player_house', targetX: 3, targetY: 7 },
       // Rival's house door
-      { x: 14, y: 7, targetMap: 'rival_house', targetX: 3, targetY: 7 },
+      { x: 14, y: 6, targetMap: 'rival_house', targetX: 3, targetY: 7 },
       // Oak's Lab door
-      { x: 10, y: 16, targetMap: 'oaks_lab', targetX: 4, targetY: 11 },
+      { x: 10, y: 15, targetMap: 'oaks_lab', targetX: 4, targetY: 11 },
       // North exit to Route 1
       { x: 8, y: 1, targetMap: 'route1', targetX: 8, targetY: 28 },
       { x: 9, y: 1, targetMap: 'route1', targetX: 9, targetY: 28 },
@@ -195,7 +198,7 @@ export const PLAYER_HOUSE: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'pallet_town', targetX: 4, targetY: 8 },
+      { x: 3, y: H - 1, targetMap: 'pallet_town', targetX: 4, targetY: 7 },
     ],
     npcs: [
       {
@@ -256,7 +259,7 @@ export const RIVAL_HOUSE: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'pallet_town', targetX: 14, targetY: 8 },
+      { x: 3, y: H - 1, targetMap: 'pallet_town', targetX: 14, targetY: 7 },
     ],
     npcs: [
       {
@@ -319,8 +322,8 @@ export const OAKS_LAB: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 16 },
-      { x: 5, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 16 },
+      { x: 4, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 15 },
+      { x: 5, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 15 },
     ],
     npcs: [
       {
@@ -498,24 +501,24 @@ export const VIRIDIAN_CITY: MapData = (() => {
   fillRect(2, 14, 26, 2, T.PATH);
 
   // Pokemon Center (left side)
-  fillRect(3, 8, 5, 4, T.BUILDING);
-  setTile(5, 12, T.DOOR);
-  // Red roof indicator
-  setTile(4, 8, T.BUILDING);
-  setTile(5, 8, T.BUILDING);
-  setTile(6, 8, T.BUILDING);
+  fillRect(3, 8, 5, 1, T.ROOF);
+  fillRect(3, 9, 5, 3, T.BUILDING);
+  setTile(5, 11, T.DOOR);
 
   // Pokemart (right side)
-  fillRect(18, 8, 5, 4, T.BUILDING);
-  setTile(20, 12, T.DOOR);
+  fillRect(18, 8, 5, 1, T.ROOF);
+  fillRect(18, 9, 5, 3, T.BUILDING);
+  setTile(20, 11, T.DOOR);
 
   // Viridian Gym (locked initially)
-  fillRect(4, 18, 6, 5, T.BUILDING);
-  setTile(7, 23, T.DOOR);
+  fillRect(4, 18, 6, 1, T.ROOF);
+  fillRect(4, 19, 6, 4, T.BUILDING);
+  setTile(7, 22, T.DOOR);
 
   // Houses
-  fillRect(18, 18, 5, 4, T.BUILDING);
-  setTile(20, 22, T.DOOR);
+  fillRect(18, 18, 5, 1, T.ROOF);
+  fillRect(18, 19, 5, 3, T.BUILDING);
+  setTile(20, 21, T.DOOR);
 
   // Water pond
   fillRect(14, 20, 3, 3, T.WATER);
@@ -547,18 +550,18 @@ export const VIRIDIAN_CITY: MapData = (() => {
       { x: 10, y: H - 1, targetMap: 'route1', targetX: 10, targetY: 1 },
       { x: 11, y: H - 1, targetMap: 'route1', targetX: 11, targetY: 1 },
       // Pokemon Center door
-      { x: 5, y: 12, targetMap: 'pokemon_center', targetX: 4, targetY: 7 },
+      { x: 5, y: 11, targetMap: 'pokemon_center', targetX: 4, targetY: 7 },
       // Pokemart door
-      { x: 20, y: 12, targetMap: 'pokemart', targetX: 3, targetY: 7 },
+      { x: 20, y: 11, targetMap: 'pokemart', targetX: 3, targetY: 7 },
       // North to Route 2
       { x: 8, y: 1, targetMap: 'route2', targetX: 8, targetY: 28 },
       { x: 9, y: 1, targetMap: 'route2', targetX: 9, targetY: 28 },
       { x: 10, y: 1, targetMap: 'route2', targetX: 10, targetY: 28 },
       { x: 11, y: 1, targetMap: 'route2', targetX: 11, targetY: 28 },
       // Viridian Gym door
-      { x: 7, y: 23, targetMap: 'viridian_gym', targetX: 4, targetY: 13 },
+      { x: 7, y: 22, targetMap: 'viridian_gym', targetX: 4, targetY: 13 },
       // House door
-      { x: 20, y: 22, targetMap: 'viridian_house', targetX: 3, targetY: 7 },
+      { x: 20, y: 21, targetMap: 'viridian_house', targetX: 3, targetY: 7 },
       // West to Route 22
       { x: 1, y: 14, targetMap: 'route22', targetX: 23, targetY: 4 },
       { x: 1, y: 15, targetMap: 'route22', targetX: 23, targetY: 5 },
@@ -643,8 +646,8 @@ export const POKEMON_CENTER: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: H - 1, targetMap: 'viridian_city', targetX: 5, targetY: 13 },
-      { x: 5, y: H - 1, targetMap: 'viridian_city', targetX: 5, targetY: 13 },
+      { x: 4, y: H - 1, targetMap: 'viridian_city', targetX: 5, targetY: 12 },
+      { x: 5, y: H - 1, targetMap: 'viridian_city', targetX: 5, targetY: 12 },
     ],
     npcs: [
       {
@@ -703,7 +706,7 @@ export const POKEMART: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'viridian_city', targetX: 20, targetY: 13 },
+      { x: 3, y: H - 1, targetMap: 'viridian_city', targetX: 20, targetY: 12 },
     ],
     npcs: [
       {
@@ -769,12 +772,14 @@ export const ROUTE2: MapData = (() => {
   setTile(14, 6, T.TREE);
 
   // Oak's Aide building (east section, behind tree wall)
-  fillRect(13, 15, 4, 2, T.BUILDING);
-  setTile(15, 17, T.DOOR);
+  fillRect(13, 15, 4, 1, T.ROOF);
+  fillRect(13, 16, 4, 1, T.BUILDING);
+  setTile(15, 16, T.DOOR);
 
   // Diglett's Cave entrance building (east section)
-  fillRect(13, 22, 4, 2, T.BUILDING);
-  setTile(15, 24, T.DOOR);
+  fillRect(13, 22, 4, 1, T.ROOF);
+  fillRect(13, 23, 4, 1, T.BUILDING);
+  setTile(15, 23, T.DOOR);
 
   return {
     id: 'route2',
@@ -795,9 +800,9 @@ export const ROUTE2: MapData = (() => {
       { x: 10, y: 0, targetMap: 'viridian_forest', targetX: 15, targetY: 42 },
       { x: 11, y: 0, targetMap: 'viridian_forest', targetX: 16, targetY: 42 },
       // Oak's Aide house door
-      { x: 15, y: 17, targetMap: 'oaks_aide_house', targetX: 3, targetY: 6 },
+      { x: 15, y: 16, targetMap: 'oaks_aide_house', targetX: 3, targetY: 6 },
       // Diglett's Cave entrance door
-      { x: 15, y: 24, targetMap: 'digletts_cave', targetX: 6, targetY: 2 },
+      { x: 15, y: 23, targetMap: 'digletts_cave', targetX: 6, targetY: 2 },
     ],
     npcs: [],
     wildEncounters: {
@@ -845,7 +850,7 @@ export const OAKS_AIDE_HOUSE: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'route2', targetX: 15, targetY: 18 },
+      { x: 3, y: H - 1, targetMap: 'route2', targetX: 15, targetY: 17 },
     ],
     npcs: [
       {
@@ -1123,24 +1128,29 @@ export const PEWTER_CITY: MapData = (() => {
   fillRect(2, 12, 21, 2, T.PATH);
 
   // Pewter Gym
-  fillRect(4, 4, 6, 5, T.BUILDING);
-  setTile(7, 9, T.DOOR);
+  fillRect(4, 4, 6, 1, T.ROOF);
+  fillRect(4, 5, 6, 4, T.BUILDING);
+  setTile(7, 8, T.DOOR);
 
   // Pokemon Center
-  fillRect(14, 4, 5, 4, T.BUILDING);
-  setTile(16, 8, T.DOOR);
+  fillRect(14, 4, 5, 1, T.ROOF);
+  fillRect(14, 5, 5, 3, T.BUILDING);
+  setTile(16, 7, T.DOOR);
 
   // Museum (top)
-  fillRect(14, 10, 7, 3, T.BUILDING);
-  setTile(17, 13, T.DOOR);
+  fillRect(14, 10, 7, 1, T.ROOF);
+  fillRect(14, 11, 7, 2, T.BUILDING);
+  setTile(17, 12, T.DOOR);
 
   // Pokemart
-  fillRect(14, 16, 5, 4, T.BUILDING);
-  setTile(16, 20, T.DOOR);
+  fillRect(14, 16, 5, 1, T.ROOF);
+  fillRect(14, 17, 5, 3, T.BUILDING);
+  setTile(16, 19, T.DOOR);
 
   // Houses
-  fillRect(3, 16, 5, 4, T.BUILDING);
-  setTile(5, 20, T.DOOR);
+  fillRect(3, 16, 5, 1, T.ROOF);
+  fillRect(3, 17, 5, 3, T.BUILDING);
+  setTile(5, 19, T.DOOR);
 
   // Flowers
   setTile(12, 6, T.FLOWER);
@@ -1165,15 +1175,15 @@ export const PEWTER_CITY: MapData = (() => {
       { x: 10, y: H - 1, targetMap: 'viridian_forest', targetX: 6, targetY: 2 },
       { x: 11, y: H - 1, targetMap: 'viridian_forest', targetX: 6, targetY: 2 },
       // Gym
-      { x: 7, y: 9, targetMap: 'pewter_gym', targetX: 4, targetY: 13 },
+      { x: 7, y: 8, targetMap: 'pewter_gym', targetX: 4, targetY: 13 },
       // Pokemon Center
-      { x: 16, y: 8, targetMap: 'pokemon_center_pewter', targetX: 4, targetY: 7 },
+      { x: 16, y: 7, targetMap: 'pokemon_center_pewter', targetX: 4, targetY: 7 },
       // Pokemart
-      { x: 16, y: 20, targetMap: 'pokemart_pewter', targetX: 3, targetY: 7 },
+      { x: 16, y: 19, targetMap: 'pokemart_pewter', targetX: 3, targetY: 7 },
       // House
-      { x: 5, y: 20, targetMap: 'pewter_house', targetX: 3, targetY: 7 },
+      { x: 5, y: 19, targetMap: 'pewter_house', targetX: 3, targetY: 7 },
       // Museum
-      { x: 17, y: 13, targetMap: 'pewter_museum', targetX: 5, targetY: 9 },
+      { x: 17, y: 12, targetMap: 'pewter_museum', targetX: 5, targetY: 9 },
       // East to Route 3 (upper lane entry)
       { x: W - 2, y: 12, targetMap: 'route3', targetX: 1, targetY: 3 },
       { x: W - 2, y: 13, targetMap: 'route3', targetX: 1, targetY: 4 },
@@ -1257,8 +1267,8 @@ export const PEWTER_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: H - 1, targetMap: 'pewter_city', targetX: 7, targetY: 10 },
-      { x: 5, y: H - 1, targetMap: 'pewter_city', targetX: 7, targetY: 10 },
+      { x: 4, y: H - 1, targetMap: 'pewter_city', targetX: 7, targetY: 9 },
+      { x: 5, y: H - 1, targetMap: 'pewter_city', targetX: 7, targetY: 9 },
     ],
     npcs: [
       {
@@ -1296,8 +1306,8 @@ export const POKEMON_CENTER_PEWTER: MapData = (() => {
   const base = JSON.parse(JSON.stringify(POKEMON_CENTER)) as MapData;
   base.id = 'pokemon_center_pewter';
   base.warps = [
-    { x: 4, y: base.height - 1, targetMap: 'pewter_city', targetX: 16, targetY: 9 },
-    { x: 5, y: base.height - 1, targetMap: 'pewter_city', targetX: 16, targetY: 9 },
+    { x: 4, y: base.height - 1, targetMap: 'pewter_city', targetX: 16, targetY: 8 },
+    { x: 5, y: base.height - 1, targetMap: 'pewter_city', targetX: 16, targetY: 8 },
   ];
   return base;
 })();
@@ -1415,8 +1425,9 @@ export const ROUTE3: MapData = (() => {
     setTile(W - 1, y, T.TREE);
   }
   // Pokemon Center building
-  fillRect(42, 1, 5, 4, T.BUILDING);
-  setTile(44, 5, T.DOOR);
+  fillRect(42, 1, 5, 1, T.ROOF);
+  fillRect(42, 2, 5, 3, T.BUILDING);
+  setTile(44, 4, T.DOOR);
   // Path in front of Pokemon Center (don't overwrite building bottom row)
   fillRect(40, 5, 4, 1, T.PATH);
   // East path to Mt. Moon exit
@@ -1453,7 +1464,7 @@ export const ROUTE3: MapData = (() => {
       { x: W - 1, y: 8, targetMap: 'mt_moon', targetX: 6, targetY: 24 },
       { x: W - 1, y: 9, targetMap: 'mt_moon', targetX: 6, targetY: 24 },
       // Pokemon Center
-      { x: 44, y: 5, targetMap: 'pokemon_center_route3', targetX: 4, targetY: 7 },
+      { x: 44, y: 4, targetMap: 'pokemon_center_route3', targetX: 4, targetY: 7 },
     ],
     npcs: [
       // ── UPPER LANE TRAINERS ──
@@ -1581,8 +1592,8 @@ export const POKEMON_CENTER_ROUTE3: MapData = (() => {
   const base = JSON.parse(JSON.stringify(POKEMON_CENTER)) as MapData;
   base.id = 'pokemon_center_route3';
   base.warps = [
-    { x: 4, y: base.height - 1, targetMap: 'route3', targetX: 44, targetY: 6 },
-    { x: 5, y: base.height - 1, targetMap: 'route3', targetX: 44, targetY: 6 },
+    { x: 4, y: base.height - 1, targetMap: 'route3', targetX: 44, targetY: 5 },
+    { x: 5, y: base.height - 1, targetMap: 'route3', targetX: 44, targetY: 5 },
   ];
   return base;
 })();
@@ -1633,8 +1644,8 @@ export const VIRIDIAN_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: H - 1, targetMap: 'viridian_city', targetX: 7, targetY: 24 },
-      { x: 5, y: H - 1, targetMap: 'viridian_city', targetX: 7, targetY: 24 },
+      { x: 4, y: H - 1, targetMap: 'viridian_city', targetX: 7, targetY: 23 },
+      { x: 5, y: H - 1, targetMap: 'viridian_city', targetX: 7, targetY: 23 },
     ],
     npcs: [
       {
@@ -1693,7 +1704,7 @@ export const VIRIDIAN_HOUSE: MapData = (() => {
   setTile(3, H - 1, T.DOOR);
   return {
     id: 'viridian_house', name: 'VIRIDIAN HOUSE', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'viridian_city', targetX: 20, targetY: 23 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'viridian_city', targetX: 20, targetY: 22 }],
     npcs: [{
       id: 'viridian_house_npc', x: 4, y: 3, spriteColor: 0xc0a060, direction: Direction.DOWN,
       dialogue: ['Did you know that you\ncan use CUT outside', 'of battle to chop\ndown small trees?'],
@@ -1716,7 +1727,7 @@ export const POKEMART_PEWTER: MapData = (() => {
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
   return {
     id: 'pokemart_pewter', name: 'POKeMON MART', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'pewter_city', targetX: 16, targetY: 21 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'pewter_city', targetX: 16, targetY: 20 }],
     npcs: [{
       id: 'mart_clerk_pewter', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
       dialogue: ['Welcome! How may I\nserve you?'],
@@ -1741,7 +1752,7 @@ export const PEWTER_HOUSE: MapData = (() => {
   setTile(3, H - 1, T.DOOR);
   return {
     id: 'pewter_house', name: 'PEWTER HOUSE', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'pewter_city', targetX: 5, targetY: 21 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'pewter_city', targetX: 5, targetY: 20 }],
     npcs: [{
       id: 'pewter_house_npc', x: 4, y: 3, spriteColor: 0xa080c0, direction: Direction.DOWN,
       dialogue: ["BROCK's POKeMON are\nall ROCK-type.", 'Use WATER or GRASS\ntype moves to win!'],
@@ -1770,8 +1781,8 @@ export const PEWTER_MUSEUM: MapData = (() => {
   return {
     id: 'pewter_museum', name: 'PEWTER MUSEUM', width: W, height: H, tiles, collision,
     warps: [
-      { x: 5, y: H - 1, targetMap: 'pewter_city', targetX: 17, targetY: 14 },
-      { x: 6, y: H - 1, targetMap: 'pewter_city', targetX: 17, targetY: 14 },
+      { x: 5, y: H - 1, targetMap: 'pewter_city', targetX: 17, targetY: 13 },
+      { x: 6, y: H - 1, targetMap: 'pewter_city', targetX: 17, targetY: 13 },
     ],
     npcs: [
       {

@@ -9,7 +9,7 @@ function fill2D<V>(w: number, h: number, v: V): V[][] {
 
 const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
-  T.CUT_TREE, T.BOULDER,
+  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN,
 ]);
 
 // ─── SILPH CO. 1F — Lobby ───────────────────────────────────────────────────
@@ -58,8 +58,8 @@ const SILPH_CO_1F: MapData = (() => {
     tiles, collision,
     warps: [
       // Exit to Saffron City
-      { x: 6, y: 13, targetMap: 'saffron_city', targetX: 15, targetY: 11 },
-      { x: 7, y: 13, targetMap: 'saffron_city', targetX: 15, targetY: 11 },
+      { x: 6, y: 13, targetMap: 'saffron_city', targetX: 15, targetY: 10 },
+      { x: 7, y: 13, targetMap: 'saffron_city', targetX: 15, targetY: 10 },
       // Stairs to 2F
       { x: 12, y: 2, targetMap: 'silph_co_2f', targetX: 12, targetY: 12 },
     ],

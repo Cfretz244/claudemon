@@ -9,7 +9,7 @@ function fill2D<V>(w: number, h: number, v: V): V[][] {
 
 const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
-  T.CUT_TREE, T.BOULDER,
+  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN,
 ]);
 
 // ---------------------------------------------------------------------------
@@ -235,16 +235,19 @@ export const VERMILION_CITY: MapData = (() => {
   fillRect(2, 12, 26, 2, T.PATH);
 
   // Vermilion Gym (left side, lower)
-  fillRect(4, 15, 6, 5, T.BUILDING);
-  setTile(7, 20, T.DOOR);
+  fillRect(4, 15, 6, 1, T.ROOF);
+  fillRect(4, 16, 6, 4, T.BUILDING);
+  setTile(7, 19, T.DOOR);
 
   // Pokemon Center (right side, upper)
-  fillRect(16, 5, 5, 4, T.BUILDING);
-  setTile(18, 9, T.DOOR);
+  fillRect(16, 5, 5, 1, T.ROOF);
+  fillRect(16, 6, 5, 3, T.BUILDING);
+  setTile(18, 8, T.DOOR);
 
   // Pokemart (left side, upper)
-  fillRect(4, 5, 5, 4, T.BUILDING);
-  setTile(6, 9, T.DOOR);
+  fillRect(4, 5, 5, 1, T.ROOF);
+  fillRect(4, 6, 5, 3, T.BUILDING);
+  setTile(6, 8, T.DOOR);
 
   // SS Anne pier - path from road south to dock
   fillRect(22, 14, 2, 8, T.PATH);
@@ -286,11 +289,11 @@ export const VERMILION_CITY: MapData = (() => {
       { x: 28, y: 12, targetMap: 'route11', targetX: 2, targetY: 5 },
       { x: 28, y: 13, targetMap: 'route11', targetX: 2, targetY: 5 },
       // Gym door
-      { x: 7, y: 20, targetMap: 'vermilion_gym', targetX: 4, targetY: 13 },
+      { x: 7, y: 19, targetMap: 'vermilion_gym', targetX: 4, targetY: 13 },
       // Pokemon Center
-      { x: 18, y: 9, targetMap: 'pokemon_center_vermilion', targetX: 4, targetY: 7 },
+      { x: 18, y: 8, targetMap: 'pokemon_center_vermilion', targetX: 4, targetY: 7 },
       // Pokemart door
-      { x: 6, y: 9, targetMap: 'pokemart_vermilion', targetX: 3, targetY: 7 },
+      { x: 6, y: 8, targetMap: 'pokemart_vermilion', targetX: 3, targetY: 7 },
       // SS Anne pier
       { x: 22, y: 24, targetMap: 'ss_anne', targetX: 10, targetY: 12 },
       { x: 23, y: 24, targetMap: 'ss_anne', targetX: 10, targetY: 12 },
@@ -372,8 +375,8 @@ export const VERMILION_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 13, targetMap: 'vermilion_city', targetX: 7, targetY: 21 },
-      { x: 5, y: 13, targetMap: 'vermilion_city', targetX: 7, targetY: 21 },
+      { x: 4, y: 13, targetMap: 'vermilion_city', targetX: 7, targetY: 20 },
+      { x: 5, y: 13, targetMap: 'vermilion_city', targetX: 7, targetY: 20 },
     ],
     npcs: [
       {
@@ -452,8 +455,8 @@ export const POKEMON_CENTER_VERMILION: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'vermilion_city', targetX: 18, targetY: 10 },
-      { x: 5, y: 7, targetMap: 'vermilion_city', targetX: 18, targetY: 10 },
+      { x: 4, y: 7, targetMap: 'vermilion_city', targetX: 18, targetY: 9 },
+      { x: 5, y: 7, targetMap: 'vermilion_city', targetX: 18, targetY: 9 },
     ],
     npcs: [
       {
@@ -594,8 +597,9 @@ export const ROUTE10: MapData = (() => {
   setTile(10, 12, T.DOOR);
 
   // Pokemon Center near tunnel entrance
-  fillRect(14, 10, 5, 4, T.BUILDING);
-  setTile(16, 14, T.DOOR);
+  fillRect(14, 10, 5, 1, T.ROOF);
+  fillRect(14, 11, 5, 3, T.BUILDING);
+  setTile(16, 13, T.DOOR);
 
   // Tall grass patches
   fillRect(3, 3, 4, 3, T.TALL_GRASS);
@@ -624,7 +628,7 @@ export const ROUTE10: MapData = (() => {
       // Rock Tunnel entrance
       { x: 10, y: 12, targetMap: 'rock_tunnel', targetX: 9, targetY: 19 },
       // Pokemon Center door
-      { x: 16, y: 14, targetMap: 'pokemon_center_route10', targetX: 4, targetY: 7 },
+      { x: 16, y: 13, targetMap: 'pokemon_center_route10', targetX: 4, targetY: 7 },
       // South exit -> Lavender Town
       { x: 9, y: 24, targetMap: 'lavender_town', targetX: 11, targetY: 2 },
       { x: 10, y: 24, targetMap: 'lavender_town', targetX: 11, targetY: 2 },
@@ -834,8 +838,8 @@ export const POKEMON_CENTER_ROUTE10: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'route10', targetX: 16, targetY: 15 },
-      { x: 5, y: 7, targetMap: 'route10', targetX: 16, targetY: 15 },
+      { x: 4, y: 7, targetMap: 'route10', targetX: 16, targetY: 14 },
+      { x: 5, y: 7, targetMap: 'route10', targetX: 16, targetY: 14 },
     ],
     npcs: [
       {
@@ -888,7 +892,7 @@ export const POKEMART_VERMILION: MapData = (() => {
     width: W, height: H,
     tiles, collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'vermilion_city', targetX: 6, targetY: 10 },
+      { x: 3, y: H - 1, targetMap: 'vermilion_city', targetX: 6, targetY: 9 },
     ],
     npcs: [
       {

@@ -9,7 +9,7 @@ function fill2D<V>(w: number, h: number, v: V): V[][] {
 
 const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
-  T.CUT_TREE, T.BOULDER,
+  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN,
 ]);
 
 // ─── ROUTE 12 ──────────────────────────────────────────────────────────────────
@@ -663,24 +663,29 @@ export const FUCHSIA_CITY: MapData = (() => {
   fillRect(2, 12, 21, 2, T.PATH);  // Horizontal
 
   // Fuchsia Gym
-  fillRect(4, 5, 6, 5, T.BUILDING);
-  setTile(7, 10, T.DOOR);
+  fillRect(4, 5, 6, 1, T.ROOF);
+  fillRect(4, 6, 6, 4, T.BUILDING);
+  setTile(7, 9, T.DOOR);
 
   // Pokemon Center
-  fillRect(16, 5, 5, 4, T.BUILDING);
-  setTile(18, 9, T.DOOR);
+  fillRect(16, 5, 5, 1, T.ROOF);
+  fillRect(16, 6, 5, 3, T.BUILDING);
+  setTile(18, 8, T.DOOR);
 
   // Safari Zone Gate (north)
-  fillRect(10, 3, 5, 3, T.BUILDING);
-  setTile(12, 6, T.DOOR);
+  fillRect(10, 3, 5, 1, T.ROOF);
+  fillRect(10, 4, 5, 2, T.BUILDING);
+  setTile(12, 5, T.DOOR);
 
   // Pokemart
-  fillRect(16, 16, 5, 4, T.BUILDING);
-  setTile(18, 20, T.DOOR);
+  fillRect(16, 16, 5, 1, T.ROOF);
+  fillRect(16, 17, 5, 3, T.BUILDING);
+  setTile(18, 19, T.DOOR);
 
   // Warden's House
-  fillRect(4, 16, 5, 4, T.BUILDING);
-  setTile(6, 20, T.DOOR);
+  fillRect(4, 16, 5, 1, T.ROOF);
+  fillRect(4, 17, 5, 3, T.BUILDING);
+  setTile(6, 19, T.DOOR);
 
   // Flowers
   setTile(9, 8, T.FLOWER);
@@ -704,7 +709,7 @@ export const FUCHSIA_CITY: MapData = (() => {
     collision,
     warps: [
       // Safari Zone gate (north)
-      { x: 12, y: 6, targetMap: 'safari_zone', targetX: 12, targetY: 24 },
+      { x: 12, y: 5, targetMap: 'safari_zone', targetX: 12, targetY: 24 },
       // East exit to Route 15
       { x: 24, y: 12, targetMap: 'route15', targetX: 1, targetY: 4 },
       { x: 24, y: 13, targetMap: 'route15', targetX: 1, targetY: 4 },
@@ -714,13 +719,13 @@ export const FUCHSIA_CITY: MapData = (() => {
       { x: 12, y: 24, targetMap: 'route19', targetX: 7, targetY: 1 },
       { x: 13, y: 24, targetMap: 'route19', targetX: 7, targetY: 1 },
       // Gym door
-      { x: 7, y: 10, targetMap: 'fuchsia_gym', targetX: 4, targetY: 13 },
+      { x: 7, y: 9, targetMap: 'fuchsia_gym', targetX: 4, targetY: 13 },
       // Pokemon Center door
-      { x: 18, y: 9, targetMap: 'pokemon_center_fuchsia', targetX: 4, targetY: 7 },
+      { x: 18, y: 8, targetMap: 'pokemon_center_fuchsia', targetX: 4, targetY: 7 },
       // Pokemart door
-      { x: 18, y: 20, targetMap: 'pokemart_fuchsia', targetX: 3, targetY: 7 },
+      { x: 18, y: 19, targetMap: 'pokemart_fuchsia', targetX: 3, targetY: 7 },
       // Warden's House
-      { x: 6, y: 20, targetMap: 'warden_house', targetX: 3, targetY: 7 },
+      { x: 6, y: 19, targetMap: 'warden_house', targetX: 3, targetY: 7 },
     ],
     npcs: [
       {
@@ -821,8 +826,8 @@ export const FUCHSIA_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 13, targetMap: 'fuchsia_city', targetX: 7, targetY: 11 },
-      { x: 5, y: 13, targetMap: 'fuchsia_city', targetX: 7, targetY: 11 },
+      { x: 4, y: 13, targetMap: 'fuchsia_city', targetX: 7, targetY: 10 },
+      { x: 5, y: 13, targetMap: 'fuchsia_city', targetX: 7, targetY: 10 },
     ],
     npcs: [
       {
@@ -910,8 +915,8 @@ export const POKEMON_CENTER_FUCHSIA: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'fuchsia_city', targetX: 18, targetY: 10 },
-      { x: 5, y: 7, targetMap: 'fuchsia_city', targetX: 18, targetY: 10 },
+      { x: 4, y: 7, targetMap: 'fuchsia_city', targetX: 18, targetY: 9 },
+      { x: 5, y: 7, targetMap: 'fuchsia_city', targetX: 18, targetY: 9 },
     ],
     npcs: [
       {
@@ -994,7 +999,7 @@ export const SAFARI_ZONE: MapData = (() => {
     collision,
     warps: [
       // South entrance back to Fuchsia City
-      { x: 12, y: 24, targetMap: 'fuchsia_city', targetX: 12, targetY: 7 },
+      { x: 12, y: 24, targetMap: 'fuchsia_city', targetX: 12, targetY: 6 },
     ],
     npcs: [
       {
@@ -1072,7 +1077,7 @@ const POKEMART_FUCHSIA: MapData = (() => {
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
   return {
     id: 'pokemart_fuchsia', name: 'POKeMON MART', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'fuchsia_city', targetX: 18, targetY: 21 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'fuchsia_city', targetX: 18, targetY: 20 }],
     npcs: [{
       id: 'mart_clerk', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
       dialogue: ['Welcome! How may I\nserve you?'],
@@ -1097,7 +1102,7 @@ export const WARDEN_HOUSE: MapData = (() => {
   setTile(3, H - 1, T.DOOR);
   return {
     id: 'warden_house', name: "WARDEN's HOUSE", width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'fuchsia_city', targetX: 6, targetY: 21 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'fuchsia_city', targetX: 6, targetY: 20 }],
     npcs: [{
       id: 'safari_warden', x: 4, y: 3, spriteColor: 0x80a060, direction: Direction.DOWN,
       dialogue: [

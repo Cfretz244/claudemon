@@ -2,6 +2,7 @@ import { TILE_SIZE } from './constants';
 import { TileType } from '../types/map.types';
 import { PokemonType } from '../types/pokemon.types';
 import { CUSTOM_POKEMON_SPRITES } from '../sprites/index';
+import { TOWN_THEMES, TownPalette } from '../data/townThemes';
 
 // Helper: create a canvas texture with frames for use as a spritesheet
 function addCanvasSpriteSheet(
@@ -273,6 +274,55 @@ export function generateTileset(scene: Phaser.Scene): void {
       ctx.fillRect(2, 12, 2, 2);
       ctx.fillRect(12, 12, 2, 2);
     },
+    [TileType.ROOF]: (ctx) => {
+      ctx.fillStyle = '#c05050';
+      ctx.fillRect(0, 0, 16, 16);
+      // Lighter horizontal stripe for dimension
+      ctx.fillStyle = '#d06060';
+      ctx.fillRect(0, 4, 16, 3);
+      // Darker bottom edge (eave shadow)
+      ctx.fillStyle = '#a04040';
+      ctx.fillRect(0, 14, 16, 2);
+    },
+    [TileType.FOUNTAIN]: (ctx) => {
+      // Stone basin on grass
+      ctx.fillStyle = '#88c070';
+      ctx.fillRect(0, 0, 16, 16);
+      // Outer stone basin
+      ctx.fillStyle = '#a0a0a0';
+      ctx.fillRect(2, 2, 12, 12);
+      // Inner basin
+      ctx.fillStyle = '#888888';
+      ctx.fillRect(3, 3, 10, 10);
+      // Blue water
+      ctx.fillStyle = '#4090d0';
+      ctx.fillRect(4, 4, 8, 8);
+      // Water highlight
+      ctx.fillStyle = '#60b0e0';
+      ctx.fillRect(5, 5, 3, 2);
+      // Center spray
+      ctx.fillStyle = '#c0e0f8';
+      ctx.fillRect(7, 5, 2, 2);
+      ctx.fillRect(7, 3, 2, 2);
+    },
+    [TileType.COBBLESTONE]: (ctx) => {
+      // Gray/tan interlocking rectangular pattern
+      ctx.fillStyle = '#b8b0a0';
+      ctx.fillRect(0, 0, 16, 16);
+      // Grout lines (darker)
+      ctx.fillStyle = '#989080';
+      ctx.fillRect(0, 0, 16, 1);
+      ctx.fillRect(0, 4, 16, 1);
+      ctx.fillRect(0, 8, 16, 1);
+      ctx.fillRect(0, 12, 16, 1);
+      ctx.fillRect(0, 0, 1, 16);
+      ctx.fillRect(8, 0, 1, 4);
+      ctx.fillRect(4, 4, 1, 4);
+      ctx.fillRect(12, 4, 1, 4);
+      ctx.fillRect(8, 8, 1, 4);
+      ctx.fillRect(4, 12, 1, 4);
+      ctx.fillRect(12, 12, 1, 4);
+    },
   };
 
   // Generate individual tile textures
@@ -326,6 +376,161 @@ export function generateTileset(scene: Phaser.Scene): void {
     cx.fillRect(0, 0, 1, 16);
     drawArrow(cx);
     scene.textures.addCanvas(`spin_tile_${dir}`, c);
+  }
+
+  // Generate themed tile variants for towns
+  const themedTileDrawers: Record<number, (ctx: CanvasRenderingContext2D, p: TownPalette) => void> = {
+    [TileType.GRASS]: (ctx, p) => {
+      ctx.fillStyle = p.grassBase;
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = p.grassAccent;
+      for (let i = 0; i < 4; i++) {
+        const x = (i % 2) * 8 + 2;
+        const y = Math.floor(i / 2) * 8 + 2;
+        ctx.fillRect(x, y, 2, 3);
+      }
+    },
+    [TileType.PATH]: (ctx, p) => {
+      ctx.fillStyle = p.pathBase;
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = p.pathAccent;
+      ctx.fillRect(0, 0, 1, 16);
+      ctx.fillRect(0, 0, 16, 1);
+    },
+    [TileType.TREE]: (ctx, p) => {
+      ctx.fillStyle = p.treeTrunk;
+      ctx.fillRect(5, 10, 6, 6);
+      ctx.fillStyle = p.treeCanopy;
+      ctx.fillRect(1, 1, 14, 10);
+      ctx.fillStyle = p.treeCanopyLight;
+      ctx.fillRect(3, 2, 10, 7);
+    },
+    [TileType.TALL_GRASS]: (ctx, p) => {
+      ctx.fillStyle = p.tallGrassBase;
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = p.tallGrassBlade;
+      for (let i = 0; i < 6; i++) {
+        ctx.fillRect(i * 3 + 1, 2, 2, 12);
+      }
+      ctx.fillStyle = p.tallGrassLight;
+      for (let i = 0; i < 5; i++) {
+        ctx.fillRect(i * 3 + 2, 4, 2, 8);
+      }
+    },
+    [TileType.BUILDING]: (ctx, p) => {
+      ctx.fillStyle = p.buildingWall;
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = p.buildingBorder;
+      ctx.fillRect(0, 0, 16, 1);
+      ctx.fillRect(0, 0, 1, 16);
+      ctx.fillRect(15, 0, 1, 16);
+    },
+    [TileType.DOOR]: (ctx, p) => {
+      ctx.fillStyle = p.doorWall;
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#805028';
+      ctx.fillRect(3, 2, 10, 14);
+      ctx.fillStyle = '#604018';
+      ctx.fillRect(4, 3, 8, 12);
+      ctx.fillStyle = '#c0a030';
+      ctx.fillRect(10, 9, 2, 2);
+    },
+    [TileType.SIGN]: (ctx, p) => {
+      ctx.fillStyle = p.signGrass;
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#805028';
+      ctx.fillRect(6, 10, 4, 6);
+      ctx.fillStyle = '#d0c080';
+      ctx.fillRect(2, 4, 12, 8);
+      ctx.fillStyle = '#a09060';
+      ctx.fillRect(3, 5, 10, 6);
+    },
+    [TileType.LEDGE]: (ctx, p) => {
+      ctx.fillStyle = p.ledgeGrass;
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#507850';
+      ctx.fillRect(0, 12, 16, 4);
+      ctx.fillStyle = '#608860';
+      ctx.fillRect(0, 12, 16, 2);
+    },
+    [TileType.FENCE]: (ctx, p) => {
+      ctx.fillStyle = p.fenceGrass;
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#d0b880';
+      ctx.fillRect(0, 4, 16, 8);
+      ctx.fillStyle = '#c0a870';
+      ctx.fillRect(2, 4, 2, 8);
+      ctx.fillRect(12, 4, 2, 8);
+      ctx.fillRect(0, 7, 16, 2);
+    },
+    [TileType.FLOWER]: (ctx, p) => {
+      ctx.fillStyle = p.flowerGrass;
+      ctx.fillRect(0, 0, 16, 16);
+      const colors = ['#f05050', '#f0f050', '#f050f0'];
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = colors[i];
+        ctx.fillRect(i * 5 + 2, 5, 3, 3);
+        ctx.fillStyle = '#50a038';
+        ctx.fillRect(i * 5 + 3, 8, 1, 4);
+      }
+    },
+    [TileType.CUT_TREE]: (ctx, p) => {
+      ctx.fillStyle = p.cutTreeGrass;
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = p.treeTrunk;
+      ctx.fillRect(6, 10, 4, 6);
+      ctx.fillStyle = p.treeCanopy;
+      ctx.fillRect(3, 3, 10, 8);
+      ctx.fillStyle = p.treeCanopyLight;
+      ctx.fillRect(4, 4, 8, 6);
+      ctx.fillStyle = '#c0a040';
+      ctx.fillRect(6, 5, 4, 1);
+      ctx.fillRect(7, 4, 2, 3);
+    },
+    [TileType.ROOF]: (ctx, p) => {
+      ctx.fillStyle = p.roof;
+      ctx.fillRect(0, 0, 16, 16);
+      // Lighter stripe for dimension
+      const r = parseInt(p.roof.slice(1, 3), 16);
+      const g = parseInt(p.roof.slice(3, 5), 16);
+      const b = parseInt(p.roof.slice(5, 7), 16);
+      const lighter = '#' + [Math.min(255, r + 24), Math.min(255, g + 24), Math.min(255, b + 24)]
+        .map(v => v.toString(16).padStart(2, '0')).join('');
+      const darker = '#' + [Math.max(0, r - 24), Math.max(0, g - 24), Math.max(0, b - 24)]
+        .map(v => v.toString(16).padStart(2, '0')).join('');
+      ctx.fillStyle = lighter;
+      ctx.fillRect(0, 4, 16, 3);
+      ctx.fillStyle = darker;
+      ctx.fillRect(0, 14, 16, 2);
+    },
+    [TileType.FOUNTAIN]: (ctx, p) => {
+      ctx.fillStyle = p.grassBase;
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#a0a0a0';
+      ctx.fillRect(2, 2, 12, 12);
+      ctx.fillStyle = '#888888';
+      ctx.fillRect(3, 3, 10, 10);
+      ctx.fillStyle = '#4090d0';
+      ctx.fillRect(4, 4, 8, 8);
+      ctx.fillStyle = '#60b0e0';
+      ctx.fillRect(5, 5, 3, 2);
+      ctx.fillStyle = '#c0e0f8';
+      ctx.fillRect(7, 5, 2, 2);
+      ctx.fillRect(7, 3, 2, 2);
+    },
+  };
+
+  for (const [themeId, palette] of Object.entries(TOWN_THEMES)) {
+    for (const [tileIdStr, drawFn] of Object.entries(themedTileDrawers)) {
+      const tileId = Number(tileIdStr);
+      const key = `tile_${themeId}_${tileId}`;
+      const tc = document.createElement('canvas');
+      tc.width = TILE_SIZE;
+      tc.height = TILE_SIZE;
+      const tcx = tc.getContext('2d')!;
+      drawFn(tcx, palette);
+      scene.textures.addCanvas(key, tc);
+    }
   }
 }
 
