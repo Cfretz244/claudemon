@@ -70,6 +70,14 @@ const STORY_FLAG_GROUPS = [
     ],
   },
   {
+    title: 'Gift Pokemon',
+    flags: [
+      { id: 'got_bulbasaur', label: 'Got Bulbasaur (Cerulean)' },
+      { id: 'got_charmander', label: 'Got Charmander (Route 25)' },
+      { id: 'got_squirtle', label: 'Got Squirtle (Vermilion)' },
+    ],
+  },
+  {
     title: 'Snorlax',
     flags: [
       { id: 'snorlax_route12_cleared', label: 'Route 12 Snorlax' },

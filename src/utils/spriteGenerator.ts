@@ -1619,3 +1619,181 @@ export function generatePlayerPortraitMid(scene: Phaser.Scene): void {
 
   scene.textures.addCanvas('player_portrait_mid', canvas);
 }
+
+// Pikachu face portraits — 5 expressions based on happiness level
+// Frame 0: Ecstatic (>=200), Frame 1: Happy (>=150), Frame 2: Content (>=100),
+// Frame 3: Unsure (>=50), Frame 4: Unhappy (<50)
+export const PIKACHU_FACE_SIZE = 48;
+export const PIKACHU_FACE_LABELS = ['Ecstatic (200+)', 'Happy (150+)', 'Content (100+)', 'Unsure (50+)', 'Unhappy (<50)'];
+
+export function drawPikachuFaces(ctx: CanvasRenderingContext2D): void {
+  const S = PIKACHU_FACE_SIZE;
+
+  function drawBase(ox: number) {
+    // Head shape — yellow circle-ish
+    ctx.fillStyle = '#f8d030';
+    ctx.fillRect(ox + 10, 8, 28, 30);
+    ctx.fillRect(ox + 8, 12, 32, 24);
+    ctx.fillRect(ox + 6, 16, 36, 18);
+    // Rounded top
+    ctx.fillRect(ox + 14, 6, 20, 4);
+    // Chin
+    ctx.fillRect(ox + 14, 38, 20, 4);
+    ctx.fillRect(ox + 18, 42, 12, 2);
+
+    // Ears — tall pointed
+    ctx.fillStyle = '#f8d030';
+    ctx.fillRect(ox + 6, 0, 6, 16);
+    ctx.fillRect(ox + 8, 0, 4, 18);
+    ctx.fillRect(ox + 36, 0, 6, 16);
+    ctx.fillRect(ox + 36, 0, 4, 18);
+    // Ear tips — black
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(ox + 7, 0, 4, 5);
+    ctx.fillRect(ox + 37, 0, 4, 5);
+
+    // Cheeks — red circles
+    ctx.fillStyle = '#e03030';
+    ctx.fillRect(ox + 6, 26, 6, 5);
+    ctx.fillRect(ox + 7, 25, 4, 7);
+    ctx.fillRect(ox + 36, 26, 6, 5);
+    ctx.fillRect(ox + 37, 25, 4, 7);
+
+    // Nose — tiny dark dot
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(ox + 22, 24, 4, 3);
+    ctx.fillRect(ox + 23, 23, 2, 1);
+  }
+
+  // Frame 0: Ecstatic — heart eyes, huge open smile
+  {
+    const ox = 0;
+    drawBase(ox);
+    // Heart eyes (left)
+    ctx.fillStyle = '#e03060';
+    ctx.fillRect(ox + 13, 16, 2, 2);
+    ctx.fillRect(ox + 17, 16, 2, 2);
+    ctx.fillRect(ox + 12, 18, 8, 2);
+    ctx.fillRect(ox + 13, 20, 6, 2);
+    ctx.fillRect(ox + 14, 22, 4, 1);
+    ctx.fillRect(ox + 15, 23, 2, 1);
+    // Heart eyes (right)
+    ctx.fillRect(ox + 29, 16, 2, 2);
+    ctx.fillRect(ox + 33, 16, 2, 2);
+    ctx.fillRect(ox + 28, 18, 8, 2);
+    ctx.fillRect(ox + 29, 20, 6, 2);
+    ctx.fillRect(ox + 30, 22, 4, 1);
+    ctx.fillRect(ox + 31, 23, 2, 1);
+    // Big open smile
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(ox + 16, 30, 16, 2);
+    ctx.fillRect(ox + 18, 32, 12, 3);
+    ctx.fillRect(ox + 20, 35, 8, 1);
+    // Tongue
+    ctx.fillStyle = '#f06080';
+    ctx.fillRect(ox + 20, 32, 8, 2);
+    ctx.fillRect(ox + 22, 34, 4, 1);
+  }
+
+  // Frame 1: Happy — bright eyes, smile
+  {
+    const ox = S;
+    drawBase(ox);
+    // Eyes — big shiny
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(ox + 14, 17, 6, 6);
+    ctx.fillRect(ox + 28, 17, 6, 6);
+    // Eye shine
+    ctx.fillStyle = '#f8f8f8';
+    ctx.fillRect(ox + 15, 18, 2, 2);
+    ctx.fillRect(ox + 29, 18, 2, 2);
+    // Small shine
+    ctx.fillRect(ox + 18, 21, 1, 1);
+    ctx.fillRect(ox + 32, 21, 1, 1);
+    // Happy smile — curved up
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(ox + 18, 30, 12, 2);
+    ctx.fillRect(ox + 16, 29, 3, 1);
+    ctx.fillRect(ox + 29, 29, 3, 1);
+    // Open mouth
+    ctx.fillStyle = '#f06080';
+    ctx.fillRect(ox + 20, 31, 8, 2);
+  }
+
+  // Frame 2: Content — normal eyes, slight smile
+  {
+    const ox = S * 2;
+    drawBase(ox);
+    // Eyes — normal
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(ox + 14, 18, 5, 5);
+    ctx.fillRect(ox + 29, 18, 5, 5);
+    // Eye shine
+    ctx.fillStyle = '#f8f8f8';
+    ctx.fillRect(ox + 15, 19, 2, 2);
+    ctx.fillRect(ox + 30, 19, 2, 2);
+    // Slight smile
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(ox + 19, 31, 10, 1);
+    ctx.fillRect(ox + 17, 30, 3, 1);
+    ctx.fillRect(ox + 28, 30, 3, 1);
+  }
+
+  // Frame 3: Unsure — eyes looking away, flat mouth
+  {
+    const ox = S * 3;
+    drawBase(ox);
+    // Eyes — looking to side, smaller
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(ox + 13, 18, 5, 5);
+    ctx.fillRect(ox + 28, 18, 5, 5);
+    // Pupils shifted left
+    ctx.fillStyle = '#f8f8f8';
+    ctx.fillRect(ox + 13, 19, 2, 2);
+    ctx.fillRect(ox + 28, 19, 2, 2);
+    // Eyebrows — slightly furrowed
+    ctx.fillStyle = '#c0a020';
+    ctx.fillRect(ox + 13, 16, 6, 2);
+    ctx.fillRect(ox + 29, 16, 6, 2);
+    // Flat/wavy mouth
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(ox + 19, 31, 10, 1);
+  }
+
+  // Frame 4: Unhappy — angry eyes, frown
+  {
+    const ox = S * 4;
+    drawBase(ox);
+    // Angry eyebrows — diagonal
+    ctx.fillStyle = '#c0a020';
+    ctx.fillRect(ox + 12, 14, 8, 2);
+    ctx.fillRect(ox + 14, 16, 6, 1);
+    ctx.fillRect(ox + 28, 14, 8, 2);
+    ctx.fillRect(ox + 30, 16, 6, 1);
+    // Eyes — narrowed, angry
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(ox + 14, 18, 6, 4);
+    ctx.fillRect(ox + 28, 18, 6, 4);
+    // Eye shine — small
+    ctx.fillStyle = '#f8f8f8';
+    ctx.fillRect(ox + 15, 19, 1, 1);
+    ctx.fillRect(ox + 29, 19, 1, 1);
+    // Frown
+    ctx.fillStyle = '#302020';
+    ctx.fillRect(ox + 19, 32, 10, 1);
+    ctx.fillRect(ox + 17, 31, 3, 1);
+    ctx.fillRect(ox + 28, 31, 3, 1);
+    // Teeth gritting
+    ctx.fillRect(ox + 20, 33, 8, 1);
+  }
+}
+
+export function generatePikachuFacePortraits(scene: Phaser.Scene): void {
+  const S = PIKACHU_FACE_SIZE;
+  const canvas = document.createElement('canvas');
+  canvas.width = S * 5;
+  canvas.height = S;
+  const ctx = canvas.getContext('2d')!;
+  drawPikachuFaces(ctx);
+  addCanvasSpriteSheet(scene, 'pikachu_face', canvas, S, S);
+}

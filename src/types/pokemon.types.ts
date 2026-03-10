@@ -169,6 +169,7 @@ export interface PokemonInstance {
   status: StatusCondition;
   ot: string; // original trainer
   isShiny?: boolean;
+  happiness: number; // 0-255, Gen 1 Pokemon Yellow style
 }
 
 export interface PokemonMove {

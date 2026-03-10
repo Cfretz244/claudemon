@@ -330,6 +330,16 @@ export const VERMILION_CITY: MapData = (() => {
           "Watch out for his\nRAICHU!",
         ],
       },
+      // Officer Jenny - gives Squirtle after Thunder Badge
+      {
+        id: 'vermilion_officer_jenny',
+        x: 16, y: 13,
+        spriteColor: 0x4060c0,
+        direction: Direction.DOWN,
+        dialogue: [
+          "OFFICER JENNY: I'm\npatrolling the city!",
+        ],
+      },
     ],
   };
 })();

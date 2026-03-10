@@ -3,6 +3,7 @@ import { POKEMON_DATA } from './data/pokemon';
 import { TRAINER_SPRITES_CLASSES1 } from './utils/trainerSprites_classes1';
 import { TRAINER_SPRITES_CLASSES2 } from './utils/trainerSprites_classes2';
 import { TRAINER_SPRITES_INDIVIDUALS } from './utils/trainerSprites_individuals';
+import { drawPikachuFaces, PIKACHU_FACE_SIZE, PIKACHU_FACE_LABELS } from './utils/spriteGenerator';
 
 const SPRITE_SIZE = 32;
 const SCALE = 2;
@@ -93,6 +94,45 @@ for (let id = 1; id <= 151; id++) {
   card.appendChild(idSpan);
   card.appendChild(nameSpan);
   grid.appendChild(card);
+}
+
+// Pikachu face portraits section
+{
+  const FACE_SCALE = 2;
+  const FACE_DISPLAY = PIKACHU_FACE_SIZE * FACE_SCALE;
+  const faceGrid = document.getElementById('pikachu-face-grid')!;
+
+  // Draw all faces onto a single offscreen canvas
+  const off = document.createElement('canvas');
+  off.width = PIKACHU_FACE_SIZE * 5;
+  off.height = PIKACHU_FACE_SIZE;
+  const offCtx = off.getContext('2d')!;
+  drawPikachuFaces(offCtx);
+
+  // Create a card for each expression
+  for (let i = 0; i < 5; i++) {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const canvas = document.createElement('canvas');
+    canvas.width = FACE_DISPLAY;
+    canvas.height = FACE_DISPLAY;
+    const ctx = canvas.getContext('2d')!;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(
+      off,
+      i * PIKACHU_FACE_SIZE, 0, PIKACHU_FACE_SIZE, PIKACHU_FACE_SIZE,
+      0, 0, FACE_DISPLAY, FACE_DISPLAY
+    );
+
+    const nameSpan = document.createElement('div');
+    nameSpan.className = 'name';
+    nameSpan.textContent = PIKACHU_FACE_LABELS[i];
+
+    card.appendChild(canvas);
+    card.appendChild(nameSpan);
+    faceGrid.appendChild(card);
+  }
 }
 
 // Trainer sprites section

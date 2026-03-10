@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { generateTileset, generatePlayerSprite, generatePikachuFollowerSprite, generatePikachuSurfSprite, generatePokeballSprite, generateOakPortrait, generateNidorinoPortrait, generateSurfSprite, generatePlayerPortrait, generatePlayerPortraitMid } from '../utils/spriteGenerator';
+import { generateTileset, generatePlayerSprite, generatePikachuFollowerSprite, generatePikachuSurfSprite, generatePokeballSprite, generateOakPortrait, generateNidorinoPortrait, generateSurfSprite, generatePlayerPortrait, generatePlayerPortraitMid, generatePikachuFacePortraits } from '../utils/spriteGenerator';
 import { generateAllTrainerSprites } from '../utils/trainerSpriteGenerator';
 
 export class BootScene extends Phaser.Scene {
@@ -35,6 +35,7 @@ export class BootScene extends Phaser.Scene {
     generatePlayerSprite(this);
     generatePikachuFollowerSprite(this);
     generatePikachuSurfSprite(this);
+    generatePikachuFacePortraits(this);
     generatePokeballSprite(this);
     generateOakPortrait(this);
     generateNidorinoPortrait(this);

@@ -19,7 +19,7 @@ import { generatePokemonSprite, getShapeForSpecies } from '../utils/spriteGenera
 import { PlayerState } from '../entities/Player';
 import { SaveData } from '../systems/SaveSystem';
 import { getEffectivenessText } from '../data/typeChart';
-import { createPokemon } from '../entities/Pokemon';
+import { createPokemon, gainHappiness, loseHappiness } from '../entities/Pokemon';
 import { TRAINERS } from '../data/trainers';
 import { GYM_LEADERS } from '../data/gymLeaders';
 import { ELITE_FOUR, CHAMPION, HALL_OF_FAME_TEXT } from '../data/eliteFour';
@@ -1267,6 +1267,7 @@ export class BattleScene extends Phaser.Scene {
 
       for (const lu of levelUps) {
         await this.showText([`${pokeName} grew to\nLv. ${lu.newLevel}!`]);
+        gainHappiness(pokemon, 5);
 
         // Check for new moves
         for (const moveId of lu.newMoves) {
@@ -1379,6 +1380,7 @@ export class BattleScene extends Phaser.Scene {
     });
 
     await this.showText([`${name} fainted!`]);
+    loseHappiness(this.playerPokemon, 1);
 
     // Check for more alive Pokemon
     const nextIndex = this.playerState.party.findIndex(

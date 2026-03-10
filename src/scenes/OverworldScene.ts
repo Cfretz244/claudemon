@@ -16,7 +16,7 @@ import { soundSystem } from '../systems/SoundSystem';
 import { getMusicForMap } from '../data/musicTracks';
 import { MAP_THEMES } from '../data/townThemes';
 import { StatusCondition } from '../types/pokemon.types';
-import { createPokemon } from '../entities/Pokemon';
+import { createPokemon, gainHappiness, getHappiness } from '../entities/Pokemon';
 import { PlayerState } from '../entities/Player';
 import { ELITE_FOUR, CHAMPION } from '../data/eliteFour';
 import { GYM_LEADERS } from '../data/gymLeaders';
@@ -56,6 +56,7 @@ export class OverworldScene extends Phaser.Scene {
   private pikachuDirection: Direction = Direction.DOWN;
   private pikachuVisible = false;
   private playerMoveHistory: Array<{ x: number; y: number; dir: Direction }> = [];
+  private walkStepCounter = 0; // Counts steps for happiness gain
 
   // NPCs
   private npcSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
@@ -691,6 +692,7 @@ export class OverworldScene extends Phaser.Scene {
       duration: MOVE_DURATION,
       onComplete: () => {
         this.isMoving = false;
+        this.tickWalkHappiness();
         if (this.isSurfing) {
           this.player.play(`surf_${this.playerDirection}`, true);
         } else {
@@ -1735,7 +1737,27 @@ export class OverworldScene extends Phaser.Scene {
     // Check for Pikachu interaction
     if (this.pikachuVisible && targetX === this.pikachuGridX && targetY === this.pikachuGridY) {
       soundSystem.pokemonCry(800);
-      this.textBox.show(['PIKACHU: Pika pika!', 'PIKACHU seems happy!']);
+      const pikachu = this.playerState.party.find(p => p.speciesId === 25);
+      const happiness = pikachu ? getHappiness(pikachu) : 70;
+      let pikachuMsg: string[];
+      let faceFrame: number;
+      if (happiness >= 200) {
+        pikachuMsg = ['PIKACHU: Pika pika!', 'PIKACHU looks very\nhappy! It loves you!'];
+        faceFrame = 0;
+      } else if (happiness >= 150) {
+        pikachuMsg = ['PIKACHU: Pikachu!', 'PIKACHU seems really\nhappy!'];
+        faceFrame = 1;
+      } else if (happiness >= 100) {
+        pikachuMsg = ['PIKACHU: Pika!', 'PIKACHU seems fairly\nhappy.'];
+        faceFrame = 2;
+      } else if (happiness >= 50) {
+        pikachuMsg = ['PIKACHU: Pika...', 'PIKACHU seems a\nlittle unsure.'];
+        faceFrame = 3;
+      } else {
+        pikachuMsg = ['PIKACHU: ...', 'PIKACHU doesn\'t seem\nto like you yet...'];
+        faceFrame = 4;
+      }
+      this.showPikachuFace(faceFrame, pikachuMsg);
     }
   }
 
@@ -2223,6 +2245,96 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
+    // Bulbasaur gift - girl in Cerulean house (requires happy Pikachu)
+    if (npc.id === 'cerulean_bulbasaur_girl') {
+      if (this.playerState.storyFlags['got_bulbasaur']) {
+        this.textBox.show(["Take good care of\nthat BULBASAUR!"]);
+        return;
+      }
+      const pikachu = this.playerState.party.find(p => p.speciesId === 25);
+      const happiness = pikachu ? getHappiness(pikachu) : 0;
+      if (happiness >= 150) {
+        this.textBox.show(
+          [
+            "Oh wow! Your PIKACHU\nis so happy!",
+            "You must be a great\ntrainer!",
+            "I have a BULBASAUR\nthat needs a good\nhome...",
+            "Would you take care\nof it for me?",
+            `${this.playerState.name} received\nBULBASAUR!`,
+          ],
+          () => {
+            const bulbasaur = createPokemon(1, 10, this.playerState.name);
+            this.playerState.addToParty(bulbasaur);
+            this.playerState.storyFlags['got_bulbasaur'] = true;
+            soundSystem.pokemonCry(600);
+          }
+        );
+      } else {
+        this.textBox.show([
+          "I love POKeMON!",
+          "I have a BULBASAUR\nI'd like to give away...",
+          "But only to a trainer\nwhose PIKACHU is\nreally happy!",
+          "Come back when your\nPIKACHU likes you\nmore!",
+        ]);
+      }
+      return;
+    }
+
+    // Charmander gift - trainer on Route 24
+    if (npc.id === 'route24_charmander_guy') {
+      if (this.playerState.storyFlags['got_charmander']) {
+        this.textBox.show(["How's that CHARMANDER\ndoing?", "Take good care of it!"]);
+        return;
+      }
+      this.textBox.show(
+        [
+          "I found this\nCHARMANDER abandoned\non the road...",
+          "I'm not a strong\nenough trainer to\nraise it.",
+          "You look like you\ncould handle it!\nPlease, take it!",
+          `${this.playerState.name} received\nCHARMANDER!`,
+        ],
+        () => {
+          const charmander = createPokemon(4, 10, this.playerState.name);
+          this.playerState.addToParty(charmander);
+          this.playerState.storyFlags['got_charmander'] = true;
+          soundSystem.pokemonCry(700);
+        }
+      );
+      return;
+    }
+
+    // Squirtle gift - Officer Jenny in Vermilion (requires Thunder Badge)
+    if (npc.id === 'vermilion_officer_jenny') {
+      if (this.playerState.storyFlags['got_squirtle']) {
+        this.textBox.show(["That SQUIRTLE is a\ngood POKeMON!", "Keep it out of\ntrouble!"]);
+        return;
+      }
+      if (this.playerState.badges.includes('THUNDER')) {
+        this.textBox.show(
+          [
+            "OFFICER JENNY: Hey!\nYou beat LT. SURGE!",
+            "I've been looking for\na trainer to take\nthis SQUIRTLE.",
+            "It's been causing\ntrouble around town!",
+            "I think a strong\ntrainer like you could\nkeep it in line!",
+            `${this.playerState.name} received\nSQUIRTLE!`,
+          ],
+          () => {
+            const squirtle = createPokemon(7, 10, this.playerState.name);
+            this.playerState.addToParty(squirtle);
+            this.playerState.storyFlags['got_squirtle'] = true;
+            soundSystem.pokemonCry(500);
+          }
+        );
+      } else {
+        this.textBox.show([
+          "OFFICER JENNY: I'm\nkeeping the peace in\nVERMILION CITY!",
+          "There's a mischievous\nSQUIRTLE causing\ntrouble around here...",
+          "If only there were a\nstrong trainer to\ntake it...",
+        ]);
+      }
+      return;
+    }
+
     // Trainer battle check
     if (npc.isTrainer && !this.playerState.defeatedTrainers.includes(npc.id)) {
       // Play encounter music for trainers the player walks up to (not spotted by sight)
@@ -2247,6 +2359,70 @@ export class OverworldScene extends Phaser.Scene {
         d.replace('{PLAYER}', this.playerState.name).replace('{RIVAL}', this.playerState.rivalName)
       );
       this.textBox.show(dialogue);
+    }
+  }
+
+  private showPikachuFace(frame: number, messages: string[]): void {
+    // White border frame around the portrait
+    const border = this.add.rectangle(
+      GAME_WIDTH / 2, GAME_HEIGHT / 2 - 24,
+      54, 54, 0xf8f8f8
+    );
+    border.setScrollFactor(0);
+    border.setDepth(901);
+
+    // Inner dark border
+    const innerBorder = this.add.rectangle(
+      GAME_WIDTH / 2, GAME_HEIGHT / 2 - 24,
+      50, 50, 0x282828
+    );
+    innerBorder.setScrollFactor(0);
+    innerBorder.setDepth(902);
+
+    // Pikachu face sprite
+    const face = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 24, 'pikachu_face', frame);
+    face.setScrollFactor(0);
+    face.setDepth(903);
+
+    // Pop-in animation
+    face.setScale(0);
+    border.setScale(0);
+    innerBorder.setScale(0);
+
+    this.tweens.add({
+      targets: [border, innerBorder, face],
+      scale: 1,
+      duration: 200,
+      ease: 'Back.easeOut',
+    });
+
+    // Show text after a short delay, then clean up face on dismiss
+    this.time.delayedCall(300, () => {
+      this.textBox.show(messages, () => {
+        // Pop-out animation then destroy
+        this.tweens.add({
+          targets: [face, border, innerBorder],
+          scale: 0,
+          duration: 150,
+          ease: 'Quad.easeIn',
+          onComplete: () => {
+            border.destroy();
+            innerBorder.destroy();
+            face.destroy();
+          },
+        });
+      });
+    });
+  }
+
+  private tickWalkHappiness(): void {
+    this.walkStepCounter++;
+    // Every 128 steps, +1 happiness to all party Pokemon (Gen 1 Yellow rate)
+    if (this.walkStepCounter >= 128) {
+      this.walkStepCounter = 0;
+      for (const pokemon of this.playerState.party) {
+        gainHappiness(pokemon, 1);
+      }
     }
   }
 
@@ -2798,6 +2974,7 @@ export class OverworldScene extends Phaser.Scene {
           for (const move of pokemon.moves) {
             move.currentPp = move.maxPp;
           }
+          gainHappiness(pokemon, 3);
         }
         this.playerState.lastHealMap = this.currentMap.id;
         this.playerState.lastHealX = this.playerGridX;

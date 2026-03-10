@@ -686,6 +686,11 @@ export const CERULEAN_CITY: MapData = (() => {
   setTile(5, 11, T.SIGN);   // Gym sign
   setTile(17, 10, T.SIGN);  // Pokemon Center sign
 
+  // Bulbasaur house (small house north of path, center area)
+  fillRect(14, 2, 3, 1, T.ROOF);
+  fillRect(14, 3, 3, 2, T.BUILDING);
+  setTile(15, 4, T.DOOR);
+
   // Flowers and decoration
   setTile(9, 6, T.FLOWER);
   setTile(9, 7, T.FLOWER);
@@ -766,6 +771,8 @@ export const CERULEAN_CITY: MapData = (() => {
       { x: 18, y: 18, targetMap: 'pokemart_cerulean', targetX: 3, targetY: 7 },
       // Bike Shop door
       { x: 5, y: 18, targetMap: 'bike_shop', targetX: 3, targetY: 7 },
+      // Bulbasaur house door
+      { x: 15, y: 4, targetMap: 'cerulean_house', targetX: 3, targetY: 6 },
       // Burgled House front door (north face)
       { x: 15, y: 20, targetMap: 'burgled_house', targetX: 3, targetY: 6 },
       // Burgled House back door (south face, re-entry from behind)
@@ -1250,6 +1257,17 @@ export const ROUTE25: MapData = (() => {
         isItemBall: true,
         itemId: 'super_potion',
       },
+      // Charmander gift NPC - trainer who found an abandoned Charmander
+      {
+        id: 'route24_charmander_guy',
+        x: 3, y: 6,
+        spriteColor: 0xf08040,
+        direction: Direction.RIGHT,
+        dialogue: [
+          "I found a POKeMON\nabandoned on the road...",
+          "I'm looking for someone\nto take it.",
+        ],
+      },
     ],
     wildEncounters: {
       grassRate: 0.2,
@@ -1507,6 +1525,62 @@ export const BIKE_SHOP: MapData = (() => {
 })();
 
 // ─────────────────────────────────────────────────────────────
+// 12. CERULEAN HOUSE  (8x8 indoor - Bulbasaur girl)
+// ─────────────────────────────────────────────────────────────
+export const CERULEAN_HOUSE: MapData = (() => {
+  const W = 8, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+
+  // Walls: top 2 rows and sides
+  for (let x = 0; x < W; x++) {
+    setTile(x, 0, T.WALL);
+    setTile(x, 1, T.WALL);
+  }
+  for (let y = 0; y < H; y++) {
+    setTile(0, y, T.WALL);
+    setTile(W - 1, y, T.WALL);
+  }
+
+  // Furniture
+  setTile(1, 2, T.COUNTER);
+  setTile(2, 2, T.COUNTER);
+  setTile(5, 2, T.COUNTER);
+  setTile(6, 2, T.COUNTER);
+
+  return {
+    id: 'cerulean_house',
+    name: 'CERULEAN HOUSE',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      { x: 3, y: H - 1, targetMap: 'cerulean_city', targetX: 15, targetY: 5 },
+    ],
+    npcs: [
+      {
+        id: 'cerulean_bulbasaur_girl',
+        x: 4, y: 4,
+        spriteColor: 0x60c080,
+        direction: Direction.DOWN,
+        dialogue: [
+          "I love POKeMON so\nmuch!",
+          "I have a special\nBULBASAUR...",
+        ],
+      },
+    ],
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────
 // Combined export
 // ─────────────────────────────────────────────────────────────
 export const CERULEAN_MAPS: Record<string, MapData> = {
@@ -1523,4 +1597,5 @@ export const CERULEAN_MAPS: Record<string, MapData> = {
   bills_house: BILLS_HOUSE,
   burgled_house: BURGLED_HOUSE,
   bike_shop: BIKE_SHOP,
+  cerulean_house: CERULEAN_HOUSE,
 };

@@ -86,7 +86,21 @@ export function createPokemon(speciesId: number, level: number, ot: string = 'RE
     exp,
     status: StatusCondition.NONE,
     ot,
+    happiness: 70, // Base happiness for newly obtained Pokemon
   };
+}
+
+// Happiness utility functions (Gen 1 Pokemon Yellow style, 0-255 range)
+export function gainHappiness(pokemon: PokemonInstance, amount: number): void {
+  pokemon.happiness = Math.min(255, (pokemon.happiness ?? 70) + amount);
+}
+
+export function loseHappiness(pokemon: PokemonInstance, amount: number): void {
+  pokemon.happiness = Math.max(0, (pokemon.happiness ?? 70) - amount);
+}
+
+export function getHappiness(pokemon: PokemonInstance): number {
+  return pokemon.happiness ?? 70;
 }
 
 export function getExpForLevel(level: number): number {
