@@ -434,6 +434,10 @@ export const CINNABAR_GYM: MapData = (() => {
   // Approach path from door
   fillRect(4, 11, 2, 3, T.PATH);
 
+  // Entrance mat on exit warps
+  setTile(4, 13, T.DOORMAT);
+  setTile(5, 13, T.DOORMAT);
+
   return {
     id: 'cinnabar_gym',
     name: 'CINNABAR GYM',
@@ -537,6 +541,9 @@ export const POKEMON_MANSION: MapData = (() => {
   // Open entrance
   setTile(7, 14, T.INDOOR_FLOOR);
 
+  // Entrance mat on exit warp
+  setTile(7, 14, T.DOORMAT);
+
   return {
     id: 'pokemon_mansion',
     name: 'POKeMON MANSION',
@@ -639,11 +646,15 @@ export const POKEMON_CENTER_CINNABAR: MapData = (() => {
   // PC
   setTile(8, 2, T.PC);
 
-  // Carpet to door
+  // Carpet runner to door
   setTile(4, 5, T.CARPET);
   setTile(5, 5, T.CARPET);
   setTile(4, 6, T.CARPET);
   setTile(5, 6, T.CARPET);
+
+  // Entrance mat on exit warps
+  setTile(4, 7, T.DOORMAT);
+  setTile(5, 7, T.DOORMAT);
 
   return {
     id: 'pokemon_center_cinnabar',
@@ -1233,11 +1244,15 @@ export const POKEMON_CENTER_INDIGO: MapData = (() => {
   // PC
   setTile(8, 2, T.PC);
 
-  // Carpet to door
+  // Carpet runner to door
   setTile(4, 5, T.CARPET);
   setTile(5, 5, T.CARPET);
   setTile(4, 6, T.CARPET);
   setTile(5, 6, T.CARPET);
+
+  // Entrance mat on exit warps
+  setTile(4, 7, T.DOORMAT);
+  setTile(5, 7, T.DOORMAT);
 
   return {
     id: 'pokemon_center_indigo',
@@ -1417,6 +1432,10 @@ const POKEMART_CINNABAR: MapData = (() => {
   setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
   setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+
+  // Entrance mat on exit warp
+  setTile(3, 7, T.DOORMAT);
+
   return {
     id: 'pokemart_cinnabar', name: 'POKeMON MART', width: W, height: H, tiles, collision,
     warps: [{ x: 3, y: H - 1, targetMap: 'cinnabar_island', targetX: 14, targetY: 16 }],

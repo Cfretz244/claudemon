@@ -878,6 +878,10 @@ export const CERULEAN_GYM: MapData = (() => {
   // Approach path from door to pool
   fillRect(4, 9, 2, 5, T.PATH);
 
+  // Entrance mat on exit warps
+  setTile(4, 13, T.DOORMAT);
+  setTile(5, 13, T.DOORMAT);
+
   return {
     id: 'cerulean_gym',
     name: 'CERULEAN GYM',
@@ -961,6 +965,10 @@ export const POKEMON_CENTER_CERULEAN: MapData = (() => {
   setTile(5, 5, T.CARPET);
   setTile(4, 6, T.CARPET);
   setTile(5, 6, T.CARPET);
+
+  // Entrance mat on exit warps
+  setTile(4, 7, T.DOORMAT);
+  setTile(5, 7, T.DOORMAT);
 
   return {
     id: 'pokemon_center_cerulean',
@@ -1315,6 +1323,9 @@ export const POKEMART_CERULEAN: MapData = (() => {
   setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
 
+  // Entrance mat on exit warp
+  setTile(3, H - 1, T.DOORMAT);
+
   return {
     id: 'pokemart_cerulean',
     name: 'POKeMON MART',
@@ -1368,9 +1379,12 @@ export const BILLS_HOUSE: MapData = (() => {
   setTile(5, 2, T.COUNTER);
   setTile(6, 2, T.COUNTER);
 
-  // Carpet
+  // Carpet (room center)
   setTile(3, 4, T.CARPET);
   setTile(4, 4, T.CARPET);
+
+  // Entrance mat on exit warp
+  setTile(3, H - 1, T.DOORMAT);
 
   // Door at bottom
   setTile(3, H - 1, T.DOOR);
@@ -1440,6 +1454,10 @@ export const BURGLED_HOUSE: MapData = (() => {
   setTile(5, 2, T.COUNTER);
   setTile(6, 2, T.COUNTER);
 
+  // Entrance mat on exit warps
+  setTile(3, 1, T.DOORMAT);   // back door (north)
+  setTile(3, H - 1, T.DOORMAT); // front door (south)
+
   return {
     id: 'burgled_house',
     name: 'BURGLED HOUSE',
@@ -1500,6 +1518,9 @@ export const BIKE_SHOP: MapData = (() => {
   setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
 
+  // Entrance mat on exit warp
+  setTile(3, H - 1, T.DOORMAT);
+
   return {
     id: 'bike_shop',
     name: 'BIKE SHOP',
@@ -1554,6 +1575,9 @@ export const CERULEAN_HOUSE: MapData = (() => {
   setTile(2, 2, T.COUNTER);
   setTile(5, 2, T.COUNTER);
   setTile(6, 2, T.COUNTER);
+
+  // Entrance mat on exit warp
+  setTile(3, H - 1, T.DOORMAT);
 
   return {
     id: 'cerulean_house',

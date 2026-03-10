@@ -323,6 +323,29 @@ export function generateTileset(scene: Phaser.Scene): void {
       ctx.fillRect(4, 12, 1, 4);
       ctx.fillRect(12, 12, 1, 4);
     },
+    [TileType.DOORMAT]: (ctx) => {
+      // Indoor floor base
+      ctx.fillStyle = '#f8f0d0';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#e8e0c0';
+      ctx.fillRect(0, 0, 16, 1);
+      ctx.fillRect(0, 0, 1, 16);
+      // Brown woven mat
+      ctx.fillStyle = '#9b7340';
+      ctx.fillRect(1, 4, 14, 9);
+      // Lighter weave stripes
+      ctx.fillStyle = '#b8894e';
+      ctx.fillRect(2, 5, 12, 1);
+      ctx.fillRect(2, 7, 12, 1);
+      ctx.fillRect(2, 9, 12, 1);
+      ctx.fillRect(2, 11, 12, 1);
+      // Dark border around mat
+      ctx.fillStyle = '#7a5a2e';
+      ctx.fillRect(1, 4, 14, 1);
+      ctx.fillRect(1, 12, 14, 1);
+      ctx.fillRect(1, 4, 1, 9);
+      ctx.fillRect(14, 4, 1, 9);
+    },
   };
 
   // Generate individual tile textures

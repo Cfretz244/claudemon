@@ -190,6 +190,9 @@ export const PLAYER_HOUSE: MapData = (() => {
   // Door at bottom
   setTile(3, H - 1, T.DOOR);
 
+  // Entrance mat on warp tile
+  setTile(3, H - 1, T.DOORMAT);
+
   return {
     id: 'player_house',
     name: "PLAYER's HOUSE",
@@ -250,6 +253,9 @@ export const RIVAL_HOUSE: MapData = (() => {
 
   // Door at bottom
   setTile(3, H - 1, T.DOOR);
+
+  // Entrance mat on warp tile
+  setTile(3, H - 1, T.DOORMAT);
 
   return {
     id: 'rival_house',
@@ -313,6 +319,10 @@ export const OAKS_LAB: MapData = (() => {
   // Machines
   setTile(1, 3, T.PC);
   setTile(2, 3, T.PC);
+
+  // Entrance mat on warp tiles
+  setTile(4, H - 1, T.DOORMAT);
+  setTile(5, H - 1, T.DOORMAT);
 
   return {
     id: 'oaks_lab',
@@ -638,6 +648,10 @@ export const POKEMON_CENTER: MapData = (() => {
   setTile(4, 5, T.CARPET);
   setTile(5, 5, T.CARPET);
 
+  // Entrance mat on warp tiles
+  setTile(4, H - 1, T.DOORMAT);
+  setTile(5, H - 1, T.DOORMAT);
+
   return {
     id: 'pokemon_center',
     name: 'POKeMON CENTER',
@@ -697,6 +711,9 @@ export const POKEMART: MapData = (() => {
   setTile(6, 2, T.MART_SHELF);
   setTile(5, 4, T.MART_SHELF);
   setTile(6, 4, T.MART_SHELF);
+
+  // Entrance mat on warp tile
+  setTile(3, H - 1, T.DOORMAT);
 
   return {
     id: 'pokemart',
@@ -841,6 +858,9 @@ export const OAKS_AIDE_HOUSE: MapData = (() => {
 
   // Door at bottom
   setTile(3, H - 1, T.DOOR);
+
+  // Entrance mat on warp tile
+  setTile(3, H - 1, T.DOORMAT);
 
   return {
     id: 'oaks_aide_house',
@@ -1259,6 +1279,10 @@ export const PEWTER_GYM: MapData = (() => {
   setTile(2, 8, T.WALL);
   setTile(7, 8, T.WALL);
 
+  // Entrance mat on warp tiles
+  setTile(4, H - 1, T.DOORMAT);
+  setTile(5, H - 1, T.DOORMAT);
+
   return {
     id: 'pewter_gym',
     name: 'PEWTER GYM',
@@ -1636,6 +1660,10 @@ export const VIRIDIAN_GYM: MapData = (() => {
   setTile(2, 9, T.WALL);
   setTile(7, 9, T.WALL);
 
+  // Entrance mat on warp tiles
+  setTile(4, H - 1, T.DOORMAT);
+  setTile(5, H - 1, T.DOORMAT);
+
   return {
     id: 'viridian_gym',
     name: 'VIRIDIAN GYM',
@@ -1702,6 +1730,8 @@ export const VIRIDIAN_HOUSE: MapData = (() => {
   setTile(3, 5, T.CARPET); setTile(4, 5, T.CARPET);
   setTile(2, 2, T.PC); setTile(5, 2, T.MART_SHELF);
   setTile(3, H - 1, T.DOOR);
+  // Entrance mat on warp tile
+  setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'viridian_house', name: 'VIRIDIAN HOUSE', width: W, height: H, tiles, collision,
     warps: [{ x: 3, y: H - 1, targetMap: 'viridian_city', targetX: 20, targetY: 22 }],
@@ -1725,6 +1755,8 @@ export const POKEMART_PEWTER: MapData = (() => {
   setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
   setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+  // Entrance mat on warp tile
+  setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'pokemart_pewter', name: 'POKeMON MART', width: W, height: H, tiles, collision,
     warps: [{ x: 3, y: H - 1, targetMap: 'pewter_city', targetX: 16, targetY: 20 }],
@@ -1750,6 +1782,8 @@ export const PEWTER_HOUSE: MapData = (() => {
   setTile(3, 5, T.CARPET); setTile(4, 5, T.CARPET);
   setTile(2, 2, T.MART_SHELF); setTile(5, 2, T.MART_SHELF);
   setTile(3, H - 1, T.DOOR);
+  // Entrance mat on warp tile
+  setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'pewter_house', name: 'PEWTER HOUSE', width: W, height: H, tiles, collision,
     warps: [{ x: 3, y: H - 1, targetMap: 'pewter_city', targetX: 5, targetY: 20 }],

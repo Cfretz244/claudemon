@@ -402,6 +402,10 @@ export const VERMILION_GYM: MapData = (() => {
     setTile(tx, ty, T.COUNTER);
   }
 
+  // Entrance mat on exit warps
+  setTile(4, 15, T.DOORMAT);
+  setTile(5, 15, T.DOORMAT);
+
   return {
     id: 'vermilion_gym',
     name: 'VERMILION GYM',
@@ -505,6 +509,10 @@ export const POKEMON_CENTER_VERMILION: MapData = (() => {
   setTile(5, 5, T.CARPET);
   setTile(4, 6, T.CARPET);
   setTile(5, 6, T.CARPET);
+
+  // Entrance mat on exit warps
+  setTile(4, 7, T.DOORMAT);
+  setTile(5, 7, T.DOORMAT);
 
   return {
     id: 'pokemon_center_vermilion',
@@ -889,6 +897,10 @@ export const POKEMON_CENTER_ROUTE10: MapData = (() => {
   setTile(4, 6, T.CARPET);
   setTile(5, 6, T.CARPET);
 
+  // Entrance mat on exit warps
+  setTile(4, 7, T.DOORMAT);
+  setTile(5, 7, T.DOORMAT);
+
   return {
     id: 'pokemon_center_route10',
     name: 'POKeMON CENTER',
@@ -944,6 +956,9 @@ export const POKEMART_VERMILION: MapData = (() => {
   setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
   setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+
+  // Entrance mat on exit warp
+  setTile(3, 7, T.DOORMAT);
 
   return {
     id: 'pokemart_vermilion',
