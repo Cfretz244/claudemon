@@ -358,6 +358,18 @@ export class BagScreen {
       return;
     }
 
+    // Repel: set 100 steps of encounter prevention
+    if (item.id === 'repel') {
+      this.playerState.useItem(item.id);
+      this.playerState.repelSteps = 100;
+      soundSystem.heal();
+      this.mode = 'list';
+      this.optionsContainer.setVisible(false);
+      this.showMessage('REPEL\'s effect lasted!');
+      this.rebuildItemList();
+      return;
+    }
+
     if (!itemData || (itemData.category !== 'medicine' && itemData.category !== 'hm')) {
       this.mode = 'list';
       this.optionsContainer.setVisible(false);
