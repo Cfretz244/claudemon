@@ -448,8 +448,13 @@ export class BattleMenu {
     }
 
     this.mode = 'bag';
-    this.bagSelectedIndex = 0;
-    this.bagScrollOffset = 0;
+    // Keep bagSelectedIndex from last turn (don't reset to 0)
+    this.bagSelectedIndex = Math.min(this.bagSelectedIndex, Math.max(0, this.bagItems.length - 1));
+    if (this.bagSelectedIndex < this.bagScrollOffset) {
+      this.bagScrollOffset = this.bagSelectedIndex;
+    } else if (this.bagSelectedIndex >= this.bagScrollOffset + BattleMenu.BAG_VISIBLE_ROWS) {
+      this.bagScrollOffset = this.bagSelectedIndex - BattleMenu.BAG_VISIBLE_ROWS + 1;
+    }
     this.container.setVisible(false);
     this.bagContainer.setVisible(true);
 
