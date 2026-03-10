@@ -727,10 +727,16 @@ function populateParty(save: SaveData) {
         `<span class="type-tag" style="background:${getTypeColor(t)}">${t}</span>`
       ).join('');
 
+      const statusOptions = [
+        StatusCondition.NONE, StatusCondition.POISON, StatusCondition.BURN,
+        StatusCondition.PARALYSIS, StatusCondition.SLEEP, StatusCondition.FREEZE,
+      ].map(s => `<option value="${s}"${poke.status === s ? ' selected' : ''}>${s === 'NONE' ? 'OK' : s}</option>`).join('');
+
       info.innerHTML = `
         <div class="poke-name">${species?.name || `#${poke.speciesId}`}</div>
         <div class="poke-level">Lv.${poke.level} &middot; HP ${poke.currentHp}/${poke.stats.hp}</div>
         <div class="poke-types">${typeTags}</div>
+        <div class="poke-status">Status: <select class="status-select" data-party-index="${i}">${statusOptions}</select></div>
       `;
 
       // Editable move slots
@@ -796,6 +802,16 @@ function populateParty(save: SaveData) {
       slot.appendChild(info);
       slot.appendChild(movesContainer);
       slot.appendChild(removeBtn);
+
+      // Status condition selector
+      const statusSel = info.querySelector('.status-select') as HTMLSelectElement;
+      if (statusSel) {
+        const idx = i;
+        statusSel.addEventListener('change', () => {
+          const p = save.party[idx];
+          if (p) p.status = statusSel.value as StatusCondition;
+        });
+      }
 
       // Click sprite/name area to replace Pokemon
       spriteEl.style.cursor = 'pointer';

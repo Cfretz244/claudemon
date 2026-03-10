@@ -1330,6 +1330,9 @@ export class BattleScene extends Phaser.Scene {
       const prizeMoney = this.opponentPokemon.level * 50;
       this.playerState.money += prizeMoney;
 
+      // Look up trainer loss dialogue
+      const lossDialogue = this.getTrainerLossDialogue();
+
       // Check if gym leader
       const gymLeader = this.trainerId ? GYM_LEADERS[this.trainerId] : undefined;
       if (gymLeader && !this.playerState.badges.includes(gymLeader.badge)) {
@@ -1337,6 +1340,7 @@ export class BattleScene extends Phaser.Scene {
         soundSystem.victory();
         const messages = [
           `${this.trainerName} was\ndefeated!`,
+          ...lossDialogue,
           `Got $${prizeMoney} for winning!`,
           `${this.playerState.name} received\nthe ${gymLeader.badge} BADGE!`,
         ];
@@ -1353,6 +1357,7 @@ export class BattleScene extends Phaser.Scene {
         soundSystem.victory();
         await this.showText([
           `${this.trainerName} was\ndefeated!`,
+          ...lossDialogue,
           `Got $${prizeMoney} for winning!`,
         ]);
       }
@@ -1803,6 +1808,18 @@ export class BattleScene extends Phaser.Scene {
 
   private getSpeciesName(speciesId: number): string {
     return POKEMON_DATA[speciesId]?.name || `#${speciesId}`;
+  }
+
+  private getTrainerLossDialogue(): string[] {
+    if (!this.trainerId) return [];
+    const e4Member = ELITE_FOUR.find(e => e.id === this.trainerId);
+    if (e4Member) return e4Member.dialogue.after;
+    if (this.trainerId === CHAMPION.id) return CHAMPION.dialogue.after;
+    const gymLeader = GYM_LEADERS[this.trainerId];
+    if (gymLeader) return gymLeader.dialogue.after;
+    const trainer = TRAINERS[this.trainerId];
+    if (trainer) return trainer.dialogue.after;
+    return [];
   }
 
   private generateTrainerTeam(trainerId: string): PokemonInstance[] {
