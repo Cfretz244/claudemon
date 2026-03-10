@@ -1,7 +1,7 @@
 {
-  "name": "pokemon-yellow-clone",
+  "name": "claudemon",
   "version": "1.0.0",
-  "description": "Pokemon Yellow clone in retro Atari style",
+  "description": "A Pokemon Yellow recreation built entirely by Claude",
   "type": "module",
   "scripts": {
     "dev": "vite",
