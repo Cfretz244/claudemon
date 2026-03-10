@@ -48,6 +48,13 @@ export const ROUTE5: MapData = (() => {
   setTile(6, 9, T.TREE);
   setTile(14, 7, T.TREE);
 
+  // Underground Path entrance building
+  fillRect(13, 16, 3, 1, T.ROOF);
+  fillRect(13, 17, 3, 1, T.BUILDING);
+  setTile(13, 18, T.BUILDING); setTile(15, 18, T.BUILDING);
+  setTile(14, 18, T.DOOR);
+  setTile(12, 18, T.SIGN);
+
   return {
     id: 'route5',
     name: 'ROUTE 5',
@@ -56,11 +63,13 @@ export const ROUTE5: MapData = (() => {
     tiles,
     collision,
     warps: [
-      // South exit -> Route 6
-      { x: 8, y: 19, targetMap: 'route6', targetX: 8, targetY: 1 },
-      { x: 9, y: 19, targetMap: 'route6', targetX: 9, targetY: 1 },
-      { x: 10, y: 19, targetMap: 'route6', targetX: 10, targetY: 1 },
-      { x: 11, y: 19, targetMap: 'route6', targetX: 11, targetY: 1 },
+      // South exit -> Saffron Gate North
+      { x: 8, y: 19, targetMap: 'saffron_gate_north', targetX: 2, targetY: 1 },
+      { x: 9, y: 19, targetMap: 'saffron_gate_north', targetX: 3, targetY: 1 },
+      { x: 10, y: 19, targetMap: 'saffron_gate_north', targetX: 2, targetY: 1 },
+      { x: 11, y: 19, targetMap: 'saffron_gate_north', targetX: 3, targetY: 1 },
+      // Underground Path entrance
+      { x: 14, y: 18, targetMap: 'underground_ns', targetX: 2, targetY: 1 },
       // North entrance -> Cerulean City
       { x: 8, y: 0, targetMap: 'cerulean_city', targetX: 10, targetY: 23 },
       { x: 9, y: 0, targetMap: 'cerulean_city', targetX: 11, targetY: 23 },
@@ -144,6 +153,13 @@ export const ROUTE6: MapData = (() => {
   setTile(14, 10, T.FLOWER);
   setTile(15, 10, T.FLOWER);
 
+  // Underground Path entrance building
+  fillRect(13, 1, 3, 1, T.ROOF);
+  fillRect(13, 2, 3, 1, T.BUILDING);
+  setTile(13, 3, T.BUILDING); setTile(15, 3, T.BUILDING);
+  setTile(14, 3, T.DOOR);
+  setTile(12, 3, T.SIGN);
+
   return {
     id: 'route6',
     name: 'ROUTE 6',
@@ -157,11 +173,13 @@ export const ROUTE6: MapData = (() => {
       { x: 9, y: 19, targetMap: 'vermilion_city', targetX: 11, targetY: 2 },
       { x: 10, y: 19, targetMap: 'vermilion_city', targetX: 12, targetY: 2 },
       { x: 11, y: 19, targetMap: 'vermilion_city', targetX: 13, targetY: 2 },
-      // North entrance -> Route 5
-      { x: 8, y: 0, targetMap: 'route5', targetX: 8, targetY: 18 },
-      { x: 9, y: 0, targetMap: 'route5', targetX: 9, targetY: 18 },
-      { x: 10, y: 0, targetMap: 'route5', targetX: 10, targetY: 18 },
-      { x: 11, y: 0, targetMap: 'route5', targetX: 11, targetY: 18 },
+      // North entrance -> Saffron Gate South
+      { x: 8, y: 0, targetMap: 'saffron_gate_south', targetX: 2, targetY: 6 },
+      { x: 9, y: 0, targetMap: 'saffron_gate_south', targetX: 3, targetY: 6 },
+      { x: 10, y: 0, targetMap: 'saffron_gate_south', targetX: 2, targetY: 6 },
+      { x: 11, y: 0, targetMap: 'saffron_gate_south', targetX: 3, targetY: 6 },
+      // Underground Path entrance
+      { x: 14, y: 3, targetMap: 'underground_ns', targetX: 2, targetY: 28 },
     ],
     npcs: [
       {

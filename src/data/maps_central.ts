@@ -349,6 +349,9 @@ export const ROUTE7: MapData = (() => {
   fillRect(2, 2, 4, 2, T.TALL_GRASS);
   fillRect(15, 6, 4, 2, T.TALL_GRASS);
 
+  // Sign near underground entrance
+  setTile(12, 3, T.SIGN);
+
   return {
     id: 'route7',
     name: 'ROUTE 7',
@@ -360,11 +363,11 @@ export const ROUTE7: MapData = (() => {
       // West exit → Celadon City
       { x: 0, y: 4, targetMap: 'celadon_city', targetX: 28, targetY: 12 },
       { x: 0, y: 5, targetMap: 'celadon_city', targetX: 28, targetY: 13 },
-      // East exit → Saffron City
-      { x: 19, y: 4, targetMap: 'saffron_city', targetX: 2, targetY: 14 },
-      { x: 19, y: 5, targetMap: 'saffron_city', targetX: 2, targetY: 15 },
-      // Guardhouse
-      { x: 10, y: 3, targetMap: 'route7_gate', targetX: 3, targetY: 5 },
+      // East exit → Route 7 Gate (guard checks for Tea)
+      { x: 19, y: 4, targetMap: 'route7_gate', targetX: 1, targetY: 2 },
+      { x: 19, y: 5, targetMap: 'route7_gate', targetX: 1, targetY: 3 },
+      // Underground Path entrance
+      { x: 10, y: 3, targetMap: 'underground_ew', targetX: 1, targetY: 2 },
     ],
     npcs: [],
     wildEncounters: {
@@ -403,6 +406,13 @@ export const ROUTE8: MapData = (() => {
   fillRect(10, 6, 4, 3, T.TALL_GRASS);
   fillRect(18, 1, 4, 3, T.TALL_GRASS);
 
+  // Underground Path entrance building
+  fillRect(14, 1, 3, 1, T.ROOF);
+  fillRect(14, 2, 3, 1, T.BUILDING);
+  setTile(14, 3, T.BUILDING); setTile(16, 3, T.BUILDING);
+  setTile(15, 3, T.DOOR);
+  setTile(13, 3, T.SIGN);
+
   return {
     id: 'route8',
     name: 'ROUTE 8',
@@ -411,12 +421,14 @@ export const ROUTE8: MapData = (() => {
     tiles,
     collision,
     warps: [
-      // West exit → Saffron City
-      { x: 0, y: 4, targetMap: 'saffron_city', targetX: 28, targetY: 14 },
-      { x: 0, y: 5, targetMap: 'saffron_city', targetX: 28, targetY: 15 },
+      // West exit → Saffron Gate East (guard checks for Tea)
+      { x: 0, y: 4, targetMap: 'saffron_gate_east', targetX: 6, targetY: 2 },
+      { x: 0, y: 5, targetMap: 'saffron_gate_east', targetX: 6, targetY: 3 },
       // East exit → Lavender Town
       { x: 24, y: 4, targetMap: 'lavender_town', targetX: 2, targetY: 10 },
       { x: 24, y: 5, targetMap: 'lavender_town', targetX: 2, targetY: 11 },
+      // Underground Path entrance
+      { x: 15, y: 3, targetMap: 'underground_ew', targetX: 28, targetY: 2 },
     ],
     npcs: [
       {
@@ -882,18 +894,18 @@ export const SAFFRON_CITY: MapData = (() => {
     tiles,
     collision,
     warps: [
-      // North exit → Route 5
-      { x: 14, y: 1, targetMap: 'route5', targetX: 9, targetY: 18 },
-      { x: 15, y: 1, targetMap: 'route5', targetX: 10, targetY: 18 },
-      // South exit → Route 6
-      { x: 14, y: 27, targetMap: 'route6', targetX: 9, targetY: 1 },
-      { x: 15, y: 27, targetMap: 'route6', targetX: 10, targetY: 1 },
-      // West exit → Route 7
-      { x: 1, y: 14, targetMap: 'route7', targetX: 18, targetY: 4 },
-      { x: 1, y: 15, targetMap: 'route7', targetX: 18, targetY: 5 },
-      // East exit → Route 8
-      { x: 29, y: 14, targetMap: 'route8', targetX: 1, targetY: 4 },
-      { x: 29, y: 15, targetMap: 'route8', targetX: 1, targetY: 5 },
+      // North exit → Saffron Gate North
+      { x: 14, y: 1, targetMap: 'saffron_gate_north', targetX: 2, targetY: 6 },
+      { x: 15, y: 1, targetMap: 'saffron_gate_north', targetX: 3, targetY: 6 },
+      // South exit → Saffron Gate South
+      { x: 14, y: 27, targetMap: 'saffron_gate_south', targetX: 2, targetY: 1 },
+      { x: 15, y: 27, targetMap: 'saffron_gate_south', targetX: 3, targetY: 1 },
+      // West exit → Route 7 Gate
+      { x: 1, y: 14, targetMap: 'route7_gate', targetX: 6, targetY: 2 },
+      { x: 1, y: 15, targetMap: 'route7_gate', targetX: 6, targetY: 3 },
+      // East exit → Saffron Gate East
+      { x: 29, y: 14, targetMap: 'saffron_gate_east', targetX: 1, targetY: 2 },
+      { x: 29, y: 15, targetMap: 'saffron_gate_east', targetX: 1, targetY: 3 },
       // Gym door
       { x: 7, y: 8, targetMap: 'saffron_gym', targetX: 4, targetY: 13 },
       // Pokemon Center door
@@ -1779,7 +1791,7 @@ export const FIGHTING_DOJO: MapData = (() => {
   };
 })();
 
-// ─── Route 7 Gate ────────────────────────────────────────────────────────────
+// ─── Route 7 Gate (horizontal pass-through) ─────────────────────────────────
 export const ROUTE7_GATE: MapData = (() => {
   const W = 8, H = 6;
   const tiles = fill2D(W, H, T.INDOOR_FLOOR);
@@ -1787,18 +1799,169 @@ export const ROUTE7_GATE: MapData = (() => {
   function setTile(x: number, y: number, type: TileType) {
     if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
   }
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); }
+  // Walls: top, bottom, sides
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, H - 1, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
-  setTile(2, 2, T.COUNTER); setTile(3, 2, T.COUNTER);
+  // Open side doorways at y=2-3
+  setTile(0, 2, T.INDOOR_FLOOR); setTile(0, 3, T.INDOOR_FLOOR);
+  setTile(W - 1, 2, T.INDOOR_FLOOR); setTile(W - 1, 3, T.INDOOR_FLOOR);
+  // Counter
+  setTile(3, 1, T.COUNTER); setTile(4, 1, T.COUNTER);
   return {
     id: 'route7_gate', name: 'ROUTE 7 GATE', width: W, height: H, tiles, collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'route7', targetX: 10, targetY: 4 },
-      { x: 4, y: H - 1, targetMap: 'route7', targetX: 10, targetY: 4 },
+      // Left exit → Route 7
+      { x: 0, y: 2, targetMap: 'route7', targetX: 18, targetY: 4 },
+      { x: 0, y: 3, targetMap: 'route7', targetX: 18, targetY: 5 },
+      // Right exit → Saffron City (blocked without Tea)
+      { x: 7, y: 2, targetMap: 'saffron_city', targetX: 2, targetY: 14 },
+      { x: 7, y: 3, targetMap: 'saffron_city', targetX: 2, targetY: 15 },
     ],
     npcs: [{
-      id: 'route7_guard', x: 4, y: 2, spriteColor: 0x4060b0, direction: Direction.DOWN,
-      dialogue: ['This road connects\nCELADON CITY and', 'SAFFRON CITY.'],
+      id: 'route7_guard', x: 4, y: 2, spriteColor: 0x4060b0, direction: Direction.LEFT,
+      dialogue: ['You need TEA to pass\nthrough to SAFFRON.', 'Thirsty work, this\nguarding business...'],
+    }],
+  };
+})();
+
+// ─── Saffron Gate North (vertical pass-through, Route 5 side) ────────────────
+export const SAFFRON_GATE_NORTH: MapData = (() => {
+  const W = 6, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  // Walls: top row, side columns
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  // Counter and guard
+  setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER);
+  return {
+    id: 'saffron_gate_north', name: 'SAFFRON GATE', width: W, height: H, tiles, collision,
+    warps: [
+      // North exit → Route 5 (bump warp on wall)
+      { x: 2, y: 0, targetMap: 'route5', targetX: 9, targetY: 18 },
+      { x: 3, y: 0, targetMap: 'route5', targetX: 10, targetY: 18 },
+      // South exit → Saffron City (edge warp, blocked without Tea)
+      { x: 2, y: 7, targetMap: 'saffron_city', targetX: 14, targetY: 2 },
+      { x: 3, y: 7, targetMap: 'saffron_city', targetX: 15, targetY: 2 },
+    ],
+    npcs: [{
+      id: 'gate_north_guard', x: 3, y: 3, spriteColor: 0x4060b0, direction: Direction.LEFT,
+      dialogue: ['You need TEA to pass\nthrough to SAFFRON.', "I'm parched just\nstanding here..."],
+    }],
+  };
+})();
+
+// ─── Saffron Gate South (vertical pass-through, Route 6 side) ────────────────
+export const SAFFRON_GATE_SOUTH: MapData = (() => {
+  const W = 6, H = 8;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  // Walls: top row, side columns
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  // Counter and guard
+  setTile(3, 4, T.COUNTER); setTile(4, 4, T.COUNTER);
+  return {
+    id: 'saffron_gate_south', name: 'SAFFRON GATE', width: W, height: H, tiles, collision,
+    warps: [
+      // North exit → Saffron City (bump warp on wall, blocked without Tea)
+      { x: 2, y: 0, targetMap: 'saffron_city', targetX: 14, targetY: 26 },
+      { x: 3, y: 0, targetMap: 'saffron_city', targetX: 15, targetY: 26 },
+      // South exit → Route 6 (edge warp)
+      { x: 2, y: 7, targetMap: 'route6', targetX: 9, targetY: 1 },
+      { x: 3, y: 7, targetMap: 'route6', targetX: 10, targetY: 1 },
+    ],
+    npcs: [{
+      id: 'gate_south_guard', x: 2, y: 4, spriteColor: 0x4060b0, direction: Direction.RIGHT,
+      dialogue: ['You need TEA to pass\nthrough to SAFFRON.', 'A nice cup of TEA\nwould hit the spot...'],
+    }],
+  };
+})();
+
+// ─── Saffron Gate East (horizontal pass-through, Route 8 side) ──────────────
+export const SAFFRON_GATE_EAST: MapData = (() => {
+  const W = 8, H = 6;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  // Walls: all borders
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, H - 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  // Counter
+  setTile(2, 1, T.COUNTER); setTile(3, 1, T.COUNTER);
+  return {
+    id: 'saffron_gate_east', name: 'SAFFRON GATE', width: W, height: H, tiles, collision,
+    warps: [
+      // West exit → Saffron City (bump warp, blocked without Tea)
+      { x: 0, y: 2, targetMap: 'saffron_city', targetX: 28, targetY: 14 },
+      { x: 0, y: 3, targetMap: 'saffron_city', targetX: 28, targetY: 15 },
+      // East exit → Route 8 (bump warp)
+      { x: 7, y: 2, targetMap: 'route8', targetX: 1, targetY: 4 },
+      { x: 7, y: 3, targetMap: 'route8', targetX: 1, targetY: 5 },
+    ],
+    npcs: [{
+      id: 'gate_east_guard', x: 4, y: 2, spriteColor: 0x4060b0, direction: Direction.LEFT,
+      dialogue: ['You need TEA to pass\nthrough to SAFFRON.', "Can't let anyone in\nwithout it..."],
+    }],
+  };
+})();
+
+// ─── Underground Path North-South (Route 5 ↔ Route 6) ──────────────────────
+export const UNDERGROUND_NS: MapData = (() => {
+  const W = 5, H = 30;
+  const tiles = fill2D(W, H, T.CAVE_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  // Cave walls on all borders
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.CAVE_WALL); setTile(x, H - 1, T.CAVE_WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.CAVE_WALL); setTile(W - 1, y, T.CAVE_WALL); }
+  return {
+    id: 'underground_ns', name: 'UNDERGROUND PATH', width: W, height: H, tiles, collision,
+    warps: [
+      // North exit → Route 5 (bump warp on cave wall)
+      { x: 2, y: 0, targetMap: 'route5', targetX: 14, targetY: 19 },
+      // South exit → Route 6 (bump warp on cave wall)
+      { x: 2, y: 29, targetMap: 'route6', targetX: 14, targetY: 4 },
+    ],
+    npcs: [{
+      id: 'underground_ns_npc', x: 2, y: 15, spriteColor: 0x808080, direction: Direction.DOWN,
+      dialogue: ['This underground path\nconnects ROUTE 5', 'and ROUTE 6.', "It's a shortcut that\nbypasses SAFFRON!"],
+    }],
+  };
+})();
+
+// ─── Underground Path East-West (Route 7 ↔ Route 8) ────────────────────────
+export const UNDERGROUND_EW: MapData = (() => {
+  const W = 30, H = 5;
+  const tiles = fill2D(W, H, T.CAVE_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  // Cave walls on all borders
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.CAVE_WALL); setTile(x, H - 1, T.CAVE_WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.CAVE_WALL); setTile(W - 1, y, T.CAVE_WALL); }
+  return {
+    id: 'underground_ew', name: 'UNDERGROUND PATH', width: W, height: H, tiles, collision,
+    warps: [
+      // West exit → Route 7 (bump warp on cave wall)
+      { x: 0, y: 2, targetMap: 'route7', targetX: 10, targetY: 4 },
+      // East exit → Route 8 (bump warp on cave wall)
+      { x: 29, y: 2, targetMap: 'route8', targetX: 15, targetY: 4 },
+    ],
+    npcs: [{
+      id: 'underground_ew_npc', x: 15, y: 2, spriteColor: 0x808080, direction: Direction.DOWN,
+      dialogue: ['This underground path\nconnects ROUTE 7', 'and ROUTE 8.', "It's a shortcut that\nbypasses SAFFRON!"],
     }],
   };
 })();
@@ -1831,4 +1994,9 @@ export const CENTRAL_MAPS: Record<string, MapData> = {
   celadon_mansion: CELADON_MANSION,
   fighting_dojo: FIGHTING_DOJO,
   route7_gate: ROUTE7_GATE,
+  saffron_gate_north: SAFFRON_GATE_NORTH,
+  saffron_gate_south: SAFFRON_GATE_SOUTH,
+  saffron_gate_east: SAFFRON_GATE_EAST,
+  underground_ns: UNDERGROUND_NS,
+  underground_ew: UNDERGROUND_EW,
 };

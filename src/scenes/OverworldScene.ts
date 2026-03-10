@@ -2439,6 +2439,10 @@ export class OverworldScene extends Phaser.Scene {
       'route3:41,6': ['ROUTE 3', 'MT. MOON ahead'],
       'celadon_city:12,12': ['CELADON CITY GYM\nLEADER: ERIKA', 'The Nature-Loving\nPrincess!'],
       'celadon_city:9,10': ['CELADON CITY', 'The City of Rainbow\nDreams!'],
+      'route5:12,18': ['UNDERGROUND PATH', 'Route 5 - Route 6'],
+      'route6:12,3': ['UNDERGROUND PATH', 'Route 5 - Route 6'],
+      'route7:12,3': ['UNDERGROUND PATH', 'Route 7 - Route 8'],
+      'route8:13,3': ['UNDERGROUND PATH', 'Route 7 - Route 8'],
     };
 
     // Game Corner poster puzzle

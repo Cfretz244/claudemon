@@ -128,7 +128,7 @@ const MAP_GROUPS: { label: string; maps: string[] }[] = [
   },
   {
     label: 'Routes 5-6 / Vermilion',
-    maps: ['route5', 'route6', 'vermilion_city', 'vermilion_gym', 'pokemon_center_vermilion', 'pokemart_vermilion', 'ss_anne', 'ss_anne_2f', 'ss_anne_b1f', 'ss_anne_deck'],
+    maps: ['route5', 'route6', 'saffron_gate_north', 'saffron_gate_south', 'underground_ns', 'vermilion_city', 'vermilion_gym', 'pokemon_center_vermilion', 'pokemart_vermilion', 'ss_anne', 'ss_anne_2f', 'ss_anne_b1f', 'ss_anne_deck'],
   },
   {
     label: 'Routes 9-10 / Rock Tunnel',
@@ -140,7 +140,7 @@ const MAP_GROUPS: { label: string; maps: string[] }[] = [
   },
   {
     label: 'Routes 7-8-11 / Celadon / Saffron',
-    maps: ['route7', 'route7_gate', 'route8', 'route11', 'celadon_city', 'celadon_gym', 'pokemon_center_celadon', 'pokemart_celadon', 'celadon_mansion', 'game_corner', 'rocket_hideout_b1f', 'rocket_hideout_b2f', 'rocket_hideout_b3f', 'rocket_hideout_b4f', 'digletts_cave', 'saffron_city', 'saffron_gym', 'pokemon_center_saffron', 'pokemart_saffron', 'silph_co_1f', 'silph_co_2f', 'silph_co_3f', 'silph_co_4f', 'silph_co_5f', 'silph_co_6f', 'silph_co_7f', 'fighting_dojo'],
+    maps: ['route7', 'route7_gate', 'route8', 'saffron_gate_east', 'underground_ew', 'route11', 'celadon_city', 'celadon_gym', 'pokemon_center_celadon', 'pokemart_celadon', 'celadon_mansion', 'game_corner', 'rocket_hideout_b1f', 'rocket_hideout_b2f', 'rocket_hideout_b3f', 'rocket_hideout_b4f', 'digletts_cave', 'saffron_city', 'saffron_gym', 'pokemon_center_saffron', 'pokemart_saffron', 'silph_co_1f', 'silph_co_2f', 'silph_co_3f', 'silph_co_4f', 'silph_co_5f', 'silph_co_6f', 'silph_co_7f', 'fighting_dojo'],
   },
   {
     label: 'Routes 12-18 / Fuchsia / Safari',
