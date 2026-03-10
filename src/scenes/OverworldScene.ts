@@ -141,6 +141,10 @@ export class OverworldScene extends Phaser.Scene {
       data.playerY = 12;
     }
     this.currentMap = ALL_MAPS[mapId];
+    // Reset flash when entering a non-dark map so re-entry into dark caves requires Flash again
+    if (!this.currentMap.isDark) {
+      this.flashUsed = false;
+    }
     this.playerGridX = data.playerX ?? 9;
     this.playerGridY = data.playerY ?? 8;
 
