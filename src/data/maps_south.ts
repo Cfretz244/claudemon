@@ -47,6 +47,16 @@ export const ROUTE12: MapData = (() => {
   fillRect(2, 12, 4, 1, T.LEDGE);
   fillRect(2, 18, 4, 1, T.LEDGE);
 
+  // Three-row barrier around Snorlax — blocks both north and south
+  // Rows 3 and 5: full tree walls with only column 7 open (for post-Snorlax travel)
+  for (let x = 2; x < W - 2; x++) {
+    if (x !== 7) { setTile(x, 3, T.TREE); setTile(x, 5, T.TREE); }
+  }
+  // Row 4: trees on east side, horizontal corridor on west side for gate entrance
+  for (let x = 8; x < W - 2; x++) { setTile(x, 4, T.TREE); }
+  // Gate corridor: path from west edge through tree border to column 6
+  fillRect(0, 4, 7, 1, T.PATH);
+
   return {
     id: 'route12',
     name: 'ROUTE 12',
@@ -57,8 +67,10 @@ export const ROUTE12: MapData = (() => {
     warps: [
       // North entrance from Lavender Town
       { x: 7, y: 0, targetMap: 'lavender_town', targetX: 9, targetY: 18 },
-      // South exit to Route 13
-      { x: 7, y: 24, targetMap: 'route13', targetX: 1, targetY: 5 },
+      // West entrance from Route 11 Gate (corridor at Snorlax barrier row)
+      { x: 0, y: 4, targetMap: 'route11_gate', targetX: 6, targetY: 2 },
+      // South exit to Route 13 (east side)
+      { x: 7, y: 24, targetMap: 'route13', targetX: 23, targetY: 5 },
     ],
     npcs: [
       {
@@ -260,8 +272,8 @@ export const ROUTE14: MapData = (() => {
     warps: [
       // North entrance from Route 13
       { x: 7, y: 0, targetMap: 'route13', targetX: 1, targetY: 4 },
-      // South exit to Route 15
-      { x: 7, y: 19, targetMap: 'route15', targetX: 1, targetY: 5 },
+      // South exit to Route 15 (east side)
+      { x: 7, y: 19, targetMap: 'route15', targetX: 23, targetY: 5 },
     ],
     npcs: [
       {

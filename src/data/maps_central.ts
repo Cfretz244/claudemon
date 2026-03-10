@@ -530,6 +530,9 @@ export const ROUTE11: MapData = (() => {
       { x: 0, y: 5, targetMap: 'vermilion_city', targetX: 27, targetY: 13 },
       // Diglett's Cave entrance
       { x: 22, y: 3, targetMap: 'digletts_cave', targetX: 6, targetY: 18 },
+      // East exit → Route 11/12 Gate
+      { x: 24, y: 4, targetMap: 'route11_gate', targetX: 1, targetY: 2 },
+      { x: 24, y: 5, targetMap: 'route11_gate', targetX: 1, targetY: 3 },
     ],
     npcs: [
       {
@@ -1857,6 +1860,39 @@ export const ROUTE7_GATE: MapData = (() => {
   };
 })();
 
+// ─── Route 11/12 Gate (horizontal pass-through, connects Route 11 to Route 12) ─
+export const ROUTE11_GATE: MapData = (() => {
+  const W = 8, H = 6;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  // Walls: top, bottom, sides
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, H - 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  // Open side doorways at y=2-3
+  setTile(0, 2, T.INDOOR_FLOOR); setTile(0, 3, T.INDOOR_FLOOR);
+  setTile(W - 1, 2, T.INDOOR_FLOOR); setTile(W - 1, 3, T.INDOOR_FLOOR);
+  // Counter
+  setTile(3, 1, T.COUNTER); setTile(4, 1, T.COUNTER);
+  return {
+    id: 'route11_gate', name: 'ROUTE 11 GATE', width: W, height: H, tiles, collision,
+    warps: [
+      // West exit → Route 11
+      { x: 0, y: 2, targetMap: 'route11', targetX: 23, targetY: 4 },
+      { x: 0, y: 3, targetMap: 'route11', targetX: 23, targetY: 5 },
+      // East exit → Route 12 (corridor at Snorlax barrier row)
+      { x: 7, y: 2, targetMap: 'route12', targetX: 1, targetY: 4 },
+      { x: 7, y: 3, targetMap: 'route12', targetX: 1, targetY: 4 },
+    ],
+    npcs: [{
+      id: 'route11_gate_guide', x: 4, y: 2, spriteColor: 0x4060b0, direction: Direction.LEFT,
+      dialogue: ['ROUTE 12 is to the\neast.', 'A sleeping POKeMON\nblocks the way north.'],
+    }],
+  };
+})();
+
 // ─── Saffron Gate North (vertical pass-through, Route 5 side) ────────────────
 export const SAFFRON_GATE_NORTH: MapData = (() => {
   const W = 6, H = 8;
@@ -2027,6 +2063,7 @@ export const CENTRAL_MAPS: Record<string, MapData> = {
   celadon_mansion: CELADON_MANSION,
   fighting_dojo: FIGHTING_DOJO,
   route7_gate: ROUTE7_GATE,
+  route11_gate: ROUTE11_GATE,
   saffron_gate_north: SAFFRON_GATE_NORTH,
   saffron_gate_south: SAFFRON_GATE_SOUTH,
   saffron_gate_east: SAFFRON_GATE_EAST,

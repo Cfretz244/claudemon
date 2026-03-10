@@ -9,7 +9,7 @@ import { BagScreen } from '../components/BagScreen';
 import { ShopScreen } from '../components/ShopScreen';
 import { PCScreen } from '../components/PCScreen';
 import { TrainerCard } from '../components/TrainerCard';
-import { generateNPCSprite, generateItemBallSprite, generateJessieSprite, generateJamesSprite } from '../utils/spriteGenerator';
+import { generateNPCSprite, generateItemBallSprite, generateJessieSprite, generateJamesSprite, generateSnorlaxNPCSprite } from '../utils/spriteGenerator';
 import { ITEMS } from '../data/items';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
@@ -427,6 +427,8 @@ export class OverworldScene extends Phaser.Scene {
       if (!this.textures.exists(spriteKey)) {
         if (npc.isItemBall) {
           generateItemBallSprite(this, spriteKey);
+        } else if (npc.id.startsWith('snorlax_')) {
+          generateSnorlaxNPCSprite(this, spriteKey);
         } else if (npc.id.startsWith('jessie_')) {
           generateJessieSprite(this, spriteKey);
         } else if (npc.id.startsWith('james_')) {
@@ -511,7 +513,7 @@ export class OverworldScene extends Phaser.Scene {
         // Check NPC at landing spot
         for (const npc of this.currentMap.npcs) {
           if (this.shouldSkipNPC(npc)) continue;
-          if (npc.x === newX && npc.y === landY) return;
+          if (this.npcBlocksTile(npc, newX, landY)) return;
         }
         this.performLedgeHop(newX, landY, dir);
         return;
@@ -559,7 +561,7 @@ export class OverworldScene extends Phaser.Scene {
     // Check NPC collision
     for (const npc of this.currentMap.npcs) {
       if (this.shouldSkipNPC(npc)) continue;
-      if (npc.x === newX && npc.y === newY) {
+      if (this.npcBlocksTile(npc, newX, newY)) {
         return; // Blocked by NPC
       }
     }
@@ -716,6 +718,14 @@ export class OverworldScene extends Phaser.Scene {
     });
   }
 
+  private npcBlocksTile(npc: NPCData, x: number, y: number): boolean {
+    if (npc.id.startsWith('snorlax_')) {
+      // Snorlax has extended collision (1 tile above and below)
+      return npc.x === x && Math.abs(npc.y - y) <= 1;
+    }
+    return npc.x === x && npc.y === y;
+  }
+
   private isSpinBlocked(x: number, y: number): boolean {
     // Out of bounds
     if (x < 0 || x >= this.currentMap.width || y < 0 || y >= this.currentMap.height) return true;
@@ -724,7 +734,7 @@ export class OverworldScene extends Phaser.Scene {
     // NPC collision
     for (const npc of this.currentMap.npcs) {
       if (this.shouldSkipNPC(npc)) continue;
-      if (npc.x === x && npc.y === y) return true;
+      if (this.npcBlocksTile(npc, x, y)) return true;
     }
     return false;
   }
@@ -1601,7 +1611,7 @@ export class OverworldScene extends Phaser.Scene {
 
     for (const npc of this.currentMap.npcs) {
       if (this.shouldSkipNPC(npc)) continue;
-      if (npc.x === targetX && npc.y === targetY) {
+      if (this.npcBlocksTile(npc, targetX, targetY)) {
         this.interactWithNPC(npc);
         return;
       }
