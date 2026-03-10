@@ -352,6 +352,7 @@ export class BattleScene extends Phaser.Scene {
     const usableIds = [
       'poke_ball', 'great_ball', 'ultra_ball', 'master_ball',
       'potion', 'super_potion', 'hyper_potion', 'max_potion', 'full_restore',
+      'revive',
     ];
     const items: BagItem[] = [];
     for (const id of usableIds) {
@@ -416,6 +417,8 @@ export class BattleScene extends Phaser.Scene {
 
     if (isBall) {
       this.useBall(itemId);
+    } else if (itemId === 'revive') {
+      this.useRevive();
     } else {
       this.usePotion(itemId);
     }
@@ -1555,6 +1558,48 @@ export class BattleScene extends Phaser.Scene {
     const name = this.getSpeciesName(this.playerPokemon.speciesId);
     this.textBox.show([`Used POTION on\n${name}!`], () => {
       // Opponent attacks
+      const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+      const aiMove = this.opponentPokemon.moves[aiMoveIndex];
+      const aiMoveData = MOVES_DATA[aiMove?.moveId];
+      if (aiMove && aiMoveData) {
+        this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false).then(() => {
+          if (this.playerPokemon.currentHp <= 0) {
+            this.handlePlayerFaint();
+          } else {
+            this.turnInProgress = false;
+            this.showBattleMenu();
+          }
+        });
+      } else {
+        this.turnInProgress = false;
+        this.showBattleMenu();
+      }
+    });
+  }
+
+  private useRevive(): void {
+    // Find first fainted party Pokemon
+    const faintedIdx = this.playerState.party.findIndex(
+      (p, i) => p.currentHp <= 0 && i !== this.currentPlayerPokemonIndex
+    );
+
+    if (faintedIdx === -1) {
+      this.textBox.show(["It won't have any\neffect!"], () => this.showBattleMenu());
+      return;
+    }
+
+    if (!this.playerState.useItem('revive')) {
+      this.textBox.show(["No REVIVE left!"], () => this.showBattleMenu());
+      return;
+    }
+
+    const target = this.playerState.party[faintedIdx];
+    target.currentHp = Math.floor(target.stats.hp / 2);
+
+    const name = this.getSpeciesName(target.speciesId);
+    soundSystem.heal();
+    this.textBox.show([`${name} was revived!`], () => {
+      // Opponent gets a free attack
       const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
       const aiMove = this.opponentPokemon.moves[aiMoveIndex];
       const aiMoveData = MOVES_DATA[aiMove?.moveId];
