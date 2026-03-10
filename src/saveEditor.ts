@@ -132,7 +132,7 @@ const MAP_GROUPS: { label: string; maps: string[] }[] = [
   },
   {
     label: 'Routes 7-8-11 / Celadon / Saffron',
-    maps: ['route7', 'route7_gate', 'route8', 'route11', 'celadon_city', 'celadon_gym', 'pokemon_center_celadon', 'pokemart_celadon', 'celadon_mansion', 'game_corner_basement', 'digletts_cave', 'saffron_city', 'saffron_gym', 'pokemon_center_saffron', 'pokemart_saffron', 'silph_co', 'fighting_dojo'],
+    maps: ['route7', 'route7_gate', 'route8', 'route11', 'celadon_city', 'celadon_gym', 'pokemon_center_celadon', 'pokemart_celadon', 'celadon_mansion', 'game_corner', 'rocket_hideout_b1f', 'rocket_hideout_b2f', 'rocket_hideout_b3f', 'rocket_hideout_b4f', 'digletts_cave', 'saffron_city', 'saffron_gym', 'pokemon_center_saffron', 'pokemart_saffron', 'silph_co', 'fighting_dojo'],
   },
   {
     label: 'Routes 12-18 / Fuchsia / Safari',

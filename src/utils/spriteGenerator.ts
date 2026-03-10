@@ -225,6 +225,34 @@ export function generateTileset(scene: Phaser.Scene): void {
       ctx.fillRect(2, 12, 12, 1);
       ctx.fillRect(13, 3, 1, 10);
     },
+    [TileType.STOP_TILE]: (ctx) => {
+      // Stop tile — indoor floor with a distinctive circle/dot pattern
+      ctx.fillStyle = '#f8f0d0';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#e8e0c0';
+      ctx.fillRect(0, 0, 16, 1);
+      ctx.fillRect(0, 0, 1, 16);
+      // Circle pattern to indicate stopping point
+      ctx.fillStyle = '#b0a888';
+      ctx.fillRect(5, 5, 6, 6);
+      ctx.fillStyle = '#f8f0d0';
+      ctx.fillRect(6, 6, 4, 4);
+      ctx.fillStyle = '#b0a888';
+      ctx.fillRect(7, 7, 2, 2);
+    },
+    [TileType.SPIN_TILE]: (ctx) => {
+      // Default spin tile (up arrow) - directional variants generated below
+      ctx.fillStyle = '#f8f0d0';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#e8e0c0';
+      ctx.fillRect(0, 0, 16, 1);
+      ctx.fillRect(0, 0, 1, 16);
+      // Up arrow
+      ctx.fillStyle = '#c04040';
+      ctx.fillRect(7, 3, 2, 10);
+      ctx.fillRect(5, 5, 6, 2);
+      ctx.fillRect(6, 4, 4, 2);
+    },
   };
 
   // Generate individual tile textures
@@ -237,6 +265,48 @@ export function generateTileset(scene: Phaser.Scene): void {
     tileGraphics[tileId](tileCtx);
     scene.textures.addCanvas(`tile_${tileId}`, tileCanvas);
   });
+
+  // Generate directional spin tile textures
+  const spinArrows: Record<string, (ctx: CanvasRenderingContext2D) => void> = {
+    up: (ctx) => {
+      ctx.fillStyle = '#c04040';
+      ctx.fillRect(7, 3, 2, 10);
+      ctx.fillRect(5, 5, 6, 2);
+      ctx.fillRect(6, 4, 4, 2);
+    },
+    down: (ctx) => {
+      ctx.fillStyle = '#c04040';
+      ctx.fillRect(7, 3, 2, 10);
+      ctx.fillRect(5, 9, 6, 2);
+      ctx.fillRect(6, 10, 4, 2);
+    },
+    left: (ctx) => {
+      ctx.fillStyle = '#c04040';
+      ctx.fillRect(3, 7, 10, 2);
+      ctx.fillRect(5, 5, 2, 6);
+      ctx.fillRect(4, 6, 2, 4);
+    },
+    right: (ctx) => {
+      ctx.fillStyle = '#c04040';
+      ctx.fillRect(3, 7, 10, 2);
+      ctx.fillRect(9, 5, 2, 6);
+      ctx.fillRect(10, 6, 2, 4);
+    },
+  };
+  for (const [dir, drawArrow] of Object.entries(spinArrows)) {
+    const c = document.createElement('canvas');
+    c.width = TILE_SIZE;
+    c.height = TILE_SIZE;
+    const cx = c.getContext('2d')!;
+    // Indoor floor base
+    cx.fillStyle = '#f8f0d0';
+    cx.fillRect(0, 0, 16, 16);
+    cx.fillStyle = '#e8e0c0';
+    cx.fillRect(0, 0, 16, 1);
+    cx.fillRect(0, 0, 1, 16);
+    drawArrow(cx);
+    scene.textures.addCanvas(`spin_tile_${dir}`, c);
+  }
 }
 
 function drawPlayerFrame(ctx: CanvasRenderingContext2D, dir: string, frame: number): void {

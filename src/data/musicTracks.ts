@@ -2512,7 +2512,11 @@ const MAP_MUSIC: Record<string, string> = {
   ss_anne_2f: 'ss_anne',
   ss_anne_b1f: 'ss_anne',
   ss_anne_deck: 'ss_anne',
-  game_corner_basement: 'rocket_hideout',
+  game_corner: 'game_corner',
+  rocket_hideout_b1f: 'rocket_hideout',
+  rocket_hideout_b2f: 'rocket_hideout',
+  rocket_hideout_b3f: 'rocket_hideout',
+  rocket_hideout_b4f: 'rocket_hideout',
   silph_co: 'rocket_hideout',
 };
 

@@ -114,7 +114,13 @@ export class OverworldScene extends Phaser.Scene {
     this.isMoving = false;
     this.introTransition = data.introTransition || false;
     this.teleportLanding = data.teleportLanding || false;
-    const mapId = data.mapId || 'pallet_town';
+    let mapId = data.mapId || 'pallet_town';
+    // Legacy save migration: game_corner_basement → game_corner
+    if (mapId === 'game_corner_basement') {
+      mapId = 'game_corner';
+      data.playerX = 7;
+      data.playerY = 10;
+    }
     this.currentMap = ALL_MAPS[mapId];
     this.playerGridX = data.playerX ?? 9;
     this.playerGridY = data.playerY ?? 8;
@@ -320,7 +326,12 @@ export class OverworldScene extends Phaser.Scene {
       const row: Phaser.GameObjects.Image[] = [];
       for (let x = 0; x < this.currentMap.width; x++) {
         const tileType = this.currentMap.tiles[y][x];
-        const key = `tile_${tileType}`;
+        let key = `tile_${tileType}`;
+        // Spin tiles use directional textures
+        if (tileType === TileType.SPIN_TILE && this.currentMap.spinTiles) {
+          const dir = this.currentMap.spinTiles[`${x},${y}`];
+          if (dir) key = `spin_tile_${dir}`;
+        }
         const sprite = this.add.image(
           x * TILE_SIZE + TILE_SIZE / 2,
           y * TILE_SIZE + TILE_SIZE / 2,
@@ -418,7 +429,19 @@ export class OverworldScene extends Phaser.Scene {
       return true;
     }
     // Game corner rockets disappear after Giovanni defeated
-    if ((npc.id === 'game_corner_rocket1' || npc.id === 'game_corner_rocket2') &&
+    if ((npc.id === 'game_corner_rocket1' || npc.id === 'game_corner_rocket2' ||
+         npc.id === 'game_corner_poster_rocket') &&
+        this.playerState.defeatedTrainers.includes('giovanni_game_corner')) {
+      return true;
+    }
+    // Rocket hideout grunts disappear after Giovanni defeated
+    if (npc.id.startsWith('rocket_hideout_b') && npc.isTrainer &&
+        this.playerState.defeatedTrainers.includes('giovanni_game_corner')) {
+      return true;
+    }
+    // Elevator NPCs stay visible but Lift Key check is in interaction handler
+    // Rocket hideout B4F grunt disappears after Giovanni defeated
+    if (npc.id === 'rocket_hideout_b4f_grunt1' &&
         this.playerState.defeatedTrainers.includes('giovanni_game_corner')) {
       return true;
     }
@@ -663,6 +686,15 @@ export class OverworldScene extends Phaser.Scene {
           return;
         }
 
+        // Check for spin tile
+        if (this.currentMap.spinTiles) {
+          const spinDir = this.currentMap.spinTiles[`${newX},${newY}`];
+          if (spinDir) {
+            this.performSpinSlide(spinDir);
+            return;
+          }
+        }
+
         this.stepCounter++;
 
         // Check for trainer line-of-sight
@@ -738,6 +770,109 @@ export class OverworldScene extends Phaser.Scene {
       duration: MOVE_DURATION,
       onComplete: () => {
         this.pikachu.play(`pikachu_idle_${this.pikachuDirection}`, true);
+      },
+    });
+  }
+
+  private isSpinBlocked(x: number, y: number): boolean {
+    // Out of bounds
+    if (x < 0 || x >= this.currentMap.width || y < 0 || y >= this.currentMap.height) return true;
+    // Solid tile
+    if (this.currentMap.collision[y]?.[x]) return true;
+    // NPC collision
+    for (const npc of this.currentMap.npcs) {
+      if (this.shouldSkipNPC(npc)) continue;
+      if (npc.x === x && npc.y === y) return true;
+    }
+    return false;
+  }
+
+  private performSpinSlide(dir: Direction): void {
+    this.isMoving = true;
+    const vec = DIR_VECTORS[dir];
+    const nextX = this.playerGridX + vec.x;
+    const nextY = this.playerGridY + vec.y;
+
+    // If blocked immediately, just stop
+    if (this.isSpinBlocked(nextX, nextY)) {
+      this.isMoving = false;
+      this.player.play(`player_idle_${this.playerDirection}`, true);
+      this.stepCounter++;
+      if (this.checkTrainerSight()) return;
+      return;
+    }
+
+    // Cycle sprite through directions for spinning visual
+    const spinDirs: Direction[] = [Direction.DOWN, Direction.LEFT, Direction.UP, Direction.RIGHT];
+    const curIdx = spinDirs.indexOf(this.playerDirection);
+    const nextDirIdx = (curIdx + 1) % 4;
+    this.playerDirection = spinDirs[nextDirIdx];
+    this.player.play(`player_walk_${this.playerDirection}`, true);
+
+    // Slide to next tile
+    const prevX = this.playerGridX;
+    const prevY = this.playerGridY;
+    this.playerGridX = nextX;
+    this.playerGridY = nextY;
+
+    this.tweens.add({
+      targets: this.player,
+      x: nextX * TILE_SIZE + TILE_SIZE / 2,
+      y: nextY * TILE_SIZE + TILE_SIZE / 2,
+      duration: Math.floor(MOVE_DURATION * 0.6),
+      onComplete: () => {
+        // Move pikachu follower
+        if (this.pikachuVisible) {
+          if (!this.pikachu.visible) this.pikachu.setVisible(true);
+          this.movePikachu(prevX, prevY, dir);
+        }
+
+        // Check warp on landing
+        const warp = this.currentMap.warps.find(w => w.x === nextX && w.y === nextY);
+        if (warp) {
+          this.isMoving = false;
+          this.playerDirection = dir;
+          this.player.play(`player_idle_${this.playerDirection}`, true);
+          soundSystem.doorOpen();
+          this.warpTo(warp.targetMap, warp.targetX, warp.targetY);
+          return;
+        }
+
+        // Check if landed on another spin tile -> change direction, keep going
+        if (this.currentMap.spinTiles) {
+          const nextSpin = this.currentMap.spinTiles[`${nextX},${nextY}`];
+          if (nextSpin) {
+            this.performSpinSlide(nextSpin);
+            return;
+          }
+        }
+
+        // Check if landed on a stop tile -> stop
+        const landedTile = this.currentMap.tiles[nextY]?.[nextX];
+        if (landedTile === TileType.STOP_TILE) {
+          this.isMoving = false;
+          this.playerDirection = dir;
+          this.player.play(`player_idle_${this.playerDirection}`, true);
+          this.stepCounter++;
+          if (this.checkTrainerSight()) return;
+          return;
+        }
+
+        // Otherwise keep sliding in the same direction
+        const aheadX = nextX + vec.x;
+        const aheadY = nextY + vec.y;
+        if (this.isSpinBlocked(aheadX, aheadY)) {
+          // Hit a wall — stop here
+          this.isMoving = false;
+          this.playerDirection = dir;
+          this.player.play(`player_idle_${this.playerDirection}`, true);
+          this.stepCounter++;
+          if (this.checkTrainerSight()) return;
+          return;
+        }
+
+        // Continue sliding
+        this.performSpinSlide(dir);
       },
     });
   }
@@ -828,12 +963,18 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    // Game Corner Basement: need to find the hidden switch (simplified - just need to enter Game Corner)
-    if (mapId === 'game_corner_basement' && this.playerState.defeatedTrainers.includes('giovanni_game_corner')) {
-      this.textBox.show([
-        "The hideout has been\nabandoned...",
-      ]);
-      return;
+    // Rocket Hideout B1F: need poster flag to enter from Game Corner
+    if (mapId === 'rocket_hideout_b1f' && this.currentMap.id === 'game_corner') {
+      if (!this.playerState.storyFlags['game_corner_poster_found']) {
+        // Silent block - player can't find the stairs yet
+        return;
+      }
+      if (this.playerState.defeatedTrainers.includes('giovanni_game_corner')) {
+        this.textBox.show([
+          "The hideout has been\nabandoned...",
+        ]);
+        return;
+      }
     }
 
     // Silph Co: locked after completion
@@ -1936,6 +2077,22 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
+    // Slot machine NPCs
+    if (npc.id.startsWith('slot_machine_')) {
+      this.playSlotMachine();
+      return;
+    }
+
+    // Elevator NPCs
+    if (npc.id.startsWith('elevator_')) {
+      if (!this.playerState.hasItem('lift_key')) {
+        this.textBox.show(['It\'s an elevator,\nbut it won\'t move...', 'It needs a special\nkey.']);
+      } else {
+        this.showElevatorMenu();
+      }
+      return;
+    }
+
     // Giovanni at Game Corner gives Silph Scope on defeat
     if (npc.id === 'giovanni_game_corner' && this.playerState.defeatedTrainers.includes('giovanni_game_corner')) {
       this.textBox.show(["The hideout has been\nabandoned..."]);
@@ -2042,8 +2199,129 @@ export class OverworldScene extends Phaser.Scene {
       'route1:7,10': ['ROUTE 1', 'PALLET TOWN -\nVIRIDIAN CITY'],
       'pewter_city:3,9': ['PEWTER CITY GYM\nLEADER: BROCK', 'The Rock-Solid\nPOKeMON Trainer!'],
       'route3:41,6': ['ROUTE 3', 'MT. MOON ahead'],
+      'celadon_city:12,12': ['CELADON CITY GYM\nLEADER: ERIKA', 'The Nature-Loving\nPrincess!'],
+      'celadon_city:9,10': ['CELADON CITY', 'The City of Rainbow\nDreams!'],
     };
+
+    // Game Corner poster puzzle
+    if (signKey === 'game_corner:11,2') {
+      if (this.playerState.storyFlags['game_corner_poster_found']) {
+        this.textBox.show(['The hidden stairs\nlead underground...']);
+      } else if (this.playerState.defeatedTrainers.includes('game_corner_poster_rocket')) {
+        this.textBox.show(
+          ['There\'s a switch\nbehind the poster!', 'A hidden staircase\nappeared!'],
+          () => {
+            this.playerState.storyFlags['game_corner_poster_found'] = true;
+          }
+        );
+      } else {
+        this.textBox.show(['A poster for a GAME\nCORNER tournament...']);
+      }
+      return;
+    }
+
     this.textBox.show(signs[signKey] || [this.currentMap.name]);
+  }
+
+  private playSlotMachine(): void {
+    if (this.playerState.money < 50) {
+      this.textBox.show(["You don't have\nenough money!"]);
+      return;
+    }
+    this.playerState.money -= 50;
+    const symbols = ['7', 'BAR', 'CHERRY', 'PIKACHU', 'STAR'];
+    const r1 = symbols[Math.floor(Math.random() * symbols.length)];
+    const r2 = symbols[Math.floor(Math.random() * symbols.length)];
+    const r3 = symbols[Math.floor(Math.random() * symbols.length)];
+    const result = `${r1} | ${r2} | ${r3}`;
+    let payout = 0;
+    if (r1 === r2 && r2 === r3) {
+      payout = r1 === '7' ? 5000 : 1000;
+    } else if (r1 === r2 || r2 === r3 || r1 === r3) {
+      payout = 100;
+    }
+    if (payout > 0) {
+      this.playerState.money += payout;
+      soundSystem.pokemonCry(1200);
+      this.textBox.show([result, `You win $${payout}!`]);
+    } else {
+      this.textBox.show([result, 'No luck this time...']);
+    }
+  }
+
+  private showElevatorMenu(): void {
+    const floors = [
+      { label: 'B1F', map: 'rocket_hideout_b1f', x: 2, y: 13 },
+      { label: 'B2F', map: 'rocket_hideout_b2f', x: 2, y: 13 },
+      { label: 'B4F', map: 'rocket_hideout_b4f', x: 2, y: 9 },
+    ];
+
+    this.screenOpen = true;
+
+    let cursorIdx = 0;
+    const menuW = 50;
+    const menuH = floors.length * 14 + 8;
+    const menuX = GAME_WIDTH - menuW - 4;
+    const menuY = 4;
+
+    const container = this.add.container(menuX, menuY);
+    container.setScrollFactor(0);
+    container.setDepth(990);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xf8f8f8, 1);
+    bg.fillRoundedRect(0, 0, menuW, menuH, 2);
+    bg.lineStyle(2, 0x383838, 1);
+    bg.strokeRoundedRect(0, 0, menuW, menuH, 2);
+    container.add(bg);
+
+    floors.forEach((opt, i) => {
+      const isCurrent = opt.map === this.currentMap.id;
+      const t = this.add.text(14, 4 + i * 14, opt.label, {
+        fontSize: '8px',
+        color: isCurrent ? '#a0a0a0' : '#383838',
+        fontFamily: 'monospace',
+      });
+      container.add(t);
+    });
+
+    const cursor = this.add.text(4, 4, '▶', {
+      fontSize: '8px', color: '#383838', fontFamily: 'monospace',
+    });
+    container.add(cursor);
+
+    const cleanup = () => {
+      container.destroy();
+      this.screenOpen = false;
+      this.input.keyboard!.off('keydown', onKey);
+    };
+
+    // Skip the initial Z/Enter that opened this menu
+    let ready = false;
+    this.time.delayedCall(100, () => { ready = true; });
+
+    const onKey = (event: KeyboardEvent) => {
+      if (!ready) return;
+      if (event.key === 'ArrowUp') {
+        cursorIdx = (cursorIdx - 1 + floors.length) % floors.length;
+        cursor.setY(4 + cursorIdx * 14);
+        soundSystem.menuSelect();
+      } else if (event.key === 'ArrowDown') {
+        cursorIdx = (cursorIdx + 1) % floors.length;
+        cursor.setY(4 + cursorIdx * 14);
+        soundSystem.menuSelect();
+      } else if (event.key === 'z' || event.key === 'Enter') {
+        const target = floors[cursorIdx];
+        if (target.map === this.currentMap.id) return; // Already on this floor
+        cleanup();
+        soundSystem.doorOpen();
+        this.warpTo(target.map, target.x, target.y);
+      } else if (event.key === 'x' || event.key === 'Escape') {
+        cleanup();
+      }
+    };
+
+    this.input.keyboard!.on('keydown', onKey);
   }
 
   private startTrainerBattle(npc: NPCData): void {

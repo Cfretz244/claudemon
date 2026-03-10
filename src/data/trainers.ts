@@ -1617,6 +1617,113 @@ export const TRAINERS: Record<string, TrainerData> = {
     },
   },
 
+  // Game Corner poster guard
+  game_corner_poster_rocket: {
+    id: 'game_corner_poster_rocket',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 20, level: 20 },  // Raticate
+      { speciesId: 41, level: 20 },  // Zubat
+    ],
+    prizeMoney: 800,
+    dialogue: {
+      before: ['ROCKET: Hey! Don\'t be\nsnooping around here!'],
+      after: ['No! The poster...!'],
+    },
+  },
+  // Rocket Hideout B1F
+  rocket_hideout_b1f_grunt1: {
+    id: 'rocket_hideout_b1f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 19, level: 21 },  // Rattata
+      { speciesId: 41, level: 22 },  // Zubat
+    ],
+    prizeMoney: 840,
+    dialogue: {
+      before: ['ROCKET: How did you\nget down here?!'],
+      after: ['This isn\'t over!'],
+    },
+  },
+  rocket_hideout_b1f_grunt2: {
+    id: 'rocket_hideout_b1f_grunt2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 88, level: 21 },  // Grimer
+      { speciesId: 66, level: 22 },  // Machop
+    ],
+    prizeMoney: 840,
+    dialogue: {
+      before: ['ROCKET: You\'re not\ngetting past me!'],
+      after: ['Urgh... go ahead...'],
+    },
+  },
+  // Rocket Hideout B2F
+  rocket_hideout_b2f_grunt1: {
+    id: 'rocket_hideout_b2f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 109, level: 22 }, // Koffing
+      { speciesId: 96, level: 23 },  // Drowzee
+    ],
+    prizeMoney: 880,
+    dialogue: {
+      before: ['ROCKET: Intruder alert!\nIntruder alert!'],
+      after: ['I\'ll sound the\nalarm!'],
+    },
+  },
+  rocket_hideout_b2f_grunt2: {
+    id: 'rocket_hideout_b2f_grunt2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 27, level: 23 },  // Sandshrew
+      { speciesId: 23, level: 23 },  // Ekans
+      { speciesId: 28, level: 23 },  // Sandslash
+    ],
+    prizeMoney: 920,
+    dialogue: {
+      before: ['ROCKET: You made it\nthis far? Impressive.'],
+      after: ['The BOSS will deal\nwith you...'],
+    },
+  },
+  // Rocket Hideout B3F
+  rocket_hideout_b3f_grunt1: {
+    id: 'rocket_hideout_b3f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 20, level: 23 },  // Raticate
+      { speciesId: 41, level: 23 },  // Zubat
+      { speciesId: 42, level: 24 },  // Golbat
+    ],
+    prizeMoney: 920,
+    dialogue: {
+      before: ['ROCKET: The BOSS is\njust below!', 'You\'ll never reach\nhim!'],
+      after: ['The BOSS won\'t be\nas easy!'],
+    },
+  },
+  // Rocket Hideout B4F
+  rocket_hideout_b4f_grunt1: {
+    id: 'rocket_hideout_b4f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 66, level: 24 },  // Machop
+      { speciesId: 109, level: 24 }, // Koffing
+      { speciesId: 88, level: 25 },  // Grimer
+    ],
+    prizeMoney: 960,
+    dialogue: {
+      before: ['ROCKET: This is the\nBOSS\'s private floor!'],
+      after: ['The BOSS will\nclobber you!'],
+    },
+  },
+
   // Pokemon Tower Rockets
   tower_rocket1: {
     id: 'tower_rocket1',

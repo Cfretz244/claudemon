@@ -23,6 +23,8 @@ export enum TileType {
   CAVE_WALL = 19,
   CUT_TREE = 20,
   BOULDER = 21,
+  SPIN_TILE = 22,
+  STOP_TILE = 23,
 }
 
 export interface WarpPoint {
@@ -61,6 +63,7 @@ export interface MapData {
   wildEncounters?: WildEncounterTable;
   musicId?: string;
   isDark?: boolean;
+  spinTiles?: Record<string, Direction>;
 }
 
 export interface WildEncounterTable {

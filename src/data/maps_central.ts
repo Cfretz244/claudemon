@@ -627,8 +627,8 @@ export const CELADON_CITY: MapData = (() => {
       { x: 22, y: 9, targetMap: 'pokemon_center_celadon', targetX: 4, targetY: 7 },
       // Department Store (Pokemart)
       { x: 23, y: 20, targetMap: 'pokemart_celadon', targetX: 3, targetY: 7 },
-      // Game Corner basement
-      { x: 13, y: 19, targetMap: 'game_corner_basement', targetX: 5, targetY: 12 },
+      // Game Corner
+      { x: 13, y: 19, targetMap: 'game_corner', targetX: 7, targetY: 10 },
       // Celadon Mansion
       { x: 5, y: 19, targetMap: 'celadon_mansion', targetX: 3, targetY: 7 },
     ],
@@ -1157,10 +1157,10 @@ const POKEMART_SAFFRON: MapData = (() => {
   };
 })();
 
-// ─── GAME CORNER BASEMENT ───────────────────────────────────────────────────
+// ─── GAME CORNER (Ground Floor) ─────────────────────────────────────────────
 
-const GAME_CORNER_BASEMENT: MapData = (() => {
-  const W = 12, H = 14;
+const GAME_CORNER: MapData = (() => {
+  const W = 14, H = 12;
   const tiles = fill2D(W, H, T.INDOOR_FLOOR);
   const collision = fill2D(W, H, false);
   function setTile(x: number, y: number, type: TileType) {
@@ -1170,52 +1170,355 @@ const GAME_CORNER_BASEMENT: MapData = (() => {
     for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
   }
 
-  // Walls: top 2 rows, sides
+  // Walls
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
 
-  // Interior walls creating corridors
-  fillRect(4, 4, 1, 4, T.WALL);
-  fillRect(7, 2, 1, 4, T.WALL);
-  fillRect(4, 10, 4, 1, T.WALL);
+  // Rows of slot machine counters (3 rows of 3 pairs)
+  fillRect(3, 3, 2, 1, T.COUNTER);
+  fillRect(6, 3, 2, 1, T.COUNTER);
+  fillRect(9, 3, 2, 1, T.COUNTER);
+  fillRect(3, 5, 2, 1, T.COUNTER);
+  fillRect(6, 5, 2, 1, T.COUNTER);
+  fillRect(9, 5, 2, 1, T.COUNTER);
+  fillRect(3, 7, 2, 1, T.COUNTER);
+  fillRect(6, 7, 2, 1, T.COUNTER);
+  fillRect(9, 7, 2, 1, T.COUNTER);
 
-  // Giovanni's desk at the back
-  setTile(5, 2, T.COUNTER);
-  setTile(6, 2, T.COUNTER);
+  // Counter along back wall (prize exchange)
+  fillRect(2, 2, 3, 1, T.COUNTER);
+
+  // Poster on back wall (SIGN tile)
+  setTile(11, 2, T.SIGN);
+
+  // Carpet aisle
+  fillRect(5, 9, 4, 2, T.CARPET);
 
   return {
-    id: 'game_corner_basement',
-    name: 'ROCKET HIDEOUT',
+    id: 'game_corner',
+    name: 'GAME CORNER',
     width: W, height: H,
     tiles, collision,
     warps: [
-      { x: 5, y: 13, targetMap: 'celadon_city', targetX: 13, targetY: 20 },
+      // Exit to Celadon City
+      { x: 7, y: 11, targetMap: 'celadon_city', targetX: 13, targetY: 20 },
+      // Hidden stairs to B1F (behind poster, x=11 y=2 is the sign/poster)
+      { x: 12, y: 2, targetMap: 'rocket_hideout_b1f', targetX: 14, targetY: 2 },
+    ],
+    npcs: [
+      // Slot machine NPCs (players seated at machines)
+      {
+        id: 'slot_machine_1',
+        x: 3, y: 4,
+        spriteColor: 0x60a0c0,
+        direction: Direction.UP,
+        dialogue: ['Want to play the\nslot machines?', 'It costs $50 per\nplay!'],
+      },
+      {
+        id: 'slot_machine_2',
+        x: 6, y: 6,
+        spriteColor: 0xc06060,
+        direction: Direction.UP,
+        dialogue: ['Want to try your\nluck?', 'It costs $50 per\nplay!'],
+      },
+      {
+        id: 'slot_machine_3',
+        x: 9, y: 8,
+        spriteColor: 0x60c060,
+        direction: Direction.UP,
+        dialogue: ['Feeling lucky?\nGive it a spin!', 'It costs $50 per\nplay!'],
+      },
+      // Rocket grunt guarding the poster
+      {
+        id: 'game_corner_poster_rocket',
+        x: 10, y: 9,
+        spriteColor: 0x383838,
+        direction: Direction.LEFT,
+        dialogue: ['ROCKET: Hey! Don\'t be\nsnooping around here!'],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      // Prize exchange clerk
+      {
+        id: 'game_corner_clerk',
+        x: 3, y: 2,
+        spriteColor: 0xf0a060,
+        direction: Direction.DOWN,
+        dialogue: [
+          'Welcome to the GAME\nCORNER prize exchange!',
+          'Sorry, we only accept\ncoins right now.',
+        ],
+      },
+      // NPC gambler
+      {
+        id: 'game_corner_gambler',
+        x: 9, y: 4,
+        spriteColor: 0xa080c0,
+        direction: Direction.UP,
+        dialogue: [
+          'I\'ve been playing\nall day...',
+          'I just know the next\none will be a winner!',
+        ],
+      },
+    ],
+  };
+})();
+
+// ─── ROCKET HIDEOUT B1F ─────────────────────────────────────────────────────
+
+const ROCKET_HIDEOUT_B1F: MapData = (() => {
+  const W = 16, H = 16;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Walls
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  // Bottom wall
+  for (let x = 0; x < W; x++) { setTile(x, H - 1, T.WALL); }
+
+  // Interior walls creating corridors
+  fillRect(6, 4, 1, 4, T.WALL);
+  fillRect(10, 2, 1, 5, T.WALL);
+  fillRect(3, 9, 6, 1, T.WALL);
+  fillRect(11, 9, 3, 1, T.WALL);
+
+  // Spin tiles — B1F puzzle
+  // The player enters from top-right (14,2) and needs to reach stairs at bottom-left (1,14)
+  // Arrows slide you continuously; stop tiles let you regain control
+  const spinTiles: Record<string, Direction> = {
+    '12,3': Direction.LEFT,   // entrance area — slides left
+    '8,3': Direction.DOWN,    // redirects down
+    '8,7': Direction.LEFT,    // redirects left
+    '3,7': Direction.DOWN,    // redirects down toward B2F stairs
+    '4,5': Direction.RIGHT,   // wrong path — sends right
+    '7,5': Direction.DOWN,    // sends down into wall
+    '2,4': Direction.DOWN,    // corridor shortcut
+    '12,6': Direction.LEFT,   // alternate path
+    '9,6': Direction.DOWN,    // sends down
+    '3,12': Direction.LEFT,   // near exit
+    '5,12': Direction.RIGHT,  // trap — sends back right
+    '11,12': Direction.LEFT,  // lower corridor
+    '7,10': Direction.DOWN,   // sends toward exit area
+    '12,10': Direction.LEFT,  // lower right path
+  };
+  for (const key of Object.keys(spinTiles)) {
+    const [sx, sy] = key.split(',').map(Number);
+    setTile(sx, sy, T.SPIN_TILE);
+  }
+
+  // Stop tiles — designated stopping points in the maze
+  setTile(3, 3, T.STOP_TILE);    // left side landing
+  setTile(8, 5, T.STOP_TILE);    // mid corridor
+  setTile(3, 10, T.STOP_TILE);   // near exit path
+  setTile(12, 8, T.STOP_TILE);   // right side landing
+  setTile(7, 12, T.STOP_TILE);   // lower middle
+  setTile(9, 10, T.STOP_TILE);   // right of wall gap
+  setTile(2, 7, T.STOP_TILE);    // left corridor
+
+  return {
+    id: 'rocket_hideout_b1f',
+    name: 'ROCKET HIDEOUT B1F',
+    width: W, height: H,
+    tiles, collision,
+    spinTiles,
+    warps: [
+      // Stairs up to Game Corner
+      { x: 14, y: 2, targetMap: 'game_corner', targetX: 12, targetY: 2 },
+      // Stairs down to B2F
+      { x: 1, y: 14, targetMap: 'rocket_hideout_b2f', targetX: 1, targetY: 2 },
     ],
     npcs: [
       {
-        id: 'game_corner_rocket1',
-        x: 3, y: 6,
+        id: 'rocket_hideout_b1f_grunt1',
+        x: 6, y: 5,
         spriteColor: 0x383838,
-        direction: Direction.RIGHT,
-        dialogue: ['ROCKET: You found\nour secret hideout!', 'No one leaves alive!'],
+        direction: Direction.DOWN,
+        dialogue: ['ROCKET: How did you\nget down here?!'],
         isTrainer: true,
         sightRange: 3,
       },
       {
-        id: 'game_corner_rocket2',
-        x: 9, y: 8,
+        id: 'rocket_hideout_b1f_grunt2',
+        x: 12, y: 11,
         spriteColor: 0x383838,
         direction: Direction.LEFT,
-        dialogue: ['ROCKET: Stop right\nthere, kid!'],
+        dialogue: ['ROCKET: You\'re not\ngetting past me!'],
         isTrainer: true,
         sightRange: 3,
       },
-      // Jessie & James - guarding the hideout
+      // Elevator
+      {
+        id: 'elevator_b1f',
+        x: 2, y: 14,
+        spriteColor: 0x808080,
+        direction: Direction.DOWN,
+        dialogue: ['It\'s an elevator.'],
+      },
+    ],
+  };
+})();
+
+// ─── ROCKET HIDEOUT B2F ─────────────────────────────────────────────────────
+
+const ROCKET_HIDEOUT_B2F: MapData = (() => {
+  const W = 16, H = 16;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Walls
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  for (let x = 0; x < W; x++) { setTile(x, H - 1, T.WALL); }
+
+  // Interior walls — harder maze
+  fillRect(5, 3, 1, 4, T.WALL);
+  fillRect(9, 2, 1, 5, T.WALL);
+  fillRect(12, 5, 1, 4, T.WALL);
+  fillRect(3, 9, 4, 1, T.WALL);
+  fillRect(8, 10, 1, 3, T.WALL);
+  fillRect(11, 11, 3, 1, T.WALL);
+
+  // Spin tiles — B2F harder maze
+  // Player enters from top-left (1,2) and needs to reach stairs at bottom-right (14,14)
+  const spinTiles: Record<string, Direction> = {
+    '3,2': Direction.RIGHT,   // entrance push
+    '7,2': Direction.DOWN,    // redirect down
+    '7,6': Direction.RIGHT,   // redirect right
+    '13,6': Direction.DOWN,   // redirect down
+    '13,9': Direction.LEFT,   // redirect left
+    '11,4': Direction.DOWN,   // right side path
+    '3,4': Direction.DOWN,    // left side trap
+    '3,7': Direction.RIGHT,   // left mid redirect
+    '6,7': Direction.DOWN,    // center down
+    '2,6': Direction.RIGHT,   // left corridor
+    '11,9': Direction.DOWN,   // right mid path
+    '6,12': Direction.RIGHT,  // bottom center path
+    '7,10': Direction.RIGHT,  // mid shortcut
+    '3,12': Direction.RIGHT,  // bottom left
+    '13,12': Direction.DOWN,  // near exit
+    '2,10': Direction.RIGHT,  // lower left push
+    '4,10': Direction.DOWN,   // trap path
+  };
+  for (const key of Object.keys(spinTiles)) {
+    const [sx, sy] = key.split(',').map(Number);
+    setTile(sx, sy, T.SPIN_TILE);
+  }
+
+  // Stop tiles — B2F stopping points
+  setTile(7, 4, T.STOP_TILE);    // after first redirect
+  setTile(11, 6, T.STOP_TILE);   // right side
+  setTile(3, 6, T.STOP_TILE);    // left side
+  setTile(6, 9, T.STOP_TILE);    // center
+  setTile(13, 10, T.STOP_TILE);  // right side lower
+  setTile(2, 12, T.STOP_TILE);   // bottom left
+  setTile(11, 12, T.STOP_TILE);  // bottom right
+  setTile(7, 8, T.STOP_TILE);    // mid area
+
+  return {
+    id: 'rocket_hideout_b2f',
+    name: 'ROCKET HIDEOUT B2F',
+    width: W, height: H,
+    tiles, collision,
+    spinTiles,
+    warps: [
+      // Stairs up to B1F
+      { x: 1, y: 2, targetMap: 'rocket_hideout_b1f', targetX: 1, targetY: 14 },
+      // Stairs down to B3F
+      { x: 14, y: 14, targetMap: 'rocket_hideout_b3f', targetX: 12, targetY: 2 },
+    ],
+    npcs: [
+      {
+        id: 'rocket_hideout_b2f_grunt1',
+        x: 7, y: 3,
+        spriteColor: 0x383838,
+        direction: Direction.LEFT,
+        dialogue: ['ROCKET: Intruder alert!\nIntruder alert!'],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'rocket_hideout_b2f_grunt2',
+        x: 12, y: 9,
+        spriteColor: 0x383838,
+        direction: Direction.DOWN,
+        dialogue: ['ROCKET: You made it\nthis far? Impressive.'],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      // Elevator
+      {
+        id: 'elevator_b2f',
+        x: 2, y: 14,
+        spriteColor: 0x808080,
+        direction: Direction.DOWN,
+        dialogue: ['It\'s an elevator.'],
+      },
+    ],
+  };
+})();
+
+// ─── ROCKET HIDEOUT B3F ─────────────────────────────────────────────────────
+
+const ROCKET_HIDEOUT_B3F: MapData = (() => {
+  const W = 14, H = 14;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Walls
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  for (let x = 0; x < W; x++) { setTile(x, H - 1, T.WALL); }
+
+  // Interior walls
+  fillRect(4, 5, 6, 1, T.WALL);
+  fillRect(4, 9, 6, 1, T.WALL);
+
+  return {
+    id: 'rocket_hideout_b3f',
+    name: 'ROCKET HIDEOUT B3F',
+    width: W, height: H,
+    tiles, collision,
+    warps: [
+      // Stairs up to B2F
+      { x: 12, y: 2, targetMap: 'rocket_hideout_b2f', targetX: 14, targetY: 14 },
+      // Stairs down to B4F
+      { x: 1, y: 12, targetMap: 'rocket_hideout_b4f', targetX: 1, targetY: 2 },
+    ],
+    npcs: [
+      {
+        id: 'rocket_hideout_b3f_grunt1',
+        x: 7, y: 3,
+        spriteColor: 0x383838,
+        direction: Direction.DOWN,
+        dialogue: ['ROCKET: The BOSS is\njust below!', 'You\'ll never reach\nhim!'],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      // Jessie & James
       {
         id: 'jessie_gamecorner',
-        x: 9, y: 12,
+        x: 6, y: 7,
         spriteColor: 0xd02070,
-        direction: Direction.UP,
+        direction: Direction.DOWN,
         dialogue: [
           'JESSIE & JAMES: You!\nWe remember you from\nMT. MOON!',
           'Prepare for trouble!',
@@ -1228,17 +1531,66 @@ const GAME_CORNER_BASEMENT: MapData = (() => {
       },
       {
         id: 'james_gamecorner',
-        x: 10, y: 12,
+        x: 7, y: 7,
         spriteColor: 0x6060d0,
-        direction: Direction.UP,
+        direction: Direction.DOWN,
         dialogue: [
           "JAMES: The boss's\nhideout is just ahead!",
           "You'll never get\npast us!",
         ],
       },
+    ],
+  };
+})();
+
+// ─── ROCKET HIDEOUT B4F ─────────────────────────────────────────────────────
+
+const ROCKET_HIDEOUT_B4F: MapData = (() => {
+  const W = 12, H = 12;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Walls
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  for (let x = 0; x < W; x++) { setTile(x, H - 1, T.WALL); }
+
+  // Giovanni's office — desk
+  setTile(5, 3, T.COUNTER);
+  setTile(6, 3, T.COUNTER);
+
+  // Carpet in Giovanni's office area
+  fillRect(4, 4, 4, 3, T.CARPET);
+
+  return {
+    id: 'rocket_hideout_b4f',
+    name: 'ROCKET HIDEOUT B4F',
+    width: W, height: H,
+    tiles, collision,
+    warps: [
+      // Stairs up to B3F
+      { x: 1, y: 2, targetMap: 'rocket_hideout_b3f', targetX: 1, targetY: 12 },
+    ],
+    npcs: [
+      {
+        id: 'rocket_hideout_b4f_grunt1',
+        x: 8, y: 6,
+        spriteColor: 0x383838,
+        direction: Direction.LEFT,
+        dialogue: ['ROCKET: This is the\nBOSS\'s private floor!'],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      // Giovanni
       {
         id: 'giovanni_game_corner',
-        x: 6, y: 3,
+        x: 6, y: 4,
         spriteColor: 0x604020,
         direction: Direction.DOWN,
         dialogue: [
@@ -1248,6 +1600,24 @@ const GAME_CORNER_BASEMENT: MapData = (() => {
         ],
         isTrainer: true,
         sightRange: 3,
+      },
+      // Lift Key item ball
+      {
+        id: 'rocket_hideout_lift_key',
+        x: 9, y: 9,
+        spriteColor: 0xe03030,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'lift_key',
+      },
+      // Elevator
+      {
+        id: 'elevator_b4f',
+        x: 2, y: 10,
+        spriteColor: 0x808080,
+        direction: Direction.DOWN,
+        dialogue: ['It\'s an elevator.'],
       },
     ],
   };
@@ -1572,7 +1942,11 @@ export const CENTRAL_MAPS: Record<string, MapData> = {
   saffron_gym: SAFFRON_GYM,
   pokemon_center_saffron: POKEMON_CENTER_SAFFRON,
   pokemart_saffron: POKEMART_SAFFRON,
-  game_corner_basement: GAME_CORNER_BASEMENT,
+  game_corner: GAME_CORNER,
+  rocket_hideout_b1f: ROCKET_HIDEOUT_B1F,
+  rocket_hideout_b2f: ROCKET_HIDEOUT_B2F,
+  rocket_hideout_b3f: ROCKET_HIDEOUT_B3F,
+  rocket_hideout_b4f: ROCKET_HIDEOUT_B4F,
   silph_co: SILPH_CO,
   digletts_cave: DIGLETTS_CAVE,
   lavender_house: LAVENDER_HOUSE,

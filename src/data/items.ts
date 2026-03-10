@@ -232,6 +232,13 @@ export const ITEMS: Record<string, ItemData> = {
     price: 0,
     category: 'key',
   },
+  lift_key: {
+    id: 'lift_key',
+    name: 'LIFT KEY',
+    description: 'Opens the elevator\nin the ROCKET HIDEOUT.',
+    price: 0,
+    category: 'key',
+  },
   // HM items
   hm01_cut: {
     id: 'hm01_cut',
