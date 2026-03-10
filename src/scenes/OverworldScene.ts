@@ -896,8 +896,10 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    // SS Anne: already departed
-    if (mapId === 'ss_anne' && this.playerState.storyFlags['ss_anne_departed']) {
+    // SS Anne: already departed (only block entry from outside the ship)
+    const currentMapId = this.currentMap?.id || '';
+    const isOnSSAnne = currentMapId.startsWith('ss_anne');
+    if (mapId === 'ss_anne' && this.playerState.storyFlags['ss_anne_departed'] && !isOnSSAnne) {
       this.textBox.show([
         "The S.S. ANNE has\nalready departed...",
       ]);
