@@ -818,6 +818,10 @@ export const FUCHSIA_GYM: MapData = (() => {
   setTile(6, 10, T.WALL);
   setTile(7, 10, T.WALL);
 
+  // Carpet on exit warp tiles
+  setTile(4, 13, T.DOORMAT);
+  setTile(5, 13, T.DOORMAT);
+
   return {
     id: 'fuchsia_gym',
     name: 'FUCHSIA GYM',
@@ -906,6 +910,10 @@ export const POKEMON_CENTER_FUCHSIA: MapData = (() => {
   setTile(5, 6, T.CARPET);
   setTile(4, 5, T.CARPET);
   setTile(5, 5, T.CARPET);
+
+  // Carpet on exit warp tiles
+  setTile(4, 7, T.DOORMAT);
+  setTile(5, 7, T.DOORMAT);
 
   return {
     id: 'pokemon_center_fuchsia',
@@ -1075,6 +1083,8 @@ const POKEMART_FUCHSIA: MapData = (() => {
   setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
   setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+  // Carpet on exit warp tile
+  setTile(3, 7, T.DOORMAT);
   return {
     id: 'pokemart_fuchsia', name: 'POKeMON MART', width: W, height: H, tiles, collision,
     warps: [{ x: 3, y: H - 1, targetMap: 'fuchsia_city', targetX: 18, targetY: 20 }],
@@ -1099,7 +1109,8 @@ export const WARDEN_HOUSE: MapData = (() => {
   setTile(3, 4, T.CARPET); setTile(4, 4, T.CARPET);
   setTile(3, 5, T.CARPET); setTile(4, 5, T.CARPET);
   setTile(2, 2, T.MART_SHELF); setTile(5, 2, T.MART_SHELF);
-  setTile(3, H - 1, T.DOOR);
+  // Carpet on exit warp tile
+  setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'warden_house', name: "WARDEN's HOUSE", width: W, height: H, tiles, collision,
     warps: [{ x: 3, y: H - 1, targetMap: 'fuchsia_city', targetX: 6, targetY: 20 }],

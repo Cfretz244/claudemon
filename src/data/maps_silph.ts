@@ -43,13 +43,14 @@ const SILPH_CO_1F: MapData = (() => {
 
   // Carpet lobby
   fillRect(5, 9, 4, 4, T.CARPET);
+  setTile(6, 13, T.DOORMAT);
+  setTile(7, 13, T.DOORMAT);
 
   // Stairs area (top-right) — leads to 2F
   setTile(12, 2, T.DOOR);
 
-  // Exit door (bottom center)
-  setTile(6, 13, T.DOOR);
-  setTile(7, 13, T.DOOR);
+  // Exit door (bottom center) — carpet mats placed on warp tiles
+  // (carpet set above in lobby carpet section)
 
   return {
     id: 'silph_co_1f',

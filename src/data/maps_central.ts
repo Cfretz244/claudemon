@@ -147,6 +147,9 @@ export const POKEMON_TOWER: MapData = (() => {
   // Door at bottom
   setTile(5, 13, T.DOOR);
 
+  // Entrance mat on exit warp
+  setTile(5, 13, T.DOORMAT);
+
   return {
     id: 'pokemon_tower',
     name: 'POKEMON TOWER',
@@ -294,6 +297,9 @@ export const POKEMON_CENTER_LAVENDER: MapData = (() => {
 
   // Carpet to door
   fillRect(4, 5, 2, 2, T.CARPET);
+
+  // Entrance mat on exit warps
+  setTile(4, 7, T.DOORMAT); setTile(5, 7, T.DOORMAT);
 
   return {
     id: 'pokemon_center_lavender',
@@ -727,6 +733,9 @@ export const CELADON_GYM: MapData = (() => {
   fillRect(2, 9, 2, 2, T.TALL_GRASS);
   fillRect(6, 9, 2, 2, T.TALL_GRASS);
 
+  // Entrance mat on exit warps
+  setTile(4, 13, T.DOORMAT); setTile(5, 13, T.DOORMAT);
+
   return {
     id: 'celadon_gym',
     name: 'CELADON GYM',
@@ -807,6 +816,9 @@ export const POKEMON_CENTER_CELADON: MapData = (() => {
 
   // Carpet to door
   fillRect(4, 5, 2, 2, T.CARPET);
+
+  // Entrance mat on exit warps
+  setTile(4, 7, T.DOORMAT); setTile(5, 7, T.DOORMAT);
 
   return {
     id: 'pokemon_center_celadon',
@@ -989,6 +1001,9 @@ export const SAFFRON_GYM: MapData = (() => {
   fillRect(3, 3, 1, 1, T.CARPET);
   fillRect(6, 3, 1, 1, T.CARPET);
 
+  // Entrance mat on exit warps
+  setTile(4, 13, T.DOORMAT); setTile(5, 13, T.DOORMAT);
+
   return {
     id: 'saffron_gym',
     name: 'SAFFRON GYM',
@@ -1069,6 +1084,9 @@ export const POKEMON_CENTER_SAFFRON: MapData = (() => {
   // Carpet to door
   fillRect(4, 5, 2, 2, T.CARPET);
 
+  // Entrance mat on exit warps
+  setTile(4, 7, T.DOORMAT); setTile(5, 7, T.DOORMAT);
+
   return {
     id: 'pokemon_center_saffron',
     name: 'POKeMON CENTER',
@@ -1112,6 +1130,8 @@ const POKEMART_LAVENDER: MapData = (() => {
   setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
   setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+  // Entrance mat on exit warp
+  setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'pokemart_lavender', name: 'POKeMON MART', width: W, height: H, tiles, collision,
     warps: [{ x: 3, y: H - 1, targetMap: 'lavender_town', targetX: 5, targetY: 17 }],
@@ -1139,6 +1159,8 @@ const POKEMART_CELADON: MapData = (() => {
   setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
   setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+  // Entrance mat on exit warp
+  setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'pokemart_celadon', name: 'CELADON DEPT STORE', width: W, height: H, tiles, collision,
     warps: [{ x: 3, y: H - 1, targetMap: 'celadon_city', targetX: 23, targetY: 20 }],
@@ -1166,6 +1188,8 @@ const POKEMART_SAFFRON: MapData = (() => {
   setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
   setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
   setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
+  // Entrance mat on exit warp
+  setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'pokemart_saffron', name: 'POKeMON MART', width: W, height: H, tiles, collision,
     warps: [{ x: 3, y: H - 1, targetMap: 'saffron_city', targetX: 24, targetY: 22 }],
@@ -1213,6 +1237,9 @@ const GAME_CORNER: MapData = (() => {
 
   // Carpet aisle
   fillRect(5, 9, 4, 2, T.CARPET);
+
+  // Entrance mat on exit warp
+  setTile(7, 11, T.DOORMAT);
 
   return {
     id: 'game_corner',
@@ -1715,6 +1742,8 @@ export const LAVENDER_HOUSE: MapData = (() => {
   setTile(3, 5, T.CARPET); setTile(4, 5, T.CARPET);
   setTile(2, 2, T.MART_SHELF); setTile(5, 2, T.MART_SHELF);
   setTile(3, H - 1, T.DOOR);
+  // Entrance mat on exit warp
+  setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'lavender_house', name: 'LAVENDER HOUSE', width: W, height: H, tiles, collision,
     warps: [{ x: 3, y: H - 1, targetMap: 'lavender_town', targetX: 14, targetY: 17 }],
@@ -1740,6 +1769,8 @@ export const CELADON_MANSION: MapData = (() => {
   setTile(2, 2, T.MART_SHELF); setTile(5, 2, T.MART_SHELF);
   setTile(3, 2, T.MART_SHELF);
   setTile(3, H - 1, T.DOOR);
+  // Entrance mat on exit warp
+  setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'celadon_mansion', name: 'CELADON MANSION', width: W, height: H, tiles, collision,
     warps: [{ x: 3, y: H - 1, targetMap: 'celadon_city', targetX: 5, targetY: 19 }],
@@ -1762,6 +1793,8 @@ export const FIGHTING_DOJO: MapData = (() => {
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   // Carpet arena
   for (let dy = 3; dy < 8; dy++) for (let dx = 2; dx < 8; dx++) setTile(dx, dy, T.CARPET);
+  // Entrance mat on exit warps
+  setTile(4, H - 1, T.DOORMAT); setTile(5, H - 1, T.DOORMAT);
   return {
     id: 'fighting_dojo', name: 'FIGHTING DOJO', width: W, height: H, tiles, collision,
     warps: [

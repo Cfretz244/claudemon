@@ -29,6 +29,7 @@ export enum TileType {
   ROOF = 25,
   FOUNTAIN = 26,
   COBBLESTONE = 27,
+  DOORMAT = 28,
 }
 
 export interface WarpPoint {
