@@ -120,7 +120,7 @@ const MAP_GROUPS: { label: string; maps: string[] }[] = [
   },
   {
     label: 'Routes 5-6 / Vermilion',
-    maps: ['route5', 'route6', 'vermilion_city', 'vermilion_gym', 'pokemon_center_vermilion', 'pokemart_vermilion', 'ss_anne'],
+    maps: ['route5', 'route6', 'vermilion_city', 'vermilion_gym', 'pokemon_center_vermilion', 'pokemart_vermilion', 'ss_anne', 'ss_anne_2f', 'ss_anne_b1f', 'ss_anne_deck'],
   },
   {
     label: 'Routes 9-10 / Rock Tunnel',

@@ -1344,6 +1344,182 @@ export const TRAINERS: Record<string, TrainerData> = {
       after: ["{RIVAL}: Hmph! You\njust got lucky!", "I'll be stronger\nnext time!"],
     },
   },
+  // S.S. Anne trainers
+  ss_anne_lass1: {
+    id: 'ss_anne_lass1',
+    name: 'LASS EMMA',
+    class: 'Lass',
+    team: [
+      { speciesId: 35, level: 18 },  // Clefairy
+      { speciesId: 39, level: 20 },  // Jigglypuff
+    ],
+    prizeMoney: 400,
+    dialogue: {
+      before: ['LASS: Isn\'t this ship\njust wonderful?'],
+      after: ['I should enjoy the\nscenery instead...'],
+    },
+  },
+  ss_anne_beauty1: {
+    id: 'ss_anne_beauty1',
+    name: 'BEAUTY LANA',
+    class: 'Beauty',
+    team: [
+      { speciesId: 120, level: 18 }, // Staryu
+      { speciesId: 90, level: 18 },  // Shellder
+      { speciesId: 118, level: 20 }, // Goldeen
+    ],
+    prizeMoney: 1400,
+    dialogue: {
+      before: ['BEAUTY: A cruise is the\nperfect getaway!'],
+      after: ['Well, that was\nunexpected!'],
+    },
+  },
+  ss_anne_gambler1: {
+    id: 'ss_anne_gambler1',
+    name: 'GAMBLER STAN',
+    class: 'Gambler',
+    team: [
+      { speciesId: 21, level: 18 },  // Spearow
+      { speciesId: 100, level: 20 }, // Voltorb
+      { speciesId: 58, level: 20 },  // Growlithe
+    ],
+    prizeMoney: 1440,
+    dialogue: {
+      before: ['GAMBLER: I bet I can\nbeat you!'],
+      after: ['I lost the bet!'],
+    },
+  },
+  ss_anne_fisher1: {
+    id: 'ss_anne_fisher1',
+    name: 'FISHER DALE',
+    class: 'Fisher',
+    team: [
+      { speciesId: 72, level: 17 },  // Tentacool
+      { speciesId: 116, level: 19 }, // Horsea
+      { speciesId: 54, level: 19 },  // Psyduck
+    ],
+    prizeMoney: 684,
+    dialogue: {
+      before: ['FISHER: I catch\nPOKeMON from the\nship\'s railing!'],
+      after: ['Maybe I should use\na fishing rod...'],
+    },
+  },
+  ss_anne_youngster1: {
+    id: 'ss_anne_youngster1',
+    name: 'YOUNGSTER JOEY',
+    class: 'Youngster',
+    team: [
+      { speciesId: 19, level: 19 },  // Rattata
+      { speciesId: 56, level: 21 },  // Mankey
+    ],
+    prizeMoney: 336,
+    dialogue: {
+      before: ['YOUNGSTER: My first\ncruise! Let\'s battle!'],
+      after: ['What a great trip\nthis is!'],
+    },
+  },
+  ss_anne_sailor3: {
+    id: 'ss_anne_sailor3',
+    name: 'SAILOR DIRK',
+    class: 'Sailor',
+    team: [
+      { speciesId: 66, level: 18 },  // Machop
+      { speciesId: 72, level: 20 },  // Tentacool
+    ],
+    prizeMoney: 640,
+    dialogue: {
+      before: ['SAILOR: No passengers\nallowed down here!'],
+      after: ['Well, you earned\nthe right to stay.'],
+    },
+  },
+  ss_anne_sailor4: {
+    id: 'ss_anne_sailor4',
+    name: 'SAILOR PHILLIP',
+    class: 'Sailor',
+    team: [
+      { speciesId: 66, level: 17 },  // Machop
+      { speciesId: 66, level: 17 },  // Machop
+      { speciesId: 67, level: 20 },  // Machoke
+    ],
+    prizeMoney: 640,
+    dialogue: {
+      before: ['SAILOR: My MACHOP are\ntougher than they\nlook!'],
+      after: ['Okay, they need more\ntraining...'],
+    },
+  },
+  ss_anne_sailor5: {
+    id: 'ss_anne_sailor5',
+    name: 'SAILOR HUEY',
+    class: 'Sailor',
+    team: [
+      { speciesId: 86, level: 20 },  // Seel
+      { speciesId: 79, level: 21 },  // Slowpoke
+    ],
+    prizeMoney: 672,
+    dialogue: {
+      before: ['SAILOR: I found these\nPOKeMON at sea!'],
+      after: ['They still need\nmore training.'],
+    },
+  },
+  ss_anne_fisher2: {
+    id: 'ss_anne_fisher2',
+    name: 'FISHER HANK',
+    class: 'Fisher',
+    team: [
+      { speciesId: 129, level: 17 }, // Magikarp
+      { speciesId: 60, level: 19 },  // Poliwag
+      { speciesId: 98, level: 19 },  // Krabby
+    ],
+    prizeMoney: 684,
+    dialogue: {
+      before: ['FISHER: The kitchen\nneeds fresh seafood!'],
+      after: ['Guess I\'ll stick\nto cooking...'],
+    },
+  },
+  ss_anne_cooltrainer1: {
+    id: 'ss_anne_cooltrainer1',
+    name: 'COOLTRAINER SEAN',
+    class: 'Cooltrainer',
+    team: [
+      { speciesId: 27, level: 19 },  // Sandshrew
+      { speciesId: 21, level: 21 },  // Spearow
+      { speciesId: 25, level: 22 },  // Pikachu
+    ],
+    prizeMoney: 792,
+    dialogue: {
+      before: ['COOLTRAINER: The sea\nbreeze is perfect\nfor battling!'],
+      after: ['You\'re pretty good!'],
+    },
+  },
+  ss_anne_lass2: {
+    id: 'ss_anne_lass2',
+    name: 'LASS ROBIN',
+    class: 'Lass',
+    team: [
+      { speciesId: 37, level: 18 },  // Vulpix
+      { speciesId: 43, level: 20 },  // Oddish
+      { speciesId: 120, level: 20 }, // Staryu
+    ],
+    prizeMoney: 400,
+    dialogue: {
+      before: ['LASS: The view from\nthe deck is amazing!'],
+      after: ['I\'ll enjoy it\nmore quietly now.'],
+    },
+  },
+  ss_anne_sailor6: {
+    id: 'ss_anne_sailor6',
+    name: 'SAILOR EDMOND',
+    class: 'Sailor',
+    team: [
+      { speciesId: 66, level: 20 },  // Machop
+      { speciesId: 67, level: 22 },  // Machoke
+    ],
+    prizeMoney: 704,
+    dialogue: {
+      before: ['SAILOR: I\'m the\nstrongest sailor on\nthis ship!'],
+      after: ['Maybe second\nstrongest...'],
+    },
+  },
   rival_tower: {
     id: 'rival_tower',
     name: 'RIVAL',

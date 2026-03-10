@@ -292,8 +292,8 @@ export const VERMILION_CITY: MapData = (() => {
       // Pokemart door
       { x: 6, y: 9, targetMap: 'pokemart_vermilion', targetX: 3, targetY: 7 },
       // SS Anne pier
-      { x: 22, y: 24, targetMap: 'ss_anne', targetX: 5, targetY: 10 },
-      { x: 23, y: 24, targetMap: 'ss_anne', targetX: 5, targetY: 10 },
+      { x: 22, y: 24, targetMap: 'ss_anne', targetX: 10, targetY: 12 },
+      { x: 23, y: 24, targetMap: 'ss_anne', targetX: 10, targetY: 12 },
     ],
     npcs: [
       {
@@ -904,10 +904,10 @@ export const POKEMART_VERMILION: MapData = (() => {
 })();
 
 // ---------------------------------------------------------------------------
-// S.S. ANNE -- ship interior with rival battle + Captain gives HM01 Cut
+// S.S. ANNE 1F -- Main entrance hall with 4 passenger cabins
 // ---------------------------------------------------------------------------
 export const SS_ANNE: MapData = (() => {
-  const W = 15, H = 12;
+  const W = 22, H = 14;
   const tiles = fill2D(W, H, T.INDOOR_FLOOR);
   const collision = fill2D(W, H, false);
 
@@ -918,45 +918,174 @@ export const SS_ANNE: MapData = (() => {
     for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
   }
 
-  // Walls: top 2 rows and sides
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  // Outer walls
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); setTile(x, H - 1, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
 
-  // Corridor along center
-  fillRect(1, 5, 13, 2, T.CARPET);
+  // Cabin band (y=2-4): solid wall, then carve out 4 cabin interiors + doors
+  fillRect(1, 2, 20, 3, T.WALL);
+  // Cabin 1 (x=2-4, y=2-3)
+  fillRect(2, 2, 3, 2, T.INDOOR_FLOOR); setTile(3, 4, T.DOOR);
+  setTile(2, 2, T.COUNTER);
+  // Cabin 2 (x=7-9, y=2-3)
+  fillRect(7, 2, 3, 2, T.INDOOR_FLOOR); setTile(8, 4, T.DOOR);
+  setTile(7, 2, T.COUNTER);
+  // Cabin 3 (x=12-14, y=2-3)
+  fillRect(12, 2, 3, 2, T.INDOOR_FLOOR); setTile(13, 4, T.DOOR);
+  setTile(14, 2, T.COUNTER);
+  // Cabin 4 (x=17-19, y=2-3)
+  fillRect(17, 2, 3, 2, T.INDOOR_FLOOR); setTile(18, 4, T.DOOR);
+  setTile(19, 2, T.COUNTER);
 
-  // Captain's room (top-left)
-  fillRect(2, 2, 4, 3, T.INDOOR_FLOOR);
-  setTile(4, 5, T.CARPET);
-  // Captain's desk
-  setTile(3, 2, T.COUNTER);
-  setTile(4, 2, T.COUNTER);
+  // Central carpet corridor (y=5-6)
+  fillRect(1, 5, 20, 2, T.CARPET);
 
-  // Cabins (decorative walls)
-  fillRect(8, 2, 5, 3, T.INDOOR_FLOOR);
-  setTile(10, 5, T.CARPET);
-  setTile(9, 2, T.COUNTER);
-  setTile(11, 2, T.COUNTER);
+  // Stair alcoves (2 tall so doors are accessible from the corridor side)
+  // West stairs down to B1F
+  fillRect(1, 8, 3, 2, T.WALL);
+  setTile(2, 8, T.DOOR);
+  // East stairs up to 2F
+  fillRect(18, 8, 3, 2, T.WALL);
+  setTile(19, 8, T.DOOR);
 
-  // Entrance area at bottom
-  fillRect(4, 8, 7, 3, T.CARPET);
-  setTile(5, 11, T.DOOR);
+  // Entrance vestibule
+  fillRect(8, 10, 6, 3, T.CARPET);
+  setTile(10, 13, T.DOOR);
+  setTile(11, 13, T.DOOR);
 
   return {
     id: 'ss_anne',
-    name: 'S.S. ANNE',
+    name: 'S.S. ANNE 1F',
     width: W,
     height: H,
     tiles,
     collision,
     warps: [
-      // Exit back to Vermilion pier
-      { x: 5, y: 11, targetMap: 'vermilion_city', targetX: 22, targetY: 23 },
+      // Exit to Vermilion pier
+      { x: 10, y: 13, targetMap: 'vermilion_city', targetX: 22, targetY: 23 },
+      { x: 11, y: 13, targetMap: 'vermilion_city', targetX: 22, targetY: 23 },
+      // West stairs down to B1F
+      { x: 2, y: 8, targetMap: 'ss_anne_b1f', targetX: 2, targetY: 4 },
+      // East stairs up to 2F
+      { x: 19, y: 8, targetMap: 'ss_anne_2f', targetX: 19, targetY: 9 },
+    ],
+    npcs: [
+      {
+        id: 'ss_anne_sailor_greeter',
+        x: 10, y: 7,
+        spriteColor: 0x4060b0,
+        direction: Direction.DOWN,
+        dialogue: [
+          "SAILOR: Welcome aboard\nthe S.S. ANNE!",
+          "The CAPTAIN's quarters\nare upstairs on 2F.",
+          "The crew area is\ndown below.",
+        ],
+      },
+      {
+        id: 'ss_anne_lass1',
+        x: 3, y: 3,
+        spriteColor: 0xe06080,
+        direction: Direction.DOWN,
+        dialogue: ["LASS: Isn't this ship\njust wonderful?"],
+        isTrainer: true,
+        sightRange: 1,
+      },
+      {
+        id: 'ss_anne_beauty1',
+        x: 8, y: 3,
+        spriteColor: 0xe06080,
+        direction: Direction.DOWN,
+        dialogue: ["BEAUTY: A cruise is the\nperfect getaway!"],
+        isTrainer: true,
+        sightRange: 1,
+      },
+      {
+        id: 'ss_anne_gambler1',
+        x: 13, y: 3,
+        spriteColor: 0x808080,
+        direction: Direction.DOWN,
+        dialogue: ["GAMBLER: I bet I can\nbeat you!"],
+        isTrainer: true,
+        sightRange: 1,
+      },
+      {
+        id: 'item_ss_anne_1f_super_potion',
+        x: 18, y: 3,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'super_potion',
+      },
+    ],
+  };
+})();
+
+// ---------------------------------------------------------------------------
+// S.S. ANNE 2F -- Captain's quarters, rival battle, upper cabins
+// ---------------------------------------------------------------------------
+export const SS_ANNE_2F: MapData = (() => {
+  const W = 22, H = 14;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Outer walls
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); setTile(x, H - 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+
+  // Captain's quarters (west, x=1-7, y=2-6)
+  fillRect(1, 2, 7, 5, T.INDOOR_FLOOR);
+  // Captain room walls
+  fillRect(7, 2, 1, 5, T.WALL); // right wall of captain's room
+  fillRect(1, 6, 7, 1, T.WALL); // front wall
+  setTile(4, 6, T.DOOR); // door to captain's room
+  // Captain's desk
+  setTile(3, 2, T.COUNTER); setTile(4, 2, T.COUNTER);
+
+  // Upper cabins (y=2-4): wall band east of captain's room, carve cabins
+  fillRect(9, 2, 12, 3, T.WALL);
+  // Cabin A (x=10-12, y=2-3)
+  fillRect(10, 2, 3, 2, T.INDOOR_FLOOR); setTile(11, 4, T.DOOR);
+  setTile(10, 2, T.COUNTER);
+  // Cabin B (x=15-17, y=2-3)
+  fillRect(15, 2, 3, 2, T.INDOOR_FLOOR); setTile(16, 4, T.DOOR);
+  setTile(17, 2, T.COUNTER);
+
+  // Central carpet corridor (y=7-8)
+  fillRect(1, 7, 20, 2, T.CARPET);
+
+  // Stair alcoves (2 tall so doors are accessible)
+  // East stairs down to 1F
+  fillRect(18, 10, 3, 2, T.WALL);
+  setTile(19, 10, T.DOOR);
+  // Center-west stairs up to Deck
+  fillRect(4, 10, 3, 2, T.WALL);
+  setTile(5, 10, T.DOOR);
+
+  return {
+    id: 'ss_anne_2f',
+    name: 'S.S. ANNE 2F',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      // East stairs down to 1F
+      { x: 19, y: 10, targetMap: 'ss_anne', targetX: 19, targetY: 7 },
+      // Center-west stairs up to Deck
+      { x: 5, y: 10, targetMap: 'ss_anne_deck', targetX: 11, targetY: 7 },
     ],
     npcs: [
       {
         id: 'ss_anne_captain',
-        x: 3, y: 3,
+        x: 4, y: 4,
         spriteColor: 0x4060b0,
         direction: Direction.DOWN,
         dialogue: [
@@ -967,7 +1096,7 @@ export const SS_ANNE: MapData = (() => {
       },
       {
         id: 'rival_ss_anne',
-        x: 7, y: 6,
+        x: 7, y: 8,
         spriteColor: 0x6080c0,
         direction: Direction.LEFT,
         dialogue: [
@@ -978,14 +1107,262 @@ export const SS_ANNE: MapData = (() => {
         sightRange: 3,
       },
       {
-        id: 'ss_anne_sailor1',
-        x: 10, y: 3,
+        id: 'ss_anne_sailor2',
+        x: 14, y: 7,
+        spriteColor: 0x4060b0,
+        direction: Direction.LEFT,
+        dialogue: [
+          "SAILOR: The CAPTAIN\nhasn't been feeling\nwell...",
+          "His quarters are\njust to the west.",
+        ],
+      },
+      {
+        id: 'ss_anne_fisher1',
+        x: 11, y: 3,
+        spriteColor: 0x808060,
+        direction: Direction.DOWN,
+        dialogue: ["FISHER: I catch POKeMON\nfrom the ship's railing!"],
+        isTrainer: true,
+        sightRange: 1,
+      },
+      {
+        id: 'ss_anne_youngster1',
+        x: 16, y: 3,
+        spriteColor: 0x6080c0,
+        direction: Direction.DOWN,
+        dialogue: ["YOUNGSTER: My first\ncruise! Let's battle!"],
+        isTrainer: true,
+        sightRange: 1,
+      },
+      {
+        id: 'item_ss_anne_2f_rare_candy',
+        x: 12, y: 2,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'rare_candy',
+      },
+    ],
+  };
+})();
+
+// ---------------------------------------------------------------------------
+// S.S. ANNE B1F -- Crew quarters, kitchen, and storage
+// ---------------------------------------------------------------------------
+export const SS_ANNE_B1F: MapData = (() => {
+  const W = 22, H = 12;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Outer walls
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); setTile(x, H - 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+
+  // Stair alcove (up to 1F) at top-left
+  fillRect(1, 2, 3, 2, T.WALL);
+  setTile(2, 3, T.DOOR);
+
+  // Kitchen area (west, x=1-8, y=5-10)
+  // Prep tables (counters)
+  fillRect(2, 5, 2, 1, T.COUNTER);
+  fillRect(2, 7, 2, 1, T.COUNTER);
+  fillRect(5, 5, 2, 1, T.COUNTER);
+  // Dividing wall between kitchen and crew quarters
+  fillRect(9, 2, 1, 9, T.WALL);
+  setTile(9, 6, T.DOOR); // passage between areas
+
+  // Crew quarters (east, x=10-20, y=2-10)
+  // Bunk beds (counters)
+  fillRect(11, 2, 2, 1, T.COUNTER);
+  fillRect(14, 2, 2, 1, T.COUNTER);
+  fillRect(11, 4, 2, 1, T.COUNTER);
+  fillRect(14, 4, 2, 1, T.COUNTER);
+
+  // Storage room at far east
+  fillRect(17, 2, 1, 5, T.WALL);
+  setTile(17, 5, T.DOOR);
+
+  return {
+    id: 'ss_anne_b1f',
+    name: 'S.S. ANNE B1F',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      // Stairs up to 1F
+      { x: 2, y: 3, targetMap: 'ss_anne', targetX: 2, targetY: 7 },
+    ],
+    npcs: [
+      {
+        id: 'ss_anne_cook',
+        x: 4, y: 6,
+        spriteColor: 0xe0e0e0,
+        direction: Direction.RIGHT,
+        dialogue: [
+          "COOK: I'm preparing\ntonight's dinner!",
+          "The passengers love\nmy MAGIKARP stew!",
+        ],
+      },
+      {
+        id: 'ss_anne_sailor3',
+        x: 6, y: 8,
+        spriteColor: 0x4060b0,
+        direction: Direction.UP,
+        dialogue: ["SAILOR: No passengers\nallowed down here!"],
+        isTrainer: true,
+        sightRange: 2,
+      },
+      {
+        id: 'ss_anne_sailor4',
+        x: 3, y: 9,
+        spriteColor: 0x4060b0,
+        direction: Direction.RIGHT,
+        dialogue: ["SAILOR: My MACHOP are\ntougher than they look!"],
+        isTrainer: true,
+        sightRange: 2,
+      },
+      {
+        id: 'ss_anne_sailor5',
+        x: 12, y: 6,
         spriteColor: 0x4060b0,
         direction: Direction.DOWN,
+        dialogue: ["SAILOR: I found these\nPOKeMON at sea!"],
+        isTrainer: true,
+        sightRange: 2,
+      },
+      {
+        id: 'ss_anne_fisher2',
+        x: 15, y: 6,
+        spriteColor: 0x808060,
+        direction: Direction.LEFT,
+        dialogue: ["FISHER: The kitchen\nneeds fresh seafood!"],
+        isTrainer: true,
+        sightRange: 2,
+      },
+      {
+        id: 'item_ss_anne_b1f_hyper_potion',
+        x: 19, y: 3,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'hyper_potion',
+      },
+      {
+        id: 'item_ss_anne_b1f_super_potion',
+        x: 7, y: 7,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'super_potion',
+      },
+    ],
+  };
+})();
+
+// ---------------------------------------------------------------------------
+// S.S. ANNE DECK -- Open-air top deck with ocean view
+// ---------------------------------------------------------------------------
+export const SS_ANNE_DECK: MapData = (() => {
+  const W = 24, H = 10;
+  const tiles = fill2D(W, H, T.PATH);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Ocean (top rows)
+  fillRect(0, 0, W, 2, T.WATER);
+  // Ship railing
+  fillRect(0, 2, W, 1, T.FENCE);
+  // Left and right hull walls
+  for (let y = 3; y < H; y++) { setTile(0, y, T.FENCE); setTile(W - 1, y, T.FENCE); }
+  // Bottom hull wall
+  fillRect(0, H - 1, W, 1, T.FENCE);
+
+  // Benches along sides
+  fillRect(2, 4, 1, 1, T.COUNTER);
+  fillRect(5, 4, 1, 1, T.COUNTER);
+  fillRect(18, 4, 1, 1, T.COUNTER);
+  fillRect(21, 4, 1, 1, T.COUNTER);
+  fillRect(2, 7, 1, 1, T.COUNTER);
+  fillRect(21, 7, 1, 1, T.COUNTER);
+
+  // Stair alcove (down to 2F) at center
+  fillRect(10, 8, 3, 1, T.WALL);
+  setTile(11, 8, T.DOOR);
+
+  return {
+    id: 'ss_anne_deck',
+    name: 'S.S. ANNE DECK',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      // Stairs down to 2F
+      { x: 11, y: 8, targetMap: 'ss_anne_2f', targetX: 5, targetY: 9 },
+    ],
+    npcs: [
+      {
+        id: 'ss_anne_passenger1',
+        x: 4, y: 5,
+        spriteColor: 0x60a060,
+        direction: Direction.UP,
         dialogue: [
-          "SAILOR: Welcome aboard\nthe S.S. ANNE!",
-          "The CAPTAIN is in the\nroom to the left.",
+          "PASSENGER: The ocean\nis so beautiful!",
+          "I could stay up here\nall day!",
         ],
+      },
+      {
+        id: 'ss_anne_cooltrainer1',
+        x: 8, y: 5,
+        spriteColor: 0xc06040,
+        direction: Direction.RIGHT,
+        dialogue: ["COOLTRAINER: The sea\nbreeze is perfect\nfor battling!"],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'ss_anne_lass2',
+        x: 16, y: 5,
+        spriteColor: 0xe06080,
+        direction: Direction.LEFT,
+        dialogue: ["LASS: The view from\nthe deck is amazing!"],
+        isTrainer: true,
+        sightRange: 2,
+      },
+      {
+        id: 'ss_anne_sailor6',
+        x: 20, y: 5,
+        spriteColor: 0x4060b0,
+        direction: Direction.LEFT,
+        dialogue: ["SAILOR: I'm the\nstrongest sailor on\nthis ship!"],
+        isTrainer: true,
+        sightRange: 2,
+      },
+      {
+        id: 'item_ss_anne_deck_nugget',
+        x: 22, y: 5,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'nugget',
       },
     ],
   };
@@ -1003,4 +1380,7 @@ export const VERMILION_MAPS: Record<string, MapData> = {
   rock_tunnel: ROCK_TUNNEL,
   pokemon_center_route10: POKEMON_CENTER_ROUTE10,
   ss_anne: SS_ANNE,
+  ss_anne_2f: SS_ANNE_2F,
+  ss_anne_b1f: SS_ANNE_B1F,
+  ss_anne_deck: SS_ANNE_DECK,
 };

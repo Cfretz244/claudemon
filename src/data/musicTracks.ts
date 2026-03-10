@@ -2509,6 +2509,9 @@ const MAP_MUSIC: Record<string, string> = {
 
   // Special locations
   ss_anne: 'ss_anne',
+  ss_anne_2f: 'ss_anne',
+  ss_anne_b1f: 'ss_anne',
+  ss_anne_deck: 'ss_anne',
   game_corner_basement: 'rocket_hideout',
   silph_co: 'rocket_hideout',
 };
