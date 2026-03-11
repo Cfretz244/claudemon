@@ -941,8 +941,8 @@ export const CELADON_CITY: MapData = (() => {
       { x: 6, y: 9, targetMap: 'celadon_gym', targetX: 4, targetY: 13 },
       // Pokemon Center door
       { x: 22, y: 8, targetMap: 'pokemon_center_celadon', targetX: 4, targetY: 7 },
-      // Department Store (Pokemart)
-      { x: 23, y: 19, targetMap: 'pokemart_celadon', targetX: 3, targetY: 7 },
+      // Department Store
+      { x: 23, y: 19, targetMap: 'celadon_dept_1f', targetX: 5, targetY: 9 },
       // Game Corner
       { x: 13, y: 18, targetMap: 'game_corner', targetX: 7, targetY: 10 },
       // Celadon Mansion
@@ -1438,9 +1438,46 @@ const POKEMART_LAVENDER: MapData = (() => {
   };
 })();
 
-// ─── POKeMON MART (CELADON / DEPT STORE)  (8x8 indoor) ──────────
-const POKEMART_CELADON: MapData = (() => {
-  const W = 8, H = 8;
+// ─── CELADON DEPARTMENT STORE — 6 floors ─────────────────────────
+
+// 1F — Lobby
+const CELADON_DEPT_1F: MapData = (() => {
+  const W = 12, H = 10;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+  // Walls: top 2 rows, left/right columns
+  fillRect(0, 0, W, 2, T.WALL);
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  // Carpet runner from door to stairs
+  fillRect(5, 4, 2, 5, T.CARPET);
+  // Decorative plants
+  setTile(2, 2, T.TREE); setTile(9, 2, T.TREE);
+  // Stairs up (right side)
+  setTile(10, 3, T.DOOR);
+  // Entrance mat
+  setTile(5, H - 1, T.DOORMAT);
+  return {
+    id: 'celadon_dept_1f', name: 'CELADON DEPT STORE 1F', width: W, height: H, tiles, collision,
+    warps: [
+      { x: 5, y: H - 1, targetMap: 'celadon_city', targetX: 23, targetY: 20 },
+      { x: 10, y: 3, targetMap: 'celadon_dept_2f', targetX: 1, targetY: 3 },
+    ],
+    npcs: [{
+      id: 'dept_receptionist', x: 6, y: 3, spriteColor: 0xf08080, direction: Direction.DOWN,
+      dialogue: ['Welcome to CELADON\nDEPT STORE!', 'We have 6 floors of\nmerchandise for you!'],
+    }],
+  };
+})();
+
+// 2F — TM Counter
+const CELADON_DEPT_2F: MapData = (() => {
+  const W = 12, H = 10;
   const tiles = fill2D(W, H, T.INDOOR_FLOOR);
   const collision = fill2D(W, H, false);
   function setTile(x: number, y: number, type: TileType) {
@@ -1451,19 +1488,168 @@ const POKEMART_CELADON: MapData = (() => {
   }
   fillRect(0, 0, W, 2, T.WALL);
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
-  setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
-  setTile(5, 2, T.MART_SHELF); setTile(6, 2, T.MART_SHELF);
-  setTile(5, 4, T.MART_SHELF); setTile(6, 4, T.MART_SHELF);
-  // Entrance mat on exit warp
-  setTile(3, H - 1, T.DOORMAT);
+  // Counter
+  fillRect(3, 4, 5, 1, T.COUNTER);
+  // Stairs down (left) and up (right)
+  setTile(1, 3, T.DOOR); setTile(10, 3, T.DOOR);
   return {
-    id: 'pokemart_celadon', name: 'CELADON DEPT STORE', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'celadon_city', targetX: 23, targetY: 20 }],
+    id: 'celadon_dept_2f', name: 'CELADON DEPT STORE 2F', width: W, height: H, tiles, collision,
+    warps: [
+      { x: 1, y: 3, targetMap: 'celadon_dept_1f', targetX: 10, targetY: 3 },
+      { x: 10, y: 3, targetMap: 'celadon_dept_3f', targetX: 1, targetY: 3 },
+    ],
+    npcs: [
+      {
+        id: 'dept_tm_clerk', x: 5, y: 3, spriteColor: 0x4080f0, direction: Direction.DOWN,
+        dialogue: ['Welcome to the TM\nCOUNTER!', 'We have a wide\nselection of TMs.'],
+        shopStock: ['tm32_double_team', 'tm33_reflect', 'tm02_razor_wind', 'tm07_horn_drill', 'tm37_egg_bomb', 'tm01_mega_punch', 'tm05_mega_kick', 'tm09_take_down', 'tm17_submission', 'tm18_counter', 'tm35_metronome', 'tm49_tri_attack'],
+      },
+      {
+        id: 'dept_2f_npc', x: 8, y: 7, spriteColor: 0x60c060, direction: Direction.LEFT,
+        dialogue: ['TMs are single-use\nitems.', "Make sure you teach\nthem to the right\nPOKeMON!"],
+      },
+    ],
+  };
+})();
+
+// 3F — General Items
+const CELADON_DEPT_3F: MapData = (() => {
+  const W = 12, H = 10;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+  fillRect(0, 0, W, 2, T.WALL);
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  // Counter
+  fillRect(3, 4, 5, 1, T.COUNTER);
+  // Shelves
+  setTile(8, 6, T.MART_SHELF); setTile(9, 6, T.MART_SHELF); setTile(10, 6, T.MART_SHELF);
+  setTile(8, 8, T.MART_SHELF); setTile(9, 8, T.MART_SHELF); setTile(10, 8, T.MART_SHELF);
+  // Stairs down (left) and up (right)
+  setTile(1, 3, T.DOOR); setTile(10, 3, T.DOOR);
+  return {
+    id: 'celadon_dept_3f', name: 'CELADON DEPT STORE 3F', width: W, height: H, tiles, collision,
+    warps: [
+      { x: 1, y: 3, targetMap: 'celadon_dept_2f', targetX: 10, targetY: 3 },
+      { x: 10, y: 3, targetMap: 'celadon_dept_4f', targetX: 1, targetY: 3 },
+    ],
     npcs: [{
-      id: 'mart_clerk', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
-      dialogue: ['Welcome to CELADON\nDEPT STORE!'],
-      shopStock: ['poke_ball', 'great_ball', 'ultra_ball', 'potion', 'super_potion', 'hyper_potion', 'revive', 'full_heal', 'antidote', 'repel', 'escape_rope'],
+      id: 'dept_general_clerk', x: 5, y: 3, spriteColor: 0x4080f0, direction: Direction.DOWN,
+      dialogue: ['Welcome! We carry\nall kinds of items.'],
+      shopStock: ['poke_ball', 'great_ball', 'ultra_ball', 'potion', 'super_potion', 'hyper_potion', 'max_potion', 'full_restore', 'revive', 'antidote', 'burn_heal', 'ice_heal', 'awakening', 'paralyze_heal', 'full_heal', 'repel', 'escape_rope'],
     }],
+  };
+})();
+
+// 4F — Power TMs & Battle Items
+const CELADON_DEPT_4F: MapData = (() => {
+  const W = 12, H = 10;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+  fillRect(0, 0, W, 2, T.WALL);
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  // Counter
+  fillRect(3, 4, 5, 1, T.COUNTER);
+  // Stairs down (left) and up (right)
+  setTile(1, 3, T.DOOR); setTile(10, 3, T.DOOR);
+  return {
+    id: 'celadon_dept_4f', name: 'CELADON DEPT STORE 4F', width: W, height: H, tiles, collision,
+    warps: [
+      { x: 1, y: 3, targetMap: 'celadon_dept_3f', targetX: 10, targetY: 3 },
+      { x: 10, y: 3, targetMap: 'celadon_dept_5f', targetX: 1, targetY: 3 },
+    ],
+    npcs: [{
+      id: 'dept_power_clerk', x: 5, y: 3, spriteColor: 0x4080f0, direction: Direction.DOWN,
+      dialogue: ['Looking for powerful\nTMs?', "You've come to the\nright place!"],
+      shopStock: ['tm13_ice_beam', 'tm14_blizzard', 'tm15_hyper_beam', 'tm23_dragon_rage', 'tm25_thunder', 'tm48_rock_slide', 'tm50_substitute'],
+    }],
+  };
+})();
+
+// 5F — Wiseman Floor
+const CELADON_DEPT_5F: MapData = (() => {
+  const W = 12, H = 10;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+  fillRect(0, 0, W, 2, T.WALL);
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  // Stairs down (left) and up (right)
+  setTile(1, 3, T.DOOR); setTile(10, 3, T.DOOR);
+  return {
+    id: 'celadon_dept_5f', name: 'CELADON DEPT STORE 5F', width: W, height: H, tiles, collision,
+    warps: [
+      { x: 1, y: 3, targetMap: 'celadon_dept_4f', targetX: 10, targetY: 3 },
+      { x: 10, y: 3, targetMap: 'celadon_dept_roof', targetX: 1, targetY: 3 },
+    ],
+    npcs: [
+      {
+        id: 'dept_5f_type_npc', x: 3, y: 5, spriteColor: 0xa080c0, direction: Direction.RIGHT,
+        dialogue: ['Moves have types, just\nlike POKeMON.', "Using a move that\nmatches your POKeMON's\ntype does more damage!"],
+      },
+      {
+        id: 'dept_5f_stat_npc', x: 8, y: 7, spriteColor: 0xc09060, direction: Direction.LEFT,
+        dialogue: ['Physical moves use\nATTACK and DEFENSE.', 'Special moves use\nSPECIAL for both\noffense and defense!'],
+      },
+      {
+        id: 'dept_5f_tip_npc', x: 5, y: 3, spriteColor: 0x60a0c0, direction: Direction.DOWN,
+        dialogue: ['COUNTER reflects\nphysical damage back\nat double power!', "It's tricky to use,\nbut very rewarding."],
+      },
+    ],
+  };
+})();
+
+// Rooftop — Vending Machines
+const CELADON_DEPT_ROOF: MapData = (() => {
+  const W = 12, H = 10;
+  const tiles = fill2D(W, H, T.PATH);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+  // Fence border (except stairs entry)
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.FENCE); setTile(x, H - 1, T.FENCE); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.FENCE); setTile(W - 1, y, T.FENCE); }
+  // Stairs down (left side)
+  setTile(1, 3, T.DOOR);
+  // Grass patches for rooftop garden
+  fillRect(4, 2, 3, 2, T.GRASS);
+  fillRect(7, 6, 3, 2, T.GRASS);
+  return {
+    id: 'celadon_dept_roof', name: 'CELADON DEPT STORE ROOF', width: W, height: H, tiles, collision,
+    warps: [
+      { x: 1, y: 3, targetMap: 'celadon_dept_5f', targetX: 10, targetY: 3 },
+    ],
+    npcs: [
+      {
+        id: 'dept_vending1', x: 8, y: 1, spriteColor: 0x40c0f0, direction: Direction.DOWN,
+        dialogue: ['Thirsty? Try a cold\nbeverage!'],
+        shopStock: ['fresh_water', 'soda_pop', 'lemonade'],
+      },
+      {
+        id: 'dept_roof_npc', x: 3, y: 6, spriteColor: 0xf0a060, direction: Direction.UP,
+        dialogue: ["What a great view\nfrom up here!", "You can see all of\nCELADON CITY!"],
+      },
+    ],
   };
 })();
 
@@ -2344,7 +2530,12 @@ export const CENTRAL_MAPS: Record<string, MapData> = {
   celadon_city: CELADON_CITY,
   celadon_gym: CELADON_GYM,
   pokemon_center_celadon: POKEMON_CENTER_CELADON,
-  pokemart_celadon: POKEMART_CELADON,
+  celadon_dept_1f: CELADON_DEPT_1F,
+  celadon_dept_2f: CELADON_DEPT_2F,
+  celadon_dept_3f: CELADON_DEPT_3F,
+  celadon_dept_4f: CELADON_DEPT_4F,
+  celadon_dept_5f: CELADON_DEPT_5F,
+  celadon_dept_roof: CELADON_DEPT_ROOF,
   saffron_city: SAFFRON_CITY,
   saffron_gym: SAFFRON_GYM,
   pokemon_center_saffron: POKEMON_CENTER_SAFFRON,
