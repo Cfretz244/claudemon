@@ -3,7 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { PokemonInstance, StatusCondition } from '../types/pokemon.types';
 import { POKEMON_DATA } from '../data/pokemon';
 import { MOVES_DATA } from '../data/moves';
-import { ITEMS, HM_COMPATIBILITY } from '../data/items';
+import { ITEMS, HM_COMPATIBILITY, TM_COMPATIBILITY } from '../data/items';
 import { soundSystem } from '../systems/SoundSystem';
 import { PlayerState } from '../entities/Player';
 import { addExperience, learnMove } from '../systems/ExperienceSystem';
@@ -386,7 +386,7 @@ export class BagScreen {
       return;
     }
 
-    if (!itemData || (itemData.category !== 'medicine' && itemData.category !== 'hm')) {
+    if (!itemData || (itemData.category !== 'medicine' && itemData.category !== 'hm' && itemData.category !== 'tm')) {
       this.mode = 'list';
       this.optionsContainer.setVisible(false);
       this.showMessage("Can't use that here!");
@@ -426,14 +426,15 @@ export class BagScreen {
 
     if (!itemData || !pokemon) return;
 
-    // HM teaching
-    if (itemData.category === 'hm' && itemData.moveId != null) {
+    // HM / TM teaching
+    if ((itemData.category === 'hm' || itemData.category === 'tm') && itemData.moveId != null) {
       const moveId = itemData.moveId;
       const moveName = MOVES_DATA[moveId]?.name || '???';
       const pokeName = this.getPokemonName(pokemon);
+      const isTM = itemData.category === 'tm';
 
-      // Check if this species can learn the HM
-      const compat = HM_COMPATIBILITY[moveId];
+      // Check if this species can learn the move
+      const compat = isTM ? TM_COMPATIBILITY[moveId] : HM_COMPATIBILITY[moveId];
       if (compat && !compat.has(pokemon.speciesId)) {
         this.showMessage(`${pokeName} can't\nlearn ${moveName}!`);
         return;
@@ -445,9 +446,17 @@ export class BagScreen {
         return;
       }
 
-      // If has room, learn directly (HMs are NOT consumed)
+      const consumeTM = () => {
+        if (isTM) {
+          this.playerState.useItem(item.id);
+          this.rebuildItemList();
+        }
+      };
+
+      // If has room, learn directly (HMs are NOT consumed, TMs ARE)
       if (pokemon.moves.length < 4) {
         learnMove(pokemon, moveId);
+        consumeTM();
         soundSystem.heal();
         this.showMessage(`${pokeName} learned\n${moveName}!`);
         this.mode = 'list';
@@ -464,6 +473,7 @@ export class BagScreen {
         if (replaceIndex !== null) {
           const oldMoveName = MOVES_DATA[pokemon.moves[replaceIndex].moveId]?.name || '???';
           learnMove(pokemon, moveId, replaceIndex);
+          consumeTM();
           soundSystem.heal();
           this.showMessage(`${pokeName} forgot\n${oldMoveName} and\nlearned ${moveName}!`);
         } else {
