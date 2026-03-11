@@ -78,6 +78,14 @@ const STORY_FLAG_GROUPS = [
     ],
   },
   {
+    title: 'Fishing Rods',
+    flags: [
+      { id: 'got_old_rod', label: 'Old Rod' },
+      { id: 'got_good_rod', label: 'Good Rod' },
+      { id: 'got_super_rod', label: 'Super Rod' },
+    ],
+  },
+  {
     title: 'Snorlax',
     flags: [
       { id: 'snorlax_route12_cleared', label: 'Route 12 Snorlax' },
@@ -241,7 +249,8 @@ const PRESETS: Preset[] = [
       save.party = [pika, createPokemon(1, 22, save.playerName), createPokemon(7, 22, save.playerName)];
       save.badges = ['BOULDER', 'CASCADE'];
       save.money = 8000;
-      save.bag = { poke_ball: 15, great_ball: 5, super_potion: 5, hm01_cut: 1, ss_ticket: 1, bicycle: 1 };
+      save.storyFlags['got_old_rod'] = true;
+      save.bag = { poke_ball: 15, great_ball: 5, super_potion: 5, hm01_cut: 1, ss_ticket: 1, bicycle: 1, old_rod: 1 };
     },
   },
   {
@@ -265,7 +274,8 @@ const PRESETS: Preset[] = [
       ];
       save.badges = ['BOULDER', 'CASCADE', 'THUNDER'];
       save.money = 10000;
-      save.bag = { great_ball: 15, super_potion: 10, revive: 3, hm01_cut: 1, hm05_flash: 1, escape_rope: 5, bicycle: 1 };
+      save.storyFlags['got_old_rod'] = true;
+      save.bag = { great_ball: 15, super_potion: 10, revive: 3, hm01_cut: 1, hm05_flash: 1, escape_rope: 5, bicycle: 1, old_rod: 1 };
     },
   },
   {
@@ -281,6 +291,7 @@ const PRESETS: Preset[] = [
         erika_cleared: true, bill_helped: true, got_hm01: true, got_hm02: true, got_hm05: true,
         ss_anne_departed: true, got_fossil: true, got_silph_scope: true,
         tower_rockets_cleared: true, got_poke_flute: true,
+        got_old_rod: true, got_good_rod: true,
       };
       save.party = [
         createPokemon(25, 36, save.playerName),
@@ -290,7 +301,7 @@ const PRESETS: Preset[] = [
       ];
       save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW'];
       save.money = 18000;
-      save.bag = { great_ball: 20, ultra_ball: 5, super_potion: 10, hyper_potion: 5, revive: 3, hm01_cut: 1, hm02_fly: 1, hm05_flash: 1, escape_rope: 5, bicycle: 1 };
+      save.bag = { great_ball: 20, ultra_ball: 5, super_potion: 10, hyper_potion: 5, revive: 3, hm01_cut: 1, hm02_fly: 1, hm05_flash: 1, escape_rope: 5, bicycle: 1, old_rod: 1, good_rod: 1 };
     },
   },
   {
@@ -308,6 +319,7 @@ const PRESETS: Preset[] = [
         ss_anne_departed: true, got_fossil: true, got_silph_scope: true,
         tower_rockets_cleared: true, got_poke_flute: true,
         saffron_open: true, silph_co_complete: true, giovanni_silph: true, got_master_ball: true,
+        got_old_rod: true, got_good_rod: true, got_super_rod: true,
       };
       save.party = [
         createPokemon(25, 40, save.playerName),
@@ -318,7 +330,7 @@ const PRESETS: Preset[] = [
       ];
       save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW', 'SOUL'];
       save.money = 25000;
-      save.bag = { great_ball: 15, ultra_ball: 10, hyper_potion: 10, revive: 5, master_ball: 1, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, escape_rope: 5, bicycle: 1 };
+      save.bag = { great_ball: 15, ultra_ball: 10, hyper_potion: 10, revive: 5, master_ball: 1, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, escape_rope: 5, bicycle: 1, old_rod: 1, good_rod: 1, super_rod: 1 };
     },
   },
   {
@@ -337,6 +349,7 @@ const PRESETS: Preset[] = [
         tower_rockets_cleared: true, got_poke_flute: true,
         saffron_open: true, silph_co_complete: true, giovanni_silph: true, got_master_ball: true,
         snorlax_route12_cleared: true, snorlax_route16_cleared: true,
+        got_old_rod: true, got_good_rod: true, got_super_rod: true,
       };
       save.party = [
         createPokemon(25, 45, save.playerName),
@@ -348,7 +361,7 @@ const PRESETS: Preset[] = [
       ];
       save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW', 'SOUL', 'MARSH'];
       save.money = 35000;
-      save.bag = { ultra_ball: 20, hyper_potion: 10, max_potion: 5, full_restore: 3, revive: 5, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, escape_rope: 5, bicycle: 1 };
+      save.bag = { ultra_ball: 20, hyper_potion: 10, max_potion: 5, full_restore: 3, revive: 5, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, escape_rope: 5, bicycle: 1, old_rod: 1, good_rod: 1, super_rod: 1 };
     },
   },
   {
@@ -368,6 +381,7 @@ const PRESETS: Preset[] = [
         tower_rockets_cleared: true, got_poke_flute: true,
         saffron_open: true, silph_co_complete: true, giovanni_silph: true, got_master_ball: true,
         snorlax_route12_cleared: true, snorlax_route16_cleared: true,
+        got_old_rod: true, got_good_rod: true, got_super_rod: true,
       };
       save.party = [
         createPokemon(25, 50, save.playerName),
@@ -379,7 +393,7 @@ const PRESETS: Preset[] = [
       ];
       save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW', 'SOUL', 'MARSH', 'VOLCANO'];
       save.money = 40000;
-      save.bag = { ultra_ball: 25, max_potion: 15, full_restore: 5, revive: 10, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, bicycle: 1 };
+      save.bag = { ultra_ball: 25, max_potion: 15, full_restore: 5, revive: 10, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, bicycle: 1, old_rod: 1, good_rod: 1, super_rod: 1 };
     },
   },
   {
@@ -398,6 +412,7 @@ const PRESETS: Preset[] = [
         got_silph_scope: true, tower_rockets_cleared: true, got_poke_flute: true,
         saffron_open: true, silph_co_complete: true, giovanni_silph: true, got_master_ball: true,
         snorlax_route12_cleared: true, snorlax_route16_cleared: true,
+        got_old_rod: true, got_good_rod: true, got_super_rod: true,
       };
       save.party = [
         createPokemon(25, 55, save.playerName),
@@ -409,7 +424,7 @@ const PRESETS: Preset[] = [
       ];
       save.badges = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW', 'SOUL', 'MARSH', 'VOLCANO', 'EARTH'];
       save.money = 50000;
-      save.bag = { ultra_ball: 30, master_ball: 1, max_potion: 20, full_restore: 10, revive: 10, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, bicycle: 1 };
+      save.bag = { ultra_ball: 30, master_ball: 1, max_potion: 20, full_restore: 10, revive: 10, hm01_cut: 1, hm02_fly: 1, hm03_surf: 1, hm04_strength: 1, hm05_flash: 1, bicycle: 1, old_rod: 1, good_rod: 1, super_rod: 1 };
     },
   },
   {

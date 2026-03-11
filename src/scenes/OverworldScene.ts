@@ -22,6 +22,8 @@ import { ELITE_FOUR, CHAMPION } from '../data/eliteFour';
 import { GYM_LEADERS } from '../data/gymLeaders';
 import { TRAINERS } from '../data/trainers';
 import { playBattleTransition, playTrainerBattleTransition } from '../utils/battleTransition';
+import { OLD_ROD_ENCOUNTER, GOOD_ROD_ENCOUNTERS, SUPER_ROD_ENCOUNTERS, DEFAULT_SUPER_ROD } from '../data/fishingEncounters';
+import { rollFishingEncounter } from '../systems/EncounterSystem';
 import { resyncMobileInput } from '../utils/mobileControls';
 import { shouldSkipNPC as shouldSkipNPCLogic } from '../logic/npcVisibility';
 
@@ -2447,6 +2449,69 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
+    // Fishing Guru — Old Rod (Vermilion City)
+    if (npc.id === 'fishing_guru_vermilion') {
+      if (this.playerState.storyFlags['got_old_rod']) {
+        this.textBox.show(["How's the fishing\ngoing? Keep at it!"]);
+        return;
+      }
+      this.textBox.show(
+        [
+          "FISHING GURU: Hello\nthere! I love fishing!",
+          "Do you like to fish?\nOf course you do!",
+          "I can see it in your\neyes! Here, take this!",
+          `${this.playerState.name} received\nOLD ROD!`,
+        ],
+        () => {
+          this.playerState.addItem('old_rod');
+          this.playerState.storyFlags['got_old_rod'] = true;
+        }
+      );
+      return;
+    }
+
+    // Fishing Guru — Good Rod (Route 12)
+    if (npc.id === 'fishing_guru_route12') {
+      if (this.playerState.storyFlags['got_good_rod']) {
+        this.textBox.show(["Use the GOOD ROD by\nwater to fish!"]);
+        return;
+      }
+      this.textBox.show(
+        [
+          "FISHING GURU: I'm the\nbest fisher on this\nroute!",
+          "You look like a real\ngo-getter!",
+          "Here, take my spare\nrod! It's a good one!",
+          `${this.playerState.name} received\nGOOD ROD!`,
+        ],
+        () => {
+          this.playerState.addItem('good_rod');
+          this.playerState.storyFlags['got_good_rod'] = true;
+        }
+      );
+      return;
+    }
+
+    // Fishing Guru — Super Rod (Fuchsia City)
+    if (npc.id === 'fishing_guru_fuchsia') {
+      if (this.playerState.storyFlags['got_super_rod']) {
+        this.textBox.show(["The SUPER ROD can\ncatch any POKeMON!"]);
+        return;
+      }
+      this.textBox.show(
+        [
+          "FISHING GURU: I'm the\nFISHING GURU!",
+          "You want to fish for\nrare POKeMON, yes?",
+          "Then take my best\nrod! Use it well!",
+          `${this.playerState.name} received\nSUPER ROD!`,
+        ],
+        () => {
+          this.playerState.addItem('super_rod');
+          this.playerState.storyFlags['got_super_rod'] = true;
+        }
+      );
+      return;
+    }
+
     // Trainer battle check
     if (npc.isTrainer && !this.playerState.defeatedTrainers.includes(npc.id)) {
       // Play encounter music for trainers the player walks up to (not spotted by sight)
@@ -2914,9 +2979,60 @@ export class OverworldScene extends Phaser.Scene {
       this.screenOpen = false;
       this.toggleBicycle();
     } : undefined;
+    const fishingCb = this.isFacingWater() ? (rodId: string) => {
+      this.screenOpen = false;
+      this.startFishing(rodId);
+    } : undefined;
     this.bagScreen.show(this.playerState, () => {
       this.screenOpen = false;
-    }, escapeRopeCb, bicycleCb);
+    }, escapeRopeCb, bicycleCb, fishingCb);
+  }
+
+  private isFacingWater(): boolean {
+    const vec = DIR_VECTORS[this.playerDirection];
+    const tx = this.playerGridX + vec.x;
+    const ty = this.playerGridY + vec.y;
+    return this.currentMap.tiles[ty]?.[tx] === TileType.WATER || this.isSurfing;
+  }
+
+  private startFishing(rodId: string): void {
+    // Determine encounter table
+    let encounters;
+    if (rodId === 'old_rod') {
+      encounters = OLD_ROD_ENCOUNTER;
+    } else if (rodId === 'good_rod') {
+      encounters = GOOD_ROD_ENCOUNTERS;
+    } else {
+      encounters = SUPER_ROD_ENCOUNTERS[this.currentMap.id] || DEFAULT_SUPER_ROD;
+    }
+
+    // Show fishing animation text
+    this.textBox.show(['......'], () => {
+      const wildPokemon = rollFishingEncounter(encounters);
+      if (!wildPokemon) {
+        this.textBox.show(['Not even a nibble!']);
+        return;
+      }
+      this.textBox.show(['Oh! A bite!'], () => {
+        this.isWarping = true;
+        soundSystem.battleStart();
+        playBattleTransition(this, () => {
+          this.scene.start('BattleScene', {
+            type: 'wild',
+            wildPokemon,
+            playerState: this.playerState.toSave(),
+            returnMap: this.currentMap.id,
+            returnX: this.playerGridX,
+            returnY: this.playerGridY,
+            isSurfing: this.isSurfing,
+            isRidingBike: this.isRidingBike,
+            flashUsed: this.flashUsed,
+          });
+        }, () => {
+          soundSystem.startMusic('wild_battle');
+        });
+      });
+    });
   }
 
   private showTrainerCard(): void {
@@ -3692,39 +3808,37 @@ export class OverworldScene extends Phaser.Scene {
     const cleanup = () => {
       container.destroy();
       this.screenOpen = false;
-      up.destroy();
-      down.destroy();
-      confirm.destroy();
-      cancel.destroy();
+      this.input.keyboard!.off('keydown', onKey);
     };
 
-    const up = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
-    const down = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
-    const confirm = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
-    const cancel = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.X);
+    // Skip the initial Z/Enter that opened this menu
+    let ready = false;
+    this.time.delayedCall(100, () => { ready = true; });
 
-    up.on('down', () => {
-      selectedIdx = Math.max(0, selectedIdx - 1);
-      cursor.setY(18 + selectedIdx * 12);
-      soundSystem.menuMove();
-    });
-    down.on('down', () => {
-      selectedIdx = Math.min(available.length - 1, selectedIdx + 1);
-      cursor.setY(18 + selectedIdx * 12);
-      soundSystem.menuMove();
-    });
-    confirm.on('down', () => {
-      const dest = available[selectedIdx];
-      cleanup();
-      soundSystem.menuSelect();
-      this.textBox.show([`Flew to ${dest.name}!`], () => {
-        this.warpTo(dest.mapId, dest.x, dest.y);
-      });
-    });
-    cancel.on('down', () => {
-      cleanup();
-      soundSystem.menuMove();
-    });
+    const onKey = (event: KeyboardEvent) => {
+      if (!ready) return;
+      if (event.key === 'ArrowUp') {
+        selectedIdx = Math.max(0, selectedIdx - 1);
+        cursor.setY(18 + selectedIdx * 12);
+        soundSystem.menuMove();
+      } else if (event.key === 'ArrowDown') {
+        selectedIdx = Math.min(available.length - 1, selectedIdx + 1);
+        cursor.setY(18 + selectedIdx * 12);
+        soundSystem.menuMove();
+      } else if (event.key === 'z' || event.key === 'Enter') {
+        const dest = available[selectedIdx];
+        cleanup();
+        soundSystem.menuSelect();
+        this.textBox.show([`Flew to ${dest.name}!`], () => {
+          this.warpTo(dest.mapId, dest.x, dest.y);
+        });
+      } else if (event.key === 'x' || event.key === 'Escape') {
+        cleanup();
+        soundSystem.menuMove();
+      }
+    };
+
+    this.input.keyboard!.on('keydown', onKey);
   }
 
   private useFlash(): void {
