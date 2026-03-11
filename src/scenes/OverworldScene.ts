@@ -951,6 +951,15 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
+    // Pewter Museum 2F: need ticket
+    if (mapId === 'pewter_museum_2f' && !this.playerState.storyFlags['museum_2f_ticket']) {
+      this.textBox.show([
+        "You need a ticket\nto go upstairs!",
+        "Please see the clerk\nat the front desk.",
+      ]);
+      return;
+    }
+
     // Rocket Hideout B1F: need poster flag to enter from Game Corner
     if (mapId === 'rocket_hideout_b1f' && this.currentMap.id === 'game_corner') {
       if (!this.playerState.storyFlags['game_corner_poster_found']) {
@@ -1679,7 +1688,7 @@ export class OverworldScene extends Phaser.Scene {
 
     // Check for sign
     const tileType = this.currentMap.tiles[targetY]?.[targetX];
-    if (tileType === TileType.SIGN) {
+    if (tileType === TileType.SIGN || tileType === TileType.MUSEUM_PLAQUE) {
       this.readSign(targetX, targetY);
       return;
     }
@@ -1783,6 +1792,24 @@ export class OverworldScene extends Phaser.Scene {
       this.textBox.show(greetDialogue.length > 0 ? greetDialogue : ['Let me heal your\nPOKeMON!'], () => {
         this.runHealAnimation(npc, restoreMsg);
       });
+      return;
+    }
+
+    // Museum ticket clerk: charges $50 for 2F access
+    if (npc.id === 'museum_ticket_clerk') {
+      if (this.playerState.storyFlags['museum_2f_ticket']) {
+        this.textBox.show(['Please enjoy the\nspace exhibit\nupstairs!']);
+      } else if (this.playerState.money >= 50) {
+        this.textBox.show(
+          ["That'll be $50\nfor admission to\nthe 2nd floor.", `${this.playerState.name} paid $50.`, 'Thank you! Please\nenjoy the exhibit!'],
+          () => {
+            this.playerState.money -= 50;
+            this.playerState.storyFlags['museum_2f_ticket'] = true;
+          }
+        );
+      } else {
+        this.textBox.show(["I'm sorry, you\ndon't have enough\nmoney.", "It's $50 for a\nticket to the\n2nd floor."]);
+      }
       return;
     }
 
@@ -2463,6 +2490,20 @@ export class OverworldScene extends Phaser.Scene {
       'route6:12,3': ['UNDERGROUND PATH', 'Route 5 - Route 6'],
       'route7:12,3': ['UNDERGROUND PATH', 'Route 7 - Route 8'],
       'route8:13,3': ['UNDERGROUND PATH', 'Route 7 - Route 8'],
+      // Pewter Museum 1F — Fossil Wing
+      'pewter_museum_1f:2,3': ['KABUTOPS FOSSIL', 'A vicious POKeMON\nthat lived in\nprimordial seas.'],
+      'pewter_museum_1f:6,3': ['AERODACTYL FOSSIL', 'A ferocious POKeMON\nfrom the age of\ndinosaurs.'],
+      'pewter_museum_1f:10,3': ['OMANYTE SHELL', 'A spiral shell of an\nancient POKeMON that\nlived in the sea.'],
+      'pewter_museum_1f:14,3': ['FOSSIL DIG TOOLS', 'Tools used to\ncarefully excavate\nfossils from rock.'],
+      // Pewter Museum 2F — Space Wing
+      'pewter_museum_2f:2,3': ['MOON STONE', 'A mysterious stone\nfound at MT. MOON.\nIt radiates light.'],
+      'pewter_museum_2f:6,3': ['METEORITE SAMPLE', 'A meteorite that\ncontains amino acids\nfrom outer space.'],
+      'pewter_museum_2f:10,3': ['STAR CHART', 'A chart showing the\nconstellations as\nseen from KANTO.'],
+      'pewter_museum_2f:14,3': ['ROCKET FUEL SAMPLE', 'Fuel used to launch\nthe first POKeMON\ninto space!'],
+      'pewter_museum_2f:7,5': ['SPACE SHUTTLE', 'A model of the space\nshuttle that carried\nthe first POKeMON.'],
+      'pewter_museum_2f:10,5': ['SPACE SHUTTLE', 'CLEFAIRY was the\nfirst POKeMON to\nride a shuttle!'],
+      'pewter_museum_2f:2,8': ['SPACE PIKACHU PHOTO', "A photo of PIKACHU\nin a tiny space\nsuit. How cute!"],
+      'pewter_museum_2f:14,8': ['LUNAR SOIL SAMPLE', 'Soil brought back\nfrom the moon.\nIt sparkles faintly.'],
     };
 
     // Game Corner poster puzzle

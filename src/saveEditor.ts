@@ -112,7 +112,7 @@ const MAP_GROUPS: { label: string; maps: string[] }[] = [
   },
   {
     label: 'Route 2 / Viridian Forest / Pewter',
-    maps: ['route2', 'oaks_aide_house', 'viridian_forest', 'pewter_city', 'pewter_gym', 'pokemon_center_pewter', 'pokemart_pewter', 'pewter_house', 'pewter_museum'],
+    maps: ['route2', 'oaks_aide_house', 'viridian_forest', 'pewter_city', 'pewter_gym', 'pokemon_center_pewter', 'pokemart_pewter', 'pewter_house', 'pewter_museum_1f', 'pewter_museum_2f'],
   },
   {
     label: 'Route 3 / Mt. Moon',

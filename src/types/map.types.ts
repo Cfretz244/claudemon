@@ -31,6 +31,10 @@ export enum TileType {
   COBBLESTONE = 27,
   DOORMAT = 28,
   CAVE_ENTRANCE = 29,
+  EXHIBIT_CASE = 30,
+  FOSSIL_DISPLAY = 31,
+  SHUTTLE_DISPLAY = 32,
+  MUSEUM_PLAQUE = 33,
 }
 
 export interface WarpPoint {

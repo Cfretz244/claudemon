@@ -86,7 +86,7 @@ function categorizeMap(mapId: string): string {
     [/^(indigo_plateau|elite_four|pokemon_center_indigo)/, 'Indigo Plateau'],
     [/^(pokemon_center|pokemart)$/, 'Viridian City'],
     [/^(viridian_gym)$/, 'Viridian City'],
-    [/^(pewter_gym|pewter_museum|pewter_house)$/, 'Pewter City'],
+    [/^(pewter_gym|pewter_museum_1f|pewter_museum_2f|pewter_house)$/, 'Pewter City'],
     [/^(gate|underground|diglett)/, 'Gates & Tunnels'],
     [/^route/, 'Routes (Other)'],
   ];
