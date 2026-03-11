@@ -2390,6 +2390,10 @@ const MAP_MUSIC: Record<string, string> = {
   route25: 'route24',
   viridian_forest: 'viridian_forest',
   safari_zone: 'route',
+  safari_zone_east: 'route',
+  safari_zone_west: 'route',
+  safari_zone_north: 'route',
+  safari_secret_house: 'pokemon_center',
 
   // Towns & cities
   viridian_city: 'viridian_city',

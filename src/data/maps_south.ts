@@ -709,8 +709,8 @@ export const FUCHSIA_CITY: MapData = (() => {
   setTile(6, 19, T.DOOR);
 
   // Flowers
-  setTile(9, 8, T.FLOWER);
-  setTile(9, 9, T.FLOWER);
+  setTile(3, 8, T.FLOWER);
+  setTile(3, 9, T.FLOWER);
   setTile(15, 8, T.FLOWER);
   setTile(15, 9, T.FLOWER);
   setTile(9, 16, T.FLOWER);
@@ -963,8 +963,8 @@ export const POKEMON_CENTER_FUCHSIA: MapData = (() => {
   };
 })();
 
-// ─── SAFARI ZONE ───────────────────────────────────────────────────────────────
-export const SAFARI_ZONE: MapData = (() => {
+// ─── SAFARI ZONE CENTER (Entry Hub) ──────────────────────────────────────────
+export const SAFARI_ZONE_CENTER: MapData = (() => {
   const W = 25, H = 25;
   const tiles = fill2D(W, H, T.GRASS);
   const collision = fill2D(W, H, false);
@@ -975,49 +975,44 @@ export const SAFARI_ZONE: MapData = (() => {
     for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
   }
 
-  // Tree borders (2 tiles)
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.TREE);
-    setTile(x, 1, T.TREE);
-  }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.TREE);
-    setTile(1, y, T.TREE);
-    setTile(W - 1, y, T.TREE);
-    setTile(W - 2, y, T.TREE);
-  }
+  // Tree borders (2 tiles thick)
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.TREE); setTile(x, 1, T.TREE); }
+  for (let x = 0; x < W; x++) { setTile(x, H - 1, T.TREE); setTile(x, H - 2, T.TREE); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.TREE); setTile(1, y, T.TREE); }
+  for (let y = 0; y < H; y++) { setTile(W - 1, y, T.TREE); setTile(W - 2, y, T.TREE); }
 
-  // Winding path through the zone
-  fillRect(10, 20, 5, 5, T.PATH);    // South entrance area
-  fillRect(10, 14, 3, 6, T.PATH);    // Path going north
-  fillRect(6, 14, 7, 2, T.PATH);     // Path going west
-  fillRect(6, 8, 3, 6, T.PATH);      // Path going north-west
-  fillRect(6, 8, 10, 2, T.PATH);     // Path going east
-  fillRect(14, 4, 3, 6, T.PATH);     // Path going north-east
-  fillRect(6, 4, 11, 2, T.PATH);     // Top path
+  // Central plaza (PATH clearing)
+  fillRect(8, 10, 9, 5, T.PATH);
 
-  // Dense tall grass patches
-  fillRect(3, 3, 3, 4, T.TALL_GRASS);
+  // South entrance path from (12, 24) up to plaza
+  fillRect(11, 15, 3, 9, T.PATH);
+
+  // North path from plaza to top border
+  fillRect(11, 1, 3, 9, T.PATH);
+
+  // East path from plaza to right border
+  fillRect(17, 11, 7, 3, T.PATH);
+
+  // West path from plaza to left border
+  fillRect(1, 11, 7, 3, T.PATH);
+
+  // Flowers around plaza edges
+  fillRect(7, 9, 11, 1, T.FLOWER);
+  fillRect(7, 15, 11, 1, T.FLOWER);
+  fillRect(7, 10, 1, 5, T.FLOWER);
+  fillRect(17, 10, 1, 5, T.FLOWER);
+
+  // Tall grass in corners
+  fillRect(3, 3, 4, 4, T.TALL_GRASS);
   fillRect(18, 3, 4, 4, T.TALL_GRASS);
-  fillRect(3, 10, 3, 4, T.TALL_GRASS);
-  fillRect(10, 10, 4, 3, T.TALL_GRASS);
-  fillRect(17, 10, 4, 4, T.TALL_GRASS);
-  fillRect(3, 17, 5, 4, T.TALL_GRASS);
-  fillRect(14, 17, 5, 4, T.TALL_GRASS);
-  fillRect(17, 22, 4, 2, T.TALL_GRASS);
+  fillRect(3, 17, 4, 4, T.TALL_GRASS);
+  fillRect(18, 17, 4, 4, T.TALL_GRASS);
 
-  // Water areas (ponds)
-  fillRect(15, 10, 4, 4, T.WATER);
-  fillRect(5, 18, 3, 3, T.WATER);
-
-  // Scattered interior trees
-  setTile(4, 8, T.TREE);
-  setTile(12, 6, T.TREE);
-  setTile(19, 8, T.TREE);
-  setTile(8, 18, T.TREE);
-  setTile(20, 16, T.TREE);
-  setTile(4, 15, T.TREE);
-  setTile(13, 20, T.TREE);
+  // A couple scattered trees for decoration
+  setTile(6, 6, T.TREE);
+  setTile(18, 6, T.TREE);
+  setTile(6, 18, T.TREE);
+  setTile(18, 18, T.TREE);
 
   return {
     id: 'safari_zone',
@@ -1029,11 +1024,23 @@ export const SAFARI_ZONE: MapData = (() => {
     warps: [
       // South entrance back to Fuchsia City
       { x: 12, y: 24, targetMap: 'fuchsia_city', targetX: 12, targetY: 6 },
+      // East exits → Safari Zone East
+      { x: 24, y: 11, targetMap: 'safari_zone_east', targetX: 2, targetY: 11 },
+      { x: 24, y: 12, targetMap: 'safari_zone_east', targetX: 2, targetY: 12 },
+      { x: 24, y: 13, targetMap: 'safari_zone_east', targetX: 2, targetY: 13 },
+      // West exits → Safari Zone West
+      { x: 0, y: 11, targetMap: 'safari_zone_west', targetX: 22, targetY: 11 },
+      { x: 0, y: 12, targetMap: 'safari_zone_west', targetX: 22, targetY: 12 },
+      { x: 0, y: 13, targetMap: 'safari_zone_west', targetX: 22, targetY: 13 },
+      // North exits → Safari Zone North
+      { x: 11, y: 0, targetMap: 'safari_zone_north', targetX: 11, targetY: 22 },
+      { x: 12, y: 0, targetMap: 'safari_zone_north', targetX: 12, targetY: 22 },
+      { x: 13, y: 0, targetMap: 'safari_zone_north', targetX: 13, targetY: 22 },
     ],
     npcs: [
       {
         id: 'safari_npc1',
-        x: 11, y: 21,
+        x: 12, y: 19,
         spriteColor: 0x60c060,
         direction: Direction.UP,
         dialogue: [
@@ -1043,46 +1050,350 @@ export const SAFARI_ZONE: MapData = (() => {
         ],
       },
       {
-        id: 'safari_npc2',
-        x: 8, y: 10,
-        spriteColor: 0xc0c060,
+        id: 'safari_sign',
+        x: 12, y: 14,
+        spriteColor: 0x808080,
         direction: Direction.DOWN,
+        dialogue: [
+          "EAST: Rocky Canyon\nWEST: Deep Forest",
+          "NORTH: Lake Paradise",
+        ],
+      },
+    ],
+    wildEncounters: {
+      grassRate: 0.20,
+      encounters: [
+        { speciesId: 30, minLevel: 22, maxLevel: 25, weight: 20 },   // Nidorina
+        { speciesId: 33, minLevel: 22, maxLevel: 25, weight: 20 },   // Nidorino
+        { speciesId: 102, minLevel: 22, maxLevel: 25, weight: 20 },  // Exeggcute
+        { speciesId: 47, minLevel: 22, maxLevel: 25, weight: 15 },   // Parasect
+        { speciesId: 84, minLevel: 22, maxLevel: 25, weight: 20 },   // Doduo
+        { speciesId: 113, minLevel: 22, maxLevel: 25, weight: 5 },   // Chansey
+      ],
+    },
+  };
+})();
+
+// ─── SAFARI ZONE EAST (Rocky Canyon) ─────────────────────────────────────────
+export const SAFARI_ZONE_EAST: MapData = (() => {
+  const W = 25, H = 25;
+  const tiles = fill2D(W, H, T.CAVE_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Cave wall borders (2 tiles thick)
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.CAVE_WALL); setTile(x, 1, T.CAVE_WALL); }
+  for (let x = 0; x < W; x++) { setTile(x, H - 1, T.CAVE_WALL); setTile(x, H - 2, T.CAVE_WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.CAVE_WALL); setTile(1, y, T.CAVE_WALL); }
+  for (let y = 0; y < H; y++) { setTile(W - 1, y, T.CAVE_WALL); setTile(W - 2, y, T.CAVE_WALL); }
+
+  // West entrance path (y=11-13, from border inward)
+  fillRect(1, 11, 4, 3, T.PATH);
+
+  // Large rock outcrops creating canyon maze
+  fillRect(6, 2, 4, 5, T.CAVE_WALL);    // NW outcrop
+  fillRect(15, 2, 5, 4, T.CAVE_WALL);   // NE outcrop
+  fillRect(5, 15, 5, 4, T.CAVE_WALL);   // SW outcrop
+  fillRect(16, 15, 4, 5, T.CAVE_WALL);  // SE outcrop
+  fillRect(10, 8, 5, 3, T.CAVE_WALL);   // Central outcrop
+  fillRect(8, 19, 3, 3, T.CAVE_WALL);   // South central rock
+  fillRect(18, 8, 3, 4, T.CAVE_WALL);   // East central rock
+
+  // Scattered boulders
+  setTile(4, 6, T.BOULDER);
+  setTile(13, 5, T.BOULDER);
+  setTile(21, 7, T.BOULDER);
+  setTile(4, 20, T.BOULDER);
+  setTile(14, 18, T.BOULDER);
+  setTile(21, 20, T.BOULDER);
+
+  // Sand patches near rock transitions
+  fillRect(5, 7, 3, 2, T.SAND);
+  fillRect(11, 6, 3, 2, T.SAND);
+  fillRect(15, 6, 3, 2, T.SAND);
+  fillRect(10, 11, 5, 1, T.SAND);
+  fillRect(5, 19, 3, 1, T.SAND);
+  fillRect(16, 20, 4, 1, T.SAND);
+
+  // Tall grass in clearings between rocks
+  fillRect(2, 3, 3, 4, T.TALL_GRASS);
+  fillRect(11, 2, 3, 4, T.TALL_GRASS);
+  fillRect(21, 3, 2, 4, T.TALL_GRASS);
+  fillRect(2, 15, 3, 4, T.TALL_GRASS);
+  fillRect(11, 13, 4, 3, T.TALL_GRASS);
+  fillRect(12, 19, 2, 3, T.TALL_GRASS);
+  fillRect(21, 14, 2, 4, T.TALL_GRASS);
+
+  // PATH corridors between outcrops
+  fillRect(10, 5, 1, 3, T.PATH);
+  fillRect(15, 5, 1, 3, T.PATH);
+  fillRect(6, 8, 4, 1, T.PATH);
+  fillRect(6, 10, 4, 1, T.PATH);
+
+  return {
+    id: 'safari_zone_east',
+    name: 'SAFARI ZONE EAST',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      // West exits → Safari Zone Center
+      { x: 0, y: 11, targetMap: 'safari_zone', targetX: 22, targetY: 11 },
+      { x: 0, y: 12, targetMap: 'safari_zone', targetX: 22, targetY: 12 },
+      { x: 0, y: 13, targetMap: 'safari_zone', targetX: 22, targetY: 13 },
+    ],
+    npcs: [
+      {
+        id: 'safari_npc2',
+        x: 5, y: 12,
+        spriteColor: 0xc0c060,
+        direction: Direction.RIGHT,
         dialogue: [
           "I've been looking for\na CHANSEY all day!",
           "They're super rare\nbut worth the wait!",
         ],
       },
+    ],
+    wildEncounters: {
+      grassRate: 0.25,
+      encounters: [
+        { speciesId: 111, minLevel: 25, maxLevel: 28, weight: 25 },  // Rhyhorn
+        { speciesId: 104, minLevel: 25, maxLevel: 28, weight: 20 },  // Cubone
+        { speciesId: 115, minLevel: 25, maxLevel: 28, weight: 15 },  // Kangaskhan
+        { speciesId: 33, minLevel: 25, maxLevel: 28, weight: 15 },   // Nidorino
+        { speciesId: 127, minLevel: 25, maxLevel: 28, weight: 15 },  // Pinsir
+        { speciesId: 113, minLevel: 25, maxLevel: 28, weight: 5 },   // Chansey
+        { speciesId: 128, minLevel: 25, maxLevel: 28, weight: 5 },   // Tauros
+      ],
+    },
+  };
+})();
+
+// ─── SAFARI ZONE WEST (Dense Forest) ─────────────────────────────────────────
+export const SAFARI_ZONE_WEST: MapData = (() => {
+  const W = 25, H = 25;
+  const tiles = fill2D(W, H, T.GRASS);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Tree borders (2 tiles thick)
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.TREE); setTile(x, 1, T.TREE); }
+  for (let x = 0; x < W; x++) { setTile(x, H - 1, T.TREE); setTile(x, H - 2, T.TREE); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.TREE); setTile(1, y, T.TREE); }
+  for (let y = 0; y < H; y++) { setTile(W - 1, y, T.TREE); setTile(W - 2, y, T.TREE); }
+
+  // Fill most of the interior with trees to create dense forest
+  fillRect(2, 2, 21, 21, T.TREE);
+
+  // Carve winding paths through the forest
+  // East entrance corridor (y=11-13)
+  fillRect(22, 11, 2, 3, T.PATH);
+  fillRect(18, 11, 4, 3, T.PATH);
+
+  // Main path: east entrance → south → west → north to Secret House
+  fillRect(16, 11, 2, 6, T.PATH);     // south from entrance
+  fillRect(12, 15, 4, 2, T.PATH);     // west segment
+  fillRect(12, 12, 2, 3, T.PATH);     // north connector
+  fillRect(8, 12, 4, 2, T.PATH);      // further west
+  fillRect(8, 8, 2, 4, T.PATH);       // north segment
+  fillRect(5, 8, 3, 2, T.PATH);       // west to NW area
+  fillRect(5, 4, 2, 4, T.PATH);       // north to Secret House row
+  fillRect(3, 4, 2, 2, T.PATH);       // final approach to Secret House
+
+  // Side paths and dead ends for exploration
+  fillRect(18, 6, 2, 5, T.PATH);      // NE side path
+  fillRect(14, 6, 4, 2, T.PATH);      // connecting NE
+  fillRect(14, 4, 2, 2, T.PATH);      // dead end north
+  fillRect(4, 17, 2, 4, T.PATH);      // SW dead end
+  fillRect(6, 19, 4, 2, T.PATH);      // southern corridor
+  fillRect(10, 17, 2, 4, T.PATH);     // connecting south
+
+  // Tall grass along paths
+  fillRect(17, 7, 1, 4, T.TALL_GRASS);
+  fillRect(13, 7, 1, 4, T.TALL_GRASS);
+  fillRect(7, 9, 1, 3, T.TALL_GRASS);
+  fillRect(4, 5, 1, 3, T.TALL_GRASS);
+  fillRect(11, 16, 1, 2, T.TALL_GRASS);
+  fillRect(5, 18, 1, 2, T.TALL_GRASS);
+  fillRect(9, 18, 1, 2, T.TALL_GRASS);
+
+  // CUT_TREE shortcut
+  setTile(9, 6, T.CUT_TREE);
+
+  // Secret House building (deep northwest)
+  fillRect(3, 2, 4, 1, T.ROOF);
+  fillRect(3, 3, 4, 2, T.BUILDING);
+  setTile(4, 4, T.DOOR);
+
+  // Flowers near Secret House
+  setTile(2, 5, T.FLOWER);
+  setTile(7, 3, T.FLOWER);
+  setTile(7, 4, T.FLOWER);
+
+  return {
+    id: 'safari_zone_west',
+    name: 'SAFARI ZONE WEST',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      // East exits → Safari Zone Center
+      { x: 24, y: 11, targetMap: 'safari_zone', targetX: 2, targetY: 11 },
+      { x: 24, y: 12, targetMap: 'safari_zone', targetX: 2, targetY: 12 },
+      { x: 24, y: 13, targetMap: 'safari_zone', targetX: 2, targetY: 13 },
+      // Secret House door
+      { x: 4, y: 4, targetMap: 'safari_secret_house', targetX: 3, targetY: 6 },
+    ],
+    npcs: [
       {
-        id: 'safari_secret_house',
-        x: 20, y: 4,
-        spriteColor: 0x60c060,
-        direction: Direction.DOWN,
+        id: 'safari_npc3',
+        x: 19, y: 12,
+        spriteColor: 0xc0a060,
+        direction: Direction.LEFT,
         dialogue: [
-          "Congratulations on\nmaking it this far!",
-          "Here, take this HM\nas your prize!",
+          "The SECRET HOUSE is\nsupposed to be deep",
+          "in the northwest...\nGood luck finding it!",
         ],
       },
+    ],
+    wildEncounters: {
+      grassRate: 0.30,
+      encounters: [
+        { speciesId: 123, minLevel: 25, maxLevel: 28, weight: 20 },  // Scyther
+        { speciesId: 127, minLevel: 25, maxLevel: 28, weight: 15 },  // Pinsir
+        { speciesId: 102, minLevel: 25, maxLevel: 28, weight: 20 },  // Exeggcute
+        { speciesId: 47, minLevel: 25, maxLevel: 28, weight: 15 },   // Parasect
+        { speciesId: 49, minLevel: 25, maxLevel: 28, weight: 15 },   // Venomoth
+        { speciesId: 30, minLevel: 25, maxLevel: 28, weight: 10 },   // Nidorina
+        { speciesId: 113, minLevel: 25, maxLevel: 28, weight: 5 },   // Chansey
+      ],
+    },
+  };
+})();
+
+// ─── SAFARI ZONE NORTH (Lake Paradise) ───────────────────────────────────────
+export const SAFARI_ZONE_NORTH: MapData = (() => {
+  const W = 25, H = 25;
+  const tiles = fill2D(W, H, T.GRASS);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Tree borders (2 tiles thick)
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.TREE); setTile(x, 1, T.TREE); }
+  for (let x = 0; x < W; x++) { setTile(x, H - 1, T.TREE); setTile(x, H - 2, T.TREE); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.TREE); setTile(1, y, T.TREE); }
+  for (let y = 0; y < H; y++) { setTile(W - 1, y, T.TREE); setTile(W - 2, y, T.TREE); }
+
+  // South entrance path (x=11-13, from border inward)
+  fillRect(11, 22, 3, 2, T.PATH);
+  fillRect(11, 18, 3, 4, T.PATH);
+
+  // Sand beaches surrounding the lake
+  fillRect(4, 4, 17, 14, T.SAND);
+
+  // Large irregular water lake in center
+  fillRect(6, 5, 13, 11, T.WATER);
+  // Irregular edges — carve some sand back into lake edges
+  fillRect(4, 5, 2, 3, T.SAND);
+  fillRect(4, 12, 2, 4, T.SAND);
+  fillRect(19, 5, 2, 2, T.SAND);
+  fillRect(19, 13, 2, 3, T.SAND);
+  // Notch in the lake for variation
+  fillRect(10, 5, 3, 1, T.SAND);
+  fillRect(8, 14, 5, 2, T.SAND);
+
+  // Small grass islands in the lake (tease for Surf)
+  setTile(10, 8, T.GRASS);
+  setTile(11, 8, T.GRASS);
+  setTile(14, 10, T.GRASS);
+
+  // Paths around the lake (east and west sides)
+  // West path
+  fillRect(3, 5, 1, 12, T.PATH);
+  fillRect(2, 10, 1, 2, T.PATH);
+  // East path
+  fillRect(21, 5, 1, 12, T.PATH);
+  fillRect(22, 10, 1, 2, T.PATH);
+
+  // Path from south entrance to lake shore
+  fillRect(11, 16, 3, 2, T.PATH);
+
+  // Tall grass areas — east side (where Gold Teeth are hidden)
+  fillRect(18, 17, 5, 5, T.TALL_GRASS);
+  fillRect(16, 19, 2, 3, T.TALL_GRASS);
+
+  // Tall grass areas — west side
+  fillRect(2, 17, 5, 5, T.TALL_GRASS);
+
+  // Scattered trees for aesthetics
+  setTile(7, 18, T.TREE);
+  setTile(9, 20, T.TREE);
+  setTile(15, 18, T.TREE);
+  setTile(8, 3, T.TREE);
+  setTile(16, 3, T.TREE);
+
+  return {
+    id: 'safari_zone_north',
+    name: 'SAFARI ZONE NORTH',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      // South exits → Safari Zone Center
+      { x: 11, y: 24, targetMap: 'safari_zone', targetX: 11, targetY: 2 },
+      { x: 12, y: 24, targetMap: 'safari_zone', targetX: 12, targetY: 2 },
+      { x: 13, y: 24, targetMap: 'safari_zone', targetX: 13, targetY: 2 },
+    ],
+    npcs: [
       {
         id: 'safari_gold_teeth',
-        x: 7, y: 16,
+        x: 20, y: 20,
         spriteColor: 0x000000,
         direction: Direction.DOWN,
         dialogue: [],
         isItemBall: true,
         itemId: 'gold_teeth',
       },
+      {
+        id: 'safari_npc4',
+        x: 12, y: 17,
+        spriteColor: 0x6080c0,
+        direction: Direction.UP,
+        dialogue: [
+          "Rumor has it someone\nlost something in the",
+          "tall grass to the\nsoutheast...",
+        ],
+      },
     ],
     wildEncounters: {
       grassRate: 0.25,
       encounters: [
-        { speciesId: 111, minLevel: 25, maxLevel: 28, weight: 15 },  // Rhyhorn
-        { speciesId: 113, minLevel: 25, maxLevel: 28, weight: 5 },   // Chansey
-        { speciesId: 102, minLevel: 25, maxLevel: 28, weight: 15 },  // Exeggcute
-        { speciesId: 115, minLevel: 25, maxLevel: 28, weight: 10 },  // Kangaskhan
-        { speciesId: 123, minLevel: 25, maxLevel: 28, weight: 15 },  // Scyther
-        { speciesId: 127, minLevel: 25, maxLevel: 28, weight: 15 },  // Pinsir
-        { speciesId: 128, minLevel: 25, maxLevel: 28, weight: 10 },  // Tauros
-        { speciesId: 30, minLevel: 25, maxLevel: 28, weight: 15 },   // Nidorina
+        { speciesId: 128, minLevel: 26, maxLevel: 29, weight: 15 },  // Tauros
+        { speciesId: 115, minLevel: 26, maxLevel: 29, weight: 15 },  // Kangaskhan
+        { speciesId: 113, minLevel: 26, maxLevel: 29, weight: 10 },  // Chansey (better odds)
+        { speciesId: 147, minLevel: 26, maxLevel: 29, weight: 5 },   // Dratini (exclusive rare)
+        { speciesId: 111, minLevel: 26, maxLevel: 29, weight: 20 },  // Rhyhorn
+        { speciesId: 30, minLevel: 26, maxLevel: 29, weight: 15 },   // Nidorina
+        { speciesId: 102, minLevel: 26, maxLevel: 29, weight: 15 },  // Exeggcute
+        { speciesId: 33, minLevel: 26, maxLevel: 29, weight: 5 },    // Nidorino
       ],
     },
   };
@@ -1113,6 +1424,35 @@ const POKEMART_FUCHSIA: MapData = (() => {
       id: 'mart_clerk', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
       dialogue: ['Welcome! How may I\nserve you?'],
       shopStock: ['great_ball', 'ultra_ball', 'super_potion', 'hyper_potion', 'full_heal', 'revive'],
+    }],
+  };
+})();
+
+// ─── Safari Secret House (interior) ─────────────────────────────────────────
+export const SAFARI_SECRET_HOUSE_INTERIOR: MapData = (() => {
+  const W = 7, H = 7;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(2, 2, T.MART_SHELF); setTile(4, 2, T.MART_SHELF);
+  setTile(3, 3, T.CARPET); setTile(3, 4, T.CARPET);
+  setTile(3, H - 1, T.DOORMAT);
+  return {
+    id: 'safari_secret_house', name: 'SECRET HOUSE', width: W, height: H, tiles, collision,
+    warps: [{ x: 3, y: H - 1, targetMap: 'safari_zone_west', targetX: 4, targetY: 5 }],
+    npcs: [{
+      id: 'safari_secret_house',
+      x: 3, y: 3,
+      spriteColor: 0x60c060,
+      direction: Direction.DOWN,
+      dialogue: [
+        "Congratulations on\nmaking it this far!",
+        "Here, take this HM\nas your prize!",
+      ],
     }],
   };
 })();
@@ -1158,6 +1498,10 @@ export const SOUTH_MAPS: Record<string, MapData> = {
   fuchsia_gym: FUCHSIA_GYM,
   pokemon_center_fuchsia: POKEMON_CENTER_FUCHSIA,
   pokemart_fuchsia: POKEMART_FUCHSIA,
-  safari_zone: SAFARI_ZONE,
+  safari_zone: SAFARI_ZONE_CENTER,
+  safari_zone_east: SAFARI_ZONE_EAST,
+  safari_zone_west: SAFARI_ZONE_WEST,
+  safari_zone_north: SAFARI_ZONE_NORTH,
+  safari_secret_house: SAFARI_SECRET_HOUSE_INTERIOR,
   warden_house: WARDEN_HOUSE,
 };
