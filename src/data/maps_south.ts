@@ -352,8 +352,8 @@ export const ROUTE15: MapData = (() => {
     collision,
     warps: [
       // West exit to Fuchsia City
-      { x: 0, y: 4, targetMap: 'fuchsia_city', targetX: 23, targetY: 12 },
-      { x: 0, y: 5, targetMap: 'fuchsia_city', targetX: 23, targetY: 12 },
+      { x: 0, y: 4, targetMap: 'fuchsia_city', targetX: 22, targetY: 12 },
+      { x: 0, y: 5, targetMap: 'fuchsia_city', targetX: 22, targetY: 12 },
       // East entrance from Route 14
       { x: 24, y: 4, targetMap: 'route14', targetX: 7, targetY: 18 },
       { x: 24, y: 5, targetMap: 'route14', targetX: 7, targetY: 18 },
@@ -732,8 +732,8 @@ export const FUCHSIA_CITY: MapData = (() => {
       // Safari Zone gate (north)
       { x: 12, y: 5, targetMap: 'safari_zone', targetX: 12, targetY: 24 },
       // East exit to Route 15
-      { x: 24, y: 12, targetMap: 'route15', targetX: 1, targetY: 4 },
-      { x: 24, y: 13, targetMap: 'route15', targetX: 1, targetY: 4 },
+      { x: 23, y: 12, targetMap: 'route15', targetX: 1, targetY: 4 },
+      { x: 23, y: 13, targetMap: 'route15', targetX: 1, targetY: 4 },
       // West entrance from Route 18
       { x: 1, y: 5, targetMap: 'route18', targetX: 19, targetY: 4 },
       // South exit to Route 19
