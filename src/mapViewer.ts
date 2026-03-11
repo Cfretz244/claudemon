@@ -33,6 +33,11 @@ const TILE_COLORS: Record<number, string> = {
   [TileType.COBBLESTONE]: '#b8b0a0',
   [TileType.DOORMAT]: '#9b7340',
   [TileType.CAVE_ENTRANCE]: '#504030',
+  [TileType.EXHIBIT_CASE]: '#c0a870',
+  [TileType.FOSSIL_DISPLAY]: '#d8c890',
+  [TileType.SHUTTLE_DISPLAY]: '#b0b8c0',
+  [TileType.MUSEUM_PLAQUE]: '#e0d8c0',
+  [TileType.TOMBSTONE]: '#909098',
 };
 
 // ─── Map region grouping ───
