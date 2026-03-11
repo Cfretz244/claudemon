@@ -88,7 +88,7 @@ export const ROUTE19: MapData = (() => {
 })();
 
 // ─────────────────────────────────────────────────────────────
-// 2. ROUTE 20  (30x10 horizontal water route)
+// 2. ROUTE 20  (30x10 horizontal water route — two blocking islands)
 // ─────────────────────────────────────────────────────────────
 export const ROUTE20: MapData = (() => {
   const W = 30, H = 10;
@@ -106,8 +106,19 @@ export const ROUTE20: MapData = (() => {
     for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
   }
 
-  // Small island in middle for Seafoam Islands entrance
-  fillRect(12, 2, 5, 6, T.SAND);
+  // West island (x=8-12, full height) — blocks water passage
+  fillRect(8, 0, 5, 10, T.CAVE_WALL);
+  // Sand shore on east side of west island
+  for (let y = 0; y < H; y++) setTile(12, y, T.SAND);
+  setTile(12, 5, T.DOOR); // Cave entrance
+
+  // East island (x=17-21, full height) — blocks water passage
+  fillRect(17, 0, 5, 10, T.CAVE_WALL);
+  // Sand shore on west side of east island
+  for (let y = 0; y < H; y++) setTile(17, y, T.SAND);
+  setTile(17, 5, T.DOOR); // Cave exit
+
+  // Water gap between islands (x=13-16) is cosmetic — not reachable from either end
 
   return {
     id: 'route20',
@@ -123,42 +134,32 @@ export const ROUTE20: MapData = (() => {
       // East exit → Cinnabar Island
       { x: 29, y: 4, targetMap: 'cinnabar_island', targetX: 2, targetY: 12 },
       { x: 29, y: 5, targetMap: 'cinnabar_island', targetX: 2, targetY: 12 },
-      // Seafoam Islands entrance
-      { x: 14, y: 4, targetMap: 'seafoam_islands', targetX: 9, targetY: 19 },
+      // Seafoam cave entrance (west island)
+      { x: 12, y: 5, targetMap: 'seafoam_b1f', targetX: 9, targetY: 18 },
+      // Seafoam cave exit (east island) — warp target only
+      { x: 17, y: 5, targetMap: 'seafoam_b1f', targetX: 17, targetY: 2 },
     ],
     npcs: [
       {
         id: 'route20_swimmer1',
-        x: 5, y: 2,
+        x: 4, y: 3,
         spriteColor: 0x4090d0,
         direction: Direction.DOWN,
         dialogue: [
-          'SWIMMER: SEAFOAM\nISLANDS is nearby!',
-          'You should check\nit out!',
+          'SWIMMER: You have to\ngo through SEAFOAM',
+          'ISLANDS to get\nacross!',
         ],
         isTrainer: true,
         sightRange: 5,
       },
       {
         id: 'route20_swimmer2',
-        x: 22, y: 7,
+        x: 25, y: 7,
         spriteColor: 0x60a0e0,
         direction: Direction.UP,
         dialogue: [
           "SWIMMER: CINNABAR\nISLAND isn't far!",
           "Let's battle before\nyou go!",
-        ],
-        isTrainer: true,
-        sightRange: 5,
-      },
-      {
-        id: 'route20_swimmer3',
-        x: 8, y: 7,
-        spriteColor: 0x3080c0,
-        direction: Direction.UP,
-        dialogue: [
-          'SWIMMER: I love\nswimming in the sea!',
-          "It's so refreshing!",
         ],
         isTrainer: true,
         sightRange: 5,
@@ -176,9 +177,9 @@ export const ROUTE20: MapData = (() => {
 })();
 
 // ─────────────────────────────────────────────────────────────
-// 3. SEAFOAM ISLANDS  (20x20 cave)
+// 3a. SEAFOAM B1F  (20x20 cave — main through-path)
 // ─────────────────────────────────────────────────────────────
-export const SEAFOAM_ISLANDS: MapData = (() => {
+export const SEAFOAM_B1F: MapData = (() => {
   const W = 20, H = 20;
   const tiles = fill2D(W, H, T.CAVE_FLOOR);
   const collision = fill2D(W, H, false);
@@ -196,25 +197,20 @@ export const SEAFOAM_ISLANDS: MapData = (() => {
 
   // Cave wall borders (2 tiles thick)
   for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.CAVE_WALL);
-    setTile(x, 1, T.CAVE_WALL);
-    setTile(x, H - 1, T.CAVE_WALL);
-    setTile(x, H - 2, T.CAVE_WALL);
+    setTile(x, 0, T.CAVE_WALL); setTile(x, 1, T.CAVE_WALL);
+    setTile(x, H - 1, T.CAVE_WALL); setTile(x, H - 2, T.CAVE_WALL);
   }
   for (let y = 0; y < H; y++) {
-    setTile(0, y, T.CAVE_WALL);
-    setTile(1, y, T.CAVE_WALL);
-    setTile(W - 1, y, T.CAVE_WALL);
-    setTile(W - 2, y, T.CAVE_WALL);
+    setTile(0, y, T.CAVE_WALL); setTile(1, y, T.CAVE_WALL);
+    setTile(W - 1, y, T.CAVE_WALL); setTile(W - 2, y, T.CAVE_WALL);
   }
 
-  // Open entrance/exit tiles
-  setTile(9, 18, T.CAVE_FLOOR);
-  setTile(9, 19, T.CAVE_FLOOR);
-  setTile(9, 0, T.CAVE_FLOOR);
-  setTile(9, 1, T.CAVE_FLOOR);
+  // South entrance (from Route 20 west island)
+  setTile(9, 18, T.CAVE_FLOOR); setTile(9, 19, T.CAVE_FLOOR);
+  // East exit (to Route 20 east island) — open north wall
+  setTile(17, 0, T.CAVE_FLOOR); setTile(17, 1, T.CAVE_FLOOR);
 
-  // Interior cave wall obstacles creating winding corridors
+  // Interior corridors — winding path from south to east exit
   fillRect(4, 4, 3, 2, T.CAVE_WALL);
   fillRect(11, 3, 4, 2, T.CAVE_WALL);
   fillRect(6, 8, 2, 3, T.CAVE_WALL);
@@ -223,22 +219,27 @@ export const SEAFOAM_ISLANDS: MapData = (() => {
   fillRect(14, 12, 3, 2, T.CAVE_WALL);
   fillRect(8, 15, 3, 2, T.CAVE_WALL);
 
-  // Underground rivers
-  fillRect(10, 8, 5, 4, T.WATER);
-  fillRect(3, 14, 4, 3, T.WATER);
+  // Underground water features
+  fillRect(10, 8, 3, 3, T.WATER);
+  fillRect(3, 14, 3, 2, T.WATER);
+
+  // Ladder down to B2F
+  setTile(4, 6, T.CAVE_ENTRANCE);
 
   return {
-    id: 'seafoam_islands',
-    name: 'SEAFOAM ISLANDS',
+    id: 'seafoam_b1f',
+    name: 'SEAFOAM B1F',
     width: W,
     height: H,
     tiles,
     collision,
     warps: [
-      // Entrance → Route 20
-      { x: 9, y: 19, targetMap: 'route20', targetX: 14, targetY: 5 },
-      // Exit → Route 20
-      { x: 9, y: 0, targetMap: 'route20', targetX: 15, targetY: 5 },
+      // South entrance → Route 20 (west island)
+      { x: 9, y: 19, targetMap: 'route20', targetX: 12, targetY: 4 },
+      // East exit → Route 20 (east island)
+      { x: 17, y: 0, targetMap: 'route20', targetX: 17, targetY: 6 },
+      // Ladder down to B2F
+      { x: 4, y: 6, targetMap: 'seafoam_b2f', targetX: 4, targetY: 3 },
     ],
     npcs: [
       {
@@ -252,7 +253,7 @@ export const SEAFOAM_ISLANDS: MapData = (() => {
       },
       {
         id: 'seafoam_trainer1',
-        x: 5, y: 6,
+        x: 5, y: 5,
         spriteColor: 0xc06060,
         direction: Direction.RIGHT,
         dialogue: [
@@ -278,12 +279,201 @@ export const SEAFOAM_ISLANDS: MapData = (() => {
     wildEncounters: {
       grassRate: 0.08,
       encounters: [
+        { speciesId: 86, minLevel: 30, maxLevel: 34, weight: 30 },  // Seel
+        { speciesId: 41, minLevel: 30, maxLevel: 32, weight: 25 },  // Zubat
+        { speciesId: 42, minLevel: 32, maxLevel: 36, weight: 15 },  // Golbat
+        { speciesId: 90, minLevel: 30, maxLevel: 34, weight: 30 },  // Shellder
+      ],
+    },
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────
+// 3b. SEAFOAM B2F  (20x20 cave — middle floor)
+// ─────────────────────────────────────────────────────────────
+export const SEAFOAM_B2F: MapData = (() => {
+  const W = 20, H = 20;
+  const tiles = fill2D(W, H, T.CAVE_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Cave wall borders (2 tiles thick)
+  for (let x = 0; x < W; x++) {
+    setTile(x, 0, T.CAVE_WALL); setTile(x, 1, T.CAVE_WALL);
+    setTile(x, H - 1, T.CAVE_WALL); setTile(x, H - 2, T.CAVE_WALL);
+  }
+  for (let y = 0; y < H; y++) {
+    setTile(0, y, T.CAVE_WALL); setTile(1, y, T.CAVE_WALL);
+    setTile(W - 1, y, T.CAVE_WALL); setTile(W - 2, y, T.CAVE_WALL);
+  }
+
+  // Interior walls creating corridors
+  fillRect(5, 5, 4, 2, T.CAVE_WALL);
+  fillRect(12, 4, 3, 3, T.CAVE_WALL);
+  fillRect(3, 9, 3, 2, T.CAVE_WALL);
+  fillRect(9, 9, 2, 3, T.CAVE_WALL);
+  fillRect(14, 10, 3, 2, T.CAVE_WALL);
+  fillRect(5, 14, 4, 2, T.CAVE_WALL);
+  fillRect(13, 14, 3, 2, T.CAVE_WALL);
+
+  // Water pools
+  fillRect(10, 5, 2, 2, T.WATER);
+  fillRect(4, 16, 3, 2, T.WATER);
+
+  // Ladder up to B1F
+  setTile(4, 3, T.CAVE_ENTRANCE);
+  // Ladder down to B3F
+  setTile(15, 16, T.CAVE_ENTRANCE);
+
+  return {
+    id: 'seafoam_b2f',
+    name: 'SEAFOAM B2F',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      // Ladder up to B1F
+      { x: 4, y: 3, targetMap: 'seafoam_b1f', targetX: 4, targetY: 7 },
+      // Ladder down to B3F
+      { x: 15, y: 16, targetMap: 'seafoam_b3f', targetX: 15, targetY: 3 },
+    ],
+    npcs: [
+      {
+        id: 'seafoam_b2f_trainer1',
+        x: 7, y: 8,
+        spriteColor: 0xc06060,
+        direction: Direction.DOWN,
+        dialogue: [
+          'HIKER: These caves\ngo deep!',
+          'I wonder what lies\nat the bottom...',
+        ],
+        isTrainer: true,
+        sightRange: 4,
+      },
+      {
+        id: 'seafoam_b2f_trainer2',
+        x: 12, y: 12,
+        spriteColor: 0x6060c0,
+        direction: Direction.LEFT,
+        dialogue: [
+          'SWIMMER: The water\nhere is ice cold!',
+          'Something powerful\nlives below!',
+        ],
+        isTrainer: true,
+        sightRange: 4,
+      },
+    ],
+    wildEncounters: {
+      grassRate: 0.08,
+      encounters: [
         { speciesId: 86, minLevel: 30, maxLevel: 34, weight: 25 },  // Seel
+        { speciesId: 87, minLevel: 32, maxLevel: 36, weight: 15 },  // Dewgong
+        { speciesId: 116, minLevel: 30, maxLevel: 34, weight: 20 }, // Horsea
+        { speciesId: 118, minLevel: 30, maxLevel: 34, weight: 20 }, // Goldeen
         { speciesId: 90, minLevel: 30, maxLevel: 34, weight: 20 },  // Shellder
+      ],
+    },
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────
+// 3c. SEAFOAM B3F  (20x20 cave — Articuno's chamber)
+// ─────────────────────────────────────────────────────────────
+export const SEAFOAM_B3F: MapData = (() => {
+  const W = 20, H = 20;
+  const tiles = fill2D(W, H, T.CAVE_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Cave wall borders (2 tiles thick)
+  for (let x = 0; x < W; x++) {
+    setTile(x, 0, T.CAVE_WALL); setTile(x, 1, T.CAVE_WALL);
+    setTile(x, H - 1, T.CAVE_WALL); setTile(x, H - 2, T.CAVE_WALL);
+  }
+  for (let y = 0; y < H; y++) {
+    setTile(0, y, T.CAVE_WALL); setTile(1, y, T.CAVE_WALL);
+    setTile(W - 1, y, T.CAVE_WALL); setTile(W - 2, y, T.CAVE_WALL);
+  }
+
+  // Interior walls creating corridors to Articuno chamber
+  fillRect(5, 4, 4, 2, T.CAVE_WALL);
+  fillRect(12, 3, 4, 2, T.CAVE_WALL);
+  fillRect(3, 8, 3, 2, T.CAVE_WALL);
+  fillRect(14, 8, 3, 2, T.CAVE_WALL);
+  fillRect(6, 12, 3, 2, T.CAVE_WALL);
+  fillRect(12, 12, 4, 2, T.CAVE_WALL);
+  // Wall separating main area from Articuno chamber (y=6-7, x=7-16)
+  fillRect(7, 6, 10, 2, T.CAVE_WALL);
+  // Opening in the wall blocked by boulders
+  setTile(10, 6, T.CAVE_FLOOR); setTile(10, 7, T.CAVE_FLOOR);
+
+  // Strength boulders blocking path to Articuno
+  setTile(10, 6, T.BOULDER);
+  setTile(10, 7, T.BOULDER);
+  setTile(11, 7, T.BOULDER);
+
+  // Water pools
+  fillRect(3, 14, 4, 3, T.WATER);
+  fillRect(13, 14, 4, 3, T.WATER);
+
+  // Ladder up to B2F
+  setTile(15, 3, T.CAVE_ENTRANCE);
+
+  return {
+    id: 'seafoam_b3f',
+    name: 'SEAFOAM B3F',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      // Ladder up to B2F
+      { x: 15, y: 3, targetMap: 'seafoam_b2f', targetX: 15, targetY: 17 },
+    ],
+    npcs: [
+      {
+        id: 'articuno_seafoam',
+        x: 10, y: 4,
+        spriteColor: 0x90d0f0,
+        direction: Direction.DOWN,
+        dialogue: [
+          'A legendary bird\nPOKeMON is here!',
+          "The air is freezing\ncold around it!",
+          "It's ARTICUNO!",
+        ],
+        isTrainer: false,
+      },
+    ],
+    wildEncounters: {
+      grassRate: 0.08,
+      encounters: [
+        { speciesId: 86, minLevel: 30, maxLevel: 34, weight: 20 },  // Seel
+        { speciesId: 87, minLevel: 32, maxLevel: 36, weight: 15 },  // Dewgong
+        { speciesId: 90, minLevel: 30, maxLevel: 34, weight: 15 },  // Shellder
         { speciesId: 116, minLevel: 30, maxLevel: 32, weight: 15 }, // Horsea
         { speciesId: 118, minLevel: 30, maxLevel: 34, weight: 15 }, // Goldeen
-        { speciesId: 87, minLevel: 32, maxLevel: 36, weight: 15 },  // Dewgong
-        { speciesId: 41, minLevel: 30, maxLevel: 32, weight: 10 },  // Zubat
+        { speciesId: 41, minLevel: 30, maxLevel: 34, weight: 20 },  // Zubat
       ],
     },
   };
@@ -1087,6 +1277,18 @@ export const VICTORY_ROAD: MapData = (() => {
         isTrainer: true,
         sightRange: 4,
       },
+      {
+        id: 'moltres_victory_road',
+        x: 17, y: 4,
+        spriteColor: 0xf08830,
+        direction: Direction.DOWN,
+        dialogue: [
+          'A legendary bird\nPOKeMON is here!',
+          "It's radiating\nintense heat!",
+          "It's MOLTRES!",
+        ],
+        isTrainer: false,
+      },
     ],
     wildEncounters: {
       grassRate: 0.08,
@@ -1453,7 +1655,9 @@ const POKEMART_CINNABAR: MapData = (() => {
 export const ENDGAME_MAPS: Record<string, MapData> = {
   route19: ROUTE19,
   route20: ROUTE20,
-  seafoam_islands: SEAFOAM_ISLANDS,
+  seafoam_b1f: SEAFOAM_B1F,
+  seafoam_b2f: SEAFOAM_B2F,
+  seafoam_b3f: SEAFOAM_B3F,
   cinnabar_island: CINNABAR_ISLAND,
   cinnabar_gym: CINNABAR_GYM,
   pokemon_mansion: POKEMON_MANSION,

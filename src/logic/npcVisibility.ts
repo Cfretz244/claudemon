@@ -129,5 +129,10 @@ export function shouldSkipNPC(
        defeatedTrainers.includes('giovanni_silph'))) {
     return true;
   }
+  // Legendary birds disappear after encounter
+  if (npc.id === 'articuno_seafoam' && storyFlags['articuno_seafoam_cleared']) return true;
+  if (npc.id === 'zapdos_power_plant' && storyFlags['zapdos_power_plant_cleared']) return true;
+  if (npc.id === 'moltres_victory_road' && storyFlags['moltres_victory_road_cleared']) return true;
+
   return false;
 }

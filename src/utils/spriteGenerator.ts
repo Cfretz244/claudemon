@@ -801,6 +801,81 @@ export function generateSnorlaxNPCSprite(scene: Phaser.Scene, key: string): void
   addCanvasSpriteSheet(scene, key, canvas, SIZE, SIZE);
 }
 
+export function generateArticunoNPCSprite(scene: Phaser.Scene, key: string): void {
+  const SIZE = 32; // Full Pokemon sprite size so Articuno looks big
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE * 4;
+  canvas.height = SIZE * 2;
+  const ctx = canvas.getContext('2d')!;
+
+  // Render Articuno Pokemon sprite once, reuse for all frames
+  const pokemonCanvas = document.createElement('canvas');
+  pokemonCanvas.width = SIZE;
+  pokemonCanvas.height = SIZE;
+  const pokemonCtx = pokemonCanvas.getContext('2d')!;
+  const drawFn = CUSTOM_POKEMON_SPRITES[144]; // Articuno
+  if (drawFn) drawFn(pokemonCtx, false);
+
+  // Same pose for all 4 directions x 2 walk frames
+  for (let dirIndex = 0; dirIndex < 4; dirIndex++) {
+    for (let frame = 0; frame < 2; frame++) {
+      ctx.drawImage(pokemonCanvas, dirIndex * SIZE, frame * SIZE);
+    }
+  }
+
+  addCanvasSpriteSheet(scene, key, canvas, SIZE, SIZE);
+}
+
+export function generateZapdosNPCSprite(scene: Phaser.Scene, key: string): void {
+  const SIZE = 32; // Full Pokemon sprite size so Zapdos looks big
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE * 4;
+  canvas.height = SIZE * 2;
+  const ctx = canvas.getContext('2d')!;
+
+  // Render Zapdos Pokemon sprite once, reuse for all frames
+  const pokemonCanvas = document.createElement('canvas');
+  pokemonCanvas.width = SIZE;
+  pokemonCanvas.height = SIZE;
+  const pokemonCtx = pokemonCanvas.getContext('2d')!;
+  const drawFn = CUSTOM_POKEMON_SPRITES[145]; // Zapdos
+  if (drawFn) drawFn(pokemonCtx, false);
+
+  // Same pose for all 4 directions x 2 walk frames
+  for (let dirIndex = 0; dirIndex < 4; dirIndex++) {
+    for (let frame = 0; frame < 2; frame++) {
+      ctx.drawImage(pokemonCanvas, dirIndex * SIZE, frame * SIZE);
+    }
+  }
+
+  addCanvasSpriteSheet(scene, key, canvas, SIZE, SIZE);
+}
+
+export function generateMoltresNPCSprite(scene: Phaser.Scene, key: string): void {
+  const SIZE = 32; // Full Pokemon sprite size so Moltres looks big
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE * 4;
+  canvas.height = SIZE * 2;
+  const ctx = canvas.getContext('2d')!;
+
+  // Render Moltres Pokemon sprite once, reuse for all frames
+  const pokemonCanvas = document.createElement('canvas');
+  pokemonCanvas.width = SIZE;
+  pokemonCanvas.height = SIZE;
+  const pokemonCtx = pokemonCanvas.getContext('2d')!;
+  const drawFn = CUSTOM_POKEMON_SPRITES[146]; // Moltres
+  if (drawFn) drawFn(pokemonCtx, false);
+
+  // Same pose for all 4 directions x 2 walk frames
+  for (let dirIndex = 0; dirIndex < 4; dirIndex++) {
+    for (let frame = 0; frame < 2; frame++) {
+      ctx.drawImage(pokemonCanvas, dirIndex * SIZE, frame * SIZE);
+    }
+  }
+
+  addCanvasSpriteSheet(scene, key, canvas, SIZE, SIZE);
+}
+
 export function generateJessieSprite(scene: Phaser.Scene, key: string): void {
   const canvas = document.createElement('canvas');
   canvas.width = TILE_SIZE * 4;
