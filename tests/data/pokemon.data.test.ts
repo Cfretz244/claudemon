@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { POKEMON_DATA } from '../../src/data/pokemon';
 import { MOVES_DATA } from '../../src/data/moves';
-import { HM_COMPATIBILITY } from '../../src/data/items';
+import { HM_COMPATIBILITY, TM_COMPATIBILITY } from '../../src/data/items';
 import { PokemonType } from '../../src/types/pokemon.types';
 
 const allPokemonTypes = Object.values(PokemonType);
@@ -90,6 +90,27 @@ describe('POKEMON_DATA', () => {
     expect(Object.keys(HM_COMPATIBILITY)).toHaveLength(5);
     for (const moveId of [15, 19, 57, 70, 148]) {
       expect(HM_COMPATIBILITY[moveId].size).toBeGreaterThan(0);
+    }
+  });
+
+  it('TM_COMPATIBILITY only references valid species and moves', () => {
+    const tmMoveIds = [92, 61, 72, 85, 90, 91, 117, 126, 149]; // all 9 TMs in game
+    for (const moveId of tmMoveIds) {
+      expect(TM_COMPATIBILITY[moveId], `Missing TM compatibility for move ${moveId}`).toBeDefined();
+      expect(MOVES_DATA[moveId], `TM move ${moveId} not in MOVES_DATA`).toBeDefined();
+      for (const speciesId of TM_COMPATIBILITY[moveId]) {
+        expect(
+          POKEMON_DATA[speciesId],
+          `TM ${MOVES_DATA[moveId].name} lists unknown species ID ${speciesId}`,
+        ).toBeDefined();
+      }
+    }
+  });
+
+  it('TM_COMPATIBILITY has non-empty sets for all 9 TMs', () => {
+    expect(Object.keys(TM_COMPATIBILITY)).toHaveLength(9);
+    for (const moveId of [92, 61, 72, 85, 90, 91, 117, 126, 149]) {
+      expect(TM_COMPATIBILITY[moveId].size).toBeGreaterThan(0);
     }
   });
 });
