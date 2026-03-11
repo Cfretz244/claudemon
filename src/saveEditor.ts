@@ -144,7 +144,7 @@ const MAP_GROUPS: { label: string; maps: string[] }[] = [
   },
   {
     label: 'Routes 12-18 / Fuchsia / Safari',
-    maps: ['route12', 'route13', 'route14', 'route15', 'route16', 'route17', 'route18', 'fuchsia_city', 'fuchsia_gym', 'pokemon_center_fuchsia', 'pokemart_fuchsia', 'safari_zone', 'warden_house'],
+    maps: ['route12', 'route13', 'route14', 'route15', 'route16', 'route17', 'route18', 'fuchsia_city', 'fuchsia_gym', 'pokemon_center_fuchsia', 'pokemart_fuchsia', 'safari_zone', 'safari_zone_east', 'safari_zone_west', 'safari_zone_north', 'safari_secret_house', 'warden_house'],
   },
   {
     label: 'Routes 19-21 / Cinnabar',
