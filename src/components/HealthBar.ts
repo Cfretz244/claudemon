@@ -85,6 +85,11 @@ export class HealthBar {
     this.redraw();
   }
 
+  setVisible(visible: boolean): void {
+    this.bg.setVisible(visible);
+    this.bar.setVisible(visible);
+  }
+
   destroy(): void {
     this.bg.destroy();
     this.bar.destroy();

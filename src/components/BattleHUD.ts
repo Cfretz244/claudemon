@@ -141,6 +141,12 @@ export class BattleHUD {
     return this.opponentHealthBar.animateTo(targetPercent, duration);
   }
 
+  setGhostMode(): void {
+    this.opponentNameText.setText('GHOST');
+    this.opponentLevelText.setText('??');
+    this.opponentHealthBar.setVisible(false);
+  }
+
   destroy(): void {
     this.playerBox.destroy();
     this.playerNameText.destroy();

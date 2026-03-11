@@ -417,6 +417,31 @@ export function generateTileset(scene: Phaser.Scene): void {
       ctx.fillRect(6, 7, 4, 1);
       ctx.fillRect(6, 9, 3, 1);
     },
+    [TileType.TOMBSTONE]: (ctx) => {
+      // Dark purple-gray base floor
+      ctx.fillStyle = '#3a2040';
+      ctx.fillRect(0, 0, 16, 16);
+      // Gray stone rectangle body
+      ctx.fillStyle = '#909090';
+      ctx.fillRect(4, 3, 8, 11);
+      // Lighter face detail
+      ctx.fillStyle = '#a8a8a8';
+      ctx.fillRect(5, 4, 6, 9);
+      // Rounded top
+      ctx.fillStyle = '#909090';
+      ctx.fillRect(5, 2, 6, 2);
+      ctx.fillStyle = '#a8a8a8';
+      ctx.fillRect(6, 2, 4, 1);
+      // Cross at top
+      ctx.fillStyle = '#c0c0c0';
+      ctx.fillRect(7, 4, 2, 5);
+      ctx.fillRect(6, 5, 4, 1);
+      // "RIP" text
+      ctx.fillStyle = '#606060';
+      ctx.fillRect(6, 10, 1, 2);
+      ctx.fillRect(8, 10, 1, 2);
+      ctx.fillRect(10, 10, 1, 2);
+    },
     [TileType.CAVE_ENTRANCE]: (ctx) => {
       // Rocky mountain base with dark cave opening
       ctx.fillStyle = '#706050';
@@ -2119,6 +2144,78 @@ export function drawPikachuFaces(ctx: CanvasRenderingContext2D): void {
     // Teeth gritting
     ctx.fillRect(ox + 20, 33, 8, 1);
   }
+}
+
+export function generateGhostBattleSprite(scene: Phaser.Scene): void {
+  if (scene.textures.exists('pokemon_ghost')) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d')!;
+
+  // Draw ghost for both frames (front at 0,0 and back at 32,0)
+  for (let frame = 0; frame < 2; frame++) {
+    const ox = frame * 32;
+
+    // Outer wispy layer (lighter purple)
+    ctx.fillStyle = '#3c1e50';
+    ctx.fillRect(ox + 6, 6, 20, 2);
+    ctx.fillRect(ox + 4, 8, 24, 2);
+    ctx.fillRect(ox + 3, 10, 26, 14);
+    ctx.fillRect(ox + 4, 24, 24, 2);
+    ctx.fillRect(ox + 6, 26, 20, 2);
+
+    // Main body (dark purple)
+    ctx.fillStyle = '#2a1a3a';
+    ctx.fillRect(ox + 7, 5, 18, 2);
+    ctx.fillRect(ox + 5, 7, 22, 16);
+    ctx.fillRect(ox + 7, 23, 18, 2);
+
+    // Inner dark core
+    ctx.fillStyle = '#1a0a2a';
+    ctx.fillRect(ox + 8, 8, 16, 12);
+
+    // Wispy tendrils hanging down
+    ctx.fillStyle = '#2a1a3a';
+    ctx.fillRect(ox + 5, 25, 3, 4);
+    ctx.fillRect(ox + 6, 29, 2, 2);
+    ctx.fillRect(ox + 11, 25, 2, 3);
+    ctx.fillRect(ox + 19, 25, 2, 3);
+    ctx.fillRect(ox + 24, 25, 3, 4);
+    ctx.fillRect(ox + 24, 29, 2, 2);
+    // Wispy top wisps
+    ctx.fillRect(ox + 10, 3, 3, 3);
+    ctx.fillRect(ox + 19, 3, 3, 3);
+    ctx.fillRect(ox + 14, 2, 4, 4);
+
+    if (frame === 0) {
+      // Front view - menacing white eyes
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(ox + 9, 11, 5, 4);
+      ctx.fillRect(ox + 18, 11, 5, 4);
+      // Dark pupils
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(ox + 12, 12, 2, 3);
+      ctx.fillRect(ox + 21, 12, 2, 3);
+
+      // Wide grinning mouth
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(ox + 9, 19, 14, 2);
+      // Teeth gaps
+      ctx.fillStyle = '#1a0a2a';
+      ctx.fillRect(ox + 11, 19, 1, 2);
+      ctx.fillRect(ox + 14, 19, 1, 2);
+      ctx.fillRect(ox + 17, 19, 1, 2);
+      ctx.fillRect(ox + 20, 19, 1, 2);
+    } else {
+      // Back view - faint eye glow visible from behind
+      ctx.fillStyle = '#3c2850';
+      ctx.fillRect(ox + 10, 11, 3, 3);
+      ctx.fillRect(ox + 19, 11, 3, 3);
+    }
+  }
+
+  addCanvasSpriteSheet(scene, 'pokemon_ghost', canvas, 32, 32);
 }
 
 export function generatePikachuFacePortraits(scene: Phaser.Scene): void {

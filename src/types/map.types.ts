@@ -35,6 +35,7 @@ export enum TileType {
   FOSSIL_DISPLAY = 31,
   SHUTTLE_DISPLAY = 32,
   MUSEUM_PLAQUE = 33,
+  TOMBSTONE = 34,
 }
 
 export interface WarpPoint {

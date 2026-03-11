@@ -2449,7 +2449,11 @@ const MAP_MUSIC: Record<string, string> = {
 
   // Lavender Town area
   lavender_town: 'lavender',
-  pokemon_tower: 'pokemon_tower',
+  pokemon_tower_1f: 'pokemon_tower',
+  pokemon_tower_2f: 'pokemon_tower',
+  pokemon_tower_3f: 'pokemon_tower',
+  pokemon_tower_4f: 'pokemon_tower',
+  pokemon_tower_5f: 'pokemon_tower',
 
   // Special locations
   ss_anne: 'ss_anne',

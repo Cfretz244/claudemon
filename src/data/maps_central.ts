@@ -9,7 +9,7 @@ function fill2D<V>(w: number, h: number, v: V): V[][] {
 
 const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
-  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN,
+  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN, T.TOMBSTONE,
 ]);
 
 // ─── 1. LAVENDER TOWN ────────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ export const LAVENDER_TOWN: MapData = (() => {
       { x: 9, y: 19, targetMap: 'route12', targetX: 7, targetY: 1 },
       { x: 10, y: 19, targetMap: 'route12', targetX: 7, targetY: 1 },
       // Pokemon Tower door
-      { x: 14, y: 7, targetMap: 'pokemon_tower', targetX: 5, targetY: 13 },
+      { x: 14, y: 7, targetMap: 'pokemon_tower_1f', targetX: 5, targetY: 13 },
       // Pokemon Center door
       { x: 5, y: 8, targetMap: 'pokemon_center_lavender', targetX: 4, targetY: 7 },
       // Pokemart door
@@ -116,9 +116,10 @@ export const LAVENDER_TOWN: MapData = (() => {
   };
 })();
 
-// ─── 2. POKEMON TOWER ────────────────────────────────────────────────────────
+// ─── 2. POKEMON TOWER (5 floors) ─────────────────────────────────────────────
 
-export const POKEMON_TOWER: MapData = (() => {
+// --- 1F: Lobby ---
+export const POKEMON_TOWER_1F: MapData = (() => {
   const W = 12, H = 14;
   const tiles = fill2D(W, H, T.INDOOR_FLOOR);
   const collision = fill2D(W, H, false);
@@ -133,37 +134,98 @@ export const POKEMON_TOWER: MapData = (() => {
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
 
-  // Dark/spooky carpet (purple atmosphere)
-  fillRect(3, 2, 6, 1, T.CARPET);
-  fillRect(1, 10, 10, 1, T.CARPET);
-  fillRect(5, 12, 2, 1, T.CARPET);
-
-  // Tombstone rows (COUNTER tiles)
+  // Memorial counters for atmosphere
   fillRect(2, 4, 3, 1, T.COUNTER);
   fillRect(7, 4, 3, 1, T.COUNTER);
-  fillRect(2, 7, 3, 1, T.COUNTER);
-  fillRect(7, 7, 3, 1, T.COUNTER);
 
-  // Door at bottom
-  setTile(5, 13, T.DOOR);
+  // Carpet accents
+  fillRect(4, 10, 4, 1, T.CARPET);
+  fillRect(5, 12, 2, 1, T.CARPET);
 
-  // Entrance mat on exit warp
+  // Stairs up at (10,2)
+  setTile(10, 2, T.DOOR);
+
+  // Entrance doormat
   setTile(5, 13, T.DOORMAT);
 
   return {
-    id: 'pokemon_tower',
-    name: 'POKEMON TOWER',
+    id: 'pokemon_tower_1f',
+    name: 'POKEMON TOWER 1F',
     width: W,
     height: H,
     tiles,
     collision,
     warps: [
       { x: 5, y: 13, targetMap: 'lavender_town', targetX: 14, targetY: 8 },
+      { x: 10, y: 2, targetMap: 'pokemon_tower_2f', targetX: 10, targetY: 12 },
+    ],
+    npcs: [
+      {
+        id: 'rival_tower',
+        x: 5, y: 5,
+        spriteColor: 0x6080c0,
+        direction: Direction.DOWN,
+        dialogue: [
+          "{RIVAL}: {PLAYER}!\nWhat are you doing\nhere?",
+          "Since you're here,\nlet's battle!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'tower_greeter',
+        x: 5, y: 8,
+        spriteColor: 0x90a0b0,
+        direction: Direction.UP,
+        dialogue: [
+          'This is POKEMON\nTOWER, a memorial\nfor departed POKeMON.',
+          'Many trainers come\nhere to pay respects.',
+        ],
+      },
+    ],
+  };
+})();
+
+// --- 2F: First Graveyard ---
+export const POKEMON_TOWER_2F: MapData = (() => {
+  const W = 12, H = 14;
+  const tiles = fill2D(W, H, T.CAVE_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Walls: top 2 rows, sides 1 tile
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+
+  // Dense tombstone columns: 3 rows of paired stones
+  fillRect(2, 3, 2, 1, T.TOMBSTONE); fillRect(5, 3, 2, 1, T.TOMBSTONE); fillRect(8, 3, 2, 1, T.TOMBSTONE);
+  fillRect(2, 6, 2, 1, T.TOMBSTONE); fillRect(5, 6, 2, 1, T.TOMBSTONE); fillRect(8, 6, 2, 1, T.TOMBSTONE);
+  fillRect(2, 9, 2, 1, T.TOMBSTONE); fillRect(5, 9, 2, 1, T.TOMBSTONE); fillRect(8, 9, 2, 1, T.TOMBSTONE);
+
+  // Stairs
+  setTile(10, 12, T.DOOR); // stairs down to 1F
+  setTile(10, 2, T.DOOR);  // stairs up to 3F
+
+  return {
+    id: 'pokemon_tower_2f',
+    name: 'POKEMON TOWER 2F',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      { x: 10, y: 12, targetMap: 'pokemon_tower_1f', targetX: 10, targetY: 2 },
+      { x: 10, y: 2, targetMap: 'pokemon_tower_3f', targetX: 10, targetY: 12 },
     ],
     npcs: [
       {
         id: 'tower_trainer1',
-        x: 3, y: 5,
+        x: 3, y: 4,
         spriteColor: 0x8060a0,
         direction: Direction.DOWN,
         dialogue: [
@@ -175,8 +237,84 @@ export const POKEMON_TOWER: MapData = (() => {
         sightRange: 3,
       },
       {
+        id: 'tower_trainer3',
+        x: 8, y: 7,
+        spriteColor: 0x8060a0,
+        direction: Direction.LEFT,
+        dialogue: [
+          'CHANNELER: The dead\ndo not welcome you\nhere...',
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'tower_trainer6',
+        x: 5, y: 10,
+        spriteColor: 0x8060a0,
+        direction: Direction.UP,
+        dialogue: [
+          'CHANNELER: Heh heh\nheh... You can see\nme?',
+          'Then you must be\nstrong!',
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+    ],
+    wildEncounters: {
+      grassRate: 0.15,
+      encounters: [
+        { speciesId: 92, minLevel: 20, maxLevel: 24, weight: 40 },  // Gastly
+        { speciesId: 104, minLevel: 20, maxLevel: 22, weight: 25 }, // Cubone
+        { speciesId: 93, minLevel: 22, maxLevel: 25, weight: 20 },  // Haunter
+        { speciesId: 41, minLevel: 20, maxLevel: 22, weight: 15 },  // Zubat
+      ],
+    },
+  };
+})();
+
+// --- 3F: Second Graveyard ---
+export const POKEMON_TOWER_3F: MapData = (() => {
+  const W = 12, H = 14;
+  const tiles = fill2D(W, H, T.CAVE_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Walls: top 2 rows, sides 1 tile
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+
+  // Complex maze: long tombstone walls with narrow gaps, central pillar
+  fillRect(2, 3, 4, 1, T.TOMBSTONE); fillRect(8, 3, 2, 1, T.TOMBSTONE);
+  fillRect(2, 5, 2, 1, T.TOMBSTONE); fillRect(6, 5, 4, 1, T.TOMBSTONE);
+  // Central pillar
+  fillRect(5, 7, 2, 2, T.TOMBSTONE);
+  fillRect(2, 8, 2, 1, T.TOMBSTONE); fillRect(8, 8, 2, 1, T.TOMBSTONE);
+  fillRect(3, 10, 3, 1, T.TOMBSTONE); fillRect(7, 10, 3, 1, T.TOMBSTONE);
+
+  // Stairs
+  setTile(10, 12, T.DOOR); // stairs down to 2F
+  setTile(10, 2, T.DOOR);  // stairs up to 4F
+
+  return {
+    id: 'pokemon_tower_3f',
+    name: 'POKEMON TOWER 3F',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      { x: 10, y: 12, targetMap: 'pokemon_tower_2f', targetX: 10, targetY: 2 },
+      { x: 10, y: 2, targetMap: 'pokemon_tower_4f', targetX: 10, targetY: 12 },
+    ],
+    npcs: [
+      {
         id: 'tower_trainer2',
-        x: 8, y: 8,
+        x: 8, y: 6,
         spriteColor: 0x8060a0,
         direction: Direction.LEFT,
         dialogue: [
@@ -187,44 +325,183 @@ export const POKEMON_TOWER: MapData = (() => {
         sightRange: 3,
       },
       {
-        id: 'rival_tower',
-        x: 5, y: 6,
-        spriteColor: 0x6080c0,
+        id: 'tower_trainer4',
+        x: 3, y: 9,
+        spriteColor: 0x8060a0,
+        direction: Direction.RIGHT,
+        dialogue: [
+          'CHANNELER: The\nspirits speak to\nme...',
+          'They say you will\nlose!',
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'tower_trainer7',
+        x: 6, y: 4,
+        spriteColor: 0x8060a0,
         direction: Direction.DOWN,
         dialogue: [
-          "{RIVAL}: {PLAYER}!\nWhat are you doing\nhere?",
-          "Since you're here,\nlet's battle!",
+          'CHANNELER: Kyaaaa!\nAn intruder!',
+          'The ghosts will\npunish you!',
         ],
         isTrainer: true,
         sightRange: 3,
       },
       {
-        id: 'tower_rocket1',
-        x: 3, y: 9,
-        spriteColor: 0x383838,
-        direction: Direction.UP,
+        id: 'tower_mourner',
+        x: 4, y: 4,
+        spriteColor: 0x505050,
+        direction: Direction.DOWN,
         dialogue: [
-          'ROCKET: You again?!\nTEAM ROCKET owns\nthis tower!',
+          'I came to pay my\nrespects to my\ndear POKeMON...',
+          'Please, leave me\nin peace.',
+        ],
+      },
+    ],
+    wildEncounters: {
+      grassRate: 0.15,
+      encounters: [
+        { speciesId: 92, minLevel: 22, maxLevel: 26, weight: 40 },  // Gastly
+        { speciesId: 93, minLevel: 24, maxLevel: 27, weight: 30 },  // Haunter
+        { speciesId: 104, minLevel: 22, maxLevel: 24, weight: 20 }, // Cubone
+        { speciesId: 41, minLevel: 22, maxLevel: 24, weight: 10 },  // Zubat
+      ],
+    },
+  };
+})();
+
+// --- 4F: Transition Floor ---
+export const POKEMON_TOWER_4F: MapData = (() => {
+  const W = 12, H = 14;
+  const tiles = fill2D(W, H, T.CAVE_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Walls: top 2 rows, sides 1 tile
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+
+  // Four symmetric 2x2 tombstone blocks
+  fillRect(2, 4, 2, 2, T.TOMBSTONE);
+  fillRect(8, 4, 2, 2, T.TOMBSTONE);
+  fillRect(2, 9, 2, 2, T.TOMBSTONE);
+  fillRect(8, 9, 2, 2, T.TOMBSTONE);
+
+  // Central carpet ritual area
+  fillRect(4, 6, 4, 3, T.CARPET);
+
+  // Stairs
+  setTile(10, 12, T.DOOR); // stairs down to 3F
+  setTile(10, 2, T.DOOR);  // stairs up to 5F
+
+  return {
+    id: 'pokemon_tower_4f',
+    name: 'POKEMON TOWER 4F',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      { x: 10, y: 12, targetMap: 'pokemon_tower_3f', targetX: 10, targetY: 2 },
+      { x: 10, y: 2, targetMap: 'pokemon_tower_5f', targetX: 10, targetY: 12 },
+    ],
+    npcs: [
+      {
+        id: 'tower_trainer5',
+        x: 5, y: 5,
+        spriteColor: 0x8060a0,
+        direction: Direction.DOWN,
+        dialogue: [
+          'CHANNELER: This\nfloor is sacred...',
+          'You shall not pass!',
         ],
         isTrainer: true,
         sightRange: 3,
       },
       {
-        id: 'tower_rocket2',
-        x: 8, y: 10,
-        spriteColor: 0x383838,
-        direction: Direction.LEFT,
+        id: 'tower_trainer8',
+        x: 3, y: 8,
+        spriteColor: 0x8060a0,
+        direction: Direction.RIGHT,
         dialogue: [
-          'ROCKET: You want to\nsave MR. FUJI?',
-          "You'll have to get\nthrough me first!",
+          'CHANNELER: The\nspirits grow\nstronger here...',
+          'Can you feel them?',
         ],
         isTrainer: true,
         sightRange: 3,
       },
-      // Jessie & James - blocking the path to Mr. Fuji
+    ],
+    wildEncounters: {
+      grassRate: 0.15,
+      encounters: [
+        { speciesId: 92, minLevel: 24, maxLevel: 28, weight: 30 },  // Gastly
+        { speciesId: 93, minLevel: 26, maxLevel: 29, weight: 35 },  // Haunter
+        { speciesId: 42, minLevel: 26, maxLevel: 28, weight: 20 },  // Golbat
+        { speciesId: 104, minLevel: 24, maxLevel: 26, weight: 15 }, // Cubone
+      ],
+    },
+  };
+})();
+
+// --- 5F: Team Rocket / Mr. Fuji Rescue ---
+export const POKEMON_TOWER_5F: MapData = (() => {
+  const W = 12, H = 14;
+  const tiles = fill2D(W, H, T.CAVE_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Walls: top 2 rows, sides 1 tile
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+
+  // Tombstone wall at y=5 spanning full width with gap at x=5 (Jessie & James guard here)
+  for (let x = 1; x < W - 1; x++) {
+    if (x !== 5) setTile(x, 5, T.TOMBSTONE);
+  }
+
+  // A few tombstones in the lower area
+  fillRect(2, 8, 2, 1, T.TOMBSTONE);
+  fillRect(8, 8, 2, 1, T.TOMBSTONE);
+
+  // Stairs down (no stairs up — top floor)
+  setTile(10, 12, T.DOOR);
+
+  return {
+    id: 'pokemon_tower_5f',
+    name: 'POKEMON TOWER 5F',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      { x: 10, y: 12, targetMap: 'pokemon_tower_4f', targetX: 10, targetY: 2 },
+    ],
+    npcs: [
+      {
+        id: 'mr_fuji',
+        x: 5, y: 2,
+        spriteColor: 0xc0c0c0,
+        direction: Direction.DOWN,
+        dialogue: [
+          "MR. FUJI: Thank you\nfor saving me!",
+          "Those TEAM ROCKET\nruffians held me\nhostage!",
+          "Please, take this\nPOKe FLUTE as thanks!",
+        ],
+      },
       {
         id: 'jessie_tower',
-        x: 5, y: 9,
+        x: 5, y: 6,
         spriteColor: 0xd02070,
         direction: Direction.DOWN,
         dialogue: [
@@ -238,7 +515,7 @@ export const POKEMON_TOWER: MapData = (() => {
       },
       {
         id: 'james_tower',
-        x: 6, y: 9,
+        x: 6, y: 6,
         spriteColor: 0x6060d0,
         direction: Direction.DOWN,
         dialogue: [
@@ -247,24 +524,36 @@ export const POKEMON_TOWER: MapData = (() => {
         ],
       },
       {
-        id: 'mr_fuji',
-        x: 5, y: 3,
-        spriteColor: 0xc0c0c0,
-        direction: Direction.DOWN,
+        id: 'tower_rocket1',
+        x: 3, y: 8,
+        spriteColor: 0x383838,
+        direction: Direction.UP,
         dialogue: [
-          "MR. FUJI: Thank you\nfor saving me!",
-          "Those TEAM ROCKET\nruffians held me\nhostage!",
-          "Please, take this\nPOKe FLUTE as thanks!",
+          'ROCKET: You again?!\nTEAM ROCKET owns\nthis tower!',
         ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'tower_rocket2',
+        x: 8, y: 8,
+        spriteColor: 0x383838,
+        direction: Direction.LEFT,
+        dialogue: [
+          'ROCKET: You want to\nsave MR. FUJI?',
+          "You'll have to get\nthrough me first!",
+        ],
+        isTrainer: true,
+        sightRange: 3,
       },
     ],
     wildEncounters: {
       grassRate: 0.15,
       encounters: [
-        { speciesId: 92, minLevel: 20, maxLevel: 24, weight: 40 },  // Gastly
-        { speciesId: 104, minLevel: 20, maxLevel: 22, weight: 25 }, // Cubone
-        { speciesId: 93, minLevel: 22, maxLevel: 25, weight: 20 },  // Haunter
-        { speciesId: 41, minLevel: 20, maxLevel: 22, weight: 15 },  // Zubat
+        { speciesId: 92, minLevel: 24, maxLevel: 28, weight: 30 },  // Gastly
+        { speciesId: 93, minLevel: 26, maxLevel: 29, weight: 40 },  // Haunter
+        { speciesId: 42, minLevel: 26, maxLevel: 28, weight: 15 },  // Golbat
+        { speciesId: 104, minLevel: 24, maxLevel: 26, weight: 15 }, // Cubone
       ],
     },
   };
@@ -2042,7 +2331,11 @@ export const UNDERGROUND_EW: MapData = (() => {
 
 export const CENTRAL_MAPS: Record<string, MapData> = {
   lavender_town: LAVENDER_TOWN,
-  pokemon_tower: POKEMON_TOWER,
+  pokemon_tower_1f: POKEMON_TOWER_1F,
+  pokemon_tower_2f: POKEMON_TOWER_2F,
+  pokemon_tower_3f: POKEMON_TOWER_3F,
+  pokemon_tower_4f: POKEMON_TOWER_4F,
+  pokemon_tower_5f: POKEMON_TOWER_5F,
   pokemon_center_lavender: POKEMON_CENTER_LAVENDER,
   pokemart_lavender: POKEMART_LAVENDER,
   route7: ROUTE7,

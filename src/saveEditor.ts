@@ -136,7 +136,7 @@ const MAP_GROUPS: { label: string; maps: string[] }[] = [
   },
   {
     label: 'Lavender Town',
-    maps: ['lavender_town', 'pokemon_tower', 'pokemon_center_lavender', 'pokemart_lavender', 'lavender_house'],
+    maps: ['lavender_town', 'pokemon_tower_1f', 'pokemon_tower_2f', 'pokemon_tower_3f', 'pokemon_tower_4f', 'pokemon_tower_5f', 'pokemon_center_lavender', 'pokemart_lavender', 'lavender_house'],
   },
   {
     label: 'Routes 7-8-11 / Celadon / Saffron',
