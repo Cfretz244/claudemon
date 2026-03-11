@@ -30,6 +30,7 @@ export default defineConfig({
         sounds: resolve(__dirname, 'sounds.html'),
         pokedex: resolve(__dirname, 'pokedex.html'),
         editor: resolve(__dirname, 'editor.html'),
+        maps: resolve(__dirname, 'maps.html'),
       },
     },
   },
