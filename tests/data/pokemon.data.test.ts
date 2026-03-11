@@ -107,10 +107,10 @@ describe('POKEMON_DATA', () => {
     }
   });
 
-  it('TM_COMPATIBILITY has non-empty sets for all 9 TMs', () => {
-    expect(Object.keys(TM_COMPATIBILITY)).toHaveLength(9);
-    for (const moveId of [92, 61, 72, 85, 90, 91, 117, 126, 149]) {
-      expect(TM_COMPATIBILITY[moveId].size).toBeGreaterThan(0);
+  it('TM_COMPATIBILITY has non-empty sets for all 50 TMs', () => {
+    expect(Object.keys(TM_COMPATIBILITY)).toHaveLength(50);
+    for (const moveId of Object.keys(TM_COMPATIBILITY)) {
+      expect(TM_COMPATIBILITY[Number(moveId)].size).toBeGreaterThan(0);
     }
   });
 });
