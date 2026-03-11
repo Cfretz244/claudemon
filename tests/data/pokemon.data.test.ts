@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { POKEMON_DATA } from '../../src/data/pokemon';
 import { MOVES_DATA } from '../../src/data/moves';
+import { HM_COMPATIBILITY } from '../../src/data/items';
 import { PokemonType } from '../../src/types/pokemon.types';
 
 const allPokemonTypes = Object.values(PokemonType);
@@ -68,6 +69,27 @@ describe('POKEMON_DATA', () => {
           `Species ${species.name} (${id}) evolves to itself`,
         ).not.toBe(id);
       }
+    }
+  });
+
+  it('HM_COMPATIBILITY only references valid species and moves', () => {
+    const hmMoveIds = [15, 19, 57, 70, 148]; // Cut, Fly, Surf, Strength, Flash
+    for (const moveId of hmMoveIds) {
+      expect(HM_COMPATIBILITY[moveId], `Missing HM compatibility for move ${moveId}`).toBeDefined();
+      expect(MOVES_DATA[moveId], `HM move ${moveId} not in MOVES_DATA`).toBeDefined();
+      for (const speciesId of HM_COMPATIBILITY[moveId]) {
+        expect(
+          POKEMON_DATA[speciesId],
+          `HM ${MOVES_DATA[moveId].name} lists unknown species ID ${speciesId}`,
+        ).toBeDefined();
+      }
+    }
+  });
+
+  it('HM_COMPATIBILITY has non-empty sets for all 5 HMs', () => {
+    expect(Object.keys(HM_COMPATIBILITY)).toHaveLength(5);
+    for (const moveId of [15, 19, 57, 70, 148]) {
+      expect(HM_COMPATIBILITY[moveId].size).toBeGreaterThan(0);
     }
   });
 });
