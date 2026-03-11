@@ -960,6 +960,45 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
+    // Pokemon Tower 5F: ghost Marowak blocks the stairs
+    if (mapId === 'pokemon_tower_5f') {
+      if (!this.playerState.hasItem('silph_scope')) {
+        this.textBox.show([
+          "A GHOST appeared!",
+          "Get out...\nGet out...",
+          "The GHOST won't let\nyou pass!",
+        ]);
+        return;
+      }
+      if (!this.playerState.storyFlags['marowak_ghost_defeated']) {
+        this.playerState.storyFlags['marowak_ghost_defeated'] = true;
+        this.textBox.show([
+          "The SILPH SCOPE\nreveals the GHOST's\ntrue identity!",
+          "It's the restless\nspirit of MAROWAK!",
+        ], () => {
+          const marowak = createPokemon(105, 30);
+          this.isWarping = true;
+          soundSystem.battleStart();
+          playBattleTransition(this, () => {
+            this.scene.start('BattleScene', {
+              type: 'wild',
+              wildPokemon: marowak,
+              playerState: this.playerState.toSave(),
+              returnMap: this.currentMap.id,
+              returnX: this.playerGridX,
+              returnY: this.playerGridY,
+              isSurfing: this.isSurfing,
+              isRidingBike: this.isRidingBike,
+              flashUsed: this.flashUsed,
+            });
+          }, () => {
+            soundSystem.startMusic('wild_battle');
+          });
+        });
+        return;
+      }
+    }
+
     // Rocket Hideout B1F: need poster flag to enter from Game Corner
     if (mapId === 'rocket_hideout_b1f' && this.currentMap.id === 'game_corner') {
       if (!this.playerState.storyFlags['game_corner_poster_found']) {
@@ -1131,9 +1170,9 @@ export class OverworldScene extends Phaser.Scene {
     if (npc.id.startsWith('rival_')) return 'rival_theme';
     const trainerData = TRAINERS[npc.id];
     const trainerClass = trainerData?.class || '';
-    const EVIL_CLASSES = ['Team Rocket', 'Boss'];
+    const EVIL_CLASSES = ['Team Rocket', 'Boss', 'Channeler'];
     if (EVIL_CLASSES.includes(trainerClass)) return 'evil_encounter';
-    const FEMALE_CLASSES = ['Lass', 'Beauty', 'Jr. Trainer', 'Channeler', 'Cooltrainer', 'Swimmer'];
+    const FEMALE_CLASSES = ['Lass', 'Beauty', 'Jr. Trainer', 'Cooltrainer', 'Swimmer'];
     if (FEMALE_CLASSES.includes(trainerClass)) return 'female_encounter';
     return 'trainer_encounter';
   }
@@ -1273,6 +1312,32 @@ export class OverworldScene extends Phaser.Scene {
     if (this.stepCounter - this.lastEncounterStep < MIN_STEPS_BETWEEN) return;
 
     if (Math.random() > encounters.grassRate) return;
+
+    // Pokemon Tower ghost encounters (no Silph Scope)
+    const towerFloors = ['pokemon_tower_2f', 'pokemon_tower_3f', 'pokemon_tower_4f', 'pokemon_tower_5f'];
+    if (towerFloors.includes(this.currentMap.id) && !this.playerState.hasItem('silph_scope')) {
+      const ghostPokemon = createPokemon(92, 20);
+      this.lastEncounterStep = this.stepCounter;
+      this.isWarping = true;
+      soundSystem.battleStart();
+      playBattleTransition(this, () => {
+        this.scene.start('BattleScene', {
+          type: 'wild',
+          wildPokemon: ghostPokemon,
+          playerState: this.playerState.toSave(),
+          returnMap: this.currentMap.id,
+          returnX: this.playerGridX,
+          returnY: this.playerGridY,
+          isSurfing: this.isSurfing,
+          isRidingBike: this.isRidingBike,
+          flashUsed: this.flashUsed,
+          isGhost: true,
+        });
+      }, () => {
+        soundSystem.startMusic('wild_battle');
+      });
+      return;
+    }
 
     // Pick a wild Pokemon
     const totalWeight = encounters.encounters.reduce((sum, e) => sum + e.weight, 0);

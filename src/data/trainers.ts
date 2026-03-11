@@ -852,6 +852,93 @@ export const TRAINERS: Record<string, TrainerData> = {
       after: ['The ghosts are\ncalm now...'],
     },
   },
+  tower_trainer3: {
+    id: 'tower_trainer3',
+    name: 'CHANNELER MABEL',
+    class: 'Channeler',
+    team: [
+      { speciesId: 92, level: 23 }, // Gastly
+      { speciesId: 92, level: 23 }, // Gastly
+      { speciesId: 93, level: 23 }, // Haunter
+    ],
+    prizeMoney: 736,
+    dialogue: {
+      before: ['CHANNELER: The dead\ndo not welcome you...'],
+      after: ['The spirits have\ncalmed...'],
+    },
+  },
+  tower_trainer4: {
+    id: 'tower_trainer4',
+    name: 'CHANNELER RUTH',
+    class: 'Channeler',
+    team: [
+      { speciesId: 93, level: 25 }, // Haunter
+      { speciesId: 92, level: 24 }, // Gastly
+    ],
+    prizeMoney: 800,
+    dialogue: {
+      before: ['CHANNELER: The\nspirits speak\nto me...'],
+      after: ['They say... you\nare strong...'],
+    },
+  },
+  tower_trainer5: {
+    id: 'tower_trainer5',
+    name: 'CHANNELER KARINA',
+    class: 'Channeler',
+    team: [
+      { speciesId: 92, level: 25 }, // Gastly
+      { speciesId: 93, level: 26 }, // Haunter
+      { speciesId: 93, level: 26 }, // Haunter
+    ],
+    prizeMoney: 832,
+    dialogue: {
+      before: ['CHANNELER: This\nfloor is sacred!'],
+      after: ['The ritual is\nbroken...'],
+    },
+  },
+  tower_trainer6: {
+    id: 'tower_trainer6',
+    name: 'CHANNELER TAMMY',
+    class: 'Channeler',
+    team: [
+      { speciesId: 92, level: 22 }, // Gastly
+      { speciesId: 92, level: 22 }, // Gastly
+    ],
+    prizeMoney: 704,
+    dialogue: {
+      before: ['CHANNELER: Heh heh\nheh... You can see\nme?'],
+      after: ['How... how did\nyou win?'],
+    },
+  },
+  tower_trainer7: {
+    id: 'tower_trainer7',
+    name: 'CHANNELER ROBYN',
+    class: 'Channeler',
+    team: [
+      { speciesId: 93, level: 24 }, // Haunter
+      { speciesId: 93, level: 24 }, // Haunter
+      { speciesId: 92, level: 23 }, // Gastly
+    ],
+    prizeMoney: 768,
+    dialogue: {
+      before: ['CHANNELER: Kyaaaa!\nAn intruder!'],
+      after: ['The ghosts have\nfled...'],
+    },
+  },
+  tower_trainer8: {
+    id: 'tower_trainer8',
+    name: 'CHANNELER ANGELICA',
+    class: 'Channeler',
+    team: [
+      { speciesId: 93, level: 27 }, // Haunter
+      { speciesId: 92, level: 26 }, // Gastly
+    ],
+    prizeMoney: 864,
+    dialogue: {
+      before: ['CHANNELER: The\nspirits grow\nstronger here...'],
+      after: ['Perhaps... they\nwere wrong about\nyou...'],
+    },
+  },
 
   // Route 8
   route8_trainer1: {

@@ -15,7 +15,7 @@ import { checkEvolution, evolvePokemon } from '../systems/EvolutionSystem';
 import { attemptCatch } from '../systems/CatchSystem';
 import { selectAIMove } from '../systems/AISystem';
 import { soundSystem } from '../systems/SoundSystem';
-import { generatePokemonSprite, getShapeForSpecies } from '../utils/spriteGenerator';
+import { generatePokemonSprite, getShapeForSpecies, generateGhostBattleSprite } from '../utils/spriteGenerator';
 import { PlayerState } from '../entities/Player';
 import { SaveData } from '../systems/SaveSystem';
 import { getEffectivenessText } from '../data/typeChart';
@@ -45,6 +45,7 @@ interface BattleSceneData {
   isSurfing?: boolean;
   isRidingBike?: boolean;
   flashUsed?: boolean;
+  isGhost?: boolean;
 }
 
 export class BattleScene extends Phaser.Scene {
@@ -64,6 +65,7 @@ export class BattleScene extends Phaser.Scene {
   private isSurfing = false;
   private isRidingBike = false;
   private flashUsed = false;
+  private isGhost = false;
 
   // Sprites
   private playerSprite!: Phaser.GameObjects.Sprite;
@@ -117,6 +119,7 @@ export class BattleScene extends Phaser.Scene {
     this.isSurfing = data.isSurfing || false;
     this.isRidingBike = data.isRidingBike || false;
     this.flashUsed = data.flashUsed || false;
+    this.isGhost = data.isGhost || false;
 
     if (data.type === 'wild') {
       this.battleType = BattleType.WILD;
@@ -174,10 +177,14 @@ export class BattleScene extends Phaser.Scene {
 
     // Generate Pokemon sprites
     this.ensurePokemonSprite(this.playerPokemon.speciesId);
-    this.ensurePokemonSprite(this.opponentPokemon.speciesId);
+    if (this.isGhost) {
+      generateGhostBattleSprite(this);
+    } else {
+      this.ensurePokemonSprite(this.opponentPokemon.speciesId);
+    }
 
     // Opponent sprite (top-right, front view, frame 0) - hidden initially
-    const oppSpriteKey = `pokemon_${this.opponentPokemon.speciesId}`;
+    const oppSpriteKey = this.isGhost ? 'pokemon_ghost' : `pokemon_${this.opponentPokemon.speciesId}`;
     this.opponentSprite = this.add.sprite(GAME_WIDTH - 40, 28, oppSpriteKey, 0);
     this.opponentSprite.setDepth(5);
     this.opponentSprite.setScrollFactor(0);
@@ -214,6 +221,9 @@ export class BattleScene extends Phaser.Scene {
     this.hud = new BattleHUD(this);
     this.hud.updatePlayer(this.playerPokemon);
     this.hud.updateOpponent(this.opponentPokemon);
+    if (this.isGhost) {
+      this.hud.setGhostMode();
+    }
 
     // Text box
     this.textBox = new TextBox(this);
@@ -266,7 +276,12 @@ export class BattleScene extends Phaser.Scene {
     const opponentName = this.getSpeciesName(this.opponentPokemon.speciesId);
     const playerName = this.getSpeciesName(this.playerPokemon.speciesId);
 
-    if (this.battleType === BattleType.WILD) {
+    if (this.isGhost) {
+      // Ghost encounter: player is too scared to send out Pokemon
+      await this.showText(['A GHOST appeared!']);
+      this.showBattleMenu();
+      return;
+    } else if (this.battleType === BattleType.WILD) {
       // Wild: opponent Pokemon already visible, show text
       await this.showText([`Wild ${opponentName}\nappeared!`]);
       // "Go! Pokemon!" then slide player back sprite out, bring in player pokemon
@@ -376,6 +391,23 @@ export class BattleScene extends Phaser.Scene {
 
   private handleMenuSelection(selection: MenuSelection): void {
     this.menu.hide();
+
+    if (this.isGhost) {
+      switch (selection.type) {
+        case 'fight':
+          this.textBox.show(["Too scared to move!"], () => this.showBattleMenu());
+          return;
+        case 'bag':
+          this.textBox.show(["Too scared to\nuse an item!"], () => this.showBattleMenu());
+          return;
+        case 'pokemon':
+          this.textBox.show(["Too scared to\nswitch POKeMON!"], () => this.showBattleMenu());
+          return;
+        case 'run':
+          this.textBox.show(['Got away safely!'], () => this.endBattle());
+          return;
+      }
+    }
 
     switch (selection.type) {
       case 'fight':
