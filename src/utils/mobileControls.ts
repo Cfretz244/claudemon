@@ -177,8 +177,8 @@ const MOBILE_CSS = `
 /* D-pad container */
 .dpad-container {
   display: grid;
-  grid-template-columns: 60px 60px 60px;
-  grid-template-rows: 60px 60px 60px;
+  grid-template-columns: 46px 46px 46px;
+  grid-template-rows: 46px 46px 46px;
   gap: 0;
   flex-shrink: 0;
 }
@@ -219,8 +219,8 @@ const MOBILE_CSS = `
   background-color: #2d2d4e;
   background-clip: padding-box;
   color: #aaa;
-  border: 8px solid transparent;
-  border-radius: 14px;
+  border: 1px solid transparent;
+  border-radius: 7px;
   font-size: 18px;
   display: flex;
   align-items: center;
