@@ -450,9 +450,9 @@ export const ROUTE8: MapData = (() => {
         sightRange: 3,
       },
       {
-        id: 'route8_trainer2',
+        id: 'route8_trainer3',
         x: 14, y: 5,
-        spriteColor: 0x60a0c0,
+        spriteColor: 0xe06080,
         direction: Direction.LEFT,
         dialogue: [
           'LASS: My POKeMON are\npretty and strong!',
@@ -462,13 +462,13 @@ export const ROUTE8: MapData = (() => {
         sightRange: 3,
       },
       {
-        id: 'route8_trainer3',
+        id: 'route8_trainer2',
         x: 20, y: 4,
-        spriteColor: 0xe06080,
+        spriteColor: 0x60a0c0,
         direction: Direction.LEFT,
         dialogue: [
-          'LASS: My POKeMON\nare so cute!',
-          "Don't you think\nthey're adorable?",
+          'SUPER NERD: I study\nPOKeMON extensively!',
+          'My research tells me\nI will win!',
         ],
         isTrainer: true,
         sightRange: 4,
