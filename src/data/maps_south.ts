@@ -129,6 +129,16 @@ export const ROUTE12: MapData = (() => {
         isTrainer: true,
         sightRange: 3,
       },
+      // Fishing Guru - gives Good Rod
+      {
+        id: 'fishing_guru_route12',
+        x: 9, y: 10,
+        spriteColor: 0x8080c0,
+        direction: Direction.RIGHT,
+        dialogue: [
+          "FISHING GURU: I'm the\nbest fisher on this\nroute!",
+        ],
+      },
     ],
     wildEncounters: {
       grassRate: 0.2,
@@ -786,6 +796,16 @@ export const FUCHSIA_CITY: MapData = (() => {
         direction: Direction.DOWN,
         dialogue: [
           "I lost my teeth\nsomewhere in the\nSAFARI ZONE...",
+        ],
+      },
+      // Fishing Guru - gives Super Rod
+      {
+        id: 'fishing_guru_fuchsia',
+        x: 20, y: 14,
+        spriteColor: 0x8080c0,
+        direction: Direction.LEFT,
+        dialogue: [
+          "FISHING GURU: I'm the\nFISHING GURU!",
         ],
       },
     ],

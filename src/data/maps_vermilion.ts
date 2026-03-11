@@ -376,6 +376,16 @@ export const VERMILION_CITY: MapData = (() => {
           "OFFICER JENNY: I'm\npatrolling the city!",
         ],
       },
+      // Fishing Guru - gives Old Rod
+      {
+        id: 'fishing_guru_vermilion',
+        x: 14, y: 21,
+        spriteColor: 0x8080c0,
+        direction: Direction.DOWN,
+        dialogue: [
+          "FISHING GURU: Hello\nthere! I love fishing!",
+        ],
+      },
     ],
   };
 })();

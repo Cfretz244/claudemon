@@ -246,6 +246,27 @@ export const ITEMS: Record<string, ItemData> = {
     price: 0,
     category: 'key',
   },
+  old_rod: {
+    id: 'old_rod',
+    name: 'OLD ROD',
+    description: 'Use by water to fish\nfor POKeMON.',
+    price: 0,
+    category: 'key',
+  },
+  good_rod: {
+    id: 'good_rod',
+    name: 'GOOD ROD',
+    description: 'A good rod for\nfishing POKeMON.',
+    price: 0,
+    category: 'key',
+  },
+  super_rod: {
+    id: 'super_rod',
+    name: 'SUPER ROD',
+    description: 'The best rod for\nfishing rare POKeMON.',
+    price: 0,
+    category: 'key',
+  },
   // HM items
   hm01_cut: {
     id: 'hm01_cut',
