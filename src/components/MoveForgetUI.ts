@@ -67,7 +67,10 @@ export class MoveForgetUI {
   ): void {
     this.callback = callback;
     this.cursorIndex = 0;
-    this.active = true;
+    // Defer activation to next frame so the same keypress that opens this UI
+    // doesn't immediately trigger confirm() (listeners are already registered)
+    this.active = false;
+    this.scene.time.delayedCall(0, () => { this.active = true; });
 
     // Populate existing moves
     for (let i = 0; i < 4; i++) {

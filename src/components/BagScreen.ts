@@ -3,7 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { PokemonInstance, StatusCondition } from '../types/pokemon.types';
 import { POKEMON_DATA } from '../data/pokemon';
 import { MOVES_DATA } from '../data/moves';
-import { ITEMS } from '../data/items';
+import { ITEMS, HM_COMPATIBILITY } from '../data/items';
 import { soundSystem } from '../systems/SoundSystem';
 import { PlayerState } from '../entities/Player';
 import { addExperience, learnMove } from '../systems/ExperienceSystem';
@@ -431,6 +431,13 @@ export class BagScreen {
       const moveId = itemData.moveId;
       const moveName = MOVES_DATA[moveId]?.name || '???';
       const pokeName = this.getPokemonName(pokemon);
+
+      // Check if this species can learn the HM
+      const compat = HM_COMPATIBILITY[moveId];
+      if (compat && !compat.has(pokemon.speciesId)) {
+        this.showMessage(`${pokeName} can't\nlearn ${moveName}!`);
+        return;
+      }
 
       // Check if Pokemon already knows this move
       if (pokemon.moves.some(m => m.moveId === moveId)) {
