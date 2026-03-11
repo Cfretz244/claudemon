@@ -177,9 +177,9 @@ const MOBILE_CSS = `
 /* D-pad container */
 .dpad-container {
   display: grid;
-  grid-template-columns: 44px 44px 44px;
-  grid-template-rows: 44px 44px 44px;
-  gap: 2px;
+  grid-template-columns: 60px 60px 60px;
+  grid-template-rows: 60px 60px 60px;
+  gap: 0;
   flex-shrink: 0;
 }
 
@@ -216,9 +216,11 @@ const MOBILE_CSS = `
 .dpad-down  { grid-column: 2; grid-row: 3; }
 
 .dpad-up, .dpad-down, .dpad-left, .dpad-right {
-  background: #2d2d4e;
+  background-color: #2d2d4e;
+  background-clip: padding-box;
   color: #aaa;
-  border-radius: 6px;
+  border: 8px solid transparent;
+  border-radius: 14px;
   font-size: 18px;
   display: flex;
   align-items: center;
@@ -227,7 +229,8 @@ const MOBILE_CSS = `
 
 .dpad-up.pressed, .dpad-down.pressed,
 .dpad-left.pressed, .dpad-right.pressed {
-  background: #4a4a7a;
+  background-color: #4a4a7a;
+  background-clip: padding-box;
   color: #fff;
 }
 
