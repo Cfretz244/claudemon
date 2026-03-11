@@ -18,6 +18,7 @@ function fill2D<V>(width: number, height: number, value: V): V[][] {
 export const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
   T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN,
+  T.EXHIBIT_CASE, T.FOSSIL_DISPLAY, T.SHUTTLE_DISPLAY,
 ]);
 
 export const PALLET_TOWN: MapData = (() => {
@@ -1203,7 +1204,7 @@ export const PEWTER_CITY: MapData = (() => {
       // House
       { x: 5, y: 19, targetMap: 'pewter_house', targetX: 3, targetY: 7 },
       // Museum
-      { x: 17, y: 12, targetMap: 'pewter_museum', targetX: 5, targetY: 9 },
+      { x: 17, y: 12, targetMap: 'pewter_museum_1f', targetX: 8, targetY: 12 },
       // East to Route 3 (upper lane entry)
       { x: W - 2, y: 12, targetMap: 'route3', targetX: 1, targetY: 3 },
       { x: W - 2, y: 13, targetMap: 'route3', targetX: 1, targetY: 4 },
@@ -1795,37 +1796,133 @@ export const PEWTER_HOUSE: MapData = (() => {
 })();
 
 // --- Pewter Museum ---
-export const PEWTER_MUSEUM: MapData = (() => {
-  const W = 12, H = 10;
+export const PEWTER_MUSEUM_1F: MapData = (() => {
+  const W = 18, H = 14;
   const tiles = fill2D(W, H, T.INDOOR_FLOOR);
   const collision = fill2D(W, H, false);
   function setTile(x: number, y: number, type: TileType) {
     if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
   }
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+  // Walls: top 2 rows, left/right edges, bottom edge
+  fillRect(0, 0, W, 2, T.WALL);
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
-  // Exhibit cases
-  setTile(2, 2, T.COUNTER); setTile(3, 2, T.COUNTER);
-  setTile(5, 2, T.COUNTER); setTile(6, 2, T.COUNTER);
-  setTile(8, 2, T.COUNTER); setTile(9, 2, T.COUNTER);
-  setTile(2, 5, T.COUNTER); setTile(3, 5, T.COUNTER);
-  setTile(8, 5, T.COUNTER); setTile(9, 5, T.COUNTER);
-  // Carpet aisle
-  for (let y = 3; y < H; y++) { setTile(5, y, T.CARPET); setTile(6, y, T.CARPET); }
+  fillRect(0, H - 1, W, 1, T.WALL);
+  // Exit doors at bottom
+  setTile(8, H - 1, T.DOOR); setTile(9, H - 1, T.DOOR);
+  // Carpet runner down center (cols 8-9)
+  for (let y = 2; y < H - 1; y++) { setTile(8, y, T.CARPET); setTile(9, y, T.CARPET); }
+  // Fossil displays along top wall (row 2)
+  setTile(2, 2, T.FOSSIL_DISPLAY); setTile(3, 2, T.FOSSIL_DISPLAY);
+  setTile(6, 2, T.FOSSIL_DISPLAY); setTile(7, 2, T.FOSSIL_DISPLAY);
+  setTile(10, 2, T.EXHIBIT_CASE); setTile(11, 2, T.EXHIBIT_CASE);
+  setTile(14, 2, T.EXHIBIT_CASE); setTile(15, 2, T.EXHIBIT_CASE);
+  // Museum plaques in front of exhibits (row 3)
+  setTile(2, 3, T.MUSEUM_PLAQUE); setTile(6, 3, T.MUSEUM_PLAQUE);
+  setTile(10, 3, T.MUSEUM_PLAQUE); setTile(14, 3, T.MUSEUM_PLAQUE);
+  // Side exhibit cases (rows 5-6)
+  setTile(2, 5, T.EXHIBIT_CASE); setTile(3, 5, T.EXHIBIT_CASE);
+  setTile(14, 5, T.EXHIBIT_CASE); setTile(15, 5, T.EXHIBIT_CASE);
+  // Reception counter on left (rows 8-9)
+  fillRect(2, 8, 4, 1, T.COUNTER);
+  // Stairs area on right — door at (16, 7)
+  setTile(16, 7, T.DOOR);
   return {
-    id: 'pewter_museum', name: 'PEWTER MUSEUM', width: W, height: H, tiles, collision,
+    id: 'pewter_museum_1f', name: 'PEWTER MUSEUM 1F', width: W, height: H, tiles, collision,
     warps: [
-      { x: 5, y: H - 1, targetMap: 'pewter_city', targetX: 17, targetY: 13 },
-      { x: 6, y: H - 1, targetMap: 'pewter_city', targetX: 17, targetY: 13 },
+      { x: 8, y: H - 1, targetMap: 'pewter_city', targetX: 17, targetY: 13 },
+      { x: 9, y: H - 1, targetMap: 'pewter_city', targetX: 17, targetY: 13 },
+      // Stairs to 2F
+      { x: 16, y: 7, targetMap: 'pewter_museum_2f', targetX: 16, targetY: 11 },
     ],
     npcs: [
       {
-        id: 'museum_guide', x: 6, y: 3, spriteColor: 0x4060b0, direction: Direction.DOWN,
-        dialogue: ['Welcome to PEWTER\nMUSEUM OF SCIENCE!', 'We have a fine\ncollection of fossils.'],
+        id: 'museum_receptionist', x: 3, y: 9, spriteColor: 0x4060b0, direction: Direction.UP,
+        dialogue: ['Welcome to PEWTER\nMUSEUM OF SCIENCE!', 'The 1st floor has\nour fossil exhibit.', 'The 2nd floor has\nour space exhibit.\nPlease enjoy!'],
       },
       {
-        id: 'museum_npc1', x: 3, y: 3, spriteColor: 0x80c080, direction: Direction.UP,
-        dialogue: ['This is a fossil of\nan ancient POKeMON.', "It's millions of\nyears old!"],
+        id: 'museum_ticket_clerk', x: 14, y: 8, spriteColor: 0x4060b0, direction: Direction.DOWN,
+        dialogue: ['The 2nd floor has our\nspace exhibit.', "It's $50 for a\nticket. Would you\nlike to go up?"],
+      },
+      {
+        id: 'museum_fossil_fan', x: 6, y: 4, spriteColor: 0x80c080, direction: Direction.UP,
+        dialogue: ['Wow! Look at that\nKABUTOPS fossil!', "It's so well\npreserved!", 'I want to be a\nfossil hunter when\nI grow up!'],
+      },
+      {
+        id: 'museum_scientist', x: 11, y: 4, spriteColor: 0xf0f0f0, direction: Direction.UP,
+        dialogue: ["I'm researching\nfossils for PROF.\nOAK.", "Imagine if we could\nrevive these ancient\nPOKeMON!", "Science is truly\namazing!"],
+      },
+      {
+        id: 'museum_kid', x: 3, y: 6, spriteColor: 0xe08050, direction: Direction.RIGHT,
+        dialogue: ['Do you think there\nare more fossils\nunderground?', 'I bet MT. MOON has\ntons of them!'],
+      },
+      {
+        id: 'museum_old_man', x: 14, y: 4, spriteColor: 0xb0a090, direction: Direction.UP,
+        dialogue: ["I've been visiting\nthis museum for\n40 years.", 'The fossils never\nchange, but I keep\ngetting older!', 'Ha ha ha!'],
+      },
+    ],
+  };
+})();
+
+export const PEWTER_MUSEUM_2F: MapData = (() => {
+  const W = 18, H = 14;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+  // Walls: top 2 rows, left/right edges, bottom edge
+  fillRect(0, 0, W, 2, T.WALL);
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  fillRect(0, H - 1, W, 1, T.WALL);
+  // 2x2 Space Shuttle centerpiece
+  setTile(8, 4, T.SHUTTLE_DISPLAY); setTile(9, 4, T.SHUTTLE_DISPLAY);
+  setTile(8, 5, T.SHUTTLE_DISPLAY); setTile(9, 5, T.SHUTTLE_DISPLAY);
+  // Flanking plaques for shuttle
+  setTile(7, 5, T.MUSEUM_PLAQUE); setTile(10, 5, T.MUSEUM_PLAQUE);
+  // Exhibit cases along side walls
+  setTile(2, 2, T.EXHIBIT_CASE); setTile(3, 2, T.EXHIBIT_CASE);  // Moon Stone
+  setTile(6, 2, T.EXHIBIT_CASE); setTile(7, 2, T.EXHIBIT_CASE);  // Meteorite
+  setTile(10, 2, T.EXHIBIT_CASE); setTile(11, 2, T.EXHIBIT_CASE); // Star charts
+  setTile(14, 2, T.EXHIBIT_CASE); setTile(15, 2, T.EXHIBIT_CASE); // Rocket fuel
+  // Plaques in front of top exhibits
+  setTile(2, 3, T.MUSEUM_PLAQUE); setTile(6, 3, T.MUSEUM_PLAQUE);
+  setTile(10, 3, T.MUSEUM_PLAQUE); setTile(14, 3, T.MUSEUM_PLAQUE);
+  // Side exhibits (rows 7, 9)
+  setTile(2, 7, T.EXHIBIT_CASE); setTile(3, 7, T.EXHIBIT_CASE);
+  setTile(14, 7, T.EXHIBIT_CASE); setTile(15, 7, T.EXHIBIT_CASE);
+  setTile(2, 8, T.MUSEUM_PLAQUE); setTile(14, 8, T.MUSEUM_PLAQUE);
+  // Carpet runner center (cols 8-9, rows 7-12)
+  for (let y = 7; y <= 12; y++) { setTile(8, y, T.CARPET); setTile(9, y, T.CARPET); }
+  // Stairs back to 1F — door at (16, 11)
+  setTile(16, 11, T.DOOR);
+  return {
+    id: 'pewter_museum_2f', name: 'PEWTER MUSEUM 2F', width: W, height: H, tiles, collision,
+    warps: [
+      // Stairs back to 1F
+      { x: 16, y: 11, targetMap: 'pewter_museum_1f', targetX: 16, targetY: 8 },
+    ],
+    npcs: [
+      {
+        id: 'museum_astronomer', x: 7, y: 6, spriteColor: 0xf0f0f0, direction: Direction.UP,
+        dialogue: ['That model is of the\nSpace Shuttle!', 'Did you know the\nfirst POKeMON in\nspace was a CLEFAIRY?', "It was aboard a\nrocket in 1969!"],
+      },
+      {
+        id: 'museum_space_fan', x: 3, y: 4, spriteColor: 0x6080c0, direction: Direction.RIGHT,
+        dialogue: ['MOON STONEs are said\nto come from space!', 'Some people think\nCLEFAIRY came from\nthe moon!', "It's just a theory\nthough..."],
+      },
+      {
+        id: 'museum_girl', x: 3, y: 8, spriteColor: 0xe06080, direction: Direction.UP,
+        dialogue: ["Wow, that MOON STONE\nis so pretty!", "I heard it can make\ncertain POKeMON\nevolve!"],
+      },
+      {
+        id: 'museum_nerd', x: 14, y: 4, spriteColor: 0x80b080, direction: Direction.LEFT,
+        dialogue: ['Scientists found\namino acids in this\nmeteorite!', 'Could POKeMON have\ncome from outer\nspace?', "It's a fascinating\ntheory!"],
       },
     ],
   };
@@ -1851,7 +1948,8 @@ export const ALL_MAPS: Record<string, MapData> = {
   pokemon_center_pewter: POKEMON_CENTER_PEWTER,
   pokemart_pewter: POKEMART_PEWTER,
   pewter_house: PEWTER_HOUSE,
-  pewter_museum: PEWTER_MUSEUM,
+  pewter_museum_1f: PEWTER_MUSEUM_1F,
+  pewter_museum_2f: PEWTER_MUSEUM_2F,
   viridian_house: VIRIDIAN_HOUSE,
   route3: ROUTE3,
   pokemon_center_route3: POKEMON_CENTER_ROUTE3,

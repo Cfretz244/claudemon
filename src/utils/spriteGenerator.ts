@@ -346,6 +346,77 @@ export function generateTileset(scene: Phaser.Scene): void {
       ctx.fillRect(1, 4, 1, 9);
       ctx.fillRect(14, 4, 1, 9);
     },
+    [TileType.EXHIBIT_CASE]: (ctx) => {
+      // Indoor floor base
+      ctx.fillStyle = '#f0e8d0';
+      ctx.fillRect(0, 0, 16, 16);
+      // Dark wood frame
+      ctx.fillStyle = '#705030';
+      ctx.fillRect(1, 1, 14, 14);
+      ctx.fillStyle = '#604020';
+      ctx.fillRect(2, 2, 12, 12);
+      // Glass top
+      ctx.fillStyle = '#c0d8e8';
+      ctx.fillRect(3, 3, 10, 10);
+      // White highlight on glass
+      ctx.fillStyle = '#e8f0f8';
+      ctx.fillRect(4, 4, 4, 2);
+      ctx.fillRect(4, 4, 2, 4);
+    },
+    [TileType.FOSSIL_DISPLAY]: (ctx) => {
+      // Indoor floor base
+      ctx.fillStyle = '#f0e8d0';
+      ctx.fillRect(0, 0, 16, 16);
+      // Gray stone pedestal
+      ctx.fillStyle = '#b0a8a0';
+      ctx.fillRect(3, 4, 10, 12);
+      ctx.fillStyle = '#a09890';
+      ctx.fillRect(4, 5, 8, 10);
+      // Tan fossil shape on top
+      ctx.fillStyle = '#d8c890';
+      ctx.fillRect(5, 2, 6, 5);
+      ctx.fillStyle = '#c8b880';
+      ctx.fillRect(6, 3, 4, 3);
+    },
+    [TileType.SHUTTLE_DISPLAY]: (ctx) => {
+      // Indoor floor base
+      ctx.fillStyle = '#f0e8d0';
+      ctx.fillRect(0, 0, 16, 16);
+      // Dark metal stand
+      ctx.fillStyle = '#606060';
+      ctx.fillRect(5, 10, 6, 6);
+      ctx.fillStyle = '#505050';
+      ctx.fillRect(6, 11, 4, 4);
+      // White shuttle body
+      ctx.fillStyle = '#e0e0e0';
+      ctx.fillRect(4, 2, 8, 9);
+      ctx.fillStyle = '#d0d0d0';
+      ctx.fillRect(5, 3, 6, 7);
+      // Orange engine accent
+      ctx.fillStyle = '#e08030';
+      ctx.fillRect(6, 9, 4, 2);
+      // Nose cone
+      ctx.fillStyle = '#c0c0c0';
+      ctx.fillRect(6, 1, 4, 2);
+    },
+    [TileType.MUSEUM_PLAQUE]: (ctx) => {
+      // Indoor floor base
+      ctx.fillStyle = '#f0e8d0';
+      ctx.fillRect(0, 0, 16, 16);
+      // Small centered gold rectangle
+      ctx.fillStyle = '#c0a040';
+      ctx.fillRect(4, 5, 8, 6);
+      // Border
+      ctx.fillStyle = '#a08830';
+      ctx.fillRect(4, 5, 8, 1);
+      ctx.fillRect(4, 10, 8, 1);
+      ctx.fillRect(4, 5, 1, 6);
+      ctx.fillRect(11, 5, 1, 6);
+      // Text lines
+      ctx.fillStyle = '#806020';
+      ctx.fillRect(6, 7, 4, 1);
+      ctx.fillRect(6, 9, 3, 1);
+    },
     [TileType.CAVE_ENTRANCE]: (ctx) => {
       // Rocky mountain base with dark cave opening
       ctx.fillStyle = '#706050';

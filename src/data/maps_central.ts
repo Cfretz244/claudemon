@@ -464,11 +464,11 @@ export const ROUTE8: MapData = (() => {
       {
         id: 'route8_trainer3',
         x: 20, y: 4,
-        spriteColor: 0xa0a060,
+        spriteColor: 0xe06080,
         direction: Direction.LEFT,
         dialogue: [
-          'SUPER NERD: I study\nPOKeMON extensively!',
-          'My research tells me\nI will win!',
+          'LASS: My POKeMON\nare so cute!',
+          "Don't you think\nthey're adorable?",
         ],
         isTrainer: true,
         sightRange: 4,

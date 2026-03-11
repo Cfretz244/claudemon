@@ -12,6 +12,9 @@ const SOLID_TILES = new Set([
   TileType.MART_SHELF,
   TileType.CAVE_WALL,
   TileType.PC,
+  TileType.EXHIBIT_CASE,
+  TileType.FOSSIL_DISPLAY,
+  TileType.SHUTTLE_DISPLAY,
 ]);
 
 describe('ALL_MAPS', () => {
