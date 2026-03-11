@@ -140,7 +140,7 @@ const MAP_GROUPS: { label: string; maps: string[] }[] = [
   },
   {
     label: 'Routes 9-10 / Rock Tunnel',
-    maps: ['route9', 'route10', 'rock_tunnel', 'rock_tunnel_b1f', 'pokemon_center_route10'],
+    maps: ['route9', 'route10', 'rock_tunnel', 'rock_tunnel_b1f', 'pokemon_center_route10', 'power_plant'],
   },
   {
     label: 'Lavender Town',
@@ -156,7 +156,7 @@ const MAP_GROUPS: { label: string; maps: string[] }[] = [
   },
   {
     label: 'Routes 19-21 / Cinnabar',
-    maps: ['route19', 'route20', 'route21', 'seafoam_islands', 'cinnabar_island', 'cinnabar_gym', 'pokemon_mansion', 'pokemon_center_cinnabar', 'pokemart_cinnabar'],
+    maps: ['route19', 'route20', 'route21', 'seafoam_b1f', 'seafoam_b2f', 'seafoam_b3f', 'cinnabar_island', 'cinnabar_gym', 'pokemon_mansion', 'pokemon_center_cinnabar', 'pokemart_cinnabar'],
   },
   {
     label: 'Routes 22-23 / Victory Road / Indigo',

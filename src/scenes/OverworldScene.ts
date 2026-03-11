@@ -9,7 +9,7 @@ import { BagScreen } from '../components/BagScreen';
 import { ShopScreen } from '../components/ShopScreen';
 import { PCScreen } from '../components/PCScreen';
 import { TrainerCard } from '../components/TrainerCard';
-import { generateNPCSprite, generateItemBallSprite, generateJessieSprite, generateJamesSprite, generateSnorlaxNPCSprite } from '../utils/spriteGenerator';
+import { generateNPCSprite, generateItemBallSprite, generateJessieSprite, generateJamesSprite, generateSnorlaxNPCSprite, generateArticunoNPCSprite, generateZapdosNPCSprite, generateMoltresNPCSprite } from '../utils/spriteGenerator';
 import { ITEMS } from '../data/items';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
@@ -144,6 +144,12 @@ export class OverworldScene extends Phaser.Scene {
       mapId = 'silph_co_1f';
       data.playerX = 7;
       data.playerY = 12;
+    }
+    // Legacy save migration: seafoam_islands → seafoam_b1f
+    if (mapId === 'seafoam_islands') {
+      mapId = 'seafoam_b1f';
+      data.playerX = 9;
+      data.playerY = 18;
     }
     this.currentMap = ALL_MAPS[mapId];
     // Reset flash when entering a non-dark map so re-entry into dark caves requires Flash again
@@ -452,6 +458,12 @@ export class OverworldScene extends Phaser.Scene {
           generateJessieSprite(this, spriteKey);
         } else if (npc.id.startsWith('james_')) {
           generateJamesSprite(this, spriteKey);
+        } else if (npc.id.startsWith('articuno')) {
+          generateArticunoNPCSprite(this, spriteKey);
+        } else if (npc.id.startsWith('zapdos')) {
+          generateZapdosNPCSprite(this, spriteKey);
+        } else if (npc.id.startsWith('moltres')) {
+          generateMoltresNPCSprite(this, spriteKey);
         } else {
           generateNPCSprite(this, spriteKey, npc.spriteColor);
         }
@@ -2087,6 +2099,41 @@ export class OverworldScene extends Phaser.Scene {
         "Zzz... Zzz...",
         "Maybe a melody could\nwake it up?",
       ]);
+      return;
+    }
+
+    // Legendary bird encounters (Articuno, Zapdos, Moltres)
+    if (npc.id === 'articuno_seafoam' || npc.id === 'zapdos_power_plant' || npc.id === 'moltres_victory_road') {
+      const birdSpecies: Record<string, number> = {
+        articuno_seafoam: 144,
+        zapdos_power_plant: 145,
+        moltres_victory_road: 146,
+      };
+      const speciesId = birdSpecies[npc.id];
+      this.textBox.show(
+        npc.dialogue,
+        () => {
+          const bird = createPokemon(speciesId, 50);
+          this.isWarping = true;
+          soundSystem.battleStart();
+          playBattleTransition(this, () => {
+            this.scene.start('BattleScene', {
+              type: 'wild',
+              wildPokemon: bird,
+              playerState: this.playerState.toSave(),
+              returnMap: this.currentMap.id,
+              returnX: this.playerGridX,
+              returnY: this.playerGridY,
+              isSurfing: this.isSurfing,
+              isRidingBike: this.isRidingBike,
+              flashUsed: this.flashUsed,
+            });
+          }, () => {
+            soundSystem.startMusic('wild_battle');
+          });
+          this.playerState.storyFlags[`${npc.id}_cleared`] = true;
+        }
+      );
       return;
     }
 

@@ -704,6 +704,12 @@ export const ROUTE10: MapData = (() => {
   // Scattered tree
   setTile(6, 7, T.TREE);
 
+  // Power Plant access — water + entrance east of path (requires Surf)
+  fillRect(14, 2, 3, 2, T.WATER);
+  setTile(17, 2, T.DOOR); // Power Plant entrance (reachable only by Surfing)
+  // Clear tree border so entrance tile is accessible
+  setTile(17, 2, T.DOOR);
+
   // --- Mountain formation blocking passage (y=9 to y=14) ---
   // Spans full width between tree borders; extends into east/west borders
   // so the mountain looks like it continues beyond the visible area
@@ -738,6 +744,8 @@ export const ROUTE10: MapData = (() => {
       { x: 9, y: 9, targetMap: 'rock_tunnel', targetX: 15, targetY: 27 },
       // Rock Tunnel south exit (enter from below, arrive at north end of cave)
       { x: 9, y: 14, targetMap: 'rock_tunnel', targetX: 15, targetY: 2 },
+      // Power Plant entrance (via Surf)
+      { x: 17, y: 2, targetMap: 'power_plant', targetX: 9, targetY: 19 },
       // Pokemon Center door
       { x: 14, y: 7, targetMap: 'pokemon_center_route10', targetX: 4, targetY: 7 },
       // South exit -> Lavender Town
@@ -1831,6 +1839,138 @@ export const POKEMON_FAN_CLUB: MapData = (() => {
   };
 })();
 
+// ---------------------------------------------------------------------------
+// POWER PLANT -- industrial cave east of Route 10 (requires Surf)
+// ---------------------------------------------------------------------------
+export const POWER_PLANT: MapData = (() => {
+  const W = 20, H = 20;
+  const tiles = fill2D(W, H, T.CAVE_FLOOR);
+  const collision = fill2D(W, H, false);
+
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Cave wall borders (2 tiles thick)
+  for (let x = 0; x < W; x++) {
+    setTile(x, 0, T.CAVE_WALL); setTile(x, 1, T.CAVE_WALL);
+    setTile(x, H - 1, T.CAVE_WALL); setTile(x, H - 2, T.CAVE_WALL);
+  }
+  for (let y = 0; y < H; y++) {
+    setTile(0, y, T.CAVE_WALL); setTile(1, y, T.CAVE_WALL);
+    setTile(W - 1, y, T.CAVE_WALL); setTile(W - 2, y, T.CAVE_WALL);
+  }
+
+  // Entrance at south
+  setTile(9, 18, T.CAVE_FLOOR); setTile(9, 19, T.CAVE_FLOOR);
+
+  // Winding corridors with dead ends (industrial maze)
+  fillRect(4, 4, 4, 2, T.CAVE_WALL);
+  fillRect(12, 3, 4, 2, T.CAVE_WALL);
+  fillRect(3, 8, 3, 2, T.CAVE_WALL);
+  fillRect(9, 7, 2, 3, T.CAVE_WALL);
+  fillRect(14, 8, 3, 2, T.CAVE_WALL);
+  fillRect(5, 12, 3, 2, T.CAVE_WALL);
+  fillRect(11, 12, 4, 2, T.CAVE_WALL);
+  fillRect(3, 15, 3, 2, T.CAVE_WALL);
+  fillRect(14, 15, 3, 2, T.CAVE_WALL);
+
+  return {
+    id: 'power_plant',
+    name: 'POWER PLANT',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      // Exit back to Route 10
+      { x: 9, y: 19, targetMap: 'route10', targetX: 17, targetY: 3 },
+    ],
+    npcs: [
+      {
+        id: 'zapdos_power_plant',
+        x: 10, y: 3,
+        spriteColor: 0xf0d030,
+        direction: Direction.DOWN,
+        dialogue: [
+          'A legendary bird\nPOKeMON is here!',
+          "Electricity crackles\nall around it!",
+          "It's ZAPDOS!",
+        ],
+        isTrainer: false,
+      },
+      {
+        id: 'pp_trainer1',
+        x: 6, y: 7,
+        spriteColor: 0x808080,
+        direction: Direction.RIGHT,
+        dialogue: [
+          'ENGINEER: This old\npower plant is full',
+          'of Electric-type\nPOKeMON!',
+        ],
+        isTrainer: true,
+        sightRange: 4,
+      },
+      {
+        id: 'pp_trainer2',
+        x: 14, y: 11,
+        spriteColor: 0x707070,
+        direction: Direction.LEFT,
+        dialogue: [
+          'ENGINEER: Something\npowerful lives deep',
+          'inside this plant!',
+        ],
+        isTrainer: true,
+        sightRange: 4,
+      },
+      {
+        id: 'pp_trainer3',
+        x: 8, y: 14,
+        spriteColor: 0x909090,
+        direction: Direction.UP,
+        dialogue: [
+          'ENGINEER: The\nelectricity here is',
+          'dangerous! Be\ncareful!',
+        ],
+        isTrainer: true,
+        sightRange: 3,
+      },
+      {
+        id: 'pp_tm25',
+        x: 16, y: 5,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'tm25',
+      },
+      {
+        id: 'pp_elixir',
+        x: 4, y: 10,
+        spriteColor: 0x000000,
+        direction: Direction.DOWN,
+        dialogue: [],
+        isItemBall: true,
+        itemId: 'elixir',
+      },
+    ],
+    wildEncounters: {
+      grassRate: 0.10,
+      encounters: [
+        { speciesId: 100, minLevel: 30, maxLevel: 35, weight: 25 }, // Voltorb
+        { speciesId: 25, minLevel: 30, maxLevel: 33, weight: 15 },  // Pikachu
+        { speciesId: 81, minLevel: 30, maxLevel: 35, weight: 20 },  // Magnemite
+        { speciesId: 82, minLevel: 33, maxLevel: 37, weight: 10 },  // Magneton
+        { speciesId: 125, minLevel: 35, maxLevel: 38, weight: 15 }, // Electabuzz
+        { speciesId: 101, minLevel: 35, maxLevel: 38, weight: 15 }, // Electrode
+      ],
+    },
+  };
+})();
+
 export const VERMILION_MAPS: Record<string, MapData> = {
   route5: ROUTE5,
   route6: ROUTE6,
@@ -1848,4 +1988,5 @@ export const VERMILION_MAPS: Record<string, MapData> = {
   ss_anne_2f: SS_ANNE_2F,
   ss_anne_b1f: SS_ANNE_B1F,
   ss_anne_deck: SS_ANNE_DECK,
+  power_plant: POWER_PLANT,
 };
