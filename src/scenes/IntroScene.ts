@@ -5,10 +5,11 @@ import { soundSystem } from '../systems/SoundSystem';
 // Animated attract sequence that plays before the title screen.
 // 9 choreographed steps timed to the Yellow opening-movie theme.
 //
-// Skippable with any key. Plays on every fresh page load, but is skipped
-// when returning to the title from within the game (the module-level
-// `introPlayed` flag resets automatically on browser reload so each visit
-// still gets the intro).
+// Shows a press-to-start gate first so browser audio autoplay policy is
+// satisfied before the music fires. After the user kicks off the intro,
+// any further key/click triggers a skip to the title. Plays on every
+// fresh page load, but is skipped when returning to the title from within
+// the game (the module-level `introPlayed` flag resets on browser reload).
 
 let introPlayed = false;
 
@@ -29,6 +30,8 @@ export class IntroScene extends Phaser.Scene {
   private currentStepIdx = -1;
   private pendingTimers: Phaser.Time.TimerEvent[] = [];
   private finished = false;
+  private skipEnabled = false;
+  private started = false;
 
   constructor() {
     super({ key: 'IntroScene' });
@@ -73,24 +76,112 @@ export class IntroScene extends Phaser.Scene {
     // Build the timeline
     this.buildSteps();
 
-    // Begin with an initial fade-in from black
-    // (Music starts in stepPikaFar, not here — the logo step plays in silence.)
-    this.cameras.main.fadeIn(400, 0, 0, 0);
-
-    // Skip handler (any key)
+    // Register skip handler up front, but gated by `skipEnabled` — flipped
+    // to true after the user kicks off the intro (plus a 100ms delay so
+    // the click that starts the intro doesn't also trigger a skip).
     const keyboard = this.input.keyboard;
     if (keyboard) {
       keyboard.on('keydown', this.onSkip, this);
     }
     this.input.on('pointerdown', this.onSkip, this);
 
-    // Kick off
-    this.nextStep();
+    // Show the press-to-start gate. Audio can't autoplay in browsers, so we
+    // need a user interaction before the intro's music will actually sound.
+    this.showStartGate();
+  }
+
+  // ── Press-to-start gate ──────────────────────────────────
+  private showStartGate(): void {
+    this.bgRect.setFillStyle(0x000000);
+    this.letterboxTop.setVisible(false);
+    this.letterboxBot.setVisible(false);
+
+    const gate = this.add.container(0, 0).setDepth(200);
+
+    // Big yellow CLAUDÉMON title with blue outline + white highlight
+    const titleY = 52;
+    const mkTitle = (dx: number, dy: number, color: string, alpha = 1): Phaser.GameObjects.Text =>
+      this.add.text(GAME_WIDTH / 2 + dx, titleY + dy, 'CLAUDÉMON', {
+        fontSize: '16px',
+        color,
+        fontFamily: 'monospace',
+        fontStyle: 'bold',
+      }).setOrigin(0.5).setAlpha(alpha);
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      gate.add(mkTitle(dx, dy, '#1030a0'));
+    }
+    gate.add(mkTitle(0, 0, '#f8d030'));
+    gate.add(mkTitle(0, -2, '#ffffff', 0.35));
+
+    // Subtitle pill
+    const pill = this.add.graphics();
+    pill.fillStyle(0x1030a0);
+    pill.fillRoundedRect(GAME_WIDTH / 2 - 40, 72, 80, 11, 2);
+    pill.fillStyle(0xc03030);
+    pill.fillRoundedRect(GAME_WIDTH / 2 - 39, 73, 78, 9, 2);
+    gate.add(pill);
+    gate.add(
+      this.add.text(GAME_WIDTH / 2, 77, 'YELLOW VERSION', {
+        fontSize: '7px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        fontStyle: 'bold',
+      }).setOrigin(0.5),
+    );
+
+    // Blinking "PRESS ANY KEY" prompt
+    const prompt = this.add.text(GAME_WIDTH / 2, 108, '▸ PRESS ANY KEY ◂', {
+      fontSize: '8px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    gate.add(prompt);
+    this.tweens.add({
+      targets: prompt,
+      alpha: 0.25,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    // Small copyright footer
+    gate.add(
+      this.add.text(GAME_WIDTH / 2, 132, '©2026 CLAUDEMON inc.', {
+        fontSize: '6px',
+        color: '#808080',
+        fontFamily: 'monospace',
+      }).setOrigin(0.5),
+    );
+
+    this.cameras.main.fadeIn(400, 0, 0, 0);
+
+    // One-shot start handler. Separate from the skip handler so it only
+    // reacts to the FIRST interaction and is removed after firing.
+    const startHandler = () => {
+      if (this.started) return;
+      this.started = true;
+      this.input.keyboard?.off('keydown', startHandler);
+      this.input.off('pointerdown', startHandler);
+      // Tear down the gate
+      this.tweens.killTweensOf(prompt);
+      gate.destroy(true);
+      // Nudge AudioContext into running state so music queued from
+      // stepPikaFar actually sounds immediately.
+      soundSystem.resumeOnInteraction();
+      // Begin the timeline; enable skip after a brief delay so this very
+      // keypress/click doesn't also count as a skip.
+      this.nextStep();
+      this.time.delayedCall(150, () => { this.skipEnabled = true; });
+    };
+    this.input.keyboard?.on('keydown', startHandler);
+    this.input.on('pointerdown', startHandler);
   }
 
   // ── Skip & cleanup ───────────────────────────────────────
   private onSkip = (): void => {
-    if (this.finished) return;
+    if (!this.skipEnabled || this.finished) return;
     this.finish();
   };
 
