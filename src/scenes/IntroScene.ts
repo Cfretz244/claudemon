@@ -622,7 +622,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaClosest(): Step {
     return {
       name: 'pika_closest',
-      durationMs: 2200,
+      durationMs: 1800,
       enter: () => {
         this.setLetterbox(true);
         this.setBg(0xffffff);
@@ -647,7 +647,7 @@ export class IntroScene extends Phaser.Scene {
           targets: pika,
           scaleX: 1.1,
           scaleY: 1.1,
-          duration: 2100,
+          duration: 1700,
           ease: 'Sine.easeOut',
         });
 
@@ -675,7 +675,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaBalloons(): Step {
     return {
       name: 'pika_balloons',
-      durationMs: 4500,
+      durationMs: 3800,
       enter: () => {
         this.setLetterbox(false);
 
@@ -769,8 +769,8 @@ export class IntroScene extends Phaser.Scene {
         this.pendingTimers.push(heartTimer as unknown as Phaser.Time.TimerEvent);
 
         soundSystem.levelUp();
-        this.scheduleTimer(1600, () => soundSystem.healBallDing());
-        this.scheduleTimer(3000, () => soundSystem.healBallDing());
+        this.scheduleTimer(1400, () => soundSystem.healBallDing());
+        this.scheduleTimer(2600, () => soundSystem.healBallDing());
       },
     };
   }
@@ -779,7 +779,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaCharge(): Step {
     return {
       name: 'pika_charge',
-      durationMs: 1600,
+      durationMs: 2700,
       enter: () => {
         this.setLetterbox(true);
         this.setBg(0xffffff);
@@ -789,9 +789,9 @@ export class IntroScene extends Phaser.Scene {
         pika.setScale(1);
         this.tweens.add({
           targets: pika,
-          scaleX: 1.1,
-          scaleY: 1.1,
-          duration: 1500,
+          scaleX: 1.12,
+          scaleY: 1.12,
+          duration: 2600,
           ease: 'Sine.easeOut',
         });
 
@@ -815,8 +815,9 @@ export class IntroScene extends Phaser.Scene {
         this.pendingTimers.push(sparkTimer as unknown as Phaser.Time.TimerEvent);
 
         soundSystem.superEffective();
-        this.scheduleTimer(600, () => soundSystem.superEffective());
-        this.scheduleTimer(1100, () => soundSystem.superEffective());
+        this.scheduleTimer(700, () => soundSystem.superEffective());
+        this.scheduleTimer(1400, () => soundSystem.superEffective());
+        this.scheduleTimer(2100, () => soundSystem.superEffective());
 
         // Background tint oscillation
         let tick = 0;
