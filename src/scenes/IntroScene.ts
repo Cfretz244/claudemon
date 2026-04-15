@@ -887,7 +887,7 @@ export class IntroScene extends Phaser.Scene {
         // strobing electrical effect. Same silhouette, inverted palette.
         let flashToggle = false;
         const flashTimer = this.time.addEvent({
-          delay: 90,
+          delay: 180,
           loop: true,
           callback: () => {
             flashToggle = !flashToggle;
