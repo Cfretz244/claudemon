@@ -664,6 +664,42 @@ function drawPikaPeaceful(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 40, 38, 2, 1, K);
 }
 
+// Same as drawPikaPeaceful but with eyes closed (blink frame).
+function drawPikaPeacefulBlink(ctx: CanvasRenderingContext2D): void {
+  const Y = '#f8d030';
+  const K = '#202020';
+  const R = '#e03030';
+
+  // Ears
+  rect(ctx, 12, 2, 8, 16, Y);
+  rect(ctx, 52, 2, 8, 16, Y);
+  rect(ctx, 12, 2, 8, 6, K);
+  rect(ctx, 52, 2, 8, 6, K);
+
+  // Head outline + fill
+  rect(ctx, 16, 10, 40, 4, K);
+  rect(ctx, 10, 14, 52, 4, K);
+  rect(ctx, 12, 18, 48, 30, Y);
+  rect(ctx, 8, 22, 56, 22, Y);
+
+  // Closed eyes (small smile-shaped arcs)
+  rect(ctx, 19, 26, 6, 1, K);
+  rect(ctx, 18, 25, 1, 1, K);
+  rect(ctx, 25, 25, 1, 1, K);
+  rect(ctx, 47, 26, 6, 1, K);
+  rect(ctx, 46, 25, 1, 1, K);
+  rect(ctx, 53, 25, 1, 1, K);
+
+  // Gentle cheeks
+  rect(ctx, 6, 30, 10, 8, R);
+  rect(ctx, 56, 30, 10, 8, R);
+
+  // Soft closed-mouth smile
+  rect(ctx, 30, 38, 2, 1, K);
+  rect(ctx, 32, 39, 8, 1, K);
+  rect(ctx, 40, 38, 2, 1, K);
+}
+
 // ── Pikachu charging cheeks ────────────────────────────────
 function drawPikaCharge(ctx: CanvasRenderingContext2D): void {
   const Y = '#f8d030';
@@ -855,6 +891,7 @@ const INTRO_SPRITES: IntroSprite[] = [
   { key: 'intro_pika_balloons', width: 64, height: 80, draw: drawPikaBalloons },
 
   { key: 'intro_pika_peaceful', width: 72, height: 56, draw: drawPikaPeaceful },
+  { key: 'intro_pika_peaceful_blink', width: 72, height: 56, draw: drawPikaPeacefulBlink },
   { key: 'intro_pika_charge', width: 72, height: 56, draw: drawPikaCharge },
 
   { key: 'intro_pika_zap', width: 72, height: 72, draw: drawPikaZap },

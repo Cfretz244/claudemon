@@ -801,6 +801,10 @@ export class IntroScene extends Phaser.Scene {
           ease: 'Sine.easeIn',
         });
 
+        // Blink once during the peaceful beat (open → closed → open)
+        this.scheduleTimer(650, () => pika.setTexture('intro_pika_peaceful_blink'));
+        this.scheduleTimer(780, () => pika.setTexture('intro_pika_peaceful'));
+
         // Transition into the charging phase
         this.scheduleTimer(PEACE_MS, () => {
           pika.setTexture('intro_pika_charge');
