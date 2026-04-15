@@ -73,10 +73,8 @@ export class IntroScene extends Phaser.Scene {
     // Build the timeline
     this.buildSteps();
 
-    // Start music
-    soundSystem.startMusic('intro');
-
     // Begin with an initial fade-in from black
+    // (Music starts in stepPikaFar, not here — the logo step plays in silence.)
     this.cameras.main.fadeIn(400, 0, 0, 0);
 
     // Skip handler (any key)
@@ -133,8 +131,14 @@ export class IntroScene extends Phaser.Scene {
   }
 
   private clearStage(): void {
-    this.stage.removeAll(true);
+    // Cancel all outstanding timers from the previous step BEFORE destroying
+    // game objects, so no recurring timer callback tries to touch a just-
+    // destroyed sprite (which throws `this.scene.sys` undefined inside
+    // Phaser's setTexture).
+    for (const t of this.pendingTimers) t.remove(false);
+    this.pendingTimers = [];
     this.tweens.killAll();
+    this.stage.removeAll(true);
   }
 
   private setLetterbox(visible: boolean): void {
@@ -256,6 +260,9 @@ export class IntroScene extends Phaser.Scene {
       name: 'pika_far',
       durationMs: 4500,
       enter: () => {
+        // Music kicks in here, not at the Claude logo step.
+        soundSystem.startMusic('intro');
+
         this.setLetterbox(true);
         this.setBg(0xffffff);
 
