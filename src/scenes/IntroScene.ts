@@ -883,6 +883,19 @@ export class IntroScene extends Phaser.Scene {
           repeat: 2,
         });
 
+        // Flash Pikachu's face between the red and yellow frames for a
+        // strobing electrical effect. Same silhouette, inverted palette.
+        let flashToggle = false;
+        const flashTimer = this.time.addEvent({
+          delay: 90,
+          loop: true,
+          callback: () => {
+            flashToggle = !flashToggle;
+            pika.setTexture(flashToggle ? 'intro_pika_zap_yellow' : 'intro_pika_zap');
+          },
+        });
+        this.pendingTimers.push(flashTimer as unknown as Phaser.Time.TimerEvent);
+
         // Screen shake
         this.cameras.main.shake(500, 0.015);
 

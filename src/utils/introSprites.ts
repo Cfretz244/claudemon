@@ -813,6 +813,72 @@ function drawPikaZap(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 42, 62, 10, 8, R);
 }
 
+// ── Yellow "inverted" twin of the zap sprite ───────────────
+// Same exact silhouette as drawPikaZap but with body/accent colors
+// swapped, so scene 9 can flash back and forth between the two for a
+// strobing electrical effect without any shape change.
+function drawPikaZapYellow(ctx: CanvasRenderingContext2D): void {
+  const Y = '#f8d030';
+  const YD = '#c89020';
+  const K = '#202020';
+  const W = '#ffffff';
+  const R = '#e03030';
+
+  // White outline halo — same positions as the red frame so the flash
+  // reads as a pure color swap, not a shape pop.
+  const outline = (x: number, y: number, w: number, h: number) => rect(ctx, x, y, w, h, W);
+  outline(11, 1, 14, 20);
+  outline(47, 1, 14, 20);
+  outline(9, 15, 54, 6);
+  outline(5, 19, 62, 38);
+  outline(3, 23, 66, 26);
+
+  // Yellow body (matches red frame footprint exactly)
+  rect(ctx, 12, 2, 12, 18, Y);
+  rect(ctx, 48, 2, 12, 18, Y);
+  rect(ctx, 15, 0, 6, 4, Y);
+  rect(ctx, 51, 0, 6, 4, Y);
+  // Canonical black ear tips
+  rect(ctx, 12, 2, 12, 7, K);
+  rect(ctx, 48, 2, 12, 7, K);
+  rect(ctx, 15, 0, 6, 4, K);
+  rect(ctx, 51, 0, 6, 4, K);
+
+  rect(ctx, 10, 16, 52, 6, Y);
+  rect(ctx, 6, 20, 60, 28, Y);
+  rect(ctx, 4, 24, 64, 20, Y);
+
+  // Angry black eyes with a white catchlight (inverted from the red
+  // frame's glowing yellow eyes)
+  rect(ctx, 20, 30, 8, 8, K);
+  rect(ctx, 44, 30, 8, 8, K);
+  rect(ctx, 22, 32, 2, 2, W);
+  rect(ctx, 46, 32, 2, 2, W);
+
+  // Red cheeks
+  rect(ctx, 4, 32, 8, 8, R);
+  rect(ctx, 60, 32, 8, 8, R);
+
+  // Forehead V-mark — red in this frame (white in the red frame)
+  rect(ctx, 30, 22, 2, 2, R);
+  rect(ctx, 32, 24, 4, 3, R);
+  rect(ctx, 36, 22, 2, 2, R);
+
+  // Arms out to sides
+  rect(ctx, 0, 40, 10, 6, Y);
+  rect(ctx, 62, 40, 10, 6, Y);
+
+  // Body
+  rect(ctx, 14, 48, 44, 16, Y);
+  rect(ctx, 10, 52, 52, 12, Y);
+  // Darker belly accent so the yellow frame reads as a proper Pikachu
+  rect(ctx, 16, 52, 40, 10, YD);
+
+  // Legs stumpy
+  rect(ctx, 20, 62, 10, 8, Y);
+  rect(ctx, 42, 62, 10, 8, Y);
+}
+
 // ── Front-facing happy Pikachu for the polished title screen ─
 function drawTitlePikaFront(ctx: CanvasRenderingContext2D): void {
   const Y = '#f8d030';
@@ -906,6 +972,7 @@ const INTRO_SPRITES: IntroSprite[] = [
   { key: 'intro_pika_charge', width: 72, height: 56, draw: drawPikaCharge },
 
   { key: 'intro_pika_zap', width: 72, height: 72, draw: drawPikaZap },
+  { key: 'intro_pika_zap_yellow', width: 72, height: 72, draw: drawPikaZapYellow },
 
   { key: 'title_pika_front', width: 48, height: 48, draw: drawTitlePikaFront },
 ];
