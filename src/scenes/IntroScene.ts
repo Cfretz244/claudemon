@@ -349,7 +349,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaFar(): Step {
     return {
       name: 'pika_far',
-      durationMs: 2800,
+      durationMs: 2650,
       enter: () => {
         // Music kicks in here, not at the Claude logo step.
         soundSystem.startMusic('intro');
@@ -388,7 +388,7 @@ export class IntroScene extends Phaser.Scene {
           targets: pika,
           scaleX: 1.5,
           scaleY: 1.5,
-          duration: 2700,
+          duration: 2550,
           ease: 'Quad.easeIn',
         });
 
@@ -404,7 +404,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaJump(): Step {
     return {
       name: 'pika_jump',
-      durationMs: 2400,
+      durationMs: 2250,
       enter: () => {
         this.setLetterbox(false);
         this.setBg(0xffffff);
@@ -441,7 +441,7 @@ export class IntroScene extends Phaser.Scene {
         this.tweens.add({
           targets: pika,
           x: -30,
-          duration: 2400,
+          duration: 2250,
           ease: 'Linear',
         });
         this.tweens.add({
@@ -484,7 +484,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaMid(): Step {
     return {
       name: 'pika_mid',
-      durationMs: 2400,
+      durationMs: 2250,
       enter: () => {
         this.setLetterbox(true);
         this.setBg(0xffffff);
@@ -511,7 +511,7 @@ export class IntroScene extends Phaser.Scene {
           targets: pika,
           scaleX: 1.8,
           scaleY: 1.8,
-          duration: 2300,
+          duration: 2150,
           ease: 'Quad.easeIn',
         });
 
@@ -544,7 +544,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaSurf(): Step {
     return {
       name: 'pika_surf',
-      durationMs: 3200,
+      durationMs: 3050,
       enter: () => {
         this.setLetterbox(false);
         this.setBg(0x7fd0f8);
@@ -622,7 +622,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaClosest(): Step {
     return {
       name: 'pika_closest',
-      durationMs: 1500,
+      durationMs: 1350,
       enter: () => {
         this.setLetterbox(true);
         this.setBg(0xffffff);
@@ -647,7 +647,7 @@ export class IntroScene extends Phaser.Scene {
           targets: pika,
           scaleX: 1.1,
           scaleY: 1.1,
-          duration: 1400,
+          duration: 1250,
           ease: 'Sine.easeOut',
         });
 
@@ -675,7 +675,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaBalloons(): Step {
     return {
       name: 'pika_balloons',
-      durationMs: 3300,
+      durationMs: 3150,
       enter: () => {
         this.setLetterbox(false);
 
@@ -779,13 +779,13 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaCharge(): Step {
     return {
       name: 'pika_charge',
-      durationMs: 3500,
+      durationMs: 4400,
       enter: () => {
         this.setLetterbox(true);
         this.setBg(0xffffff);
 
         // Phase A (0–1200ms): Pikachu just looks peacefully at the viewer
-        // Phase B (1200–3500ms): cheeks spark, tension rises, charging up
+        // Phase B (1200–4400ms): cheeks spark, tension rises, charging up
         const PEACE_MS = 1200;
 
         const pika = this.add.image(GAME_WIDTH / 2, 72, 'intro_pika_peaceful');
@@ -795,9 +795,9 @@ export class IntroScene extends Phaser.Scene {
         // Whole-scene subtle zoom-in starting from the peaceful phase
         this.tweens.add({
           targets: pika,
-          scaleX: 1.12,
-          scaleY: 1.12,
-          duration: 3400,
+          scaleX: 1.14,
+          scaleY: 1.14,
+          duration: 4300,
           ease: 'Sine.easeIn',
         });
 
@@ -837,9 +837,10 @@ export class IntroScene extends Phaser.Scene {
           this.pendingTimers.push(tintTimer as unknown as Phaser.Time.TimerEvent);
 
           soundSystem.superEffective();
-          this.scheduleTimer(600, () => soundSystem.superEffective());
-          this.scheduleTimer(1200, () => soundSystem.superEffective());
-          this.scheduleTimer(1800, () => soundSystem.superEffective());
+          this.scheduleTimer(700, () => soundSystem.superEffective());
+          this.scheduleTimer(1400, () => soundSystem.superEffective());
+          this.scheduleTimer(2100, () => soundSystem.superEffective());
+          this.scheduleTimer(2700, () => soundSystem.superEffective());
         });
       },
     };
