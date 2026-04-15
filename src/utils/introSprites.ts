@@ -250,65 +250,73 @@ function drawPikaSilhouetteMid(frame: 0 | 1): DrawFn {
   };
 }
 
-// ── Big Pikachu jumping through the sky ────────────────────
+// ── Pikachu flying karate kick ─────────────────────────────
+// 48×48 canvas. Pose faces RIGHT with kicking leg extended forward-right,
+// tail trailing behind-left. Scene flips X to mirror for left-moving motion.
 function drawPikaJump(ctx: CanvasRenderingContext2D): void {
   const Y = '#f8d030';
-  const YD = '#d89820';
+  const YD = '#c89020';
   const K = '#202020';
   const R = '#e03030';
   const W = '#ffffff';
   const BELLY = '#f8e878';
 
-  // Tail streaming behind (left side — jumping to upper-right)
-  rect(ctx, 0, 22, 6, 4, K);
-  rect(ctx, 2, 20, 6, 3, Y);
-  rect(ctx, 0, 18, 8, 3, Y);
-  rect(ctx, 4, 14, 6, 4, Y);
+  // Tail trailing behind (far left side, lightning-bolt shape)
+  rect(ctx, 0, 18, 5, 4, Y);
+  rect(ctx, 3, 14, 5, 5, YD);
+  rect(ctx, 0, 10, 5, 4, YD);
+  rect(ctx, 5, 16, 4, 4, Y);
 
-  // Ears (pointed, streamlined)
-  rect(ctx, 14, 4, 4, 14, Y);
-  rect(ctx, 26, 4, 4, 14, Y);
-  rect(ctx, 14, 2, 4, 4, K); // ear tip
-  rect(ctx, 26, 2, 4, 4, K);
+  // Body (compact, angled forward)
+  rect(ctx, 12, 16, 18, 16, Y);
+  rect(ctx, 10, 18, 22, 12, Y);
+  rect(ctx, 14, 20, 14, 10, BELLY);
 
-  // Head (outlined)
-  rect(ctx, 13, 10, 18, 2, K);
-  rect(ctx, 11, 12, 22, 2, K);
-  rect(ctx, 12, 14, 20, 10, Y);
-  rect(ctx, 10, 16, 24, 6, Y);
-  rect(ctx, 10, 22, 2, 2, K);
-  rect(ctx, 32, 22, 2, 2, K);
+  // Ears (laid back due to speed)
+  rect(ctx, 10, 6, 4, 10, Y);
+  rect(ctx, 10, 6, 4, 4, K);
+  rect(ctx, 16, 4, 4, 12, Y);
+  rect(ctx, 16, 4, 4, 4, K);
 
-  // Eyes (squinty, determined)
-  rect(ctx, 15, 17, 4, 2, K);
-  rect(ctx, 25, 17, 4, 2, K);
-  rect(ctx, 16, 17, 1, 1, W);
-  rect(ctx, 26, 17, 1, 1, W);
+  // Head (upper-left of body)
+  rect(ctx, 13, 10, 14, 2, K);
+  rect(ctx, 11, 12, 18, 2, K);
+  rect(ctx, 12, 14, 16, 6, Y);
 
-  // Cheeks
-  rect(ctx, 10, 19, 3, 3, R);
-  rect(ctx, 31, 19, 3, 3, R);
+  // Eye (one visible, determined yell expression)
+  rect(ctx, 17, 14, 3, 3, K);
+  rect(ctx, 18, 14, 1, 1, W);
+  // Eyebrow (angry/determined)
+  rect(ctx, 16, 13, 4, 1, K);
 
-  // Mouth (open, grinning)
-  rect(ctx, 20, 21, 4, 2, K);
-  rect(ctx, 21, 22, 2, 1, R);
+  // Cheek (glowing red)
+  rect(ctx, 11, 16, 3, 3, R);
 
-  // Body (forward, arms extended like jumping)
-  rect(ctx, 14, 24, 16, 10, Y);
-  rect(ctx, 16, 24, 12, 12, BELLY);
-  rect(ctx, 13, 25, 18, 8, Y);
+  // Mouth wide open (yelling "PIKAAA!")
+  rect(ctx, 22, 16, 5, 3, K);
+  rect(ctx, 23, 17, 3, 1, R);
 
-  // Arms out (one forward, one back for dynamic pose)
-  rect(ctx, 4, 26, 10, 4, Y);
-  rect(ctx, 2, 27, 4, 3, K);
-  rect(ctx, 34, 28, 10, 4, Y);
-  rect(ctx, 42, 29, 4, 3, K);
+  // Back arm (pulled back for balance)
+  rect(ctx, 8, 22, 5, 4, Y);
+  rect(ctx, 6, 23, 3, 3, Y);
 
-  // Legs tucked
-  rect(ctx, 16, 36, 5, 6, Y);
-  rect(ctx, 25, 36, 5, 6, Y);
-  rect(ctx, 15, 41, 7, 4, YD);
-  rect(ctx, 24, 41, 7, 4, YD);
+  // Front arm (punched forward across body)
+  rect(ctx, 26, 20, 7, 4, Y);
+  rect(ctx, 32, 21, 4, 3, Y);
+  rect(ctx, 35, 22, 2, 2, K); // fist outline
+
+  // Back leg tucked under body
+  rect(ctx, 14, 30, 6, 6, Y);
+  rect(ctx, 12, 34, 8, 4, YD);
+
+  // KICK LEG extended forward-right (the karate kick!)
+  rect(ctx, 28, 30, 10, 5, Y);
+  rect(ctx, 34, 28, 8, 6, Y);
+  rect(ctx, 38, 27, 8, 5, Y);
+  rect(ctx, 42, 26, 6, 5, Y);
+  // Foot/sole
+  rect(ctx, 42, 30, 6, 3, YD);
+  rect(ctx, 44, 31, 4, 2, K);
 }
 
 // ── Big yellow Pikachu running toward us (medium closeness) ─
@@ -401,18 +409,19 @@ function drawPikaSurf(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 19, 8, 18, 10, Y);
   rect(ctx, 17, 10, 22, 6, Y);
 
-  // Eyes (winking — left closed, right open)
-  rect(ctx, 22, 12, 4, 1, K); // wink line
-  rect(ctx, 32, 11, 3, 3, K);
-  rect(ctx, 33, 11, 1, 1, W);
+  // Eyes (two big round eyes, happy)
+  rect(ctx, 21, 11, 4, 4, K);
+  rect(ctx, 31, 11, 4, 4, K);
+  rect(ctx, 22, 12, 2, 2, W);
+  rect(ctx, 32, 12, 2, 2, W);
 
   // Cheeks
-  rect(ctx, 17, 13, 3, 3, R);
-  rect(ctx, 36, 13, 3, 3, R);
+  rect(ctx, 17, 14, 3, 3, R);
+  rect(ctx, 36, 14, 3, 3, R);
 
-  // Mouth (open smile)
-  rect(ctx, 26, 15, 4, 2, K);
-  rect(ctx, 27, 16, 2, 1, R);
+  // Mouth (happy open smile)
+  rect(ctx, 26, 16, 4, 2, K);
+  rect(ctx, 27, 17, 2, 1, R);
 
   // Body sitting
   rect(ctx, 19, 18, 18, 10, Y);
