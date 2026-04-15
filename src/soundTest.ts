@@ -4,6 +4,7 @@ import { SoundSystem } from './systems/SoundSystem';
 const sound = new SoundSystem();
 
 const TRACK_DISPLAY_NAMES: Record<string, string> = {
+  intro: 'Opening Movie (Yellow)',
   title: 'Title Screen',
   pallet_town: 'Pallet Town',
   route: 'Route Theme',

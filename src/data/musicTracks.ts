@@ -2316,9 +2316,54 @@ const evil_encounterTrack: MusicTrack = {
   ],
 };
 
+// ── intro ──
+// Source: tools/midi/Pokemon RedBlueYellow - Opening Yellow.mid
+// Converted with --grid mode (event-driven voice extraction with re-articulation-aware merging)
+// Melody: 2:0 (246 raw notes → 91 quantized)
+// Bass: 2:0 (246 raw notes → 69 quantized)
+// Melody beats: 120.5, Bass beats: 120.5
+const introTrack: MusicTrack = {
+  id: 'intro',
+  bpm: 165,
+  melody: [
+    [R, 0.5], [B4, 1], [E5, 2], [E5, 2], [E5, 2], [E5, 2],
+    [E5, 2], [E5, 2], [E5, 2], [E5, 1], [Gs5, 0.5], [G5, 0.5],
+    [Gs5, 2.5], [C5, 0.5], [Cs5, 2], [B4, 0.5], [Bb4, 0.5], [B4, 2.5],
+    [G4, 0.5], [E5, 2], [Gs5, 2], [B5, 2], [Cs6, 6],
+    [A3, 1], [A3, 1], [A5, 2], [Gs5, 2], [Fs5, 2],
+    [E5, 2], [B4, 2], [E4, 1], [E5, 1], [B4, 2],
+    [E4, 1], [E5, 1], [Gs5, 2], [B3, 1], [B5, 1], [Gs5, 2],
+    [Fs3, 1], [B5, 1], [Cs5, 2], [Gs4, 2], [Cs5, 2],
+    [Eb5, 2], [E5, 1], [Eb5, 1], [Cs5, 1], [Eb5, 2], [Eb5, 1],
+    [Cs5, 1], [B4, 1], [E5, 1], [Gs5, 1], [B3, 1], [Gs5, 1], [B3, 1], [Gs5, 1],
+    [B3, 1], [Gs5, 1], [Fs5, 1], [A5, 1], [B3, 1], [A5, 1], [Fs5, 1], [A5, 1],
+    [A5, 2], [B5, 0.5], [Bb5, 0.5], [B5, 1], [Fs5, 0.5], [F5, 0.5], [Fs5, 1], [B5, 0.5], [Bb5, 0.5], [B5, 1],
+    [E4, 0.5], [B4, 0.5], [Bb4, 0.5], [B4, 0.5], [B5, 0.5], [Bb5, 0.5], [B5, 3], [Fs5, 0.5], [F5, 0.5], [Fs5, 1],
+    [B5, 0.5], [A5, 0.5], [Gs5, 0.5], [Fs5, 0.5], [E5, 8],
+  ],
+  bass: [
+    [R, 0.5], [E3, 2], [B2, 2], [E3, 2], [B2, 2],
+    [E3, 2], [B2, 2], [E3, 1], [B2, 2], [Cs3, 1],
+    [Eb3, 0.5], [Gs3, 1.5], [E3, 1.5], [B3, 0.5], [Gs3, 2], [E3, 2],
+    [Gs3, 1.5], [B3, 0.5], [E3, 2], [Gs3, 2], [E3, 2],
+    [Fs3, 2], [Cs3, 2], [Fs3, 2], [Cs3, 2],
+    [A3, 2], [Fs3, 2], [A3, 2], [Fs3, 2],
+    [B3, 2], [Gs3, 2], [B3, 2], [Gs3, 2],
+    [Gs3, 2], [E3, 2], [Gs3, 1], [E3, 2], [Fs3, 1],
+    [A3, 2], [Fs3, 2], [A3, 2], [Fs3, 2],
+    [A3, 2], [Fs3, 2], [A3, 2], [B3, 1], [A3, 1],
+    [Gs3, 2], [E3, 2], [Gs3, 2], [E3, 2],
+    [Gs3, 2], [E3, 2], [Gs3, 2], [E3, 2],
+    [A3, 2], [E3, 2], [A3, 2], [E3, 1.5], [E4, 0.5],
+    [A3, 2], [Fs3, 2], [Cs4, 0.5], [Fs4, 1.5], [Fs3, 0.5], [Gs3, 0.5], [A3, 0.5], [Cs4, 0.5],
+    [E4, 8],
+  ],
+};
+
 // ── Track Registry ───────────────────────────────────────────
 export const MUSIC_TRACKS: Record<string, MusicTrack> = {
   title: titleTrack,
+  intro: introTrack,
   pallet_town: palletTownTrack,
   route: routeTrack,
   town: townTrack,

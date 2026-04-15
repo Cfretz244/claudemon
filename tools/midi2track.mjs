@@ -77,6 +77,7 @@ let transpose = 0;
 let maxBeats = 256;
 let quantize = 0.5;
 let dumpMode = false;
+let gridMode = false;
 let trackId = 'my_track';
 const trackFilter = [];
 
@@ -90,6 +91,7 @@ for (let i = 0; i < args.length; i++) {
   else if (arg === '--maxbeats') { maxBeats = parseInt(args[++i]); }
   else if (arg === '--quantize') { quantize = parseFloat(args[++i]); }
   else if (arg === '--dump') { dumpMode = true; }
+  else if (arg === '--grid') { gridMode = true; }
   else if (arg === '--id') { trackId = args[++i]; }
   else if (!arg.startsWith('--')) { filePath = arg; }
 }
@@ -290,9 +292,87 @@ function flattenPolyphony(notes, mode = 'high') {
   return result;
 }
 
+// ── Voice extraction via event-driven segmentation ─────────
+// For polyphonic single-channel sources (chords on one channel), we
+// segment time using all unique noteOn startTicks as boundaries, then
+// at each segment pick the highest (melody) or lowest (bass) sounding
+// note. Adjacent segments with the same picked pitch are merged UNLESS
+// a true noteOn event for that pitch happens at the boundary (genuine
+// re-articulation), so long sustained notes stay long even when the
+// other voice moves more frequently, and repeated notes stay repeated.
+function gridSampleVoice(notes, mode = 'high') {
+  if (!notes || notes.length === 0) return [];
+
+  const endTick = Math.max(...notes.map(n => n.endTick));
+  const starts = [...new Set(notes.map(n => n.startTick))].sort((a, b) => a - b);
+  const boundaries = [...starts];
+  if (boundaries[boundaries.length - 1] !== endTick) boundaries.push(endTick);
+
+  // Build a set of (startTick, noteNumber) pairs for fast re-articulation lookup
+  const startTickNotes = new Map(); // startTick → Set of note numbers
+  for (const n of notes) {
+    if (!startTickNotes.has(n.startTick)) startTickNotes.set(n.startTick, new Set());
+    startTickNotes.get(n.startTick).add(n.note);
+  }
+
+  // First pass: build raw segments (tickDuration, pickedNoteOrNull)
+  const segments = [];
+  if (boundaries[0] > 0) {
+    segments.push({ pick: null, reArtic: false, durTicks: boundaries[0] });
+  }
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    const segStart = boundaries[i];
+    const segEnd = boundaries[i + 1];
+    const sampleTick = segStart + 1;
+    const active = notes.filter(n => n.startTick <= sampleTick && n.endTick > sampleTick);
+    let pick = null;
+    if (active.length > 0) {
+      pick = mode === 'high'
+        ? active.reduce((a, b) => (b.note > a.note ? b : a)).note
+        : active.reduce((a, b) => (b.note < a.note ? b : a)).note;
+    }
+    // True re-articulation: is there a noteOn event for `pick` at this segStart?
+    const reArtic = pick !== null && startTickNotes.get(segStart)?.has(pick) === true;
+    segments.push({ pick, reArtic, durTicks: segEnd - segStart });
+  }
+
+  // Second pass: merge consecutive segments with same pitch UNLESS re-articulated.
+  // Rests (pick=null) merge with other rests.
+  const merged = [];
+  for (const seg of segments) {
+    const last = merged[merged.length - 1];
+    const sameAsLast = last && last.pick === seg.pick;
+    const isRest = seg.pick === null;
+    if (sameAsLast && (isRest || !seg.reArtic)) {
+      last.durTicks += seg.durTicks;
+    } else {
+      merged.push({ ...seg });
+    }
+  }
+
+  // Third pass: quantize tick durations into the beat grid
+  const result = [];
+  for (const seg of merged) {
+    const durGridUnits = Math.max(1, Math.round(seg.durTicks / quantizeTicks));
+    const durBeats = durGridUnits * quantize;
+    if (seg.pick === null) {
+      result.push([0, durBeats]);
+    } else {
+      const freq = Math.round(midiToFreq(seg.pick) * 100) / 100;
+      result.push([freq, durBeats]);
+    }
+  }
+
+  return result;
+}
+
 // ── Quantize notes into beat grid ────────────────────────────
 function quantizeChannel(notes, mode = 'high') {
   if (!notes || notes.length === 0) return [];
+
+  if (gridMode) {
+    return gridSampleVoice(notes, mode);
+  }
 
   // Flatten polyphony first
   const flat = flattenPolyphony(notes, mode);
