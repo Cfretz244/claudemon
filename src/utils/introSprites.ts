@@ -309,14 +309,9 @@ function drawPikaJump(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 14, 30, 6, 6, Y);
   rect(ctx, 12, 34, 8, 4, YD);
 
-  // KICK LEG extended forward-right (the karate kick!)
-  rect(ctx, 28, 30, 10, 5, Y);
-  rect(ctx, 34, 28, 8, 6, Y);
-  rect(ctx, 38, 27, 8, 5, Y);
-  rect(ctx, 42, 26, 6, 5, Y);
-  // Foot/sole
-  rect(ctx, 42, 30, 6, 3, YD);
-  rect(ctx, 44, 31, 4, 2, K);
+  // Short kick leg poking forward with a tiny cute foot at the tip
+  rect(ctx, 28, 31, 6, 4, Y);
+  rect(ctx, 34, 32, 3, 3, YD);
 }
 
 // ── Big yellow Pikachu running toward us (medium closeness) ─
