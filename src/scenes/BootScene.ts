@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { generateTileset, generatePlayerSprite, generatePikachuFollowerSprite, generatePikachuSurfSprite, generatePikachuBikeSprite, generatePokeballSprite, generateOakPortrait, generateNidorinoPortrait, generateSurfSprite, generateBikeSprite, generatePlayerPortrait, generatePlayerPortraitMid, generatePikachuFacePortraits } from '../utils/spriteGenerator';
 import { generateAllTrainerSprites } from '../utils/trainerSpriteGenerator';
+import { generateIntroSprites } from '../utils/introSprites';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -45,6 +46,7 @@ export class BootScene extends Phaser.Scene {
     generateSurfSprite(this);
     generateBikeSprite(this);
     generateAllTrainerSprites(this);
+    generateIntroSprites(this);
 
     // Create player animations
     this.anims.create({
@@ -270,6 +272,6 @@ export class BootScene extends Phaser.Scene {
       frameRate: 1,
     });
 
-    this.scene.start('TitleScene');
+    this.scene.start('IntroScene');
   }
 }
