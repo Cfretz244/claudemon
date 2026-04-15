@@ -409,11 +409,11 @@ function drawPikaSurf(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 19, 8, 18, 10, Y);
   rect(ctx, 17, 10, 22, 6, Y);
 
-  // Eyes (two big round eyes, happy)
+  // Eyes: mostly black with a single-pixel catchlight
   rect(ctx, 21, 11, 4, 4, K);
   rect(ctx, 31, 11, 4, 4, K);
-  rect(ctx, 22, 12, 2, 2, W);
-  rect(ctx, 32, 12, 2, 2, W);
+  rect(ctx, 22, 12, 1, 1, W);
+  rect(ctx, 32, 12, 1, 1, W);
 
   // Cheeks
   rect(ctx, 17, 14, 3, 3, R);
