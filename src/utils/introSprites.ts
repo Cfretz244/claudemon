@@ -25,50 +25,136 @@ function rect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h:
 }
 
 // ── Claude logo ─────────────────────────────────────────────
-// 6-point asterisk burst (Claude brand mark) + CLAUDE wordmark.
+// 6-arm burst mark centered above a chunky CLAUDE wordmark.
+// Canvas: 120×72, burst at top center, text centered below.
 function drawClaudeLogo(ctx: CanvasRenderingContext2D): void {
   const TAN = '#cc785c';
-  const TAN_DARK = '#a85c42';
+  const TAN_HI = '#e09070';
+  const TAN_DARK = '#8a4328';
   const INK = '#1f1c18';
 
-  // Burst centred at (20, 14), 6 arms, thick pixelated "*"
-  const cx = 20;
-  const cy = 14;
+  const CANVAS_W = 120;
 
-  // Horizontal arm
-  rect(ctx, cx - 8, cy - 1, 17, 3, TAN);
-  rect(ctx, cx - 9, cy, 19, 1, TAN);
-  // Diagonals (NE/SW and NW/SE) drawn stair-stepped
-  for (let i = -6; i <= 6; i++) {
-    const y1 = cy + Math.round(i * 0.7);
-    rect(ctx, cx + i, y1, 2, 1, TAN);
-    const y2 = cy - Math.round(i * 0.7);
-    rect(ctx, cx + i, y2, 2, 1, TAN);
+  // ── Burst mark ────────────────────────────────────
+  // Centered at (60, 22). Arms ~16px long, thick.
+  const cx = 60;
+  const cy = 22;
+
+  // Vertical arm (shortest — gives the mark a distinct shape)
+  rect(ctx, cx - 2, cy - 14, 5, 28, TAN);
+  rect(ctx, cx - 1, cy - 16, 3, 32, TAN);
+
+  // Horizontal arm (medium)
+  rect(ctx, cx - 16, cy - 2, 32, 5, TAN);
+  rect(ctx, cx - 18, cy - 1, 36, 3, TAN);
+
+  // Two diagonal arms (NE/SW and NW/SE), stair-stepped
+  for (let i = -14; i <= 14; i++) {
+    const slope = Math.round(i * 0.55);
+    // NE↘SW
+    rect(ctx, cx + i - 1, cy + slope - 1, 3, 3, TAN);
+    // NW↘SE
+    rect(ctx, cx + i - 1, cy - slope - 1, 3, 3, TAN);
   }
-  // Vertical arm (shorter on Claude mark)
-  rect(ctx, cx - 1, cy - 6, 3, 13, TAN);
-  rect(ctx, cx, cy - 7, 1, 15, TAN);
-  // Center highlight
-  rect(ctx, cx - 1, cy - 1, 3, 3, TAN_DARK);
 
-  // "CLAUDE" pixel wordmark (6 chars, 5 wide each, 2px gap)
+  // Darker inner ring to give depth
+  rect(ctx, cx - 4, cy - 4, 9, 9, TAN_DARK);
+  rect(ctx, cx - 3, cy - 3, 7, 7, TAN);
+  // Bright center pip
+  rect(ctx, cx - 1, cy - 1, 3, 3, TAN_HI);
+
+  // ── "CLAUDE" wordmark (7×9 pixel glyphs) ──────────
   const letters: Record<string, number[][]> = {
-    C: [[1,1,1,1],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,1,1,1]],
-    L: [[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,1,1,1]],
-    A: [[0,1,1,0],[1,0,0,1],[1,1,1,1],[1,0,0,1],[1,0,0,1]],
-    U: [[1,0,0,1],[1,0,0,1],[1,0,0,1],[1,0,0,1],[0,1,1,0]],
-    D: [[1,1,1,0],[1,0,0,1],[1,0,0,1],[1,0,0,1],[1,1,1,0]],
-    E: [[1,1,1,1],[1,0,0,0],[1,1,1,0],[1,0,0,0],[1,1,1,1]],
+    C: [
+      [0,1,1,1,1,1,0],
+      [1,1,1,0,0,1,1],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,1,0,0,1,1],
+      [0,1,1,1,1,1,0],
+    ],
+    L: [
+      [1,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [1,1,1,1,1,1,1],
+    ],
+    A: [
+      [0,0,1,1,1,0,0],
+      [0,1,1,1,1,1,0],
+      [1,1,1,0,1,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+    ],
+    U: [
+      [1,1,1,0,0,1,1],
+      [1,1,1,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,1,0,1,1,1],
+      [0,1,1,1,1,1,0],
+    ],
+    D: [
+      [1,1,1,1,1,0,0],
+      [1,1,1,1,1,1,0],
+      [1,1,0,0,1,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,1,1,1],
+      [1,1,1,1,1,1,0],
+      [1,1,1,1,1,0,0],
+    ],
+    E: [
+      [1,1,1,1,1,1,1],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,1,1,1,1,0],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,1,1,1,1,1],
+    ],
   };
+
   const word = 'CLAUDE';
-  const startX = 40;
-  const startY = 23;
+  const glyphW = 7;
+  const glyphH = 9;
+  const spacing = 2;
+  const totalW = word.length * glyphW + (word.length - 1) * spacing;
+  const startX = Math.round((CANVAS_W - totalW) / 2);
+  const startY = 50;
+
   for (let i = 0; i < word.length; i++) {
     const glyph = letters[word[i]];
     if (!glyph) continue;
-    for (let r = 0; r < 5; r++) {
-      for (let c = 0; c < 4; c++) {
-        if (glyph[r][c]) rect(ctx, startX + i * 6 + c, startY + r, 1, 1, INK);
+    const charX = startX + i * (glyphW + spacing);
+    // Subtle tan shadow behind the ink (1px down/right)
+    for (let r = 0; r < glyphH; r++) {
+      for (let c = 0; c < glyphW; c++) {
+        if (glyph[r][c]) rect(ctx, charX + c + 1, startY + r + 1, 1, 1, TAN);
+      }
+    }
+    // Ink body
+    for (let r = 0; r < glyphH; r++) {
+      for (let c = 0; c < glyphW; c++) {
+        if (glyph[r][c]) rect(ctx, charX + c, startY + r, 1, 1, INK);
       }
     }
   }
@@ -704,7 +790,7 @@ function drawTitlePikaFront(ctx: CanvasRenderingContext2D): void {
 
 // ── Sprite registry ────────────────────────────────────────
 const INTRO_SPRITES: IntroSprite[] = [
-  { key: 'intro_claude_logo', width: 80, height: 32, draw: drawClaudeLogo },
+  { key: 'intro_claude_logo', width: 120, height: 72, draw: drawClaudeLogo },
   { key: 'intro_star_big', width: 12, height: 12, draw: drawBigStar },
   { key: 'intro_star_tiny', width: 4, height: 4, draw: drawTinyStar },
 
