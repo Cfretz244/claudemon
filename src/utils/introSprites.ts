@@ -335,6 +335,8 @@ function drawPikaRunNear(frame: 0 | 1): DrawFn {
     rect(ctx, 15, 12, 34, 2, Y);
     rect(ctx, 16, 14, 32, 12, Y);
     rect(ctx, 14, 16, 36, 8, Y);
+    // Subtle 1px crown outline between the ears
+    rect(ctx, 20, 10, 24, 1, K);
 
     // Eyes
     rect(ctx, 21, 18, 5, 4, K);
@@ -460,6 +462,8 @@ function drawPikaRunClosest(frame: 0 | 1): DrawFn {
     rect(ctx, 14, 18, 68, 4, Y);
     rect(ctx, 18, 18, 60, 24, Y);
     rect(ctx, 14, 22, 68, 16, Y);
+    // Subtle 1px crown outline between the ears
+    rect(ctx, 30, 14, 36, 1, K);
 
     // Eyes (big, friendly)
     rect(ctx, 28, 26, 8, 6, K);
@@ -645,6 +649,8 @@ function drawPikaPeaceful(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 10, 14, 52, 4, Y);
   rect(ctx, 12, 18, 48, 30, Y);
   rect(ctx, 8, 22, 56, 22, Y);
+  // Subtle 1px crown outline between the ears
+  rect(ctx, 22, 10, 28, 1, K);
 
   // Big soft round eyes (no angry brow)
   rect(ctx, 18, 22, 8, 8, K);
@@ -679,6 +685,8 @@ function drawPikaPeacefulBlink(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 10, 14, 52, 4, Y);
   rect(ctx, 12, 18, 48, 30, Y);
   rect(ctx, 8, 22, 56, 22, Y);
+  // Subtle 1px crown outline between the ears
+  rect(ctx, 22, 10, 28, 1, K);
 
   // Closed eyes (small smile-shaped arcs)
   rect(ctx, 19, 26, 6, 1, K);
@@ -718,6 +726,8 @@ function drawPikaCharge(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 10, 14, 52, 4, Y);
   rect(ctx, 12, 18, 48, 30, Y);
   rect(ctx, 8, 22, 56, 22, Y);
+  // Subtle 1px crown outline between the ears
+  rect(ctx, 22, 10, 28, 1, K);
 
   // Angry eyebrows
   rect(ctx, 18, 20, 10, 2, K);
@@ -824,6 +834,8 @@ function drawTitlePikaFront(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 9, 14, 30, 2, Y);
   rect(ctx, 10, 16, 28, 12, Y);
   rect(ctx, 8, 18, 32, 8, Y);
+  // Subtle 1px crown outline between the ears
+  rect(ctx, 15, 12, 20, 1, K);
 
   // Eyes (big round, happy)
   rect(ctx, 14, 18, 4, 5, K);
