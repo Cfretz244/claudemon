@@ -46,6 +46,7 @@ export class TitleScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor('#88ccff');
+    this.cameras.main.fadeIn(500, 255, 255, 255);
     this.state = 'menu';
     soundSystem.startMusic('title');
 
@@ -59,110 +60,71 @@ export class TitleScene extends Phaser.Scene {
 
     // Clouds
     sky.fillStyle(0xffffff);
-    sky.fillRect(122, 8, 18, 4); sky.fillRect(125, 6, 12, 8); sky.fillRect(128, 4, 6, 4);
-    sky.fillStyle(0xe0e8f0);
-    sky.fillRect(122, 12, 18, 2);
-    sky.fillStyle(0xffffff);
     sky.fillRect(2, 88, 22, 4); sky.fillRect(5, 86, 16, 8); sky.fillRect(8, 84, 10, 4);
     sky.fillStyle(0xe0e8f0);
     sky.fillRect(2, 92, 22, 2);
     sky.fillStyle(0xffffff);
-    sky.fillRect(112, 112, 28, 5); sky.fillRect(116, 110, 18, 9); sky.fillRect(120, 108, 10, 4);
+    sky.fillRect(128, 90, 26, 4); sky.fillRect(132, 88, 18, 8); sky.fillRect(136, 86, 10, 4);
     sky.fillStyle(0xe0e8f0);
-    sky.fillRect(112, 117, 28, 2);
+    sky.fillRect(128, 94, 26, 2);
 
-    // --- Pikachu on balloons illustration ---
-    const art = this.add.graphics();
+    // ── CLAUDÉMON wordmark ─────────────────────────────────
+    // Big yellow title with blue outline + white highlight (shadow/hi pair)
+    const title = this.add.container(GAME_WIDTH / 2, 22);
+    // Drop shadow
+    title.add(this.add.text(1, 1, 'CLAUDÉMON', {
+      fontSize: '14px', color: '#1030a0', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5));
+    // Outline layers (4-direction stroke)
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      title.add(this.add.text(dx, dy, 'CLAUDÉMON', {
+        fontSize: '14px', color: '#1030a0', fontFamily: 'monospace', fontStyle: 'bold',
+      }).setOrigin(0.5));
+    }
+    // Yellow fill
+    title.add(this.add.text(0, 0, 'CLAUDÉMON', {
+      fontSize: '14px', color: '#f8d030', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5));
+    // White highlight on top
+    title.add(this.add.text(0, -2, 'CLAUDÉMON', {
+      fontSize: '14px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5).setAlpha(0.35));
 
-    // Balloon strings (converge at belly where they're tied)
-    art.fillStyle(0x484848);
-    for (let i = 0; i < 36; i++) { art.fillRect(74 + Math.round(5 * i / 35), 46 + i, 1, 1); }
-    for (let i = 0; i < 38; i++) { art.fillRect(83 - Math.round(3 * i / 37), 44 + i, 1, 1); }
-    for (let i = 0; i < 34; i++) { art.fillRect(91 - Math.round(9 * i / 33), 48 + i, 1, 1); }
-    for (let i = 0; i < 34; i++) { art.fillRect(78 + Math.round(i / 33), 48 + i, 1, 1); }
+    // "Pika!" script badge — small, tilted, in red
+    const pikaTag = this.add.container(GAME_WIDTH / 2 + 28, 36);
+    pikaTag.angle = -12;
+    pikaTag.add(this.add.text(1, 1, 'Pika!', {
+      fontSize: '8px', color: '#6a0010', fontFamily: 'monospace', fontStyle: 'italic bold',
+    }).setOrigin(0.5));
+    pikaTag.add(this.add.text(0, 0, 'Pika!', {
+      fontSize: '8px', color: '#ff3030', fontFamily: 'monospace', fontStyle: 'italic bold',
+    }).setOrigin(0.5));
 
-    // Pikachu ears (yellow with black tips)
-    art.fillStyle(0xf8d030);
-    art.fillRect(68, 54, 5, 12); art.fillRect(87, 54, 5, 12);
-    art.fillStyle(0x282828);
-    art.fillRect(68, 54, 5, 3); art.fillRect(87, 54, 5, 3);
-
-    // Pikachu head
-    art.fillStyle(0xf8d030);
-    art.fillRect(71, 64, 18, 10); art.fillRect(69, 67, 22, 8);
-
-    // Eyes
-    art.fillStyle(0x282828);
-    art.fillRect(74, 68, 3, 3); art.fillRect(83, 68, 3, 3);
-    art.fillStyle(0xffffff);
-    art.fillRect(75, 68, 1, 1); art.fillRect(84, 68, 1, 1);
-
-    // Red cheeks
-    art.fillStyle(0xe04040);
-    art.fillRect(69, 71, 4, 3); art.fillRect(87, 71, 4, 3);
-
-    // Mouth (smile)
-    art.fillStyle(0x282828);
-    art.fillRect(78, 73, 1, 1); art.fillRect(79, 74, 2, 1); art.fillRect(81, 73, 1, 1);
-
-    // Body
-    art.fillStyle(0xf8d030);
-    art.fillRect(68, 75, 24, 12); art.fillRect(66, 78, 28, 6);
-    // Lighter belly
-    art.fillStyle(0xf8e878);
-    art.fillRect(72, 78, 16, 8);
-    // Back stripes
-    art.fillStyle(0xb07820);
-    art.fillRect(76, 75, 3, 3); art.fillRect(81, 75, 3, 3);
-
-    // Arms (outstretched to sides)
-    art.fillStyle(0xf8d030);
-    art.fillRect(56, 78, 12, 5); art.fillRect(92, 78, 12, 5);
-
-    // Legs and feet
-    art.fillStyle(0xf8d030);
-    art.fillRect(72, 87, 5, 5); art.fillRect(83, 87, 5, 5);
-    art.fillRect(71, 91, 7, 3); art.fillRect(82, 91, 7, 3);
-
-    // Tail (lightning bolt)
-    art.fillStyle(0xf8d030);
-    art.fillRect(92, 75, 4, 4); art.fillRect(95, 71, 4, 5); art.fillRect(98, 67, 5, 5);
-    art.fillStyle(0xe8c020);
-    art.fillRect(96, 65, 3, 3);
-
-    // String band tied around belly
-    art.fillStyle(0x585858);
-    art.fillRect(69, 81, 22, 1);
-    art.fillRect(79, 80, 2, 3);
-
-    // Colorful balloons (drawn on top, above Pikachu)
-    const drawBalloon = (cx: number, cy: number, color: number, highlight: number, dark: number) => {
-      art.fillStyle(color);
-      art.fillRect(cx - 4, cy - 5, 8, 11); art.fillRect(cx - 5, cy - 3, 10, 7);
-      art.fillRect(cx - 3, cy - 6, 6, 2);
-      art.fillStyle(highlight);
-      art.fillRect(cx - 2, cy - 4, 3, 3);
-      art.fillStyle(dark);
-      art.fillRect(cx, cy + 6, 2, 2);
-    };
-    drawBalloon(74, 38, 0xe83030, 0xf86868, 0xb02020);
-    drawBalloon(83, 36, 0x30b830, 0x60d860, 0x208820);
-    drawBalloon(91, 40, 0x3890e0, 0x68b8f8, 0x286898);
-    drawBalloon(78, 40, 0xf09030, 0xf8b860, 0xb06820);
-
-    // Title text with shadow for readability on sky
-    this.add.text(GAME_WIDTH / 2 + 1, 13, 'POKeMON', {
-      fontSize: '16px', color: '#604008', fontFamily: 'monospace',
-    }).setOrigin(0.5);
-    this.add.text(GAME_WIDTH / 2, 12, 'POKeMON', {
-      fontSize: '16px', color: '#f8d030', fontFamily: 'monospace',
+    // YELLOW VERSION subtitle (white-on-red pill)
+    const subPill = this.add.graphics();
+    subPill.fillStyle(0x1030a0);
+    subPill.fillRoundedRect(GAME_WIDTH / 2 - 36, 40, 72, 10, 2);
+    subPill.fillStyle(0xc03030);
+    subPill.fillRoundedRect(GAME_WIDTH / 2 - 35, 41, 70, 8, 2);
+    this.add.text(GAME_WIDTH / 2, 45, 'YELLOW VERSION', {
+      fontSize: '7px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2 + 1, 27, 'YELLOW', {
-      fontSize: '12px', color: '#604008', fontFamily: 'monospace',
-    }).setOrigin(0.5);
-    this.add.text(GAME_WIDTH / 2, 26, 'YELLOW', {
-      fontSize: '12px', color: '#f8d030', fontFamily: 'monospace',
+    // Front-facing happy Pikachu (uses the title_pika_front sprite from introSprites.ts)
+    const titlePika = this.add.image(GAME_WIDTH / 2, 82, 'title_pika_front');
+    this.tweens.add({
+      targets: titlePika,
+      scaleX: 1.04,
+      scaleY: 1.04,
+      duration: 1500,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+    });
+
+    // Footer copyright
+    this.add.text(GAME_WIDTH / 2, 138, '©2026 CLAUDEMON inc.', {
+      fontSize: '6px', color: '#1030a0', fontFamily: 'monospace',
     }).setOrigin(0.5);
 
     // Check for save data

@@ -444,6 +444,51 @@ export class SoundSystem {
       { freq: 1200, dur: 0.2, delay: 0.2 },
     ], 'triangle', 0.08);
   }
+
+  starShimmer(): void {
+    this.playNotes([
+      { freq: 1200, dur: 0.06, delay: 0 },
+      { freq: 1600, dur: 0.06, delay: 0.05 },
+      { freq: 2000, dur: 0.08, delay: 0.1 },
+      { freq: 2400, dur: 0.1, delay: 0.16 },
+    ], 'sine', 0.06);
+  }
+
+  thunderZap(): void {
+    this.playNotes([
+      { freq: 600, dur: 0.05, delay: 0 },
+      { freq: 400, dur: 0.05, delay: 0.04 },
+      { freq: 250, dur: 0.06, delay: 0.08 },
+      { freq: 150, dur: 0.08, delay: 0.13 },
+      { freq: 80, dur: 0.15, delay: 0.2 },
+    ], 'sawtooth', 0.12);
+    this.playNotes([
+      { freq: 60, dur: 0.4, delay: 0.05 },
+    ], 'square', 0.08);
+  }
+
+  whoosh(): void {
+    this.playNotes([
+      { freq: 200, dur: 0.04, delay: 0 },
+      { freq: 350, dur: 0.04, delay: 0.03 },
+      { freq: 500, dur: 0.04, delay: 0.06 },
+      { freq: 700, dur: 0.05, delay: 0.09 },
+      { freq: 900, dur: 0.06, delay: 0.13 },
+    ], 'sine', 0.05);
+  }
+
+  splash(): void {
+    this.playNotes([
+      { freq: 320, dur: 0.04, delay: 0 },
+      { freq: 260, dur: 0.05, delay: 0.04 },
+      { freq: 200, dur: 0.06, delay: 0.09 },
+      { freq: 150, dur: 0.08, delay: 0.14 },
+    ], 'triangle', 0.06);
+  }
+
+  balloonPop(): void {
+    this.playTone(420, 0.04, 'square', 0.07);
+  }
 }
 
 // Global sound instance

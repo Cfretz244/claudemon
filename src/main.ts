@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, SCALE } from './utils/constants';
 import { BootScene } from './scenes/BootScene';
+import { IntroScene } from './scenes/IntroScene';
 import { TitleScene } from './scenes/TitleScene';
 import { OverworldScene } from './scenes/OverworldScene';
 import { BattleScene } from './scenes/BattleScene';
@@ -13,7 +14,7 @@ const config: Phaser.Types.Core.GameConfig = {
   zoom: SCALE,
   parent: 'game-container',
   backgroundColor: '#000000',
-  scene: [BootScene, TitleScene, OverworldScene, BattleScene],
+  scene: [BootScene, IntroScene, TitleScene, OverworldScene, BattleScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
