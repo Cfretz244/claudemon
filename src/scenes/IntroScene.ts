@@ -32,6 +32,7 @@ export class IntroScene extends Phaser.Scene {
   private finished = false;
   private skipEnabled = false;
   private started = false;
+  private musicAutoStopTimer?: Phaser.Time.TimerEvent;
 
   constructor() {
     super({ key: 'IntroScene' });
@@ -190,6 +191,8 @@ export class IntroScene extends Phaser.Scene {
     this.finished = true;
     for (const t of this.pendingTimers) t.remove(false);
     this.pendingTimers = [];
+    this.musicAutoStopTimer?.remove(false);
+    this.musicAutoStopTimer = undefined;
     soundSystem.stopMusic();
     introPlayed = true;
     this.cameras.main.fadeOut(300, 255, 255, 255);
@@ -353,6 +356,14 @@ export class IntroScene extends Phaser.Scene {
       enter: () => {
         // Music kicks in here, not at the Claude logo step.
         soundSystem.startMusic('intro');
+        // The intro track is 120.5 beats at 165 BPM ≈ 21.9s per loop.
+        // Force-stop slightly before the loop point so any scene overrun
+        // doesn't cause the opening motif to re-trigger audibly. This timer
+        // is deliberately NOT pushed onto pendingTimers so clearStage()
+        // between steps doesn't cancel it.
+        this.musicAutoStopTimer = this.time.delayedCall(21850, () => {
+          if (!this.finished) soundSystem.stopMusic();
+        });
 
         this.setLetterbox(true);
         this.setBg(0xffffff);
