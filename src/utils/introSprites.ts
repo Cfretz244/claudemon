@@ -279,8 +279,8 @@ function drawPikaJump(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 16, 4, 4, 4, K);
 
   // Head (upper-left of body)
-  rect(ctx, 13, 10, 14, 2, K);
-  rect(ctx, 11, 12, 18, 2, K);
+  rect(ctx, 13, 10, 14, 2, Y);
+  rect(ctx, 11, 12, 18, 2, Y);
   rect(ctx, 12, 14, 16, 6, Y);
 
   // Eye (one visible, determined yell expression)
@@ -330,9 +330,9 @@ function drawPikaRunNear(frame: 0 | 1): DrawFn {
     rect(ctx, 14, 2, 5, 5, K);
     rect(ctx, 45, 2, 5, 5, K);
 
-    // Head outline + fill
-    rect(ctx, 18, 10, 28, 2, K);
-    rect(ctx, 15, 12, 34, 2, K);
+    // Head (yellow all the way up — only the ear tips are black)
+    rect(ctx, 18, 10, 28, 2, Y);
+    rect(ctx, 15, 12, 34, 2, Y);
     rect(ctx, 16, 14, 32, 12, Y);
     rect(ctx, 14, 16, 36, 8, Y);
 
@@ -455,11 +455,9 @@ function drawPikaRunClosest(frame: 0 | 1): DrawFn {
     rect(ctx, 18, 2, 10, 8, K);
     rect(ctx, 68, 2, 10, 8, K);
 
-    // Head outline
-    rect(ctx, 20, 14, 56, 4, K);
-    rect(ctx, 14, 18, 68, 4, K);
-
-    // Head fill
+    // Head (yellow all the way up — only the ear tips are black)
+    rect(ctx, 20, 14, 56, 4, Y);
+    rect(ctx, 14, 18, 68, 4, Y);
     rect(ctx, 18, 18, 60, 24, Y);
     rect(ctx, 14, 22, 68, 16, Y);
 
@@ -642,9 +640,9 @@ function drawPikaPeaceful(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 12, 2, 8, 6, K);
   rect(ctx, 52, 2, 8, 6, K);
 
-  // Head outline + fill
-  rect(ctx, 16, 10, 40, 4, K);
-  rect(ctx, 10, 14, 52, 4, K);
+  // Head (yellow all the way up — only the ear tips are black)
+  rect(ctx, 16, 10, 40, 4, Y);
+  rect(ctx, 10, 14, 52, 4, Y);
   rect(ctx, 12, 18, 48, 30, Y);
   rect(ctx, 8, 22, 56, 22, Y);
 
@@ -676,9 +674,9 @@ function drawPikaPeacefulBlink(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 12, 2, 8, 6, K);
   rect(ctx, 52, 2, 8, 6, K);
 
-  // Head outline + fill
-  rect(ctx, 16, 10, 40, 4, K);
-  rect(ctx, 10, 14, 52, 4, K);
+  // Head (yellow all the way up — only the ear tips are black)
+  rect(ctx, 16, 10, 40, 4, Y);
+  rect(ctx, 10, 14, 52, 4, Y);
   rect(ctx, 12, 18, 48, 30, Y);
   rect(ctx, 8, 22, 56, 22, Y);
 
@@ -715,9 +713,9 @@ function drawPikaCharge(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 12, 2, 8, 6, K);
   rect(ctx, 52, 2, 8, 6, K);
 
-  // Head outline + fill
-  rect(ctx, 16, 10, 40, 4, K);
-  rect(ctx, 10, 14, 52, 4, K);
+  // Head (yellow all the way up — only the ear tips are black)
+  rect(ctx, 16, 10, 40, 4, Y);
+  rect(ctx, 10, 14, 52, 4, Y);
   rect(ctx, 12, 18, 48, 30, Y);
   rect(ctx, 8, 22, 56, 22, Y);
 
@@ -821,9 +819,9 @@ function drawTitlePikaFront(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 8, 2, 5, 5, K);
   rect(ctx, 35, 2, 5, 5, K);
 
-  // Head
-  rect(ctx, 11, 12, 26, 2, K);
-  rect(ctx, 9, 14, 30, 2, K);
+  // Head (yellow all the way up — only the ear tips are black)
+  rect(ctx, 11, 12, 26, 2, Y);
+  rect(ctx, 9, 14, 30, 2, Y);
   rect(ctx, 10, 16, 28, 12, Y);
   rect(ctx, 8, 18, 32, 8, Y);
 
