@@ -25,50 +25,136 @@ function rect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h:
 }
 
 // ── Claude logo ─────────────────────────────────────────────
-// 6-point asterisk burst (Claude brand mark) + CLAUDE wordmark.
+// 6-arm burst mark centered above a chunky CLAUDE wordmark.
+// Canvas: 120×72, burst at top center, text centered below.
 function drawClaudeLogo(ctx: CanvasRenderingContext2D): void {
   const TAN = '#cc785c';
-  const TAN_DARK = '#a85c42';
+  const TAN_HI = '#e09070';
+  const TAN_DARK = '#8a4328';
   const INK = '#1f1c18';
 
-  // Burst centred at (20, 14), 6 arms, thick pixelated "*"
-  const cx = 20;
-  const cy = 14;
+  const CANVAS_W = 120;
 
-  // Horizontal arm
-  rect(ctx, cx - 8, cy - 1, 17, 3, TAN);
-  rect(ctx, cx - 9, cy, 19, 1, TAN);
-  // Diagonals (NE/SW and NW/SE) drawn stair-stepped
-  for (let i = -6; i <= 6; i++) {
-    const y1 = cy + Math.round(i * 0.7);
-    rect(ctx, cx + i, y1, 2, 1, TAN);
-    const y2 = cy - Math.round(i * 0.7);
-    rect(ctx, cx + i, y2, 2, 1, TAN);
+  // ── Burst mark ────────────────────────────────────
+  // Centered at (60, 22). Arms ~16px long, thick.
+  const cx = 60;
+  const cy = 22;
+
+  // Vertical arm (shortest — gives the mark a distinct shape)
+  rect(ctx, cx - 2, cy - 14, 5, 28, TAN);
+  rect(ctx, cx - 1, cy - 16, 3, 32, TAN);
+
+  // Horizontal arm (medium)
+  rect(ctx, cx - 16, cy - 2, 32, 5, TAN);
+  rect(ctx, cx - 18, cy - 1, 36, 3, TAN);
+
+  // Two diagonal arms (NE/SW and NW/SE), stair-stepped
+  for (let i = -14; i <= 14; i++) {
+    const slope = Math.round(i * 0.55);
+    // NE↘SW
+    rect(ctx, cx + i - 1, cy + slope - 1, 3, 3, TAN);
+    // NW↘SE
+    rect(ctx, cx + i - 1, cy - slope - 1, 3, 3, TAN);
   }
-  // Vertical arm (shorter on Claude mark)
-  rect(ctx, cx - 1, cy - 6, 3, 13, TAN);
-  rect(ctx, cx, cy - 7, 1, 15, TAN);
-  // Center highlight
-  rect(ctx, cx - 1, cy - 1, 3, 3, TAN_DARK);
 
-  // "CLAUDE" pixel wordmark (6 chars, 5 wide each, 2px gap)
+  // Darker inner ring to give depth
+  rect(ctx, cx - 4, cy - 4, 9, 9, TAN_DARK);
+  rect(ctx, cx - 3, cy - 3, 7, 7, TAN);
+  // Bright center pip
+  rect(ctx, cx - 1, cy - 1, 3, 3, TAN_HI);
+
+  // ── "CLAUDE" wordmark (7×9 pixel glyphs) ──────────
   const letters: Record<string, number[][]> = {
-    C: [[1,1,1,1],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,1,1,1]],
-    L: [[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,1,1,1]],
-    A: [[0,1,1,0],[1,0,0,1],[1,1,1,1],[1,0,0,1],[1,0,0,1]],
-    U: [[1,0,0,1],[1,0,0,1],[1,0,0,1],[1,0,0,1],[0,1,1,0]],
-    D: [[1,1,1,0],[1,0,0,1],[1,0,0,1],[1,0,0,1],[1,1,1,0]],
-    E: [[1,1,1,1],[1,0,0,0],[1,1,1,0],[1,0,0,0],[1,1,1,1]],
+    C: [
+      [0,1,1,1,1,1,0],
+      [1,1,1,0,0,1,1],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,1,0,0,1,1],
+      [0,1,1,1,1,1,0],
+    ],
+    L: [
+      [1,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [0,1,1,0,0,0,0],
+      [1,1,1,1,1,1,1],
+    ],
+    A: [
+      [0,0,1,1,1,0,0],
+      [0,1,1,1,1,1,0],
+      [1,1,1,0,1,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+    ],
+    U: [
+      [1,1,1,0,0,1,1],
+      [1,1,1,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,1,0,1,1,1],
+      [0,1,1,1,1,1,0],
+    ],
+    D: [
+      [1,1,1,1,1,0,0],
+      [1,1,1,1,1,1,0],
+      [1,1,0,0,1,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,0,1,1],
+      [1,1,0,0,1,1,1],
+      [1,1,1,1,1,1,0],
+      [1,1,1,1,1,0,0],
+    ],
+    E: [
+      [1,1,1,1,1,1,1],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,1,1,1,1,0],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,0,0,0,0,0],
+      [1,1,1,1,1,1,1],
+    ],
   };
+
   const word = 'CLAUDE';
-  const startX = 40;
-  const startY = 23;
+  const glyphW = 7;
+  const glyphH = 9;
+  const spacing = 2;
+  const totalW = word.length * glyphW + (word.length - 1) * spacing;
+  const startX = Math.round((CANVAS_W - totalW) / 2);
+  const startY = 50;
+
   for (let i = 0; i < word.length; i++) {
     const glyph = letters[word[i]];
     if (!glyph) continue;
-    for (let r = 0; r < 5; r++) {
-      for (let c = 0; c < 4; c++) {
-        if (glyph[r][c]) rect(ctx, startX + i * 6 + c, startY + r, 1, 1, INK);
+    const charX = startX + i * (glyphW + spacing);
+    // Subtle tan shadow behind the ink (1px down/right)
+    for (let r = 0; r < glyphH; r++) {
+      for (let c = 0; c < glyphW; c++) {
+        if (glyph[r][c]) rect(ctx, charX + c + 1, startY + r + 1, 1, 1, TAN);
+      }
+    }
+    // Ink body
+    for (let r = 0; r < glyphH; r++) {
+      for (let c = 0; c < glyphW; c++) {
+        if (glyph[r][c]) rect(ctx, charX + c, startY + r, 1, 1, INK);
       }
     }
   }
@@ -164,65 +250,68 @@ function drawPikaSilhouetteMid(frame: 0 | 1): DrawFn {
   };
 }
 
-// ── Big Pikachu jumping through the sky ────────────────────
+// ── Pikachu flying karate kick ─────────────────────────────
+// 48×48 canvas. Pose faces RIGHT with kicking leg extended forward-right,
+// tail trailing behind-left. Scene flips X to mirror for left-moving motion.
 function drawPikaJump(ctx: CanvasRenderingContext2D): void {
   const Y = '#f8d030';
-  const YD = '#d89820';
+  const YD = '#c89020';
   const K = '#202020';
   const R = '#e03030';
   const W = '#ffffff';
   const BELLY = '#f8e878';
 
-  // Tail streaming behind (left side — jumping to upper-right)
-  rect(ctx, 0, 22, 6, 4, K);
-  rect(ctx, 2, 20, 6, 3, Y);
-  rect(ctx, 0, 18, 8, 3, Y);
-  rect(ctx, 4, 14, 6, 4, Y);
+  // Tail trailing behind (far left side, lightning-bolt shape)
+  rect(ctx, 0, 18, 5, 4, Y);
+  rect(ctx, 3, 14, 5, 5, YD);
+  rect(ctx, 0, 10, 5, 4, YD);
+  rect(ctx, 5, 16, 4, 4, Y);
 
-  // Ears (pointed, streamlined)
-  rect(ctx, 14, 4, 4, 14, Y);
-  rect(ctx, 26, 4, 4, 14, Y);
-  rect(ctx, 14, 2, 4, 4, K); // ear tip
-  rect(ctx, 26, 2, 4, 4, K);
+  // Body (compact, angled forward)
+  rect(ctx, 12, 16, 18, 16, Y);
+  rect(ctx, 10, 18, 22, 12, Y);
+  rect(ctx, 14, 20, 14, 10, BELLY);
 
-  // Head (outlined)
-  rect(ctx, 13, 10, 18, 2, K);
-  rect(ctx, 11, 12, 22, 2, K);
-  rect(ctx, 12, 14, 20, 10, Y);
-  rect(ctx, 10, 16, 24, 6, Y);
-  rect(ctx, 10, 22, 2, 2, K);
-  rect(ctx, 32, 22, 2, 2, K);
+  // Ears (laid back due to speed)
+  rect(ctx, 10, 6, 4, 10, Y);
+  rect(ctx, 10, 6, 4, 4, K);
+  rect(ctx, 16, 4, 4, 12, Y);
+  rect(ctx, 16, 4, 4, 4, K);
 
-  // Eyes (squinty, determined)
-  rect(ctx, 15, 17, 4, 2, K);
-  rect(ctx, 25, 17, 4, 2, K);
-  rect(ctx, 16, 17, 1, 1, W);
-  rect(ctx, 26, 17, 1, 1, W);
+  // Head (upper-left of body)
+  rect(ctx, 13, 10, 14, 2, K);
+  rect(ctx, 11, 12, 18, 2, K);
+  rect(ctx, 12, 14, 16, 6, Y);
 
-  // Cheeks
-  rect(ctx, 10, 19, 3, 3, R);
-  rect(ctx, 31, 19, 3, 3, R);
+  // Eye (one visible, determined yell expression)
+  rect(ctx, 17, 14, 3, 3, K);
+  rect(ctx, 18, 14, 1, 1, W);
+  // Eyebrow (angry/determined)
+  rect(ctx, 16, 13, 4, 1, K);
 
-  // Mouth (open, grinning)
-  rect(ctx, 20, 21, 4, 2, K);
-  rect(ctx, 21, 22, 2, 1, R);
+  // Cheek (glowing red)
+  rect(ctx, 11, 16, 3, 3, R);
 
-  // Body (forward, arms extended like jumping)
-  rect(ctx, 14, 24, 16, 10, Y);
-  rect(ctx, 16, 24, 12, 12, BELLY);
-  rect(ctx, 13, 25, 18, 8, Y);
+  // Mouth wide open (yelling "PIKAAA!")
+  rect(ctx, 22, 16, 5, 3, K);
+  rect(ctx, 23, 17, 3, 1, R);
 
-  // Arms out (one forward, one back for dynamic pose)
-  rect(ctx, 4, 26, 10, 4, Y);
-  rect(ctx, 2, 27, 4, 3, K);
-  rect(ctx, 34, 28, 10, 4, Y);
-  rect(ctx, 42, 29, 4, 3, K);
+  // Back arm (pulled back for balance)
+  rect(ctx, 8, 22, 5, 4, Y);
+  rect(ctx, 6, 23, 3, 3, Y);
 
-  // Legs tucked
-  rect(ctx, 16, 36, 5, 6, Y);
-  rect(ctx, 25, 36, 5, 6, Y);
-  rect(ctx, 15, 41, 7, 4, YD);
-  rect(ctx, 24, 41, 7, 4, YD);
+  // Front arm (punched forward across body)
+  rect(ctx, 26, 20, 7, 4, Y);
+  rect(ctx, 32, 21, 4, 3, Y);
+  rect(ctx, 35, 22, 2, 2, K); // fist outline
+
+  // Back leg tucked under body
+  rect(ctx, 14, 30, 6, 6, Y);
+  rect(ctx, 12, 34, 8, 4, YD);
+
+  // Short kick leg poking forward with a tiny cute foot at the tip
+  rect(ctx, 28, 31, 6, 4, Y);
+  rect(ctx, 34, 32, 3, 3, YD);
 }
 
 // ── Big yellow Pikachu running toward us (medium closeness) ─
@@ -315,18 +404,19 @@ function drawPikaSurf(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 19, 8, 18, 10, Y);
   rect(ctx, 17, 10, 22, 6, Y);
 
-  // Eyes (winking — left closed, right open)
-  rect(ctx, 22, 12, 4, 1, K); // wink line
-  rect(ctx, 32, 11, 3, 3, K);
-  rect(ctx, 33, 11, 1, 1, W);
+  // Eyes: mostly black with a single-pixel catchlight
+  rect(ctx, 21, 11, 4, 4, K);
+  rect(ctx, 31, 11, 4, 4, K);
+  rect(ctx, 22, 12, 1, 1, W);
+  rect(ctx, 32, 12, 1, 1, W);
 
   // Cheeks
-  rect(ctx, 17, 13, 3, 3, R);
-  rect(ctx, 36, 13, 3, 3, R);
+  rect(ctx, 17, 14, 3, 3, R);
+  rect(ctx, 36, 14, 3, 3, R);
 
-  // Mouth (open smile)
-  rect(ctx, 26, 15, 4, 2, K);
-  rect(ctx, 27, 16, 2, 1, R);
+  // Mouth (happy open smile)
+  rect(ctx, 26, 16, 4, 2, K);
+  rect(ctx, 27, 17, 2, 1, R);
 
   // Body sitting
   rect(ctx, 19, 18, 18, 10, Y);
@@ -536,6 +626,80 @@ function drawPikaBalloons(ctx: CanvasRenderingContext2D, w: number, h: number): 
   drawPikachuOnBalloons(ctx, w / 2, h / 2 + 8);
 }
 
+// ── Peaceful Pikachu face (pre-charge) ─────────────────────
+// Same 72×56 head layout as the charge sprite so the transition to it
+// is a seamless expression swap — eyes soften, sparks vanish, mouth
+// relaxes into a small smile.
+function drawPikaPeaceful(ctx: CanvasRenderingContext2D): void {
+  const Y = '#f8d030';
+  const K = '#202020';
+  const R = '#e03030';
+  const W = '#ffffff';
+
+  // Ears
+  rect(ctx, 12, 2, 8, 16, Y);
+  rect(ctx, 52, 2, 8, 16, Y);
+  rect(ctx, 12, 2, 8, 6, K);
+  rect(ctx, 52, 2, 8, 6, K);
+
+  // Head outline + fill
+  rect(ctx, 16, 10, 40, 4, K);
+  rect(ctx, 10, 14, 52, 4, K);
+  rect(ctx, 12, 18, 48, 30, Y);
+  rect(ctx, 8, 22, 56, 22, Y);
+
+  // Big soft round eyes (no angry brow)
+  rect(ctx, 18, 22, 8, 8, K);
+  rect(ctx, 46, 22, 8, 8, K);
+  rect(ctx, 20, 23, 2, 2, W);
+  rect(ctx, 48, 23, 2, 2, W);
+
+  // Gentle cheeks
+  rect(ctx, 6, 30, 10, 8, R);
+  rect(ctx, 56, 30, 10, 8, R);
+
+  // Soft closed-mouth smile
+  rect(ctx, 30, 38, 2, 1, K);
+  rect(ctx, 32, 39, 8, 1, K);
+  rect(ctx, 40, 38, 2, 1, K);
+}
+
+// Same as drawPikaPeaceful but with eyes closed (blink frame).
+function drawPikaPeacefulBlink(ctx: CanvasRenderingContext2D): void {
+  const Y = '#f8d030';
+  const K = '#202020';
+  const R = '#e03030';
+
+  // Ears
+  rect(ctx, 12, 2, 8, 16, Y);
+  rect(ctx, 52, 2, 8, 16, Y);
+  rect(ctx, 12, 2, 8, 6, K);
+  rect(ctx, 52, 2, 8, 6, K);
+
+  // Head outline + fill
+  rect(ctx, 16, 10, 40, 4, K);
+  rect(ctx, 10, 14, 52, 4, K);
+  rect(ctx, 12, 18, 48, 30, Y);
+  rect(ctx, 8, 22, 56, 22, Y);
+
+  // Closed eyes (small smile-shaped arcs)
+  rect(ctx, 19, 26, 6, 1, K);
+  rect(ctx, 18, 25, 1, 1, K);
+  rect(ctx, 25, 25, 1, 1, K);
+  rect(ctx, 47, 26, 6, 1, K);
+  rect(ctx, 46, 25, 1, 1, K);
+  rect(ctx, 53, 25, 1, 1, K);
+
+  // Gentle cheeks
+  rect(ctx, 6, 30, 10, 8, R);
+  rect(ctx, 56, 30, 10, 8, R);
+
+  // Soft closed-mouth smile
+  rect(ctx, 30, 38, 2, 1, K);
+  rect(ctx, 32, 39, 8, 1, K);
+  rect(ctx, 40, 38, 2, 1, K);
+}
+
 // ── Pikachu charging cheeks ────────────────────────────────
 function drawPikaCharge(ctx: CanvasRenderingContext2D): void {
   const Y = '#f8d030';
@@ -704,7 +868,7 @@ function drawTitlePikaFront(ctx: CanvasRenderingContext2D): void {
 
 // ── Sprite registry ────────────────────────────────────────
 const INTRO_SPRITES: IntroSprite[] = [
-  { key: 'intro_claude_logo', width: 80, height: 32, draw: drawClaudeLogo },
+  { key: 'intro_claude_logo', width: 120, height: 72, draw: drawClaudeLogo },
   { key: 'intro_star_big', width: 12, height: 12, draw: drawBigStar },
   { key: 'intro_star_tiny', width: 4, height: 4, draw: drawTinyStar },
 
@@ -726,6 +890,8 @@ const INTRO_SPRITES: IntroSprite[] = [
 
   { key: 'intro_pika_balloons', width: 64, height: 80, draw: drawPikaBalloons },
 
+  { key: 'intro_pika_peaceful', width: 72, height: 56, draw: drawPikaPeaceful },
+  { key: 'intro_pika_peaceful_blink', width: 72, height: 56, draw: drawPikaPeacefulBlink },
   { key: 'intro_pika_charge', width: 72, height: 56, draw: drawPikaCharge },
 
   { key: 'intro_pika_zap', width: 72, height: 72, draw: drawPikaZap },

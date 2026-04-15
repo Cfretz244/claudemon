@@ -3,12 +3,15 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { soundSystem } from '../systems/SoundSystem';
 
 // Animated attract sequence that plays before the title screen.
-// 10 choreographed steps timed to the Yellow opening-movie theme.
+// 9 choreographed steps timed to the Yellow opening-movie theme.
 //
-// Skippable with any key. Plays once per browser session (sessionStorage
-// guarded) so repeat visits jump straight to the title.
+// Shows a press-to-start gate first so browser audio autoplay policy is
+// satisfied before the music fires. After the user kicks off the intro,
+// any further key/click triggers a skip to the title. Plays on every
+// fresh page load, but is skipped when returning to the title from within
+// the game (the module-level `introPlayed` flag resets on browser reload).
 
-const SESSION_KEY = 'claudemon_intro_played';
+let introPlayed = false;
 
 type Step = {
   name: string;
@@ -27,14 +30,18 @@ export class IntroScene extends Phaser.Scene {
   private currentStepIdx = -1;
   private pendingTimers: Phaser.Time.TimerEvent[] = [];
   private finished = false;
+  private skipEnabled = false;
+  private started = false;
+  private musicAutoStopTimer?: Phaser.Time.TimerEvent;
 
   constructor() {
     super({ key: 'IntroScene' });
   }
 
   create(): void {
-    // If already played this session, skip straight to title
-    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(SESSION_KEY) === '1') {
+    // If already played once since page load, skip straight to title
+    // (so returning from the game doesn't force you to watch it again)
+    if (introPlayed) {
       this.scene.start('TitleScene');
       return;
     }
@@ -70,26 +77,112 @@ export class IntroScene extends Phaser.Scene {
     // Build the timeline
     this.buildSteps();
 
-    // Start music
-    soundSystem.startMusic('intro');
-
-    // Begin with an initial fade-in from black
-    this.cameras.main.fadeIn(400, 0, 0, 0);
-
-    // Skip handler (any key)
+    // Register skip handler up front, but gated by `skipEnabled` — flipped
+    // to true after the user kicks off the intro (plus a 100ms delay so
+    // the click that starts the intro doesn't also trigger a skip).
     const keyboard = this.input.keyboard;
     if (keyboard) {
       keyboard.on('keydown', this.onSkip, this);
     }
     this.input.on('pointerdown', this.onSkip, this);
 
-    // Kick off
-    this.nextStep();
+    // Show the press-to-start gate. Audio can't autoplay in browsers, so we
+    // need a user interaction before the intro's music will actually sound.
+    this.showStartGate();
+  }
+
+  // ── Press-to-start gate ──────────────────────────────────
+  private showStartGate(): void {
+    this.bgRect.setFillStyle(0x000000);
+    this.letterboxTop.setVisible(false);
+    this.letterboxBot.setVisible(false);
+
+    const gate = this.add.container(0, 0).setDepth(200);
+
+    // Big yellow CLAUDÉMON title with blue outline + white highlight
+    const titleY = 52;
+    const mkTitle = (dx: number, dy: number, color: string, alpha = 1): Phaser.GameObjects.Text =>
+      this.add.text(GAME_WIDTH / 2 + dx, titleY + dy, 'CLAUDÉMON', {
+        fontSize: '16px',
+        color,
+        fontFamily: 'monospace',
+        fontStyle: 'bold',
+      }).setOrigin(0.5).setAlpha(alpha);
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      gate.add(mkTitle(dx, dy, '#1030a0'));
+    }
+    gate.add(mkTitle(0, 0, '#f8d030'));
+    gate.add(mkTitle(0, -2, '#ffffff', 0.35));
+
+    // Subtitle pill
+    const pill = this.add.graphics();
+    pill.fillStyle(0x1030a0);
+    pill.fillRoundedRect(GAME_WIDTH / 2 - 40, 72, 80, 11, 2);
+    pill.fillStyle(0xc03030);
+    pill.fillRoundedRect(GAME_WIDTH / 2 - 39, 73, 78, 9, 2);
+    gate.add(pill);
+    gate.add(
+      this.add.text(GAME_WIDTH / 2, 77, 'YELLOW VERSION', {
+        fontSize: '7px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        fontStyle: 'bold',
+      }).setOrigin(0.5),
+    );
+
+    // Blinking "PRESS ANY KEY" prompt
+    const prompt = this.add.text(GAME_WIDTH / 2, 108, '▸ PRESS ANY KEY ◂', {
+      fontSize: '8px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    gate.add(prompt);
+    this.tweens.add({
+      targets: prompt,
+      alpha: 0.25,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    // Small copyright footer
+    gate.add(
+      this.add.text(GAME_WIDTH / 2, 132, '©2026 CLAUDEMON inc.', {
+        fontSize: '6px',
+        color: '#808080',
+        fontFamily: 'monospace',
+      }).setOrigin(0.5),
+    );
+
+    this.cameras.main.fadeIn(400, 0, 0, 0);
+
+    // One-shot start handler. Separate from the skip handler so it only
+    // reacts to the FIRST interaction and is removed after firing.
+    const startHandler = () => {
+      if (this.started) return;
+      this.started = true;
+      this.input.keyboard?.off('keydown', startHandler);
+      this.input.off('pointerdown', startHandler);
+      // Tear down the gate
+      this.tweens.killTweensOf(prompt);
+      gate.destroy(true);
+      // Nudge AudioContext into running state so music queued from
+      // stepPikaFar actually sounds immediately.
+      soundSystem.resumeOnInteraction();
+      // Begin the timeline; enable skip after a brief delay so this very
+      // keypress/click doesn't also count as a skip.
+      this.nextStep();
+      this.time.delayedCall(150, () => { this.skipEnabled = true; });
+    };
+    this.input.keyboard?.on('keydown', startHandler);
+    this.input.on('pointerdown', startHandler);
   }
 
   // ── Skip & cleanup ───────────────────────────────────────
   private onSkip = (): void => {
-    if (this.finished) return;
+    if (!this.skipEnabled || this.finished) return;
     this.finish();
   };
 
@@ -98,10 +191,10 @@ export class IntroScene extends Phaser.Scene {
     this.finished = true;
     for (const t of this.pendingTimers) t.remove(false);
     this.pendingTimers = [];
+    this.musicAutoStopTimer?.remove(false);
+    this.musicAutoStopTimer = undefined;
     soundSystem.stopMusic();
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem(SESSION_KEY, '1');
-    }
+    introPlayed = true;
     this.cameras.main.fadeOut(300, 255, 255, 255);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('TitleScene');
@@ -132,8 +225,14 @@ export class IntroScene extends Phaser.Scene {
   }
 
   private clearStage(): void {
-    this.stage.removeAll(true);
+    // Cancel all outstanding timers from the previous step BEFORE destroying
+    // game objects, so no recurring timer callback tries to touch a just-
+    // destroyed sprite (which throws `this.scene.sys` undefined inside
+    // Phaser's setTexture).
+    for (const t of this.pendingTimers) t.remove(false);
+    this.pendingTimers = [];
     this.tweens.killAll();
+    this.stage.removeAll(true);
   }
 
   private setLetterbox(visible: boolean): void {
@@ -164,7 +263,7 @@ export class IntroScene extends Phaser.Scene {
   private stepClaudeLogo(): Step {
     return {
       name: 'claude_logo',
-      durationMs: 5500,
+      durationMs: 4800,
       enter: () => {
         this.setLetterbox(true);
         this.setBg(0xffffff);
@@ -253,11 +352,25 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaFar(): Step {
     return {
       name: 'pika_far',
-      durationMs: 4500,
+      durationMs: 2650,
       enter: () => {
+        // Music kicks in here, not at the Claude logo step.
+        soundSystem.startMusic('intro');
+        // The intro track is 120.5 beats at 165 BPM ≈ 21.9s per loop.
+        // Force-stop slightly before the loop point so any scene overrun
+        // doesn't cause the opening motif to re-trigger audibly. This timer
+        // is deliberately NOT pushed onto pendingTimers so clearStage()
+        // between steps doesn't cancel it.
+        this.musicAutoStopTimer = this.time.delayedCall(21850, () => {
+          if (!this.finished) soundSystem.stopMusic();
+        });
+
         this.setLetterbox(true);
         this.setBg(0xffffff);
 
+        // End scale (1.5) × sprite width (16) = 24px, which matches the
+        // start of step 4 (scale 1 × 24px mid silhouette) for visual
+        // continuity across the jump-scene cutaway.
         const pika = this.add.image(GAME_WIDTH / 2, 78, 'intro_pika_far_0');
         this.stage.add(pika);
         pika.setScale(1);
@@ -271,99 +384,109 @@ export class IntroScene extends Phaser.Scene {
         // Run cycle toggle
         let frame = 0;
         const cycleTimer = this.time.addEvent({
-          delay: 130,
+          delay: 120,
           loop: true,
           callback: () => {
             frame = 1 - frame;
             pika.setTexture(frame === 0 ? 'intro_pika_far_0' : 'intro_pika_far_1');
-            // Tiny bob
             pika.y = 78 + (frame === 0 ? 0 : -1);
           },
         });
         this.pendingTimers.push(cycleTimer as unknown as Phaser.Time.TimerEvent);
 
-        // Grow toward camera
+        // Grow toward camera (ends at 24px wide to match scene 4)
         this.tweens.add({
           targets: pika,
-          scaleX: 2.4,
-          scaleY: 2.4,
-          duration: 4400,
+          scaleX: 1.5,
+          scaleY: 1.5,
+          duration: 2550,
           ease: 'Quad.easeIn',
         });
 
         // Staggered soft footsteps
-        for (let i = 0; i < 12; i++) {
-          this.scheduleTimer(i * 330, () => soundSystem.bump());
+        for (let i = 0; i < 8; i++) {
+          this.scheduleTimer(i * 320, () => soundSystem.bump());
         }
       },
     };
   }
 
-  // Step 3 — Pikachu jumping through the air over cloud platforms
+  // Step 3 — Pikachu flying karate kick across the screen
   private stepPikaJump(): Step {
     return {
       name: 'pika_jump',
-      durationMs: 4500,
+      durationMs: 2250,
       enter: () => {
         this.setLetterbox(false);
         this.setBg(0xffffff);
 
-        // Cloud platforms (yellow with cyan outlines — matches screenshot)
-        const clouds: { gfx: Phaser.GameObjects.Graphics; speed: number; y: number }[] = [];
-        for (let i = 0; i < 6; i++) {
-          const g = this.add.graphics();
-          const y = 16 + i * 22;
-          const x = (i * 47) % (GAME_WIDTH + 24);
-          g.fillStyle(0x68c8f0);
-          g.fillRect(x, y, 22, 5);
-          g.fillStyle(0xffd840);
-          g.fillRect(x + 1, y + 1, 20, 3);
-          this.stage.add(g);
-          clouds.push({ gfx: g, speed: 25 + i * 8, y });
+        // Persistent speed-streak pool. N streaks on screen at all times,
+        // gliding right-to-left at constant speeds. Respawn at right edge
+        // when they drift offscreen left.
+        type Streak = {
+          rect: Phaser.GameObjects.Rectangle;
+          speed: number;
+        };
+        const streaks: Streak[] = [];
+        const STREAK_COUNT = 16;
+        for (let i = 0; i < STREAK_COUNT; i++) {
+          const len = 10 + Math.floor(Math.random() * 16);
+          const color = i % 3 === 0 ? 0x68c8f0 : 0xd0d0d0;
+          const r = this.add.rectangle(
+            Math.random() * GAME_WIDTH,
+            10 + Math.random() * (GAME_HEIGHT - 20),
+            len,
+            1,
+            color,
+          );
+          this.stage.add(r);
+          streaks.push({ rect: r, speed: 180 + Math.random() * 140 });
         }
-        // Scroll clouds
-        const start = this.time.now;
+
+        // Pikachu glides right-to-left at constant y (slight bob for liveliness).
+        // Sprite is drawn facing right, so flipX mirrors it to face left.
+        const pika = this.add.image(GAME_WIDTH + 30, GAME_HEIGHT / 2, 'intro_pika_jump')
+          .setFlipX(true)
+          .setDepth(20);
+        this.stage.add(pika);
+        this.tweens.add({
+          targets: pika,
+          x: -30,
+          duration: 2250,
+          ease: 'Linear',
+        });
+        this.tweens.add({
+          targets: pika,
+          y: GAME_HEIGHT / 2 - 5,
+          duration: 450,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+
+        // Scroll loop — persistent streak motion with wraparound respawn
+        let lastT = this.time.now;
         const scroll = this.time.addEvent({
           delay: 16,
           loop: true,
           callback: () => {
-            const dt = (this.time.now - start) / 1000;
-            clouds.forEach((c, i) => {
-              c.gfx.x = -((dt * c.speed + i * 20) % (GAME_WIDTH + 40));
-            });
+            const now = this.time.now;
+            const dt = (now - lastT) / 1000;
+            lastT = now;
+            for (const s of streaks) {
+              s.rect.x -= s.speed * dt;
+              if (s.rect.x < -30) {
+                s.rect.x = GAME_WIDTH + 30;
+                s.rect.y = 10 + Math.random() * (GAME_HEIGHT - 20);
+              }
+            }
           },
         });
         this.pendingTimers.push(scroll as unknown as Phaser.Time.TimerEvent);
 
-        // Pikachu jumping in arc
-        const pika = this.add.image(-30, 120, 'intro_pika_jump').setDepth(20);
-        this.stage.add(pika);
-        // Horizontal sweep
-        this.tweens.add({
-          targets: pika,
-          x: GAME_WIDTH + 30,
-          duration: 3800,
-          ease: 'Linear',
-        });
-        // Parabolic arc
-        this.tweens.add({
-          targets: pika,
-          y: 40,
-          duration: 1900,
-          ease: 'Sine.easeOut',
-          yoyo: true,
-        });
-        // Slight rotation for dynamism
-        this.tweens.add({
-          targets: pika,
-          angle: -12,
-          duration: 1900,
-          ease: 'Sine.easeInOut',
-          yoyo: true,
-        });
-
         soundSystem.whoosh();
-        this.scheduleTimer(1900, () => soundSystem.whoosh());
+        this.scheduleTimer(800, () => soundSystem.whoosh());
+        this.scheduleTimer(1600, () => soundSystem.whoosh());
       },
     };
   }
@@ -372,18 +495,20 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaMid(): Step {
     return {
       name: 'pika_mid',
-      durationMs: 4000,
+      durationMs: 2250,
       enter: () => {
         this.setLetterbox(true);
         this.setBg(0xffffff);
 
+        // Start scale (1) × 24px sprite = 24px wide, matching the end of
+        // step 2 for visual continuity across the jump cutaway.
         const pika = this.add.image(GAME_WIDTH / 2, 76, 'intro_pika_mid_0');
         this.stage.add(pika);
         pika.setScale(1);
 
         let frame = 0;
         const cycleTimer = this.time.addEvent({
-          delay: 110,
+          delay: 100,
           loop: true,
           callback: () => {
             frame = 1 - frame;
@@ -395,14 +520,14 @@ export class IntroScene extends Phaser.Scene {
 
         this.tweens.add({
           targets: pika,
-          scaleX: 1.6,
-          scaleY: 1.6,
-          duration: 3900,
+          scaleX: 1.8,
+          scaleY: 1.8,
+          duration: 2150,
           ease: 'Quad.easeIn',
         });
 
-        // Spark flashes above (every 500ms)
-        for (let i = 0; i < 7; i++) {
+        // Spark flashes above
+        for (let i = 0; i < 4; i++) {
           this.scheduleTimer(200 + i * 500, () => {
             const spark = this.add.rectangle(
               GAME_WIDTH / 2 + (Math.random() * 20 - 10),
@@ -421,7 +546,7 @@ export class IntroScene extends Phaser.Scene {
           });
         }
         soundSystem.superEffective();
-        this.scheduleTimer(2000, () => soundSystem.superEffective());
+        this.scheduleTimer(1200, () => soundSystem.superEffective());
       },
     };
   }
@@ -430,7 +555,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaSurf(): Step {
     return {
       name: 'pika_surf',
-      durationMs: 5500,
+      durationMs: 3050,
       enter: () => {
         this.setLetterbox(false);
         this.setBg(0x7fd0f8);
@@ -498,9 +623,8 @@ export class IntroScene extends Phaser.Scene {
         this.pendingTimers.push(splashTimer as unknown as Phaser.Time.TimerEvent);
 
         soundSystem.splash();
-        this.scheduleTimer(1400, () => soundSystem.splash());
-        this.scheduleTimer(2800, () => soundSystem.splash());
-        this.scheduleTimer(4200, () => soundSystem.splash());
+        this.scheduleTimer(1000, () => soundSystem.splash());
+        this.scheduleTimer(2000, () => soundSystem.splash());
       },
     };
   }
@@ -509,7 +633,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaClosest(): Step {
     return {
       name: 'pika_closest',
-      durationMs: 4000,
+      durationMs: 1350,
       enter: () => {
         this.setLetterbox(true);
         this.setBg(0xffffff);
@@ -534,7 +658,7 @@ export class IntroScene extends Phaser.Scene {
           targets: pika,
           scaleX: 1.1,
           scaleY: 1.1,
-          duration: 3900,
+          duration: 1250,
           ease: 'Sine.easeOut',
         });
 
@@ -562,7 +686,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaBalloons(): Step {
     return {
       name: 'pika_balloons',
-      durationMs: 7000,
+      durationMs: 3150,
       enter: () => {
         this.setLetterbox(false);
 
@@ -600,8 +724,8 @@ export class IntroScene extends Phaser.Scene {
         cloud2.x = 100; cloud2.y = 20;
         this.stage.add(cloud1);
         this.stage.add(cloud2);
-        this.tweens.add({ targets: cloud1, x: GAME_WIDTH + 20, duration: 12000, ease: 'Linear' });
-        this.tweens.add({ targets: cloud2, x: -30, duration: 14000, ease: 'Linear' });
+        this.tweens.add({ targets: cloud1, x: GAME_WIDTH + 20, duration: 8000, ease: 'Linear' });
+        this.tweens.add({ targets: cloud2, x: -30, duration: 9500, ease: 'Linear' });
 
         // Pikachu floats up into frame
         const pika = this.add.image(GAME_WIDTH / 2, 160, 'intro_pika_balloons').setDepth(20);
@@ -609,7 +733,7 @@ export class IntroScene extends Phaser.Scene {
         this.tweens.add({
           targets: pika,
           y: 72,
-          duration: 2400,
+          duration: 1500,
           ease: 'Sine.easeOut',
           onComplete: () => {
             // Gentle bob
@@ -656,8 +780,8 @@ export class IntroScene extends Phaser.Scene {
         this.pendingTimers.push(heartTimer as unknown as Phaser.Time.TimerEvent);
 
         soundSystem.levelUp();
-        this.scheduleTimer(2500, () => soundSystem.healBallDing());
-        this.scheduleTimer(4500, () => soundSystem.healBallDing());
+        this.scheduleTimer(1200, () => soundSystem.healBallDing());
+        this.scheduleTimer(2300, () => soundSystem.healBallDing());
       },
     };
   }
@@ -666,56 +790,73 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaCharge(): Step {
     return {
       name: 'pika_charge',
-      durationMs: 2800,
+      durationMs: 4400,
       enter: () => {
         this.setLetterbox(true);
         this.setBg(0xffffff);
 
-        const pika = this.add.image(GAME_WIDTH / 2, 72, 'intro_pika_charge');
+        // Phase A (0–1200ms): Pikachu just looks peacefully at the viewer
+        // Phase B (1200–4400ms): cheeks spark, tension rises, charging up
+        const PEACE_MS = 1200;
+
+        const pika = this.add.image(GAME_WIDTH / 2, 72, 'intro_pika_peaceful');
         this.stage.add(pika);
         pika.setScale(1);
+
+        // Whole-scene subtle zoom-in starting from the peaceful phase
         this.tweens.add({
           targets: pika,
-          scaleX: 1.1,
-          scaleY: 1.1,
-          duration: 2700,
-          ease: 'Sine.easeOut',
+          scaleX: 1.14,
+          scaleY: 1.14,
+          duration: 4300,
+          ease: 'Sine.easeIn',
         });
 
-        // Spark flicker (random yellow rects around cheeks)
-        const sparkTimer = this.time.addEvent({
-          delay: 80,
-          loop: true,
-          callback: () => {
-            const x = 30 + Math.random() * 100;
-            const y = 60 + Math.random() * 30;
-            const s = this.add.rectangle(x, y, 2, 2, 0xffff40);
-            this.stage.add(s);
-            this.tweens.add({
-              targets: s,
-              alpha: 0,
-              duration: 180,
-              onComplete: () => s.destroy(),
-            });
-          },
-        });
-        this.pendingTimers.push(sparkTimer as unknown as Phaser.Time.TimerEvent);
+        // Blink once during the peaceful beat (open → closed → open)
+        this.scheduleTimer(650, () => pika.setTexture('intro_pika_peaceful_blink'));
+        this.scheduleTimer(780, () => pika.setTexture('intro_pika_peaceful'));
 
-        soundSystem.superEffective();
-        this.scheduleTimer(900, () => soundSystem.superEffective());
-        this.scheduleTimer(1800, () => soundSystem.superEffective());
+        // Transition into the charging phase
+        this.scheduleTimer(PEACE_MS, () => {
+          pika.setTexture('intro_pika_charge');
 
-        // Background tint oscillation
-        let tick = 0;
-        const tintTimer = this.time.addEvent({
-          delay: 180,
-          loop: true,
-          callback: () => {
-            tick++;
-            this.setBg(tick % 2 === 0 ? 0xffffff : 0xffe8e0);
-          },
+          // Cheek spark flicker
+          const sparkTimer = this.time.addEvent({
+            delay: 70,
+            loop: true,
+            callback: () => {
+              const x = 30 + Math.random() * 100;
+              const y = 60 + Math.random() * 30;
+              const s = this.add.rectangle(x, y, 2, 2, 0xffff40);
+              this.stage.add(s);
+              this.tweens.add({
+                targets: s,
+                alpha: 0,
+                duration: 180,
+                onComplete: () => s.destroy(),
+              });
+            },
+          });
+          this.pendingTimers.push(sparkTimer as unknown as Phaser.Time.TimerEvent);
+
+          // Background tint oscillation kicks in with the charge
+          let tick = 0;
+          const tintTimer = this.time.addEvent({
+            delay: 180,
+            loop: true,
+            callback: () => {
+              tick++;
+              this.setBg(tick % 2 === 0 ? 0xffffff : 0xffe8e0);
+            },
+          });
+          this.pendingTimers.push(tintTimer as unknown as Phaser.Time.TimerEvent);
+
+          soundSystem.superEffective();
+          this.scheduleTimer(700, () => soundSystem.superEffective());
+          this.scheduleTimer(1400, () => soundSystem.superEffective());
+          this.scheduleTimer(2100, () => soundSystem.superEffective());
+          this.scheduleTimer(2700, () => soundSystem.superEffective());
         });
-        this.pendingTimers.push(tintTimer as unknown as Phaser.Time.TimerEvent);
       },
     };
   }
@@ -724,7 +865,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaZap(): Step {
     return {
       name: 'pika_zap',
-      durationMs: 3800,
+      durationMs: 3000,
       enter: () => {
         this.setLetterbox(false);
         this.setBg(0x000000);
@@ -784,13 +925,14 @@ export class IntroScene extends Phaser.Scene {
         });
         this.pendingTimers.push(boltTimer as unknown as Phaser.Time.TimerEvent);
 
-        // Flashes
+        // Three flashes synchronized with three bass booms
         this.cameras.main.flash(150, 255, 255, 255);
-        this.scheduleTimer(300, () => this.cameras.main.flash(150, 255, 255, 255));
-        this.scheduleTimer(600, () => this.cameras.main.flash(150, 255, 255, 255));
+        this.scheduleTimer(700, () => this.cameras.main.flash(150, 255, 255, 255));
+        this.scheduleTimer(1400, () => this.cameras.main.flash(150, 255, 255, 255));
 
         soundSystem.thunderZap();
-        this.scheduleTimer(600, () => soundSystem.thunderZap());
+        this.scheduleTimer(700, () => soundSystem.thunderZap());
+        this.scheduleTimer(1400, () => soundSystem.thunderZap());
       },
       exit: () => {
         this.cameras.main.flash(400, 255, 255, 255);
