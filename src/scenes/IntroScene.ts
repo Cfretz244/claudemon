@@ -3,12 +3,14 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { soundSystem } from '../systems/SoundSystem';
 
 // Animated attract sequence that plays before the title screen.
-// 10 choreographed steps timed to the Yellow opening-movie theme.
+// 9 choreographed steps timed to the Yellow opening-movie theme.
 //
-// Skippable with any key. Plays once per browser session (sessionStorage
-// guarded) so repeat visits jump straight to the title.
+// Skippable with any key. Plays on every fresh page load, but is skipped
+// when returning to the title from within the game (the module-level
+// `introPlayed` flag resets automatically on browser reload so each visit
+// still gets the intro).
 
-const SESSION_KEY = 'claudemon_intro_played';
+let introPlayed = false;
 
 type Step = {
   name: string;
@@ -33,8 +35,9 @@ export class IntroScene extends Phaser.Scene {
   }
 
   create(): void {
-    // If already played this session, skip straight to title
-    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(SESSION_KEY) === '1') {
+    // If already played once since page load, skip straight to title
+    // (so returning from the game doesn't force you to watch it again)
+    if (introPlayed) {
       this.scene.start('TitleScene');
       return;
     }
@@ -99,9 +102,7 @@ export class IntroScene extends Phaser.Scene {
     for (const t of this.pendingTimers) t.remove(false);
     this.pendingTimers = [];
     soundSystem.stopMusic();
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem(SESSION_KEY, '1');
-    }
+    introPlayed = true;
     this.cameras.main.fadeOut(300, 255, 255, 255);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('TitleScene');
