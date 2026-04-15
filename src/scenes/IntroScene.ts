@@ -622,7 +622,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaClosest(): Step {
     return {
       name: 'pika_closest',
-      durationMs: 1800,
+      durationMs: 1500,
       enter: () => {
         this.setLetterbox(true);
         this.setBg(0xffffff);
@@ -647,7 +647,7 @@ export class IntroScene extends Phaser.Scene {
           targets: pika,
           scaleX: 1.1,
           scaleY: 1.1,
-          duration: 1700,
+          duration: 1400,
           ease: 'Sine.easeOut',
         });
 
@@ -675,7 +675,7 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaBalloons(): Step {
     return {
       name: 'pika_balloons',
-      durationMs: 3800,
+      durationMs: 3300,
       enter: () => {
         this.setLetterbox(false);
 
@@ -769,8 +769,8 @@ export class IntroScene extends Phaser.Scene {
         this.pendingTimers.push(heartTimer as unknown as Phaser.Time.TimerEvent);
 
         soundSystem.levelUp();
-        this.scheduleTimer(1400, () => soundSystem.healBallDing());
-        this.scheduleTimer(2600, () => soundSystem.healBallDing());
+        this.scheduleTimer(1200, () => soundSystem.healBallDing());
+        this.scheduleTimer(2300, () => soundSystem.healBallDing());
       },
     };
   }
@@ -779,57 +779,68 @@ export class IntroScene extends Phaser.Scene {
   private stepPikaCharge(): Step {
     return {
       name: 'pika_charge',
-      durationMs: 2700,
+      durationMs: 3500,
       enter: () => {
         this.setLetterbox(true);
         this.setBg(0xffffff);
 
-        const pika = this.add.image(GAME_WIDTH / 2, 72, 'intro_pika_charge');
+        // Phase A (0–1200ms): Pikachu just looks peacefully at the viewer
+        // Phase B (1200–3500ms): cheeks spark, tension rises, charging up
+        const PEACE_MS = 1200;
+
+        const pika = this.add.image(GAME_WIDTH / 2, 72, 'intro_pika_peaceful');
         this.stage.add(pika);
         pika.setScale(1);
+
+        // Whole-scene subtle zoom-in starting from the peaceful phase
         this.tweens.add({
           targets: pika,
           scaleX: 1.12,
           scaleY: 1.12,
-          duration: 2600,
-          ease: 'Sine.easeOut',
+          duration: 3400,
+          ease: 'Sine.easeIn',
         });
 
-        // Spark flicker (random yellow rects around cheeks)
-        const sparkTimer = this.time.addEvent({
-          delay: 70,
-          loop: true,
-          callback: () => {
-            const x = 30 + Math.random() * 100;
-            const y = 60 + Math.random() * 30;
-            const s = this.add.rectangle(x, y, 2, 2, 0xffff40);
-            this.stage.add(s);
-            this.tweens.add({
-              targets: s,
-              alpha: 0,
-              duration: 180,
-              onComplete: () => s.destroy(),
-            });
-          },
-        });
-        this.pendingTimers.push(sparkTimer as unknown as Phaser.Time.TimerEvent);
+        // Transition into the charging phase
+        this.scheduleTimer(PEACE_MS, () => {
+          pika.setTexture('intro_pika_charge');
 
-        soundSystem.superEffective();
-        this.scheduleTimer(700, () => soundSystem.superEffective());
-        this.scheduleTimer(1400, () => soundSystem.superEffective());
-        this.scheduleTimer(2100, () => soundSystem.superEffective());
+          // Cheek spark flicker
+          const sparkTimer = this.time.addEvent({
+            delay: 70,
+            loop: true,
+            callback: () => {
+              const x = 30 + Math.random() * 100;
+              const y = 60 + Math.random() * 30;
+              const s = this.add.rectangle(x, y, 2, 2, 0xffff40);
+              this.stage.add(s);
+              this.tweens.add({
+                targets: s,
+                alpha: 0,
+                duration: 180,
+                onComplete: () => s.destroy(),
+              });
+            },
+          });
+          this.pendingTimers.push(sparkTimer as unknown as Phaser.Time.TimerEvent);
 
-        // Background tint oscillation
-        let tick = 0;
-        const tintTimer = this.time.addEvent({
-          delay: 180,
-          loop: true,
-          callback: () => {
-            tick++;
-            this.setBg(tick % 2 === 0 ? 0xffffff : 0xffe8e0);
-          },
+          // Background tint oscillation kicks in with the charge
+          let tick = 0;
+          const tintTimer = this.time.addEvent({
+            delay: 180,
+            loop: true,
+            callback: () => {
+              tick++;
+              this.setBg(tick % 2 === 0 ? 0xffffff : 0xffe8e0);
+            },
+          });
+          this.pendingTimers.push(tintTimer as unknown as Phaser.Time.TimerEvent);
+
+          soundSystem.superEffective();
+          this.scheduleTimer(600, () => soundSystem.superEffective());
+          this.scheduleTimer(1200, () => soundSystem.superEffective());
+          this.scheduleTimer(1800, () => soundSystem.superEffective());
         });
-        this.pendingTimers.push(tintTimer as unknown as Phaser.Time.TimerEvent);
       },
     };
   }
