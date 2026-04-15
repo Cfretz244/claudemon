@@ -626,6 +626,44 @@ function drawPikaBalloons(ctx: CanvasRenderingContext2D, w: number, h: number): 
   drawPikachuOnBalloons(ctx, w / 2, h / 2 + 8);
 }
 
+// ── Peaceful Pikachu face (pre-charge) ─────────────────────
+// Same 72×56 head layout as the charge sprite so the transition to it
+// is a seamless expression swap — eyes soften, sparks vanish, mouth
+// relaxes into a small smile.
+function drawPikaPeaceful(ctx: CanvasRenderingContext2D): void {
+  const Y = '#f8d030';
+  const K = '#202020';
+  const R = '#e03030';
+  const W = '#ffffff';
+
+  // Ears
+  rect(ctx, 12, 2, 8, 16, Y);
+  rect(ctx, 52, 2, 8, 16, Y);
+  rect(ctx, 12, 2, 8, 6, K);
+  rect(ctx, 52, 2, 8, 6, K);
+
+  // Head outline + fill
+  rect(ctx, 16, 10, 40, 4, K);
+  rect(ctx, 10, 14, 52, 4, K);
+  rect(ctx, 12, 18, 48, 30, Y);
+  rect(ctx, 8, 22, 56, 22, Y);
+
+  // Big soft round eyes (no angry brow)
+  rect(ctx, 18, 22, 8, 8, K);
+  rect(ctx, 46, 22, 8, 8, K);
+  rect(ctx, 20, 23, 2, 2, W);
+  rect(ctx, 48, 23, 2, 2, W);
+
+  // Gentle cheeks
+  rect(ctx, 6, 30, 10, 8, R);
+  rect(ctx, 56, 30, 10, 8, R);
+
+  // Soft closed-mouth smile
+  rect(ctx, 30, 38, 2, 1, K);
+  rect(ctx, 32, 39, 8, 1, K);
+  rect(ctx, 40, 38, 2, 1, K);
+}
+
 // ── Pikachu charging cheeks ────────────────────────────────
 function drawPikaCharge(ctx: CanvasRenderingContext2D): void {
   const Y = '#f8d030';
@@ -816,6 +854,7 @@ const INTRO_SPRITES: IntroSprite[] = [
 
   { key: 'intro_pika_balloons', width: 64, height: 80, draw: drawPikaBalloons },
 
+  { key: 'intro_pika_peaceful', width: 72, height: 56, draw: drawPikaPeaceful },
   { key: 'intro_pika_charge', width: 72, height: 56, draw: drawPikaCharge },
 
   { key: 'intro_pika_zap', width: 72, height: 72, draw: drawPikaZap },
