@@ -834,8 +834,9 @@ function drawTitlePikaFront(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 9, 14, 30, 2, Y);
   rect(ctx, 10, 16, 28, 12, Y);
   rect(ctx, 8, 18, 32, 8, Y);
-  // Subtle 1px crown outline between the ears
-  rect(ctx, 15, 12, 20, 1, K);
+  // Subtle 1px crown outline between the ears — symmetric 2px margin
+  // on both sides (ears fill x=8..12 and x=35..39)
+  rect(ctx, 15, 12, 18, 1, K);
 
   // Eyes (big round, happy)
   rect(ctx, 14, 18, 4, 5, K);
