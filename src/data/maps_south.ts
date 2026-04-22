@@ -430,6 +430,8 @@ export const ROUTE16: MapData = (() => {
     setTile(W - 1, y, T.TREE);
     setTile(W - 2, y, T.TREE);
   }
+  // Cap the north end of the cycling road — Celadon has no southern exit
+  setTile(6, 0, T.TREE); setTile(7, 0, T.TREE); setTile(8, 0, T.TREE);
 
   // Fence on sides of the cycling road
   for (let y = 0; y < H; y++) {
@@ -437,16 +439,16 @@ export const ROUTE16: MapData = (() => {
     setTile(9, y, T.FENCE);
   }
 
-  // Gap in east fence for Celadon City entrance
-  setTile(9, 2, T.PATH);
+  // Single-tile gap in east fence — Snorlax sits here blocking the cycling road
   setTile(9, 3, T.PATH);
   // Path connecting cycling road to east entrance
-  fillRect(9, 2, 4, 2, T.PATH);
+  fillRect(10, 2, 3, 2, T.PATH);
 
-  // Ledges on the cycling road (one-way jumps going south)
-  fillRect(6, 6, 3, 1, T.LEDGE);
-  fillRect(6, 12, 3, 1, T.LEDGE);
-  fillRect(6, 17, 3, 1, T.LEDGE);
+  // Ledges on the cycling road (one-way jumps going south).
+  // Leave x=8 open as a return lane so players can walk back north.
+  fillRect(6, 6, 2, 1, T.LEDGE);
+  fillRect(6, 12, 2, 1, T.LEDGE);
+  fillRect(6, 17, 2, 1, T.LEDGE);
 
   // Tall grass patches on west and east of the road
   fillRect(2, 4, 3, 3, T.TALL_GRASS);
@@ -461,9 +463,7 @@ export const ROUTE16: MapData = (() => {
     tiles,
     collision,
     warps: [
-      // North entrance from Celadon City
-      { x: 7, y: 0, targetMap: 'celadon_city', targetX: 14, targetY: 23 },
-      // East exit → Celadon City
+      // East exit → Celadon City (only connection — Celadon has no southern exit)
       { x: 13, y: 2, targetMap: 'celadon_city', targetX: 2, targetY: 12 },
       { x: 13, y: 3, targetMap: 'celadon_city', targetX: 2, targetY: 13 },
       // South exit to Route 17
@@ -472,7 +472,7 @@ export const ROUTE16: MapData = (() => {
     npcs: [
       {
         id: 'snorlax_route16',
-        x: 3, y: 8,
+        x: 9, y: 3,
         spriteColor: 0x304060,
         direction: Direction.DOWN,
         dialogue: [
