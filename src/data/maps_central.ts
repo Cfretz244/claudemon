@@ -875,12 +875,12 @@ export const CELADON_CITY: MapData = (() => {
     for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
   }
 
-  // Tree borders (2 tiles thick)
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.TREE); setTile(x, 1, T.TREE); }
+  // Tree borders (2 tiles thick on all four sides — Celadon has no north/south exits)
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.TREE); setTile(x, 1, T.TREE); setTile(x, H - 2, T.TREE); setTile(x, H - 1, T.TREE); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.TREE); setTile(1, y, T.TREE); setTile(W - 1, y, T.TREE); setTile(W - 2, y, T.TREE); }
 
-  // Main roads
-  fillRect(13, 2, 4, 23, T.PATH);  // vertical
+  // Main roads — vertical path ends within the city so it doesn't imply off-map exits
+  fillRect(13, 4, 4, 17, T.PATH);  // vertical (y=4..20)
   fillRect(2, 12, 26, 2, T.PATH);  // horizontal
 
   // Celadon Gym
@@ -934,9 +934,6 @@ export const CELADON_CITY: MapData = (() => {
       // West exit → Route 16 (Cycling Road)
       { x: 1, y: 12, targetMap: 'route16', targetX: 12, targetY: 2 },
       { x: 1, y: 13, targetMap: 'route16', targetX: 12, targetY: 3 },
-      // South exit → Route 16 (Cycling Road)
-      { x: 14, y: 24, targetMap: 'route16', targetX: 7, targetY: 1 },
-      { x: 15, y: 24, targetMap: 'route16', targetX: 7, targetY: 2 },
       // Gym door
       { x: 6, y: 9, targetMap: 'celadon_gym', targetX: 4, targetY: 13 },
       // Pokemon Center door
