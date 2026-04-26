@@ -10,6 +10,7 @@ export class PlayerState {
   bag: Record<string, number>;
   pcItems: Record<string, number>;
   money: number;
+  coins: number;
   badges: string[];
   defeatedTrainers: string[];
   pokedexSeen: number[];
@@ -29,6 +30,7 @@ export class PlayerState {
     this.bag = {};
     this.pcItems = {};
     this.money = 3000;
+    this.coins = 0;
     this.badges = [];
     this.defeatedTrainers = [];
     this.pokedexSeen = [];
@@ -50,6 +52,7 @@ export class PlayerState {
     state.bag = save.bag;
     state.pcItems = save.pcItems || {};
     state.money = save.money;
+    state.coins = save.coins ?? 0;
     state.badges = save.badges;
     state.defeatedTrainers = save.defeatedTrainers;
     state.pokedexSeen = save.pokedexSeen;
@@ -75,6 +78,7 @@ export class PlayerState {
       bag: this.bag,
       pcItems: this.pcItems,
       money: this.money,
+      coins: this.coins,
       badges: this.badges,
       defeatedTrainers: this.defeatedTrainers,
       pokedexSeen: this.pokedexSeen,
@@ -135,5 +139,19 @@ export class PlayerState {
 
   hasAllBadges(): boolean {
     return this.badges.length >= 8;
+  }
+
+  addCoins(n: number): void {
+    this.coins = Math.min(9999, Math.max(0, this.coins + n));
+  }
+
+  spendCoins(n: number): boolean {
+    if (this.coins < n) return false;
+    this.coins -= n;
+    return true;
+  }
+
+  hasCoinCase(): boolean {
+    return this.hasItem('coin_case');
   }
 }

@@ -1731,27 +1731,69 @@ const GAME_CORNER: MapData = (() => {
       { x: 12, y: 2, targetMap: 'rocket_hideout_b1f', targetX: 14, targetY: 2 },
     ],
     npcs: [
-      // Slot machine NPCs (players seated at machines)
+      // Slot machine seats (one per machine — all 9 stations are playable).
       {
         id: 'slot_machine_1',
         x: 3, y: 4,
         spriteColor: 0x60a0c0,
         direction: Direction.UP,
-        dialogue: ['Want to play the\nslot machines?', 'It costs $50 per\nplay!'],
+        dialogue: ['Take a seat at the\nslots!'],
       },
       {
         id: 'slot_machine_2',
-        x: 6, y: 6,
+        x: 6, y: 4,
         spriteColor: 0xc06060,
         direction: Direction.UP,
-        dialogue: ['Want to try your\nluck?', 'It costs $50 per\nplay!'],
+        dialogue: ['Try your luck!'],
       },
       {
         id: 'slot_machine_3',
-        x: 9, y: 8,
+        x: 9, y: 4,
         spriteColor: 0x60c060,
         direction: Direction.UP,
-        dialogue: ['Feeling lucky?\nGive it a spin!', 'It costs $50 per\nplay!'],
+        dialogue: ['Feeling lucky?'],
+      },
+      {
+        id: 'slot_machine_4',
+        x: 3, y: 6,
+        spriteColor: 0xf0a040,
+        direction: Direction.UP,
+        dialogue: ['Spin to win!'],
+      },
+      {
+        id: 'slot_machine_5',
+        x: 6, y: 6,
+        spriteColor: 0xa080c0,
+        direction: Direction.UP,
+        dialogue: ['Maybe today\'s the\nday I hit it big!'],
+      },
+      {
+        id: 'slot_machine_6',
+        x: 9, y: 6,
+        spriteColor: 0x40c0a0,
+        direction: Direction.UP,
+        dialogue: ['Watch the symbols\ncarefully!'],
+      },
+      {
+        id: 'slot_machine_7',
+        x: 3, y: 8,
+        spriteColor: 0xd06090,
+        direction: Direction.UP,
+        dialogue: ['Roll the reels!'],
+      },
+      {
+        id: 'slot_machine_8',
+        x: 6, y: 8,
+        spriteColor: 0x6080f0,
+        direction: Direction.UP,
+        dialogue: ['Three sevens means\nJACKPOT!'],
+      },
+      {
+        id: 'slot_machine_9',
+        x: 9, y: 8,
+        spriteColor: 0xc0a040,
+        direction: Direction.UP,
+        dialogue: ['You play, you spin,\nyou win!'],
       },
       // Rocket grunt guarding the poster
       {
@@ -1763,26 +1805,31 @@ const GAME_CORNER: MapData = (() => {
         isTrainer: true,
         sightRange: 3,
       },
-      // Prize exchange clerk
+      // Prize exchange clerk — opens the prize exchange UI on interact.
       {
         id: 'game_corner_clerk',
         x: 3, y: 2,
         spriteColor: 0xf0a060,
         direction: Direction.DOWN,
-        dialogue: [
-          'Welcome to the GAME\nCORNER prize exchange!',
-          'Sorry, we only accept\ncoins right now.',
-        ],
+        dialogue: ['Welcome to the GAME\nCORNER prize exchange!'],
       },
-      // NPC gambler
+      // Coin vendor — sells 50 coins for $1000.
+      {
+        id: 'game_corner_coin_vendor',
+        x: 4, y: 2,
+        spriteColor: 0xa06090,
+        direction: Direction.DOWN,
+        dialogue: ['Need coins?\n50 for $1000!'],
+      },
+      // NPC gambler — hints at the skill-stop mechanic.
       {
         id: 'game_corner_gambler',
-        x: 9, y: 4,
+        x: 11, y: 6,
         spriteColor: 0xa080c0,
-        direction: Direction.UP,
+        direction: Direction.LEFT,
         dialogue: [
-          'I\'ve been playing\nall day...',
-          'I just know the next\none will be a winner!',
+          'Press the button JUST\nas a symbol crosses',
+          'the win line and you\ncan stop it on cue!',
         ],
       },
     ],
@@ -2252,10 +2299,17 @@ export const CELADON_MANSION: MapData = (() => {
   return {
     id: 'celadon_mansion', name: 'CELADON MANSION', width: W, height: H, tiles, collision,
     warps: [{ x: 3, y: H - 1, targetMap: 'celadon_city', targetX: 5, targetY: 19 }],
-    npcs: [{
-      id: 'celadon_mansion_npc', x: 4, y: 3, spriteColor: 0x60a0c0, direction: Direction.DOWN,
-      dialogue: ['I know all about the\nGAME CORNER!', 'There are rumors of a\nsecret hideout below!'],
-    }],
+    npcs: [
+      {
+        id: 'celadon_mansion_npc', x: 4, y: 3, spriteColor: 0x60a0c0, direction: Direction.DOWN,
+        dialogue: ['I know all about the\nGAME CORNER!', 'There are rumors of a\nsecret hideout below!'],
+      },
+      {
+        id: 'celadon_mansion_coin_case_giver', x: 2, y: 3, spriteColor: 0xf0a060, direction: Direction.DOWN,
+        // Dialogue is overridden by the Coin Case give logic in OverworldScene.
+        dialogue: ['...'],
+      },
+    ],
   };
 })();
 

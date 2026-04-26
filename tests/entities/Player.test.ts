@@ -133,6 +133,69 @@ describe('PlayerState', () => {
     });
   });
 
+  describe('coins (Game Corner)', () => {
+    it('initializes to 0', () => {
+      const player = new PlayerState();
+      expect(player.coins).toBe(0);
+    });
+
+    it('addCoins increases the balance', () => {
+      const player = new PlayerState();
+      player.addCoins(50);
+      expect(player.coins).toBe(50);
+    });
+
+    it('addCoins clamps to the 9999 cap', () => {
+      const player = new PlayerState();
+      player.coins = 9990;
+      player.addCoins(50);
+      expect(player.coins).toBe(9999);
+    });
+
+    it('addCoins clamps to 0 (cannot go negative)', () => {
+      const player = new PlayerState();
+      player.coins = 5;
+      player.addCoins(-100);
+      expect(player.coins).toBe(0);
+    });
+
+    it('spendCoins deducts and returns true on success', () => {
+      const player = new PlayerState();
+      player.coins = 100;
+      expect(player.spendCoins(30)).toBe(true);
+      expect(player.coins).toBe(70);
+    });
+
+    it('spendCoins returns false and leaves balance unchanged when insufficient', () => {
+      const player = new PlayerState();
+      player.coins = 10;
+      expect(player.spendCoins(30)).toBe(false);
+      expect(player.coins).toBe(10);
+    });
+
+    it('hasCoinCase reflects the bag', () => {
+      const player = new PlayerState();
+      expect(player.hasCoinCase()).toBe(false);
+      player.addItem('coin_case', 1);
+      expect(player.hasCoinCase()).toBe(true);
+    });
+
+    it('toSave / fromSave round-trips coins', () => {
+      const player = new PlayerState();
+      player.coins = 1234;
+      const restored = PlayerState.fromSave(player.toSave());
+      expect(restored.coins).toBe(1234);
+    });
+
+    it('fromSave defaults coins to 0 for old saves without the field', () => {
+      const player = new PlayerState();
+      const save = player.toSave();
+      delete (save as { coins?: number }).coins;
+      const restored = PlayerState.fromSave(save);
+      expect(restored.coins).toBe(0);
+    });
+  });
+
   describe('hasAllBadges', () => {
     it('returns false when badges < 8', () => {
       const player = new PlayerState();
