@@ -204,4 +204,30 @@ describe('shouldSkipNPC', () => {
       expect(shouldSkipNPC(james, noFlags, noBadges, noDefeated, noItems)).toBe(false);
     });
   });
+
+  describe('Elite Four chamber guards', () => {
+    const guards = [
+      { id: 'league_guard_lorelei', defeats: 'lorelei' },
+      { id: 'league_guard_bruno', defeats: 'bruno' },
+      { id: 'league_guard_agatha', defeats: 'agatha' },
+      { id: 'league_guard_lance', defeats: 'lance' },
+    ];
+
+    for (const { id, defeats } of guards) {
+      it(`${id} blocks the door before ${defeats} is defeated`, () => {
+        const npc = makeNPC(id);
+        expect(shouldSkipNPC(npc, noFlags, noBadges, noDefeated, noItems)).toBe(false);
+      });
+
+      it(`${id} steps aside once ${defeats} is defeated`, () => {
+        const npc = makeNPC(id);
+        expect(shouldSkipNPC(npc, noFlags, noBadges, [defeats], noItems)).toBe(true);
+      });
+
+      it(`${id} stays put when an unrelated trainer is defeated`, () => {
+        const npc = makeNPC(id);
+        expect(shouldSkipNPC(npc, noFlags, noBadges, ['rival_cerulean'], noItems)).toBe(false);
+      });
+    }
+  });
 });

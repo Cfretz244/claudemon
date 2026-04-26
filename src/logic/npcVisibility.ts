@@ -133,6 +133,11 @@ export function shouldSkipNPC(
   if (npc.id === 'articuno_seafoam' && storyFlags['articuno_seafoam_cleared']) return true;
   if (npc.id === 'zapdos_power_plant' && storyFlags['zapdos_power_plant_cleared']) return true;
   if (npc.id === 'moltres_victory_road' && storyFlags['moltres_victory_road_cleared']) return true;
+  // Elite Four chamber guards step aside once the room's member is defeated
+  if (npc.id === 'league_guard_lorelei' && defeatedTrainers.includes('lorelei')) return true;
+  if (npc.id === 'league_guard_bruno' && defeatedTrainers.includes('bruno')) return true;
+  if (npc.id === 'league_guard_agatha' && defeatedTrainers.includes('agatha')) return true;
+  if (npc.id === 'league_guard_lance' && defeatedTrainers.includes('lance')) return true;
 
   return false;
 }

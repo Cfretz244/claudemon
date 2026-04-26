@@ -160,7 +160,7 @@ const MAP_GROUPS: { label: string; maps: string[] }[] = [
   },
   {
     label: 'Routes 22-23 / Victory Road / Indigo',
-    maps: ['route22', 'route23', 'victory_road', 'indigo_plateau', 'pokemon_center_indigo'],
+    maps: ['route22', 'route23', 'victory_road', 'indigo_plateau', 'indigo_league_lobby', 'elite_four_lorelei', 'elite_four_bruno', 'elite_four_agatha', 'elite_four_lance', 'elite_four_champion'],
   },
   {
     label: 'Post-Game',

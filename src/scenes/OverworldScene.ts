@@ -1049,8 +1049,8 @@ export class OverworldScene extends Phaser.Scene {
       this.isRidingBike = true;
     }
 
-    // Special Elite Four trigger
-    if (mapId === 'elite_four') {
+    // Champion Hall gate — needs 8 badges, and resets the E4 gauntlet on entry
+    if (mapId === 'elite_four_lorelei') {
       if (this.playerState.badges.length < 8) {
         this.textBox.show([
           'You need all 8 BADGES\nto enter the',
@@ -1058,9 +1058,9 @@ export class OverworldScene extends Phaser.Scene {
         ]);
         return;
       }
-      this.isWarping = true;
-      this.startEliteFour();
-      return;
+      // Strict-gauntlet reset: re-fight every Elite Four member from the top.
+      const e4Ids = new Set(['lorelei', 'bruno', 'agatha', 'lance', 'champion_rival']);
+      this.playerState.defeatedTrainers = this.playerState.defeatedTrainers.filter(id => !e4Ids.has(id));
     }
 
     const map = ALL_MAPS[mapId];
@@ -1089,35 +1089,6 @@ export class OverworldScene extends Phaser.Scene {
         isRidingBike: this.isRidingBike,
         flashUsed: this.flashUsed,
       } as SceneData);
-    });
-  }
-
-  private startEliteFour(): void {
-    soundSystem.battleStart();
-
-    // Build the queue: E4 members 2-4 + Champion (with dynamic rival name)
-    const championName = CHAMPION.name.replace('{RIVAL}', this.playerState.rivalName);
-    const queue = [
-      ...ELITE_FOUR.slice(1).map(e => ({ trainerId: e.id, trainerName: e.name })),
-      { trainerId: CHAMPION.id, trainerName: championName },
-    ];
-
-    playTrainerBattleTransition(this, () => {
-      this.scene.start('BattleScene', {
-        type: 'trainer',
-        trainerId: ELITE_FOUR[0].id,
-        trainerName: ELITE_FOUR[0].name,
-        trainerClass: 'Elite Four',
-        playerState: this.playerState.toSave(),
-        returnMap: 'indigo_plateau',
-        returnX: 7,
-        returnY: 6,
-        eliteFourQueue: queue,
-        hallOfFame: false,
-        flashUsed: this.flashUsed,
-      });
-    }, () => {
-      soundSystem.startMusic('elite_four');
     });
   }
 
@@ -2813,10 +2784,17 @@ export class OverworldScene extends Phaser.Scene {
     if (npc.id.startsWith('rival_')) {
       trainerName = this.playerState.rivalName;
     }
+    // Champion battle uses the rival's name directly
+    if (npc.id === CHAMPION.id) {
+      trainerName = this.playerState.rivalName;
+    }
 
     // Look up trainer class for sprite rendering
     const trainerData = TRAINERS[npc.id];
-    const trainerClass = trainerData?.class || '';
+    let trainerClass = trainerData?.class || '';
+    const isEliteFour = ELITE_FOUR.some(e => e.id === npc.id);
+    if (isEliteFour) trainerClass = 'Elite Four';
+    else if (npc.id === CHAMPION.id) trainerClass = 'Champion';
 
     playTrainerBattleTransition(this, () => {
       this.scene.start('BattleScene', {
@@ -2833,7 +2811,9 @@ export class OverworldScene extends Phaser.Scene {
         flashUsed: this.flashUsed,
       });
     }, () => {
-      const track = npc.id in GYM_LEADERS ? 'gym_leader_battle' : 'trainer_battle';
+      let track: string = 'trainer_battle';
+      if (npc.id === CHAMPION.id) track = 'elite_four';
+      else if (isEliteFour || npc.id in GYM_LEADERS) track = 'gym_leader_battle';
       soundSystem.startMusic(track);
     });
   }

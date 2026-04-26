@@ -88,7 +88,7 @@ function categorizeMap(mapId: string): string {
     [/^(cycling_road|route16|route17|route18|route19|route20|route21)/, 'Routes (South)'],
     [/^(cinnabar|pokemon_center_cinnabar|pokemart_cinnabar|cinnabar_gym|cinnabar_lab)/, 'Cinnabar Island'],
     [/^(route22|route23)/, 'Routes (West)'],
-    [/^(indigo_plateau|elite_four|pokemon_center_indigo)/, 'Indigo Plateau'],
+    [/^(indigo_plateau|elite_four|indigo_league_lobby)/, 'Indigo Plateau'],
     [/^(pokemon_center|pokemart)$/, 'Viridian City'],
     [/^(viridian_gym)$/, 'Viridian City'],
     [/^(pewter_gym|pewter_museum_1f|pewter_museum_2f|pewter_house)$/, 'Pewter City'],

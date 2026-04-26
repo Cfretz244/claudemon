@@ -122,3 +122,64 @@ describe('ALL_MAPS', () => {
     }
   });
 });
+
+describe('Elite Four gauntlet wiring', () => {
+  const chain = [
+    { from: 'indigo_plateau', to: 'elite_four_lorelei' },
+    { from: 'elite_four_lorelei', to: 'elite_four_bruno' },
+    { from: 'elite_four_bruno', to: 'elite_four_agatha' },
+    { from: 'elite_four_agatha', to: 'elite_four_lance' },
+    { from: 'elite_four_lance', to: 'elite_four_champion' },
+  ];
+
+  for (const { from, to } of chain) {
+    it(`${from} has a warp into ${to}`, () => {
+      const map = ALL_MAPS[from];
+      expect(map, `map '${from}' missing`).toBeDefined();
+      const warp = map.warps.find(w => w.targetMap === to);
+      expect(warp, `${from} has no warp targeting ${to}`).toBeDefined();
+    });
+  }
+
+  it('Elite Four rooms have no return warp to the previous chamber (strict gauntlet)', () => {
+    const rooms = ['elite_four_lorelei', 'elite_four_bruno', 'elite_four_agatha', 'elite_four_lance'];
+    const previous: Record<string, string> = {
+      elite_four_lorelei: 'indigo_plateau',
+      elite_four_bruno: 'elite_four_lorelei',
+      elite_four_agatha: 'elite_four_bruno',
+      elite_four_lance: 'elite_four_agatha',
+    };
+    for (const room of rooms) {
+      const map = ALL_MAPS[room];
+      const back = map.warps.find(w => w.targetMap === previous[room]);
+      expect(back, `${room} unexpectedly has a warp back to ${previous[room]}`).toBeUndefined();
+    }
+  });
+
+  it("Champion's chamber has no exit warps (only Hall of Fame leaves)", () => {
+    const map = ALL_MAPS['elite_four_champion'];
+    expect(map).toBeDefined();
+    expect(map.warps.length).toBe(0);
+  });
+
+  it('Each Elite Four chamber has its trainer NPC and a matching guard NPC', () => {
+    const pairs: Array<{ map: string; trainer: string; guard?: string }> = [
+      { map: 'elite_four_lorelei', trainer: 'lorelei', guard: 'league_guard_lorelei' },
+      { map: 'elite_four_bruno', trainer: 'bruno', guard: 'league_guard_bruno' },
+      { map: 'elite_four_agatha', trainer: 'agatha', guard: 'league_guard_agatha' },
+      { map: 'elite_four_lance', trainer: 'lance', guard: 'league_guard_lance' },
+      { map: 'elite_four_champion', trainer: 'champion_rival' }, // no guard — no exit door
+    ];
+    for (const { map, trainer, guard } of pairs) {
+      const m = ALL_MAPS[map];
+      const t = m.npcs.find(n => n.id === trainer);
+      expect(t, `${map} missing trainer NPC '${trainer}'`).toBeDefined();
+      expect(t!.isTrainer).toBe(true);
+      expect(t!.sightRange, `${trainer} needs a sight range to catch the player`).toBeGreaterThan(0);
+      if (guard) {
+        const g = m.npcs.find(n => n.id === guard);
+        expect(g, `${map} missing guard NPC '${guard}'`).toBeDefined();
+      }
+    }
+  });
+});

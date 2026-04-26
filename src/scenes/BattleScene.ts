@@ -39,9 +39,6 @@ interface BattleSceneData {
   returnX: number;
   returnY: number;
   trainerClass?: string;
-  // Elite Four chain support
-  eliteFourQueue?: Array<{ trainerId: string; trainerName: string }>;
-  hallOfFame?: boolean;
   isSurfing?: boolean;
   isRidingBike?: boolean;
   flashUsed?: boolean;
@@ -60,8 +57,6 @@ export class BattleScene extends Phaser.Scene {
   private returnMap!: string;
   private returnX!: number;
   private returnY!: number;
-  private eliteFourQueue: Array<{ trainerId: string; trainerName: string }> = [];
-  private hallOfFame = false;
   private isSurfing = false;
   private isRidingBike = false;
   private flashUsed = false;
@@ -114,8 +109,6 @@ export class BattleScene extends Phaser.Scene {
     this.trainerId = data.trainerId;
     this.trainerName = data.trainerName;
     this.trainerClass = data.trainerClass;
-    this.eliteFourQueue = data.eliteFourQueue || [];
-    this.hallOfFame = data.hallOfFame || false;
     this.isSurfing = data.isSurfing || false;
     this.isRidingBike = data.isRidingBike || false;
     this.flashUsed = data.flashUsed || false;
@@ -239,9 +232,12 @@ export class BattleScene extends Phaser.Scene {
     this.playerState.markSeen(this.opponentPokemon.speciesId);
 
     // Start battle music
-    if (this.eliteFourQueue.length > 0 || this.hallOfFame || ELITE_FOUR.some(e => e.id === this.trainerId) || this.trainerId === CHAMPION.id) {
+    if (this.trainerId === CHAMPION.id) {
       soundSystem.startMusic('elite_four');
-    } else if (this.trainerId && this.trainerId in GYM_LEADERS) {
+    } else if (
+      ELITE_FOUR.some(e => e.id === this.trainerId) ||
+      (this.trainerId && this.trainerId in GYM_LEADERS)
+    ) {
       soundSystem.startMusic('gym_leader_battle');
     } else if (this.battleType === BattleType.TRAINER) {
       soundSystem.startMusic('trainer_battle');
@@ -1723,31 +1719,11 @@ export class BattleScene extends Phaser.Scene {
     // Update party state back
     this.playerState.party[this.currentPlayerPokemonIndex] = this.playerPokemon;
 
-    // Check for Hall of Fame (just beat the Champion)
-    if (this.hallOfFame) {
+    // Defeating the Champion triggers Hall of Fame
+    if (this.trainerId === CHAMPION.id) {
       this.cameras.main.fadeOut(500, 255, 255, 255);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.showHallOfFame();
-      });
-      return;
-    }
-
-    // Check for next Elite Four battle in queue
-    if (this.eliteFourQueue.length > 0) {
-      const next = this.eliteFourQueue.shift()!;
-      this.cameras.main.fadeOut(300, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('BattleScene', {
-          type: 'trainer',
-          trainerId: next.trainerId,
-          trainerName: next.trainerName,
-          playerState: this.playerState.toSave(),
-          returnMap: this.returnMap,
-          returnX: this.returnX,
-          returnY: this.returnY,
-          eliteFourQueue: this.eliteFourQueue,
-          hallOfFame: this.eliteFourQueue.length === 0, // Last one triggers Hall of Fame
-        });
       });
       return;
     }
