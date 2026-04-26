@@ -214,6 +214,13 @@ export const ITEMS: Record<string, ItemData> = {
     price: 0,
     category: 'key',
   },
+  coin_case: {
+    id: 'coin_case',
+    name: 'COIN CASE',
+    description: 'Holds up to 9999\nGAME CORNER coins.',
+    price: 0,
+    category: 'key',
+  },
   poke_flute: {
     id: 'poke_flute',
     name: 'POKe FLUTE',

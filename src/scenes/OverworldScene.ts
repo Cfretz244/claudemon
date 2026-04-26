@@ -9,6 +9,8 @@ import { BagScreen } from '../components/BagScreen';
 import { ShopScreen } from '../components/ShopScreen';
 import { PCScreen } from '../components/PCScreen';
 import { TrainerCard } from '../components/TrainerCard';
+import { SlotMachineScreen } from '../components/SlotMachineScreen';
+import { PrizeExchangeScreen } from '../components/PrizeExchangeScreen';
 import { generateNPCSprite, generateItemBallSprite, generateJessieSprite, generateJamesSprite, generateSnorlaxNPCSprite, generateArticunoNPCSprite, generateZapdosNPCSprite, generateMoltresNPCSprite } from '../utils/spriteGenerator';
 import { ITEMS } from '../data/items';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
@@ -92,6 +94,8 @@ export class OverworldScene extends Phaser.Scene {
   private shopScreen!: ShopScreen;
   private pcScreen!: PCScreen;
   private trainerCard!: TrainerCard;
+  private slotMachineScreen!: SlotMachineScreen;
+  private prizeExchangeScreen!: PrizeExchangeScreen;
 
   // Healing machine (permanent in Pokemon Centers)
   private healMachineGfx: Phaser.GameObjects.Graphics | null = null;
@@ -281,6 +285,8 @@ export class OverworldScene extends Phaser.Scene {
     this.shopScreen = new ShopScreen(this);
     this.pcScreen = new PCScreen(this);
     this.trainerCard = new TrainerCard(this);
+    this.slotMachineScreen = new SlotMachineScreen(this);
+    this.prizeExchangeScreen = new PrizeExchangeScreen(this);
 
     // Start map music
     const musicId = getMusicForMap(this.currentMap);
@@ -2299,6 +2305,34 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
+    // Game Corner prize exchange clerk
+    if (npc.id === 'game_corner_clerk') {
+      this.showPrizeExchange();
+      return;
+    }
+
+    // Game Corner coin vendor
+    if (npc.id === 'game_corner_coin_vendor') {
+      this.buyCoinsFromVendor();
+      return;
+    }
+
+    // Celadon Mansion Coin Case giver — gives Coin Case once.
+    if (npc.id === 'celadon_mansion_coin_case_giver') {
+      if (!this.playerState.hasCoinCase()) {
+        this.playerState.addItem('coin_case', 1);
+        soundSystem.menuSelect();
+        this.textBox.show([
+          "Here, take this!",
+          "It's a COIN CASE.",
+          "You can hold up to\n9999 coins in it!",
+        ]);
+      } else {
+        this.textBox.show(["Hope you're enjoying\nthe GAME CORNER!"]);
+      }
+      return;
+    }
+
     // Elevator NPCs
     if (npc.id.startsWith('elevator_')) {
       if (!this.playerState.hasItem('lift_key')) {
@@ -2675,29 +2709,53 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private playSlotMachine(): void {
-    if (this.playerState.money < 50) {
-      this.textBox.show(["You don't have\nenough money!"]);
+    if (!this.playerState.hasCoinCase()) {
+      this.textBox.show(["You'll need a\nCOIN CASE first!"]);
       return;
     }
-    this.playerState.money -= 50;
-    const symbols = ['7', 'BAR', 'CHERRY', 'PIKACHU', 'STAR'];
-    const r1 = symbols[Math.floor(Math.random() * symbols.length)];
-    const r2 = symbols[Math.floor(Math.random() * symbols.length)];
-    const r3 = symbols[Math.floor(Math.random() * symbols.length)];
-    const result = `${r1} | ${r2} | ${r3}`;
-    let payout = 0;
-    if (r1 === r2 && r2 === r3) {
-      payout = r1 === '7' ? 5000 : 1000;
-    } else if (r1 === r2 || r2 === r3 || r1 === r3) {
-      payout = 100;
+    if (this.playerState.coins <= 0) {
+      this.textBox.show([
+        "You don't have any\ncoins to play!",
+        "Try the coin vendor\nat the back counter.",
+      ]);
+      return;
     }
-    if (payout > 0) {
-      this.playerState.money += payout;
-      soundSystem.pokemonCry(1200);
-      this.textBox.show([result, `You win $${payout}!`]);
-    } else {
-      this.textBox.show([result, 'No luck this time...']);
+    this.screenOpen = true;
+    this.slotMachineScreen.show(this.playerState, () => {
+      this.screenOpen = false;
+    });
+  }
+
+  private showPrizeExchange(): void {
+    if (!this.playerState.hasCoinCase()) {
+      this.textBox.show(["You'll need a\nCOIN CASE first!"]);
+      return;
     }
+    this.screenOpen = true;
+    this.prizeExchangeScreen.show(this.playerState, () => {
+      this.screenOpen = false;
+    });
+  }
+
+  private buyCoinsFromVendor(): void {
+    if (!this.playerState.hasCoinCase()) {
+      this.textBox.show(["You'll need a\nCOIN CASE first!"]);
+      return;
+    }
+    const COIN_BUNDLE = 50;
+    const COST = 1000;
+    if (this.playerState.coins >= 9999) {
+      this.textBox.show(['Your COIN CASE is\nalready full!']);
+      return;
+    }
+    if (this.playerState.money < COST) {
+      this.textBox.show([`50 coins for $${COST}.`, "But you can't\nafford that!"]);
+      return;
+    }
+    this.playerState.money -= COST;
+    this.playerState.addCoins(COIN_BUNDLE);
+    soundSystem.menuSelect();
+    this.textBox.show([`Here you go!`, `Got 50 coins for\n$${COST}.`]);
   }
 
   private showElevatorMenu(): void {

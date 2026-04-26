@@ -577,6 +577,7 @@ function readFormIntoSave() {
   save.playerName = (($('player-name') as HTMLInputElement).value || 'RED').toUpperCase();
   save.rivalName = (($('rival-name') as HTMLInputElement).value || 'BLUE').toUpperCase();
   save.money = parseInt(($('money') as HTMLInputElement).value) || 0;
+  save.coins = Math.max(0, Math.min(9999, parseInt(($('coins') as HTMLInputElement).value) || 0));
   save.playTime = parseInt(($('play-time') as HTMLInputElement).value) || 0;
 
   save.currentMap = ($('current-map') as HTMLSelectElement).value;
@@ -642,6 +643,7 @@ function populateAll() {
   ($('player-name') as HTMLInputElement).value = save.playerName;
   ($('rival-name') as HTMLInputElement).value = save.rivalName;
   ($('money') as HTMLInputElement).value = String(save.money);
+  ($('coins') as HTMLInputElement).value = String(save.coins ?? 0);
   ($('play-time') as HTMLInputElement).value = String(save.playTime || 0);
 
   ($('player-x') as HTMLInputElement).value = String(save.playerX);

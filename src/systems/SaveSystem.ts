@@ -14,6 +14,7 @@ export interface SaveData {
   bag: Record<string, number>;
   pcItems: Record<string, number>;
   money: number;
+  coins?: number;
   badges: string[];
   defeatedTrainers: string[];
   pokedexSeen: number[];
@@ -74,6 +75,7 @@ export class SaveSystem {
       },
       pcItems: {},
       money: 3000,
+      coins: 0,
       badges: [],
       defeatedTrainers: [],
       pokedexSeen: [],
