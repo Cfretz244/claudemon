@@ -112,21 +112,14 @@ export class SlotMachineScreen {
     reelPanel.lineStyle(1, BORDER, 1);
     reelPanel.strokeRoundedRect(4, REEL_Y - 4, 76, WINDOW_H + 8, 2);
 
-    // Reel windows (white interior + border)
-    for (let r = 0; r < 3; r++) {
-      const win = scene.add.graphics();
-      win.fillStyle(FILL_BG, 1);
-      win.fillRect(REEL_X[r], REEL_Y, CELL_W, WINDOW_H);
-      win.lineStyle(1, BORDER, 1);
-      win.strokeRect(REEL_X[r] - 1, REEL_Y - 1, CELL_W + 2, WINDOW_H + 2);
-    }
-
-    // ── Reel content containers (sprites stacked vertically, 2× strip) ───────
+    // ── Reel content containers (sprites stacked vertically, 3× strip) ───────
+    // Three copies stacked so the spin can wrap visually with plenty of margin
+    // above and below the mask in either scroll direction.
     for (let r = 0; r < 3; r++) {
       const rc = scene.add.container(REEL_X[r] + CELL_W / 2, 0);
+      rc.setScrollFactor(0);
       const strip = REEL_STRIPS[r as 0 | 1 | 2];
-      // Two copies stacked so the spin can wrap visually.
-      for (let copy = 0; copy < 2; copy++) {
+      for (let copy = 0; copy < 3; copy++) {
         for (let i = 0; i < strip.length; i++) {
           const idx = copy * strip.length + i;
           const sprite = scene.add.image(0, idx * CELL_H + CELL_H / 2, SLOT_SYMBOL_TEXTURE[strip[i]]);
@@ -134,10 +127,13 @@ export class SlotMachineScreen {
           rc.add(sprite);
         }
       }
-      // Mask each container to its window
+      // Mask each container to its window. The mask graphics needs
+      // scrollFactor=0 so it stays aligned with the screen-fixed reel
+      // container even when the underlying camera has scrolled.
       const maskShape = scene.make.graphics({ x: 0, y: 0 });
       maskShape.fillStyle(0xffffff);
       maskShape.fillRect(REEL_X[r], REEL_Y, CELL_W, WINDOW_H);
+      maskShape.setScrollFactor(0);
       rc.setMask(maskShape.createGeometryMask());
       this.setReelStaticPosition(rc, r as 0 | 1 | 2, 0);
       this.reelContainers.push(rc);
@@ -427,17 +423,19 @@ export class SlotMachineScreen {
   private startReelSpin(r: 0 | 1 | 2): void {
     const rc = this.reelContainers[r];
     const stripPx = STRIP_LEN * CELL_H;
-    // Tween container.y by one full strip-length per cycle, looping.
-    // We piggyback on a per-cycle tween that resets y on completion.
-    const tween = this.scene.tweens.add({
-      targets: rc,
-      y: rc.y - stripPx,
+    const baseY = rc.y;
+    // Counter goes 0 → stripPx and repeats; rc.y = baseY - (counter mod stripPx).
+    // With three strip copies stacked, the wrap from baseY-stripPx back to baseY
+    // is visually identical content (every sprite has a duplicate one strip
+    // length above/below it), so the cycle reads as continuous scrolling.
+    const tween = this.scene.tweens.addCounter({
+      from: 0,
+      to: stripPx,
       duration: 200,
       ease: 'Linear',
       repeat: -1,
-      onRepeat: () => {
-        // Wrap: keep y in a reasonable range so floats don't drift
-        rc.y += stripPx;
+      onUpdate: (t) => {
+        rc.y = baseY - (t.getValue() ?? 0);
       },
     });
     this.reelSpinTweens[r] = tween;
