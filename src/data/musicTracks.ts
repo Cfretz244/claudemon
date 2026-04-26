@@ -2477,7 +2477,12 @@ const MAP_MUSIC: Record<string, string> = {
   pokemart_fuchsia: 'pokemon_center',
   pokemon_center_cinnabar: 'pokemon_center',
   pokemart_cinnabar: 'pokemon_center',
-  pokemon_center_indigo: 'pokemon_center',
+  indigo_league_lobby: 'pokemon_center',
+  elite_four_lorelei: 'indigo_plateau',
+  elite_four_bruno: 'indigo_plateau',
+  elite_four_agatha: 'indigo_plateau',
+  elite_four_lance: 'indigo_plateau',
+  elite_four_champion: 'indigo_plateau',
 
   // Gyms
   viridian_gym: 'gym',

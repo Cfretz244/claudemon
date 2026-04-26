@@ -1,5 +1,6 @@
 import { MapData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
+import { ELITE_FOUR, CHAMPION } from './eliteFour';
 
 const T = TileType;
 
@@ -1208,7 +1209,7 @@ export const VICTORY_ROAD: MapData = (() => {
       // South entrance → Route 23
       { x: 9, y: 19, targetMap: 'route23', targetX: 7, targetY: 1 },
       // North exit → Indigo Plateau
-      { x: 9, y: 0, targetMap: 'indigo_plateau', targetX: 7, targetY: 14 },
+      { x: 9, y: 0, targetMap: 'indigo_plateau', targetX: 10, targetY: 19 },
     ],
     npcs: [
       {
@@ -1308,7 +1309,7 @@ export const VICTORY_ROAD: MapData = (() => {
 // 12. INDIGO PLATEAU  (15x15)
 // ─────────────────────────────────────────────────────────────
 export const INDIGO_PLATEAU: MapData = (() => {
-  const W = 15, H = 15;
+  const W = 20, H = 20;
   const tiles = fill2D(W, H, T.GRASS);
   const collision = fill2D(W, H, false);
 
@@ -1323,34 +1324,43 @@ export const INDIGO_PLATEAU: MapData = (() => {
     for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
   }
 
-  // Elegant paths
-  fillRect(6, 0, 3, 15, T.PATH);
-  fillRect(2, 7, 11, 1, T.PATH);
-  fillRect(2, 12, 11, 1, T.PATH);
+  // Tree perimeter — sealed mountain plateau with a single south opening
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.TREE); setTile(x, H - 1, T.TREE); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.TREE); setTile(W - 1, y, T.TREE); }
 
-  // Flower borders
-  for (let x = 2; x < W - 2; x++) {
-    setTile(x, 1, T.FLOWER);
-    setTile(x, H - 2, T.FLOWER);
-  }
-  for (let y = 2; y < H - 2; y++) {
-    setTile(2, y, T.FLOWER);
-    setTile(W - 3, y, T.FLOWER);
-  }
+  // Champion Hall (north-center) — wide and grand
+  fillRect(8, 1, 5, 1, T.ROOF);
+  fillRect(8, 2, 5, 2, T.BUILDING);
+  setTile(10, 3, T.DOOR);
 
-  // Champion Hall entrance (Elite Four)
-  fillRect(5, 2, 5, 1, T.ROOF);
-  fillRect(5, 3, 5, 2, T.BUILDING);
-  setTile(7, 4, T.DOOR);
+  // Indigo League Lobby (combined PC + Mart) on the west
+  fillRect(2, 6, 5, 1, T.ROOF);
+  fillRect(2, 7, 5, 2, T.BUILDING);
+  setTile(4, 8, T.DOOR);
 
-  // Pokemon Center
-  fillRect(5, 8, 5, 1, T.ROOF);
-  fillRect(5, 9, 5, 3, T.BUILDING);
-  setTile(7, 11, T.DOOR);
+  // Cobblestone vertical spine — Champion Hall down to the south entrance
+  for (let y = 4; y <= H - 1; y++) setTile(10, y, T.COBBLESTONE);
+  // Horizontal branch from lobby door east to spine
+  for (let x = 4; x <= 10; x++) setTile(x, 9, T.COBBLESTONE);
+
+  // Central fountain plaza
+  fillRect(8, 10, 5, 3, T.COBBLESTONE);
+  setTile(10, 11, T.FOUNTAIN);
+
+  // Decorative flower beds in the open lawn
+  fillRect(2, 2, 3, 2, T.FLOWER);
+  fillRect(15, 2, 3, 2, T.FLOWER);
+  fillRect(15, 7, 3, 2, T.FLOWER);
+  fillRect(2, 12, 3, 2, T.FLOWER);
+  fillRect(15, 12, 3, 2, T.FLOWER);
+  setTile(7, 14, T.FLOWER);
+  setTile(8, 15, T.FLOWER);
+  setTile(12, 15, T.FLOWER);
+  setTile(13, 14, T.FLOWER);
 
   // Signs
-  setTile(5, 6, T.SIGN);   // Champion Hall sign
-  setTile(9, 12, T.SIGN);  // Pokemon Center sign
+  setTile(11, 4, T.SIGN);  // Champion Hall sign
+  setTile(6, 9, T.SIGN);   // Lobby sign on grass beside cobblestone
 
   return {
     id: 'indigo_plateau',
@@ -1360,17 +1370,65 @@ export const INDIGO_PLATEAU: MapData = (() => {
     tiles,
     collision,
     warps: [
-      // South entrance → Victory Road
-      { x: 7, y: 14, targetMap: 'victory_road', targetX: 9, targetY: 1 },
-      // Pokemon Center warp
-      { x: 7, y: 11, targetMap: 'pokemon_center_indigo', targetX: 4, targetY: 7 },
-      // Champion Hall (Elite Four entrance - special trigger)
-      { x: 7, y: 4, targetMap: 'elite_four', targetX: 7, targetY: 6 },
+      // South entrance ↔ Victory Road
+      { x: 10, y: H - 1, targetMap: 'victory_road', targetX: 9, targetY: 1 },
+      // Indigo League Lobby door
+      { x: 4, y: 8, targetMap: 'indigo_league_lobby', targetX: 7, targetY: 9 },
+      // Champion Hall door — leads directly into Lorelei's chamber (gauntlet entry)
+      { x: 10, y: 3, targetMap: 'elite_four_lorelei', targetX: 5, targetY: 9 },
     ],
     npcs: [
+      // Press photographer near the fountain
+      {
+        id: 'indigo_photographer',
+        x: 13, y: 11,
+        spriteColor: 0xb04060,
+        direction: Direction.LEFT,
+        dialogue: [
+          'Smile for the press!',
+          'Future CHAMPIONS make\nthe best photos!',
+        ],
+      },
+      // Reporter doing field coverage
+      {
+        id: 'indigo_reporter',
+        x: 6, y: 11,
+        spriteColor: 0x4060c0,
+        direction: Direction.RIGHT,
+        dialogue: [
+          'This is INDIGO PLATEAU—',
+          'where champions are\ncrowned!',
+          "I'm here to cover\nthe ELITE FOUR matches.",
+        ],
+      },
+      // Fan-club kid awestruck
+      {
+        id: 'indigo_fan',
+        x: 14, y: 16,
+        spriteColor: 0xf0d040,
+        direction: Direction.LEFT,
+        dialogue: [
+          'I came all the way\nfrom PALLET TOWN',
+          'to see this!',
+          'Do you think the\nrival is here yet?',
+        ],
+      },
+      // Veteran trainer reminiscing
+      {
+        id: 'indigo_retiree',
+        x: 16, y: 9,
+        spriteColor: 0xc0c0c0,
+        direction: Direction.LEFT,
+        dialogue: [
+          "I've watched every\nCHAMPION crowned",
+          'on this plateau!',
+          'The hall of fame\nremembers them all.',
+        ],
+      },
+      // Existing trio — repositioned around the new plaza
       {
         id: 'indigo_npc1',
-        x: 4, y: 7,
+        x: 6, y: 5,
         spriteColor: 0xf0a060,
         direction: Direction.RIGHT,
         dialogue: [
@@ -1381,7 +1439,7 @@ export const INDIGO_PLATEAU: MapData = (() => {
       },
       {
         id: 'indigo_npc2',
-        x: 10, y: 7,
+        x: 14, y: 5,
         spriteColor: 0x80c080,
         direction: Direction.LEFT,
         dialogue: [
@@ -1392,7 +1450,7 @@ export const INDIGO_PLATEAU: MapData = (() => {
       },
       {
         id: 'indigo_npc3',
-        x: 7, y: 13,
+        x: 6, y: 16,
         spriteColor: 0xc08060,
         direction: Direction.UP,
         dialogue: [
@@ -1407,10 +1465,10 @@ export const INDIGO_PLATEAU: MapData = (() => {
 })();
 
 // ─────────────────────────────────────────────────────────────
-// 13. POKEMON CENTER (INDIGO PLATEAU)  (10x8 indoor)
+// 13. INDIGO LEAGUE LOBBY (combined PC + Mart, 14x10 indoor)
 // ─────────────────────────────────────────────────────────────
-export const POKEMON_CENTER_INDIGO: MapData = (() => {
-  const W = 10, H = 8;
+export const INDIGO_LEAGUE_LOBBY: MapData = (() => {
+  const W = 14, H = 10;
   const tiles = fill2D(W, H, T.INDOOR_FLOOR);
   const collision = fill2D(W, H, false);
 
@@ -1421,7 +1479,7 @@ export const POKEMON_CENTER_INDIGO: MapData = (() => {
     }
   }
 
-  // Walls: top 2 rows and sides
+  // Walls: top 2 rows + side columns (no bottom wall — doormat is the edge warp)
   for (let x = 0; x < W; x++) {
     setTile(x, 0, T.WALL);
     setTile(x, 1, T.WALL);
@@ -1431,68 +1489,442 @@ export const POKEMON_CENTER_INDIGO: MapData = (() => {
     setTile(W - 1, y, T.WALL);
   }
 
-  // Nurse counter — enclosed bar with side returns
+  // Healing wing (left half) — nurse counter U-shape with PC tucked at the corner
+  setTile(1, 2, T.PC);
+  setTile(2, 2, T.COUNTER);
   setTile(3, 2, T.COUNTER);
   setTile(4, 2, T.COUNTER);
   setTile(5, 2, T.COUNTER);
-  setTile(6, 2, T.COUNTER);
-  setTile(3, 3, T.COUNTER);
-  setTile(6, 3, T.COUNTER);
+  setTile(2, 3, T.COUNTER);
+  setTile(5, 3, T.COUNTER);
 
-  // Mart counter (right side)
-  setTile(1, 4, T.COUNTER);
-  setTile(2, 4, T.COUNTER);
+  // Mart wing (right half) — counter with shelves behind
+  setTile(8, 2, T.COUNTER);
+  setTile(9, 2, T.COUNTER);
+  setTile(10, 2, T.COUNTER);
+  setTile(8, 3, T.COUNTER);
+  setTile(10, 3, T.COUNTER);
+  setTile(11, 2, T.MART_SHELF);
+  setTile(12, 2, T.MART_SHELF);
+  setTile(11, 3, T.MART_SHELF);
+  setTile(12, 3, T.MART_SHELF);
 
-  // PC
-  setTile(8, 2, T.PC);
+  // Decorative fountains flanking the central aisle
+  setTile(5, 5, T.FOUNTAIN);
+  setTile(8, 5, T.FOUNTAIN);
 
-  // Carpet runner to door
-  setTile(4, 5, T.CARPET);
-  setTile(5, 5, T.CARPET);
-  setTile(4, 6, T.CARPET);
-  setTile(5, 6, T.CARPET);
+  // Central carpet aisle from doormat to back of hall
+  for (let y = 4; y <= 8; y++) {
+    setTile(6, y, T.CARPET);
+    setTile(7, y, T.CARPET);
+  }
 
-  // Entrance mat on exit warps
-  setTile(4, 7, T.DOORMAT);
-  setTile(5, 7, T.DOORMAT);
+  // Doormat on bottom row — edge warp back to plateau
+  setTile(6, H - 1, T.DOORMAT);
+  setTile(7, H - 1, T.DOORMAT);
 
   return {
-    id: 'pokemon_center_indigo',
-    name: 'POKeMON CENTER',
+    id: 'indigo_league_lobby',
+    name: 'INDIGO LEAGUE LOBBY',
     width: W,
     height: H,
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'indigo_plateau', targetX: 7, targetY: 12 },
-      { x: 5, y: 7, targetMap: 'indigo_plateau', targetX: 7, targetY: 12 },
+      { x: 6, y: H - 1, targetMap: 'indigo_plateau', targetX: 4, targetY: 9 },
+      { x: 7, y: H - 1, targetMap: 'indigo_plateau', targetX: 4, targetY: 9 },
     ],
     npcs: [
       {
         id: 'nurse_indigo',
-        x: 5, y: 2,
+        x: 3, y: 2,
         spriteColor: 0xf080a0,
         direction: Direction.DOWN,
         dialogue: [
-          'Welcome to our\nPOKeMON CENTER!',
-          'We heal your POKeMON\nback to perfect health!',
+          'Welcome to the\nINDIGO LEAGUE LOBBY!',
+          'We restore your\nPOKeMON to peak form',
+          'before you face the\nELITE FOUR!',
           'Your POKeMON have been\nfully restored!',
         ],
       },
       {
         id: 'mart_clerk',
-        x: 2, y: 3,
+        x: 9, y: 2,
         spriteColor: 0x4080f0,
         direction: Direction.DOWN,
-        dialogue: ['Welcome! Stock up\nbefore the ELITE FOUR!'],
+        dialogue: ['Stock up before the\nELITE FOUR!'],
         shopStock: ['ultra_ball', 'hyper_potion', 'max_potion', 'full_restore', 'revive', 'full_heal'],
+      },
+      {
+        id: 'league_receptionist',
+        x: 5, y: 7,
+        spriteColor: 0xa050c0,
+        direction: Direction.RIGHT,
+        dialogue: [
+          'Welcome to the\nINDIGO LEAGUE!',
+          'Heal up and stock up—',
+          'once you enter\nCHAMPION HALL,',
+          'there is no turning\nback until you face',
+          'the CHAMPION!',
+        ],
       },
     ],
   };
 })();
 
 // ─────────────────────────────────────────────────────────────
-// 14. CERULEAN CAVE  (20x20 cave, post-game)
+// 14. ELITE FOUR — LORELEI (Ice Chamber, 12x10)
+// ─────────────────────────────────────────────────────────────
+export const ELITE_FOUR_LORELEI: MapData = (() => {
+  const W = 12, H = 10;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Wall perimeter — top 2 rows, side columns, bottom row
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); setTile(x, H - 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  // North exit — warps to Bruno (guarded until Lorelei defeated)
+  setTile(5, 1, T.DOOR);
+  // South arrival — decorative DOOR tile, no warp source (strict gauntlet)
+  setTile(5, H - 1, T.DOOR);
+
+  // Frozen ice corners
+  fillRect(1, 2, 2, 2, T.WATER);
+  fillRect(W - 3, 2, 2, 2, T.WATER);
+  fillRect(1, H - 3, 2, 1, T.WATER);
+  fillRect(W - 3, H - 3, 2, 1, T.WATER);
+
+  // Lorelei's icy dais (left side)
+  fillRect(2, 4, 3, 3, T.CARPET);
+
+  return {
+    id: 'elite_four_lorelei',
+    name: 'LORELEI ROOM',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      { x: 5, y: 1, targetMap: 'elite_four_bruno', targetX: 5, targetY: H - 1 },
+    ],
+    npcs: [
+      {
+        id: 'lorelei',
+        x: 3, y: 5,
+        spriteColor: 0xa0c0e0,
+        direction: Direction.RIGHT,
+        dialogue: ELITE_FOUR[0].dialogue.before,
+        isTrainer: true,
+        sightRange: 6,
+      },
+      {
+        id: 'league_guard_lorelei',
+        x: 5, y: 1,
+        spriteColor: 0x606060,
+        direction: Direction.DOWN,
+        dialogue: [
+          'You must defeat\nLORELEI before you',
+          'may face the next\nELITE FOUR member!',
+        ],
+      },
+    ],
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────
+// 15. ELITE FOUR — BRUNO (Fighting Dojo, 12x10)
+// ─────────────────────────────────────────────────────────────
+export const ELITE_FOUR_BRUNO: MapData = (() => {
+  const W = 12, H = 10;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); setTile(x, H - 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(5, 1, T.DOOR);
+  setTile(5, H - 1, T.DOOR);
+
+  // Stone arena floor — cobblestone strip down the center
+  fillRect(4, 2, 4, H - 3, T.COBBLESTONE);
+
+  // Boulder props in the corners (decorative — geometry prevents pushing)
+  setTile(1, 2, T.BOULDER);
+  setTile(W - 2, 2, T.BOULDER);
+  setTile(1, H - 2, T.BOULDER);
+  setTile(W - 2, H - 2, T.BOULDER);
+
+  // Training-rail FENCE accents along the side walls
+  setTile(1, 4, T.FENCE);
+  setTile(1, 6, T.FENCE);
+  setTile(W - 2, 4, T.FENCE);
+  setTile(W - 2, 6, T.FENCE);
+
+  // Bruno's training mat (right-side dais)
+  fillRect(W - 5, 4, 3, 3, T.CARPET);
+
+  return {
+    id: 'elite_four_bruno',
+    name: 'BRUNO ROOM',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      { x: 5, y: 1, targetMap: 'elite_four_agatha', targetX: 5, targetY: H - 1 },
+    ],
+    npcs: [
+      {
+        id: 'bruno',
+        x: W - 4, y: 5,
+        spriteColor: 0x804030,
+        direction: Direction.LEFT,
+        dialogue: ELITE_FOUR[1].dialogue.before,
+        isTrainer: true,
+        sightRange: 6,
+      },
+      {
+        id: 'league_guard_bruno',
+        x: 5, y: 1,
+        spriteColor: 0x606060,
+        direction: Direction.DOWN,
+        dialogue: [
+          'You must defeat\nBRUNO before you',
+          'may proceed deeper\ninto the LEAGUE!',
+        ],
+      },
+    ],
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────
+// 16. ELITE FOUR — AGATHA (Ghost Crypt, 12x10)
+// ─────────────────────────────────────────────────────────────
+export const ELITE_FOUR_AGATHA: MapData = (() => {
+  const W = 12, H = 10;
+  const tiles = fill2D(W, H, T.CAVE_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  // Crypt walls — CAVE_WALL perimeter
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.CAVE_WALL); setTile(x, 1, T.CAVE_WALL); setTile(x, H - 1, T.CAVE_WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.CAVE_WALL); setTile(W - 1, y, T.CAVE_WALL); }
+  setTile(5, 1, T.DOOR);
+  setTile(5, H - 1, T.DOOR);
+
+  // Stone columns lining the chamber
+  setTile(2, 3, T.CAVE_WALL);
+  setTile(W - 3, 3, T.CAVE_WALL);
+  setTile(2, H - 3, T.CAVE_WALL);
+  setTile(W - 3, H - 3, T.CAVE_WALL);
+
+  // Tombstone markers
+  setTile(1, 5, T.TOMBSTONE);
+  setTile(W - 2, 5, T.TOMBSTONE);
+  setTile(3, 7, T.TOMBSTONE);
+  setTile(W - 4, 7, T.TOMBSTONE);
+
+  // Agatha's altar dais (left side)
+  fillRect(2, 4, 3, 3, T.CARPET);
+
+  return {
+    id: 'elite_four_agatha',
+    name: 'AGATHA ROOM',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      { x: 5, y: 1, targetMap: 'elite_four_lance', targetX: 5, targetY: H - 1 },
+    ],
+    npcs: [
+      {
+        id: 'agatha',
+        x: 3, y: 5,
+        spriteColor: 0x8040a0,
+        direction: Direction.RIGHT,
+        dialogue: ELITE_FOUR[2].dialogue.before,
+        isTrainer: true,
+        sightRange: 6,
+      },
+      {
+        id: 'league_guard_agatha',
+        x: 5, y: 1,
+        spriteColor: 0x606060,
+        direction: Direction.DOWN,
+        dialogue: [
+          'You must defeat\nAGATHA before you',
+          'may face LANCE,\nthe DRAGON master!',
+        ],
+      },
+    ],
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────
+// 17. ELITE FOUR — LANCE (Dragon's Keep, 12x10)
+// ─────────────────────────────────────────────────────────────
+export const ELITE_FOUR_LANCE: MapData = (() => {
+  const W = 12, H = 10;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); setTile(x, H - 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  setTile(5, 1, T.DOOR);
+  setTile(5, H - 1, T.DOOR);
+
+  // Dragon-pit moats along the side walls
+  setTile(1, 3, T.WATER); setTile(1, 4, T.WATER); setTile(1, 5, T.WATER);
+  setTile(1, 6, T.WATER); setTile(1, 7, T.WATER);
+  setTile(W - 2, 3, T.WATER); setTile(W - 2, 4, T.WATER); setTile(W - 2, 5, T.WATER);
+  setTile(W - 2, 6, T.WATER); setTile(W - 2, 7, T.WATER);
+
+  // Arched gateway columns at the entrance
+  setTile(4, H - 2, T.ROOF);
+  setTile(W - 5, H - 2, T.ROOF);
+
+  // Fountains flanking Lance's dais
+  setTile(W - 6, 3, T.FOUNTAIN);
+  setTile(W - 6, H - 4, T.FOUNTAIN);
+
+  // Lance's dais (right side)
+  fillRect(W - 5, 4, 3, 3, T.CARPET);
+
+  return {
+    id: 'elite_four_lance',
+    name: 'LANCE ROOM',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [
+      { x: 5, y: 1, targetMap: 'elite_four_champion', targetX: 7, targetY: 11 },
+    ],
+    npcs: [
+      {
+        id: 'lance',
+        x: W - 4, y: 5,
+        spriteColor: 0xc04040,
+        direction: Direction.LEFT,
+        dialogue: ELITE_FOUR[3].dialogue.before,
+        isTrainer: true,
+        sightRange: 6,
+      },
+      {
+        id: 'league_guard_lance',
+        x: 5, y: 1,
+        spriteColor: 0x606060,
+        direction: Direction.DOWN,
+        dialogue: [
+          'Beyond this door\nawaits the CHAMPION!',
+          'Defeat LANCE first\nto claim your shot!',
+        ],
+      },
+    ],
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────
+// 18. CHAMPION'S CHAMBER (14x12 throne room)
+// ─────────────────────────────────────────────────────────────
+export const ELITE_FOUR_CHAMPION: MapData = (() => {
+  const W = 14, H = 12;
+  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
+  const collision = fill2D(W, H, false);
+  function setTile(x: number, y: number, type: TileType) {
+    if (x >= 0 && x < W && y >= 0 && y < H) {
+      tiles[y][x] = type;
+      collision[y][x] = SOLID_TILES.has(type);
+    }
+  }
+  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
+  }
+
+  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); setTile(x, H - 1, T.WALL); }
+  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
+  // South arrival door (no warp — once you're here, only the Champion lets you out)
+  setTile(7, H - 1, T.DOOR);
+
+  // Carpet runner up the center of the hall
+  for (let y = 3; y <= H - 2; y++) {
+    setTile(6, y, T.CARPET);
+    setTile(7, y, T.CARPET);
+  }
+
+  // Stepped throne dais — wider at the back
+  fillRect(5, 2, 5, 1, T.CARPET);
+  fillRect(4, 3, 7, 2, T.CARPET);
+
+  // Decorative fountains flanking the throne
+  setTile(2, 3, T.FOUNTAIN);
+  setTile(W - 3, 3, T.FOUNTAIN);
+
+  // Velvet rope barriers along the runner
+  setTile(5, 6, T.FENCE);
+  setTile(5, 8, T.FENCE);
+  setTile(W - 6, 6, T.FENCE);
+  setTile(W - 6, 8, T.FENCE);
+
+  return {
+    id: 'elite_four_champion',
+    name: 'CHAMPION CHAMBER',
+    width: W,
+    height: H,
+    tiles,
+    collision,
+    warps: [],
+    npcs: [
+      {
+        id: 'champion_rival',
+        x: 7, y: 3,
+        spriteColor: 0x4080c0,
+        direction: Direction.DOWN,
+        dialogue: CHAMPION.dialogue.before,
+        isTrainer: true,
+        sightRange: 6,
+      },
+    ],
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────
+// 19. CERULEAN CAVE  (20x20 cave, post-game)
 // ─────────────────────────────────────────────────────────────
 export const CERULEAN_CAVE: MapData = (() => {
   const W = 20, H = 20;
@@ -1668,6 +2100,11 @@ export const ENDGAME_MAPS: Record<string, MapData> = {
   route23: ROUTE23,
   victory_road: VICTORY_ROAD,
   indigo_plateau: INDIGO_PLATEAU,
-  pokemon_center_indigo: POKEMON_CENTER_INDIGO,
+  indigo_league_lobby: INDIGO_LEAGUE_LOBBY,
+  elite_four_lorelei: ELITE_FOUR_LORELEI,
+  elite_four_bruno: ELITE_FOUR_BRUNO,
+  elite_four_agatha: ELITE_FOUR_AGATHA,
+  elite_four_lance: ELITE_FOUR_LANCE,
+  elite_four_champion: ELITE_FOUR_CHAMPION,
   cerulean_cave: CERULEAN_CAVE,
 };
