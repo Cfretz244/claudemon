@@ -1,29 +1,14 @@
 import { MapData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
+import { createMapShape } from './mapBuilder';
 
 const T = TileType;
-
-function fill2D<V>(w: number, h: number, v: V): V[][] {
-  return Array.from({ length: h }, () => Array(w).fill(v));
-}
-
-const SOLID_TILES = new Set([
-  T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
-  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN,
-]);
 
 // ─── SILPH CO. 1F — Lobby ───────────────────────────────────────────────────
 
 const SILPH_CO_1F: MapData = (() => {
   const W = 14, H = 14;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls: top 2 rows, sides, bottom
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -93,14 +78,7 @@ const SILPH_CO_1F: MapData = (() => {
 
 const SILPH_CO_2F: MapData = (() => {
   const W = 14, H = 14;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -167,14 +145,7 @@ const SILPH_CO_2F: MapData = (() => {
 
 const SILPH_CO_3F: MapData = (() => {
   const W = 14, H = 14;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -251,14 +222,7 @@ const SILPH_CO_3F: MapData = (() => {
 
 const SILPH_CO_4F: MapData = (() => {
   const W = 14, H = 14;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -320,14 +284,7 @@ const SILPH_CO_4F: MapData = (() => {
 
 const SILPH_CO_5F: MapData = (() => {
   const W = 14, H = 14;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -408,14 +365,7 @@ const SILPH_CO_5F: MapData = (() => {
 
 const SILPH_CO_6F: MapData = (() => {
   const W = 14, H = 14;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -477,14 +427,7 @@ const SILPH_CO_6F: MapData = (() => {
 
 const SILPH_CO_7F: MapData = (() => {
   const W = 14, H = 14;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
