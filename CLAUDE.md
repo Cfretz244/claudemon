@@ -26,7 +26,7 @@ Create a branch, push, open a PR with `gh pr create`, and enable auto-merge with
 
 - **Phaser 3** game framework (v3.90+)
 - **TypeScript** with strict mode (ES2020 target)
-- **Vite** bundler (v7.3+) with 5 entry points: game (`index.html`), sprite viewer (`sprites.html`), sound tester (`sounds.html`), Pokedex (`pokedex.html`), save editor (`editor.html`)
+- **Vite** bundler (v7.3+) with 6 entry points: game (`index.html`), sprite viewer (`sprites.html`), sound tester (`sounds.html`), Pokedex (`pokedex.html`), save editor (`editor.html`), map viewer (`maps.html`)
 - **Vitest** test framework with V8 coverage
 - No external asset files - all sprites/sounds generated programmatically at runtime
 
@@ -40,7 +40,7 @@ Create a branch, push, open a PR with `gh pr create`, and enable auto-merge with
 
 ### Scene Flow
 
-`BootScene` (asset generation) → `TitleScene` (menu + naming + Oak intro) → `OverworldScene` (exploration) ↔ `BattleScene` (combat)
+`BootScene` (asset generation) → `IntroScene` (animated intro) → `TitleScene` (menu + naming + Oak intro) → `OverworldScene` (exploration) ↔ `BattleScene` (combat)
 
 Scenes communicate via `this.scene.start('SceneName', data)`. The `OverworldScene` uses `this.scene.restart()` for map transitions (same instance is reused - state must be reset in `init()`).
 
@@ -57,23 +57,24 @@ src/
   soundTest.ts                      # Sound/music testing tool
   pokedexViewer.ts                  # Pokedex browser tool
   saveEditor.ts                     # Save editor for playtesting (edit party, badges, flags, items, location)
+  mapViewer.ts                      # Simplified top-down map renderer for debugging layouts
   scenes/
     BootScene.ts                    # Programmatic sprite/texture generation
+    IntroScene.ts                   # Animated intro sequence before the title screen
     TitleScene.ts                   # Title screen, NEW GAME/CONTINUE, naming, Oak intro
     OverworldScene.ts               # Map rendering, movement, NPCs, warps, menu, story
-    BattleScene.ts                  # Turn-based battles, Elite Four chain, whiteout
+    BattleScene.ts                  # Battle presentation: text/animation sequencing around BattleEngine
   systems/
     AISystem.ts                     # Trainer AI: contextual move selection with status scoring
-    BattleEngine.ts                 # (Minimal - most logic is in BattleScene)
+    BattleEngine.ts                 # Battle rules: turn order, pre-action gating, move effects, special damage, run/EXP formulas (unit-tested, injectable RNG)
     CatchSystem.ts                  # Gen 1 catch formula
     DamageCalculator.ts             # Gen 1 damage formula with stat stages
-    EncounterSystem.ts              # Wild encounter logic
+    EncounterSystem.ts              # Wild/fishing encounter rolls
     EvolutionSystem.ts              # Level/item evolution
     ExperienceSystem.ts             # EXP gain, level-up, move learning
     MoveAnimations.ts               # Per-move battle animation dispatcher
     SaveSystem.ts                   # localStorage save/load, SaveData interface
     SoundSystem.ts                  # Web Audio API chiptune SFX (singleton: soundSystem)
-    TypeChart.ts                    # Type effectiveness lookups
     animations/                     # Move animation implementations (13 batch files)
       batch01_normal_contact.ts     # Normal-type contact moves
       batch02_multihit.ts           # Multi-hit moves
@@ -92,11 +93,18 @@ src/
   entities/
     Player.ts                       # PlayerState class (party, bag, badges, storyFlags)
     Pokemon.ts                      # createPokemon() factory, stat calculation
-    NPC.ts                          # NPC type definitions
-  logic/
-    npcVisibility.ts                # shouldSkipNPC() — pure function for NPC show/hide logic
+  logic/                            # Pure, unit-tested game logic (no Phaser)
+    npcVisibility.ts                # shouldSkipNPC() — NPC show/hide from story flags
+    trainerSight.ts                 # Trainer line-of-sight math (axis, range, obstacles, surf)
+    encounters.ts                   # Weighted wild-encounter pick + encounter music theme
+    surgePuzzle.ts                  # Lt. Surge trash-can switch puzzle state machine
+    storyFlagSync.ts                # Derived story flags/catch-up grants from defeated trainers
+    saveMigration.ts                # Legacy map-id remaps for old saves
+    cutTrees.ts                     # cut_<map>_<x>_<y> flag parsing
+    slotMachine.ts                  # Game Corner slot machine reel/payout logic
   components/
     TextBox.ts                      # Typewriter text display
+    MenuInput.ts                    # Shared menu key bindings + cursor clamp (bindMenuKeys/clampIndex)
     BattleHUD.ts                    # HP bars, battle info
     BattleMenu.ts                   # FIGHT/BAG/POKeMON/RUN + move selection
     HealthBar.ts                    # Animated HP bar
@@ -106,31 +114,44 @@ src/
     PCScreen.ts                     # PC Pokemon storage system
     PokedexScreen.ts                # Pokedex display
     ShopScreen.ts                   # Poke Mart shop UI
+    SlotMachineScreen.ts            # Game Corner slot machine UI
+    PrizeExchangeScreen.ts          # Game Corner prize exchange UI
     TrainerCard.ts                  # Trainer card display (badges, play time, Pokedex)
   data/
     pokemon.ts                      # All 151 species (POKEMON_DATA)
+    pokedexDescriptions.ts          # Pokedex flavor text
     moves.ts                        # 165 Gen 1 moves (MOVES_DATA)
     typeChart.ts                    # 15x15 type effectiveness matrix
     items.ts                        # Item definitions (potions, balls, key items, HMs, TMs)
-    trainers.ts                     # ~60 trainer definitions (TRAINERS)
+    trainers.ts                     # Trainer definitions (TRAINERS)
     gymLeaders.ts                   # 8 gym leaders (GYM_LEADERS)
     eliteFour.ts                    # Elite Four + Champion + Hall of Fame text
-    wildEncounters.ts               # Encounter tables for routes/caves
+    giftNpcs.ts                     # Declarative gift/conditional-dialogue NPCs (GIFT_NPCS)
+    signs.ts                        # Sign text registry keyed by <mapId>:<x>,<y>
+    flyDestinations.ts              # Fly registry + availability filter
+    fishingEncounters.ts            # Old/Good/Super Rod encounter tables
+    prizePokemon.ts                 # Game Corner prize Pokemon
     musicTracks.ts                  # Chiptune music track definitions
+    townThemes.ts                   # Per-town palette themes for tiles/buildings
+    mapBuilder.ts                   # createMapShape(): shared tiles/collision/setTile/fillRect
     maps.ts                         # Core maps (Pallet→Pewter) + ALL_MAPS registry
     maps_cerulean.ts                # Mt Moon, Cerulean area (CERULEAN_MAPS)
     maps_vermilion.ts               # Vermilion, SS Anne (VERMILION_MAPS)
     maps_central.ts                 # Lavender, Celadon, Saffron (CENTRAL_MAPS)
     maps_south.ts                   # Fuchsia, Safari Zone, Cycling Road (SOUTH_MAPS)
     maps_endgame.ts                 # Cinnabar, Victory Road, Indigo Plateau (ENDGAME_MAPS)
+    maps_silph.ts                   # Silph Co 1F-7F with teleport pads (SILPH_MAPS)
   types/
     pokemon.types.ts                # PokemonSpecies, PokemonInstance, Move interfaces
     battle.types.ts                 # BattleType enum
     map.types.ts                    # TileType enum, MapData, WarpPoint, NPCData interfaces
   utils/
-    constants.ts                    # TILE_SIZE, GAME_WIDTH/HEIGHT, Direction enum
+    constants.ts                    # TILE_SIZE, GAME_WIDTH/HEIGHT, Direction, DIR_VECTORS, OPPOSITE_DIR
     spriteGenerator.ts              # Canvas-based Pokemon sprite generation
     battleTransition.ts             # Battle transition visual effects (spiral, etc.)
+    introSprites.ts                 # Intro-sequence sprite drawing
+    slotSymbolGenerator.ts          # Slot machine reel symbol sprites
+    mobileControls.ts               # Touch D-pad/buttons for mobile
     trainerSpriteGenerator.ts       # Trainer class/individual sprite generation
     trainerSprites_classes1.ts      # Trainer class sprite data (batch 1)
     trainerSprites_classes2.ts      # Trainer class sprite data (batch 2)
@@ -144,20 +165,21 @@ src/
 tests/
   helpers/
     pokemon.factory.ts              # Shared fixtures (createTestPokemon, mockPokemon, mockMove)
-  systems/                          # Tests for battle math, AI, catch, encounter, evolution, exp, save
+  systems/                          # Tests for battle engine/math, AI, catch, encounter, evolution, exp, save
   entities/                         # Tests for Pokemon stat calc, Player state management
-  data/                             # Data integrity tests (pokemon, moves, trainers, maps)
-  logic/                            # Tests for shouldSkipNPC story visibility logic
+  data/                             # Data integrity tests (pokemon, moves, trainers, maps, gift NPCs, fly)
+  logic/                            # Tests for pure overworld logic (sight, encounters, puzzles, flags)
 ```
 
 ## Testing
 
-187 tests across 16 files covering all pure-logic systems. Run with `npm test`.
+339 tests across 26 files covering all pure-logic systems. Run with `npm test`.
 
-- **Battle math**: TypeChart, DamageCalculator, BattleEngine
+- **Battle rules & math**: BattleEngine (turn order, pre-action gating, move effects, special damage, run/EXP — with injected RNG), TypeChart, DamageCalculator
 - **Game systems**: ExperienceSystem, EvolutionSystem, CatchSystem, EncounterSystem, AISystem
+- **Overworld logic**: trainer sight, wild-encounter picks, Surge puzzle, story-flag sync, save migration, cut trees, slot machine, NPC visibility
 - **State & persistence**: Player, SaveSystem
-- **Data integrity**: All 151 Pokemon, moves, trainers, and maps validated for consistency
+- **Data integrity**: All 151 Pokemon, moves, trainers, maps, gift NPCs, and fly destinations validated for consistency
 - **Story logic**: `shouldSkipNPC` (extracted to `src/logic/npcVisibility.ts`)
 
 Tests use `mockPokemon()` and `mockMove()` from `tests/helpers/pokemon.factory.ts` for deterministic test data. Mock `Math.random` with `vi.spyOn` when testing randomized systems.
@@ -168,18 +190,19 @@ Coverage is scoped to `src/systems/`, `src/entities/`, `src/data/`, and `src/log
 
 ### How Maps Work
 
-Maps are defined as IIFEs in TypeScript that build tile and collision arrays programmatically:
+Maps are defined as IIFEs in TypeScript that build tile and collision arrays programmatically via the shared `createMapShape` helper from `data/mapBuilder.ts`:
 
 ```typescript
 export const MY_MAP: MapData = (() => {
   const W = 20, H = 20;
-  const tiles = fill2D(W, H, T.GRASS);      // 2D tile array
-  const collision = fill2D(W, H, false);      // 2D collision array
-  // setTile(x, y, type) sets both tile + collision
-  // fillRect(x, y, w, h, type) fills a rectangle
+  // setTile(x, y, type) sets both tile + collision; fillRect fills a rectangle
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
+  // ... setTile/fillRect calls ...
   return { id: 'my_map', name: 'MY MAP', width: W, height: H, tiles, collision, warps: [...], npcs: [...] };
 })();
 ```
+
+Options: `createMapShape(W, H, base, { startSolid: true })` starts with all-solid collision (carve-out style for caves); `{ solid: CUSTOM_SET }` overrides tile solidity (the museum maps add exhibit tiles, Pokemon Tower adds TOMBSTONE — note tombstones are intentionally-preserved as walkable in the endgame maps' base set).
 
 ### Map Registry
 
@@ -258,8 +281,10 @@ When all party Pokemon faint, the player is sent to `playerState.lastHealMap` at
 The game follows Pokemon Yellow's story structure using `playerState.storyFlags` (a `Record<string, boolean>`) and conditional NPC logic:
 
 - **`shouldSkipNPC()`**: Controls NPC visibility based on story flags (extracted to `src/logic/npcVisibility.ts`, called from OverworldScene)
-- **`interactWithNPC()`**: Special handlers for story NPCs (Oak, Bill, SS Anne Captain, Mr. Fuji, Giovanni, badge check gates, etc.)
-- **`checkTrainerSight()`**: Respects `shouldSkipNPC()` so invisible NPCs don't trigger battles
+- **NPC interaction dispatch** (`interactWithNPC()`): capability checks run in order — item ball → nurse heal → Oak's Parcel/mart shop → `GIFT_NPCS` lookup → stateful handler registry (`getNpcHandler`) → trainer battle → plain dialogue. To add a "condition → dialogue → reward" NPC, add a `GIFT_NPCS` entry in `data/giftNpcs.ts` (returns dialogue + `onComplete` mutation, optional `grantsPokemon`; `null` falls through to default dialogue). Stateful story NPCs (Oak chain, rival, Giovanni, badge gates, slot machines, elevators) are small scene methods registered in `getNpcHandler`; a handler returning `false` falls through (e.g. undefeated Giovanni continues into the trainer-battle branch). Dialogue may use `{PLAYER}`/`{RIVAL}` placeholders — `fmt()` substitutes them.
+- **Signs**: text lives in `data/signs.ts` keyed by `<mapId>:<x>,<y>`
+- **`checkTrainerSight()`**: uses `logic/trainerSight.ts` for the line-of-sight math and respects `shouldSkipNPC()` so invisible NPCs don't trigger battles
+- **`syncDerivedStoryFlags()`** (`logic/storyFlagSync.ts`): recomputes flags/catch-up item grants from `defeatedTrainers` on every overworld init, keeping older saves consistent
 - **Warp gates**: SS Anne requires `ss_ticket`, Viridian Gym requires `giovanni_silph` flag, etc.
 
 ### HM Field Moves
@@ -339,7 +364,8 @@ The editor reads/writes directly to `localStorage` using the same `SaveSystem` a
 - `createPokemon(speciesId, level)` creates a full `PokemonInstance` with calculated stats and moves
 - `PlayerState.toSave()` / `PlayerState.fromSave()` serialize state for scene transitions and localStorage
 - Scene transitions pass `saveData: this.playerState.toSave()` to preserve state across map changes
-- UI components that handle their own input (MoveForgetUI, BagScreen, etc.) use an `active`/`visible` flag to gate input handlers, and an `inputBound` flag to prevent stacking listeners
+- UI components that handle their own input (MoveForgetUI, BagScreen, etc.) use an `active`/`visible` flag to gate input handlers, and an `inputBound` flag to prevent stacking listeners. The standard UP/DOWN/Z/ENTER/X bindings and the no-wrap cursor clamp come from `components/MenuInput.ts` (`bindMenuKeys`/`clampIndex`)
+- Battle rules (turn order, status gating, move effects, special damage, run/EXP formulas) live in `systems/BattleEngine.ts` as pure functions with injectable RNG; `BattleScene` sequences text/animations around them. When changing battle behavior, change the engine and its tests together — several Gen-1-style quirks are preserved deliberately and documented in comments
 - Overlay UIs (MoveForgetUI, BagScreen) set a high depth (950-1000) and use `setScrollFactor(0)` to stay fixed on screen
 - `BattleScene` uses async/await with Promise-wrapped callbacks for sequential dialogue + UI flows
 - `BagScreen` is callback/mode-based (not async) — new UI states are added as mode strings and handled in `navigate()`/`confirm()`/`back()`

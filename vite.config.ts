@@ -19,7 +19,14 @@ export default defineConfig({
       reporter: ['text', 'text-summary', 'lcov', 'json-summary'],
       reportsDirectory: 'coverage',
       include: ['src/systems/**', 'src/entities/**', 'src/data/**', 'src/logic/**'],
-      exclude: ['src/**/*.test.ts'],
+      // Phaser-bound modules that can't run in the node test env are excluded
+      // from the denominator so the report reflects testable code
+      exclude: [
+        'src/**/*.test.ts',
+        'src/systems/animations/**',
+        'src/systems/MoveAnimations.ts',
+        'src/systems/SoundSystem.ts',
+      ],
     },
   },
   build: {
