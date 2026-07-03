@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE_SIZE, GAME_WIDTH, GAME_HEIGHT, MOVE_DURATION, Direction, DIR_VECTORS } from '../utils/constants';
+import { TILE_SIZE, GAME_WIDTH, GAME_HEIGHT, MOVE_DURATION, Direction, DIR_VECTORS, OPPOSITE_DIR } from '../utils/constants';
 import { ALL_MAPS } from '../data/maps';
 import { MapData, TileType, NPCData } from '../types/map.types';
 import { TextBox } from '../components/TextBox';
@@ -17,7 +17,7 @@ import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
 import { getMusicForMap } from '../data/musicTracks';
 import { MAP_THEMES } from '../data/townThemes';
-import { StatusCondition } from '../types/pokemon.types';
+import { StatusCondition, PokemonInstance } from '../types/pokemon.types';
 import { createPokemon, gainHappiness, getHappiness } from '../entities/Pokemon';
 import { PlayerState } from '../entities/Player';
 import { ELITE_FOUR, CHAMPION } from '../data/eliteFour';
@@ -28,6 +28,13 @@ import { OLD_ROD_ENCOUNTER, GOOD_ROD_ENCOUNTERS, SUPER_ROD_ENCOUNTERS, DEFAULT_S
 import { rollFishingEncounter } from '../systems/EncounterSystem';
 import { resyncMobileInput } from '../utils/mobileControls';
 import { shouldSkipNPC as shouldSkipNPCLogic } from '../logic/npcVisibility';
+import { computeTrainerSight } from '../logic/trainerSight';
+import { pickWildEncounter, getEncounterTheme } from '../logic/encounters';
+import { SurgePuzzle } from '../logic/surgePuzzle';
+import { syncDerivedStoryFlags } from '../logic/storyFlagSync';
+import { migrateLegacyLocation } from '../logic/saveMigration';
+import { getCutTiles } from '../logic/cutTrees';
+import { getAvailableFlyDestinations } from '../data/flyDestinations';
 
 interface SceneData {
   mapId: string;
@@ -118,10 +125,7 @@ export class OverworldScene extends Phaser.Scene {
   private flashUsed = false;
 
   // Vermilion Gym trash can puzzle
-  private surgeTrashCans: Array<[number, number]> = [];
-  private surgeFirstSwitch: [number, number] | null = null;
-  private surgeSecondSwitch: [number, number] | null = null;
-  private surgeFirstFound = false;
+  private surgePuzzle = new SurgePuzzle();
 
   constructor() {
     super({ key: 'OverworldScene' });
@@ -135,26 +139,15 @@ export class OverworldScene extends Phaser.Scene {
     this.isSurfing = data.isSurfing || false;
     this.isRidingBike = data.isRidingBike || false;
     this.flashUsed = data.flashUsed || false;
-    let mapId = data.mapId || 'pallet_town';
-    // Legacy save migration: game_corner_basement → game_corner
-    if (mapId === 'game_corner_basement') {
-      mapId = 'game_corner';
-      data.playerX = 7;
-      data.playerY = 10;
-    }
-    // Legacy save migration: silph_co → silph_co_1f
-    if (mapId === 'silph_co') {
-      mapId = 'silph_co_1f';
-      data.playerX = 7;
-      data.playerY = 12;
-    }
-    // Legacy save migration: seafoam_islands → seafoam_b1f
-    if (mapId === 'seafoam_islands') {
-      mapId = 'seafoam_b1f';
-      data.playerX = 9;
-      data.playerY = 18;
-    }
-    this.currentMap = ALL_MAPS[mapId];
+    // Remap locations from saves that predate map reworks
+    const spawn = migrateLegacyLocation({
+      mapId: data.mapId || 'pallet_town',
+      x: data.playerX,
+      y: data.playerY,
+    });
+    if (spawn.x !== undefined) data.playerX = spawn.x;
+    if (spawn.y !== undefined) data.playerY = spawn.y;
+    this.currentMap = ALL_MAPS[spawn.mapId];
     // Reset flash when entering a non-dark map so re-entry into dark caves requires Flash again
     if (!this.currentMap.isDark) {
       this.flashUsed = false;
@@ -173,42 +166,8 @@ export class OverworldScene extends Phaser.Scene {
       this.playerState = new PlayerState();
     }
 
-    // Sync story flags from defeated trainers
-    if (this.playerState.defeatedTrainers.includes('rival_lab')) {
-      this.playerState.storyFlags['rival_battle_lab'] = true;
-    }
-
-    // Giovanni at Game Corner -> give Silph Scope
-    if (this.playerState.defeatedTrainers.includes('giovanni_game_corner') &&
-        !this.playerState.hasItem('silph_scope') && !this.playerState.storyFlags['got_silph_scope']) {
-      this.playerState.addItem('silph_scope');
-      this.playerState.storyFlags['got_silph_scope'] = true;
-    }
-
-    // Giovanni at Silph Co -> mark Silph Co complete
-    if (this.playerState.defeatedTrainers.includes('giovanni_silph')) {
-      this.playerState.storyFlags['giovanni_silph'] = true;
-      this.playerState.storyFlags['silph_co_complete'] = true;
-    }
-
-    // Cerulean Rocket -> give TM28 Dig
-    if (this.playerState.defeatedTrainers.includes('cerulean_rocket') &&
-        !this.playerState.hasItem('tm28_dig') && !this.playerState.storyFlags['got_tm28']) {
-      this.playerState.addItem('tm28_dig');
-      this.playerState.storyFlags['got_tm28'] = true;
-    }
-
-    // Tower rockets cleared -> enable Mr. Fuji
-    if (this.playerState.defeatedTrainers.includes('tower_rocket1') &&
-        this.playerState.defeatedTrainers.includes('tower_rocket2') &&
-        this.playerState.defeatedTrainers.includes('jessie_tower')) {
-      this.playerState.storyFlags['tower_rockets_cleared'] = true;
-    }
-
-    // Saffron gate opens with Tea
-    if (this.playerState.hasItem('tea')) {
-      this.playerState.storyFlags['saffron_open'] = true;
-    }
+    // Sync story flags derived from defeated trainers / inventory
+    syncDerivedStoryFlags(this.playerState);
   }
 
   create(): void {
@@ -994,24 +953,7 @@ export class OverworldScene extends Phaser.Scene {
           "The SILPH SCOPE\nreveals the GHOST's\ntrue identity!",
           "It's the restless\nspirit of MAROWAK!",
         ], () => {
-          const marowak = createPokemon(105, 30);
-          this.isWarping = true;
-          soundSystem.battleStart();
-          playBattleTransition(this, () => {
-            this.scene.start('BattleScene', {
-              type: 'wild',
-              wildPokemon: marowak,
-              playerState: this.playerState.toSave(),
-              returnMap: this.currentMap.id,
-              returnX: this.playerGridX,
-              returnY: this.playerGridY,
-              isSurfing: this.isSurfing,
-              isRidingBike: this.isRidingBike,
-              flashUsed: this.flashUsed,
-            });
-          }, () => {
-            soundSystem.startMusic('wild_battle');
-          });
+          this.startWildBattle(createPokemon(105, 30));
         });
         return;
       }
@@ -1104,66 +1046,17 @@ export class OverworldScene extends Phaser.Scene {
       if (this.playerState.defeatedTrainers.includes(npc.id)) continue;
       if (this.shouldSkipNPC(npc)) continue;
 
-      // Check if player is in trainer's line of sight
-      const vec = DIR_VECTORS[npc.direction];
-      const dx = this.playerGridX - npc.x;
-      const dy = this.playerGridY - npc.y;
-
-      // Player must be along the trainer's facing axis
-      let inSight = false;
-      let distance = 0;
-      if (vec.x !== 0 && dy === 0) {
-        // Horizontal sight line
-        distance = dx * vec.x; // positive if player is in the direction trainer faces
-        inSight = distance > 0 && distance <= npc.sightRange;
-      } else if (vec.y !== 0 && dx === 0) {
-        // Vertical sight line
-        distance = dy * vec.y;
-        inSight = distance > 0 && distance <= npc.sightRange;
-      }
-
-      if (!inSight) continue;
-
-      // Check for obstacles between trainer and player
-      let blocked = false;
-      for (let i = 1; i < distance; i++) {
-        const checkX = npc.x + vec.x * i;
-        const checkY = npc.y + vec.y * i;
-        const tileBlocked = this.currentMap.collision[checkY]?.[checkX];
-        // Water tiles are not obstacles when surfing
-        const isWater = this.currentMap.tiles[checkY]?.[checkX] === TileType.WATER;
-        if (tileBlocked && !(this.isSurfing && isWater)) {
-          blocked = true;
-          break;
-        }
-        // Check for other NPCs blocking line of sight
-        for (const otherNpc of this.currentMap.npcs) {
-          if (otherNpc.id !== npc.id && otherNpc.x === checkX && otherNpc.y === checkY) {
-            blocked = true;
-            break;
-          }
-        }
-        if (blocked) break;
-      }
-      if (blocked) continue;
+      const sight = computeTrainerSight(
+        npc, this.playerGridX, this.playerGridY, this.currentMap, this.isSurfing,
+      );
+      if (!sight.spotted) continue;
 
       // Trainer spotted the player!
       this.isWarping = true; // Block all input
-      this.triggerTrainerEncounter(npc, distance);
+      this.triggerTrainerEncounter(npc, sight.distance);
       return true;
     }
     return false;
-  }
-
-  private getEncounterTheme(npc: NPCData): string {
-    if (npc.id.startsWith('rival_')) return 'rival_theme';
-    const trainerData = TRAINERS[npc.id];
-    const trainerClass = trainerData?.class || '';
-    const EVIL_CLASSES = ['Team Rocket', 'Boss', 'Channeler'];
-    if (EVIL_CLASSES.includes(trainerClass)) return 'evil_encounter';
-    const FEMALE_CLASSES = ['Lass', 'Beauty', 'Jr. Trainer', 'Cooltrainer', 'Swimmer'];
-    if (FEMALE_CLASSES.includes(trainerClass)) return 'female_encounter';
-    return 'trainer_encounter';
   }
 
   private triggerTrainerEncounter(npc: NPCData, distance: number): void {
@@ -1206,7 +1099,7 @@ export class OverworldScene extends Phaser.Scene {
 
     soundSystem.bump(); // Alert sound
 
-    soundSystem.startMusic(this.getEncounterTheme(npc));
+    soundSystem.startMusic(getEncounterTheme(npc.id));
 
     // After a brief pause showing "!", trainer walks toward player
     this.time.delayedCall(600, () => {
@@ -1217,13 +1110,7 @@ export class OverworldScene extends Phaser.Scene {
       const tilesToWalk = distance - 1;
       if (tilesToWalk <= 0) {
         // Already adjacent - turn player to face trainer, start battle
-        const oppositeDir: Record<Direction, Direction> = {
-          [Direction.UP]: Direction.DOWN,
-          [Direction.DOWN]: Direction.UP,
-          [Direction.LEFT]: Direction.RIGHT,
-          [Direction.RIGHT]: Direction.LEFT,
-        };
-        this.playerDirection = oppositeDir[npc.direction];
+                this.playerDirection = OPPOSITE_DIR[npc.direction];
         this.player.play(this.isSurfing ? `surf_${this.playerDirection}` : this.isRidingBike ? `bike_idle_${this.playerDirection}` : `player_idle_${this.playerDirection}`, true);
         this.isWarping = false; // Allow dialogue input
         this.interactWithNPC(npc);
@@ -1239,13 +1126,7 @@ export class OverworldScene extends Phaser.Scene {
           npc.x += vec.x * tilesToWalk;
           npc.y += vec.y * tilesToWalk;
           // Turn player to face the approaching trainer
-          const oppositeDir: Record<Direction, Direction> = {
-            [Direction.UP]: Direction.DOWN,
-            [Direction.DOWN]: Direction.UP,
-            [Direction.LEFT]: Direction.RIGHT,
-            [Direction.RIGHT]: Direction.LEFT,
-          };
-          this.playerDirection = oppositeDir[npc.direction];
+                    this.playerDirection = OPPOSITE_DIR[npc.direction];
           this.player.play(this.isSurfing ? `surf_${this.playerDirection}` : `player_idle_${this.playerDirection}`, true);
           this.isWarping = false; // Allow dialogue input
           this.interactWithNPC(npc);
@@ -1268,6 +1149,35 @@ export class OverworldScene extends Phaser.Scene {
       };
 
       walkStep();
+    });
+  }
+
+  /** Common state payload passed to BattleScene so it can restore the overworld. */
+  private buildBattleReturnData() {
+    return {
+      playerState: this.playerState.toSave(),
+      returnMap: this.currentMap.id,
+      returnX: this.playerGridX,
+      returnY: this.playerGridY,
+      isSurfing: this.isSurfing,
+      isRidingBike: this.isRidingBike,
+      flashUsed: this.flashUsed,
+    };
+  }
+
+  /** Blocks input and transitions into a wild battle with the standard payload. */
+  private startWildBattle(wildPokemon: PokemonInstance, extra: { isGhost?: boolean } = {}): void {
+    this.isWarping = true;
+    soundSystem.battleStart();
+    playBattleTransition(this, () => {
+      this.scene.start('BattleScene', {
+        type: 'wild',
+        wildPokemon,
+        ...this.buildBattleReturnData(),
+        ...extra,
+      });
+    }, () => {
+      soundSystem.startMusic('wild_battle');
     });
   }
 
@@ -1305,60 +1215,16 @@ export class OverworldScene extends Phaser.Scene {
     // Pokemon Tower ghost encounters (no Silph Scope)
     const towerFloors = ['pokemon_tower_2f', 'pokemon_tower_3f', 'pokemon_tower_4f', 'pokemon_tower_5f'];
     if (towerFloors.includes(this.currentMap.id) && !this.playerState.hasItem('silph_scope')) {
-      const ghostPokemon = createPokemon(92, 20);
       this.lastEncounterStep = this.stepCounter;
-      this.isWarping = true;
-      soundSystem.battleStart();
-      playBattleTransition(this, () => {
-        this.scene.start('BattleScene', {
-          type: 'wild',
-          wildPokemon: ghostPokemon,
-          playerState: this.playerState.toSave(),
-          returnMap: this.currentMap.id,
-          returnX: this.playerGridX,
-          returnY: this.playerGridY,
-          isSurfing: this.isSurfing,
-          isRidingBike: this.isRidingBike,
-          flashUsed: this.flashUsed,
-          isGhost: true,
-        });
-      }, () => {
-        soundSystem.startMusic('wild_battle');
-      });
+      this.startWildBattle(createPokemon(92, 20), { isGhost: true });
       return;
     }
 
     // Pick a wild Pokemon
-    const totalWeight = encounters.encounters.reduce((sum, e) => sum + e.weight, 0);
-    let roll = Math.random() * totalWeight;
-    for (const enc of encounters.encounters) {
-      roll -= enc.weight;
-      if (roll <= 0) {
-        const level = enc.minLevel + Math.floor(Math.random() * (enc.maxLevel - enc.minLevel + 1));
-        const wildPokemon = createPokemon(enc.speciesId, level);
-
-        this.lastEncounterStep = this.stepCounter;
-        this.isWarping = true; // Block movement during battle transition
-        soundSystem.battleStart();
-
-        // Transition to battle
-        playBattleTransition(this, () => {
-          this.scene.start('BattleScene', {
-            type: 'wild',
-            wildPokemon,
-            playerState: this.playerState.toSave(),
-            returnMap: this.currentMap.id,
-            returnX: this.playerGridX,
-            returnY: this.playerGridY,
-            isSurfing: this.isSurfing,
-            isRidingBike: this.isRidingBike,
-            flashUsed: this.flashUsed,
-          });
-        }, () => {
-          soundSystem.startMusic('wild_battle');
-        });
-        return;
-      }
+    const pick = pickWildEncounter(encounters);
+    if (pick) {
+      this.lastEncounterStep = this.stepCounter;
+      this.startWildBattle(createPokemon(pick.speciesId, pick.level));
     }
   }
 
@@ -1393,13 +1259,7 @@ export class OverworldScene extends Phaser.Scene {
         trainerId,
         trainerName: this.playerState.rivalName,
         trainerClass: 'Rival',
-        playerState: this.playerState.toSave(),
-        returnMap: this.currentMap.id,
-        returnX: this.playerGridX,
-        returnY: this.playerGridY,
-        isSurfing: this.isSurfing,
-        isRidingBike: this.isRidingBike,
-        flashUsed: this.flashUsed,
+        ...this.buildBattleReturnData(),
       });
     }, () => {
       soundSystem.startMusic('trainer_battle');
@@ -1796,13 +1656,7 @@ export class OverworldScene extends Phaser.Scene {
     // Turn NPC to face player
     const sprite = this.npcSprites.get(npc.id);
     if (sprite) {
-      const oppositeDir: Record<Direction, Direction> = {
-        [Direction.UP]: Direction.DOWN,
-        [Direction.DOWN]: Direction.UP,
-        [Direction.LEFT]: Direction.RIGHT,
-        [Direction.RIGHT]: Direction.LEFT,
-      };
-      const faceDir = oppositeDir[this.playerDirection];
+            const faceDir = OPPOSITE_DIR[this.playerDirection];
       const dirIndex = [Direction.DOWN, Direction.UP, Direction.LEFT, Direction.RIGHT].indexOf(faceDir);
       sprite.setFrame(dirIndex);
     }
@@ -2043,25 +1897,8 @@ export class OverworldScene extends Phaser.Scene {
             "SNORLAX woke up!\nIt looks angry!",
           ],
           () => {
-            // Start wild Snorlax battle
-            const snorlax = createPokemon(143, 30); // Snorlax level 30
-            this.isWarping = true;
-            soundSystem.battleStart();
-            playBattleTransition(this, () => {
-              this.scene.start('BattleScene', {
-                type: 'wild',
-                wildPokemon: snorlax,
-                playerState: this.playerState.toSave(),
-                returnMap: this.currentMap.id,
-                returnX: this.playerGridX,
-                returnY: this.playerGridY,
-                isSurfing: this.isSurfing,
-                isRidingBike: this.isRidingBike,
-                flashUsed: this.flashUsed,
-              });
-            }, () => {
-              soundSystem.startMusic('wild_battle');
-            });
+            // Start wild Snorlax battle (level 30)
+            this.startWildBattle(createPokemon(143, 30));
             // Set flag to remove Snorlax after battle
             this.playerState.storyFlags[`${npc.id}_cleared`] = true;
           }
@@ -2088,24 +1925,7 @@ export class OverworldScene extends Phaser.Scene {
       this.textBox.show(
         npc.dialogue,
         () => {
-          const bird = createPokemon(speciesId, 50);
-          this.isWarping = true;
-          soundSystem.battleStart();
-          playBattleTransition(this, () => {
-            this.scene.start('BattleScene', {
-              type: 'wild',
-              wildPokemon: bird,
-              playerState: this.playerState.toSave(),
-              returnMap: this.currentMap.id,
-              returnX: this.playerGridX,
-              returnY: this.playerGridY,
-              isSurfing: this.isSurfing,
-              isRidingBike: this.isRidingBike,
-              flashUsed: this.flashUsed,
-            });
-          }, () => {
-            soundSystem.startMusic('wild_battle');
-          });
+          this.startWildBattle(createPokemon(speciesId, 50));
           this.playerState.storyFlags[`${npc.id}_cleared`] = true;
         }
       );
@@ -2566,7 +2386,7 @@ export class OverworldScene extends Phaser.Scene {
     if (npc.isTrainer && !this.playerState.defeatedTrainers.includes(npc.id)) {
       // Play encounter music for trainers the player walks up to (not spotted by sight)
       if (!this.isWarping) {
-        soundSystem.startMusic(this.getEncounterTheme(npc));
+        soundSystem.startMusic(getEncounterTheme(npc.id));
       }
       const dialogue = npc.dialogue.map(d =>
         d.replace('{PLAYER}', this.playerState.name).replace('{RIVAL}', this.playerState.rivalName)
@@ -2858,13 +2678,7 @@ export class OverworldScene extends Phaser.Scene {
         trainerId: npc.id,
         trainerName,
         trainerClass,
-        playerState: this.playerState.toSave(),
-        returnMap: this.currentMap.id,
-        returnX: this.playerGridX,
-        returnY: this.playerGridY,
-        isSurfing: this.isSurfing,
-        isRidingBike: this.isRidingBike,
-        flashUsed: this.flashUsed,
+        ...this.buildBattleReturnData(),
       });
     }, () => {
       let track: string = 'trainer_battle';
@@ -3097,23 +2911,7 @@ export class OverworldScene extends Phaser.Scene {
         return;
       }
       this.textBox.show(['Oh! A bite!'], () => {
-        this.isWarping = true;
-        soundSystem.battleStart();
-        playBattleTransition(this, () => {
-          this.scene.start('BattleScene', {
-            type: 'wild',
-            wildPokemon,
-            playerState: this.playerState.toSave(),
-            returnMap: this.currentMap.id,
-            returnX: this.playerGridX,
-            returnY: this.playerGridY,
-            isSurfing: this.isSurfing,
-            isRidingBike: this.isRidingBike,
-            flashUsed: this.flashUsed,
-          });
-        }, () => {
-          soundSystem.startMusic('wild_battle');
-        });
+        this.startWildBattle(wildPokemon);
       });
     });
   }
@@ -3482,41 +3280,7 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    // Collect all trash can positions from the map
-    this.surgeTrashCans = [];
-    for (let y = 0; y < this.currentMap.height; y++) {
-      for (let x = 0; x < this.currentMap.width; x++) {
-        if (this.currentMap.tiles[y][x] === TileType.COUNTER) {
-          this.surgeTrashCans.push([x, y]);
-        }
-      }
-    }
-
-    this.surgeFirstFound = false;
-    this.randomizeSurgeSwitches();
-  }
-
-  private randomizeSurgeSwitches(): void {
-    if (this.surgeTrashCans.length < 2) return;
-
-    // Pick a random first switch
-    const firstIdx = Math.floor(Math.random() * this.surgeTrashCans.length);
-    this.surgeFirstSwitch = this.surgeTrashCans[firstIdx];
-
-    // Second switch must be adjacent (up/down/left/right) to the first
-    const [fx, fy] = this.surgeFirstSwitch;
-    const adjacent = this.surgeTrashCans.filter(([x, y]) => {
-      if (x === fx && y === fy) return false;
-      return (Math.abs(x - fx) + Math.abs(y - fy)) === 1;
-    });
-
-    // If no adjacent cans, just pick any other can (fallback)
-    if (adjacent.length > 0) {
-      this.surgeSecondSwitch = adjacent[Math.floor(Math.random() * adjacent.length)];
-    } else {
-      const others = this.surgeTrashCans.filter(([x, y]) => x !== fx || y !== fy);
-      this.surgeSecondSwitch = others[Math.floor(Math.random() * others.length)];
-    }
+    this.surgePuzzle.init(this.currentMap);
   }
 
   private handleSurgeTrashCan(targetX: number, targetY: number): boolean {
@@ -3530,28 +3294,17 @@ export class OverworldScene extends Phaser.Scene {
       return true;
     }
 
-    const isFirst = this.surgeFirstSwitch &&
-      targetX === this.surgeFirstSwitch[0] && targetY === this.surgeFirstSwitch[1];
-    const isSecond = this.surgeSecondSwitch &&
-      targetX === this.surgeSecondSwitch[0] && targetY === this.surgeSecondSwitch[1];
-
-    if (!this.surgeFirstFound) {
-      // Looking for the first switch
-      if (isFirst) {
-        this.surgeFirstFound = true;
+    const outcome = this.surgePuzzle.checkCan(targetX, targetY);
+    switch (outcome) {
+      case 'first-found':
         soundSystem.bump();
         this.textBox.show([
           'Hey! There\'s a\nswitch under the',
           'trash! Turn it on!',
           'The first lock was\nopened!',
         ]);
-      } else {
-        this.textBox.show(['There\'s nothing in\nthe trash can.']);
-      }
-    } else {
-      // First switch was found, looking for the second
-      if (isSecond) {
-        // Success! Open the gate
+        break;
+      case 'gate-open':
         this.playerState.storyFlags['surge_gate_open'] = true;
         soundSystem.bump();
         this.textBox.show([
@@ -3562,16 +3315,17 @@ export class OverworldScene extends Phaser.Scene {
         ], () => {
           this.openSurgeGate();
         });
-      } else {
-        // Wrong can! Reset the puzzle
-        this.surgeFirstFound = false;
-        this.randomizeSurgeSwitches();
+        break;
+      case 'reset':
         soundSystem.bump();
         this.textBox.show([
           'Nope, there\'s only\ntrash here.',
           'Hey! The electric\nlock was reset!',
         ]);
-      }
+        break;
+      case 'empty':
+        this.textBox.show(['There\'s nothing in\nthe trash can.']);
+        break;
     }
 
     return true;
@@ -3687,16 +3441,10 @@ export class OverworldScene extends Phaser.Scene {
 
   private restoreCutTrees(): void {
     // Restore any previously cut trees on this map
-    const prefix = `cut_${this.currentMap.id}_`;
-    for (const key of Object.keys(this.playerState.storyFlags)) {
-      if (key.startsWith(prefix) && this.playerState.storyFlags[key]) {
-        const parts = key.slice(prefix.length).split('_');
-        const x = parseInt(parts[0]);
-        const y = parseInt(parts[1]);
-        if (!isNaN(x) && !isNaN(y) && this.currentMap.tiles[y]?.[x] === TileType.CUT_TREE) {
-          this.currentMap.tiles[y][x] = TileType.GRASS;
-          this.currentMap.collision[y][x] = false;
-        }
+    for (const [x, y] of getCutTiles(this.playerState.storyFlags, this.currentMap.id)) {
+      if (this.currentMap.tiles[y]?.[x] === TileType.CUT_TREE) {
+        this.currentMap.tiles[y][x] = TileType.GRASS;
+        this.currentMap.collision[y][x] = false;
       }
     }
   }
@@ -3834,24 +3582,8 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private showFlyMap(): void {
-    // Fly destinations: towns with visited Pokemon Centers
-    const flyDestinations: Array<{ name: string; mapId: string; x: number; y: number }> = [
-      { name: 'PALLET TOWN', mapId: 'pallet_town', x: 9, y: 8 },
-      { name: 'VIRIDIAN CITY', mapId: 'viridian_city', x: 9, y: 14 },
-      { name: 'PEWTER CITY', mapId: 'pewter_city', x: 16, y: 9 },
-      { name: 'CERULEAN CITY', mapId: 'cerulean_city', x: 14, y: 11 },
-      { name: 'VERMILION CITY', mapId: 'vermilion_city', x: 11, y: 9 },
-      { name: 'LAVENDER TOWN', mapId: 'lavender_town', x: 11, y: 9 },
-      { name: 'CELADON CITY', mapId: 'celadon_city', x: 14, y: 11 },
-      { name: 'SAFFRON CITY', mapId: 'saffron_city', x: 14, y: 11 },
-      { name: 'FUCHSIA CITY', mapId: 'fuchsia_city', x: 14, y: 11 },
-      { name: 'CINNABAR ISLAND', mapId: 'cinnabar_island', x: 10, y: 9 },
-    ];
-
-    // Filter to visited towns
-    const available = flyDestinations.filter(d =>
-      this.playerState.storyFlags[`visited_${d.mapId}`] || d.mapId === 'pallet_town'
-    );
+    // Fly destinations: towns with visited Pokemon Centers (+ Pallet Town)
+    const available = getAvailableFlyDestinations(this.playerState.storyFlags);
 
     if (available.length === 0) {
       this.textBox.show(["No towns to fly to!"]);
