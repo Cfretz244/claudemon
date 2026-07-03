@@ -4,6 +4,7 @@ import { PokemonInstance, StatusCondition } from '../types/pokemon.types';
 import { POKEMON_DATA } from '../data/pokemon';
 import { MOVES_DATA } from '../data/moves';
 import { soundSystem } from '../systems/SoundSystem';
+import { bindMenuKeys, clampIndex } from './MenuInput';
 
 // Field move IDs
 const FIELD_MOVES: Record<number, { name: string; fieldName: string }> = {
@@ -139,32 +140,23 @@ export class PartyScreen {
     if (this.inputBound) return;
     this.inputBound = true;
 
-    const kb = this.scene.input.keyboard!;
-    const up = kb.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
-    const down = kb.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
-    const z = kb.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
-    const enter = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-    const x = kb.addKey(Phaser.Input.Keyboard.KeyCodes.X);
-
-    up.on('down', () => { if (this.visible) this.navigate(-1); });
-    down.on('down', () => { if (this.visible) this.navigate(1); });
-    z.on('down', () => { if (this.visible) this.confirm(); });
-    enter.on('down', () => { if (this.visible) this.confirm(); });
-    x.on('down', () => { if (this.visible) this.back(); });
+    bindMenuKeys(this.scene, {
+      isActive: () => this.visible,
+      onUp: () => this.navigate(-1),
+      onDown: () => this.navigate(1),
+      onConfirm: () => this.confirm(),
+      onCancel: () => this.back(),
+    });
   }
 
   private navigate(dir: number): void {
     soundSystem.menuMove();
 
     if (this.mode === 'list' || this.mode === 'switch') {
-      this.cursorIndex += dir;
-      if (this.cursorIndex < 0) this.cursorIndex = 0;
-      if (this.cursorIndex >= this.party.length) this.cursorIndex = this.party.length - 1;
+      this.cursorIndex = clampIndex(this.cursorIndex, dir, this.party.length);
       this.cursorText.setY(16 + this.cursorIndex * 20);
     } else if (this.mode === 'options') {
-      this.optionsIndex += dir;
-      if (this.optionsIndex < 0) this.optionsIndex = 0;
-      if (this.optionsIndex >= this.currentOptionLabels.length) this.optionsIndex = this.currentOptionLabels.length - 1;
+      this.optionsIndex = clampIndex(this.optionsIndex, dir, this.currentOptionLabels.length);
       this.optionsCursor.setY(4 + this.optionsIndex * 14);
     }
   }
