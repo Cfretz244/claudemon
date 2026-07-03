@@ -35,6 +35,8 @@ import { syncDerivedStoryFlags } from '../logic/storyFlagSync';
 import { migrateLegacyLocation } from '../logic/saveMigration';
 import { getCutTiles } from '../logic/cutTrees';
 import { getAvailableFlyDestinations } from '../data/flyDestinations';
+import { GIFT_NPCS, GiftNpcResult } from '../data/giftNpcs';
+import { SIGNS } from '../data/signs';
 
 interface SceneData {
   mapId: string;
@@ -1652,43 +1654,23 @@ export class OverworldScene extends Phaser.Scene {
     }
   }
 
+  /** Substitutes {PLAYER}/{RIVAL} placeholders in dialogue text. */
+  private fmt(s: string): string {
+    return s.replace('{PLAYER}', this.playerState.name).replace('{RIVAL}', this.playerState.rivalName);
+  }
+
   private interactWithNPC(npc: NPCData): void {
     // Turn NPC to face player
     const sprite = this.npcSprites.get(npc.id);
     if (sprite) {
-            const faceDir = OPPOSITE_DIR[this.playerDirection];
+      const faceDir = OPPOSITE_DIR[this.playerDirection];
       const dirIndex = [Direction.DOWN, Direction.UP, Direction.LEFT, Direction.RIGHT].indexOf(faceDir);
       sprite.setFrame(dirIndex);
     }
 
     // Item ball pickup
     if (npc.isItemBall && npc.itemId) {
-      const item = ITEMS[npc.itemId];
-      if (item) {
-        this.textBox.show(
-          [`${this.playerState.name} found\n${item.name}!`],
-          () => {
-            this.playerState.addItem(npc.itemId!);
-            this.playerState.storyFlags[`picked_up_${npc.id}`] = true;
-            // Remove sprite from map
-            const ballSprite = this.npcSprites.get(npc.id);
-            if (ballSprite) {
-              ballSprite.destroy();
-              this.npcSprites.delete(npc.id);
-            }
-            // Mt. Moon fossils: picking one removes the other
-            if (npc.id === 'mt_moon_helix_fossil' || npc.id === 'mt_moon_dome_fossil') {
-              this.playerState.storyFlags['got_fossil'] = true;
-              const otherId = npc.id === 'mt_moon_helix_fossil' ? 'mt_moon_dome_fossil' : 'mt_moon_helix_fossil';
-              const otherSprite = this.npcSprites.get(otherId);
-              if (otherSprite) {
-                otherSprite.destroy();
-                this.npcSprites.delete(otherId);
-              }
-            }
-          }
-        );
-      }
+      this.pickUpItemBall(npc);
       return;
     }
 
@@ -1700,24 +1682,6 @@ export class OverworldScene extends Phaser.Scene {
       this.textBox.show(greetDialogue.length > 0 ? greetDialogue : ['Let me heal your\nPOKeMON!'], () => {
         this.runHealAnimation(npc, restoreMsg);
       });
-      return;
-    }
-
-    // Museum ticket clerk: charges $50 for 2F access
-    if (npc.id === 'museum_ticket_clerk') {
-      if (this.playerState.storyFlags['museum_2f_ticket']) {
-        this.textBox.show(['Please enjoy the\nspace exhibit\nupstairs!']);
-      } else if (this.playerState.money >= 50) {
-        this.textBox.show(
-          ["That'll be $50\nfor admission to\nthe 2nd floor.", `${this.playerState.name} paid $50.`, 'Thank you! Please\nenjoy the exhibit!'],
-          () => {
-            this.playerState.money -= 50;
-            this.playerState.storyFlags['museum_2f_ticket'] = true;
-          }
-        );
-      } else {
-        this.textBox.show(["I'm sorry, you\ndon't have enough\nmoney.", "It's $50 for a\nticket to the\n2nd floor."]);
-      }
       return;
     }
 
@@ -1744,641 +1708,20 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    // Oak's story progression chain
-    if (npc.id === 'oak') {
-      if (this.currentMap.id !== 'oaks_lab') {
-        soundSystem.startMusic('oaks_theme');
-      }
-      if (!this.playerState.storyFlags['has_pikachu']) {
-        // Give Pikachu
-        this.textBox.show(
-          [
-            'OAK: Ah, {PLAYER}!\nI\'ve been waiting\nfor you!'.replace('{PLAYER}', this.playerState.name),
-            'I have a POKeMON\nhere for you!',
-            'This PIKACHU is quite\nenergetic!',
-            'Go on! Take it with\nyou on your journey!',
-            '{PLAYER} received\nPIKACHU!'.replace('{PLAYER}', this.playerState.name),
-          ],
-          () => {
-            const pikachu = createPokemon(25, 5);
-            this.playerState.addToParty(pikachu);
-            this.playerState.storyFlags['has_pikachu'] = true;
-            soundSystem.pokemonCry(800);
-
-            // Update Pikachu follower visibility
-            this.pikachuVisible = true;
-            this.pikachuGridX = this.playerGridX;
-            this.pikachuGridY = this.playerGridY;
-            this.pikachu.setPosition(
-              this.pikachuGridX * TILE_SIZE + TILE_SIZE / 2,
-              this.pikachuGridY * TILE_SIZE + TILE_SIZE / 2
-            );
-          }
-        );
+    // Declarative gift/conditional-dialogue NPCs (a null resolve falls through)
+    const gift = GIFT_NPCS[npc.id];
+    if (gift) {
+      const result = gift.resolve(this.playerState);
+      if (result) {
+        this.runGiftNpc(result);
         return;
       }
-      if (this.playerState.hasItem('oaks_parcel') && !this.playerState.storyFlags['delivered_parcel']) {
-        // Parcel delivery sequence
-        this.textBox.show(
-          [
-            'OAK: Oh! That\'s the\nparcel I was waiting\nfor!',
-            'Thank you, {PLAYER}!'.replace('{PLAYER}', this.playerState.name),
-            'OAK: I have something\nfor you in return!',
-            '{PLAYER} handed over\nthe OAK\'S PARCEL!'.replace('{PLAYER}', this.playerState.name),
-            'OAK: This is a\nPOKeDEX!',
-            'It automatically\nrecords data on\nPOKeMON you\'ve seen\nor caught!',
-            '{PLAYER} received\nthe POKeDEX!'.replace('{PLAYER}', this.playerState.name),
-            "Here, take these\ntoo!",
-            '{PLAYER} received\n5 POKe BALLs!'.replace('{PLAYER}', this.playerState.name),
-          ],
-          () => {
-            this.playerState.useItem('oaks_parcel');
-            this.playerState.addItem('pokedex');
-            this.playerState.addItem('poke_ball', 5);
-            this.playerState.storyFlags['delivered_parcel'] = true;
-            this.playerState.storyFlags['has_pokedex'] = true;
-          }
-        );
-        return;
-      }
-      if (this.playerState.storyFlags['delivered_parcel']) {
-        this.textBox.show([
-          'OAK: Good luck filling\nup that POKeDEX!',
-          'The world is full of\namazing POKeMON!',
-        ]);
-        return;
-      }
-      // Has Pikachu but no parcel yet
-      this.textBox.show([
-        'OAK: Go explore the\nworld with PIKACHU!',
-        'The VIRIDIAN CITY\nMart might have\nsomething for me...',
-      ]);
-      return;
     }
 
-    // Rival NPC in lab - context-dependent
-    if (npc.id === 'rival') {
-      if (!this.playerState.storyFlags['has_pikachu']) {
-        this.textBox.show([
-          `${this.playerState.rivalName}: What?\nGramps isn't here?`,
-          "I want my POKeMON!",
-        ]);
-        return;
-      }
-      if (this.playerState.storyFlags['rival_battle_lab']) {
-        this.textBox.show([
-          `${this.playerState.rivalName}: I'll get\nstronger and beat\nyou next time!`,
-        ]);
-        return;
-      }
-      // Rival wants to battle (triggered automatically after getting Pikachu)
-      soundSystem.startMusic('rival_theme');
-      this.textBox.show([
-        `${this.playerState.rivalName}: Wait,\n{PLAYER}!`.replace('{PLAYER}', this.playerState.name),
-        "Let's check out our\nnew POKeMON!",
-      ], () => {
-        this.startRivalBattle('rival_lab');
-      });
-      return;
-    }
-
-    // Bill gives SS Ticket
-    if (npc.id === 'bill') {
-      if (!this.playerState.storyFlags['bill_helped']) {
-        this.textBox.show(
-          [
-            "BILL: Hi! I'm a true\nPOKeMON FANATIC!",
-            "I got mixed up in one\nof my experiments...",
-            "Thanks for listening!\nHere, take this!",
-            `${this.playerState.name} received\nS.S. TICKET!`,
-          ],
-          () => {
-            this.playerState.addItem('ss_ticket');
-            this.playerState.storyFlags['bill_helped'] = true;
-          }
-        );
-        return;
-      }
-      this.textBox.show([
-        "BILL: The S.S. ANNE\nis docked at VERMILION!",
-        "Use the ticket I gave\nyou to board!",
-      ]);
-      return;
-    }
-
-    // SS Anne Captain gives HM01 Cut
-    if (npc.id === 'ss_anne_captain') {
-      if (!this.playerState.storyFlags['got_hm01']) {
-        this.textBox.show(
-          [
-            "CAPTAIN: Ugh... I feel\nseasick...",
-            "Thank you for\nchecking on me!",
-            "Here, take this HM\nas my thanks!",
-            `${this.playerState.name} received\nHM01 CUT!`,
-          ],
-          () => {
-            this.playerState.addItem('hm01_cut');
-            this.playerState.storyFlags['got_hm01'] = true;
-            this.playerState.storyFlags['ss_anne_departed'] = true;
-          }
-        );
-        return;
-      }
-      this.textBox.show(["CAPTAIN: The ship will\nbe departing soon!"]);
-      return;
-    }
-
-    // Snorlax NPC interactions (wake with Poke Flute)
-    if (npc.id === 'snorlax_route12' || npc.id === 'snorlax_route16') {
-      if (this.playerState.hasItem('poke_flute')) {
-        this.textBox.show(
-          [
-            `${this.playerState.name} used the\nPOKe FLUTE!`,
-            "SNORLAX woke up!\nIt looks angry!",
-          ],
-          () => {
-            // Start wild Snorlax battle (level 30)
-            this.startWildBattle(createPokemon(143, 30));
-            // Set flag to remove Snorlax after battle
-            this.playerState.storyFlags[`${npc.id}_cleared`] = true;
-          }
-        );
-        return;
-      }
-      this.textBox.show([
-        "A huge POKeMON is\nblocking the path!",
-        "It's sleeping soundly...",
-        "Zzz... Zzz...",
-        "Maybe a melody could\nwake it up?",
-      ]);
-      return;
-    }
-
-    // Legendary bird encounters (Articuno, Zapdos, Moltres)
-    if (npc.id === 'articuno_seafoam' || npc.id === 'zapdos_power_plant' || npc.id === 'moltres_victory_road') {
-      const birdSpecies: Record<string, number> = {
-        articuno_seafoam: 144,
-        zapdos_power_plant: 145,
-        moltres_victory_road: 146,
-      };
-      const speciesId = birdSpecies[npc.id];
-      this.textBox.show(
-        npc.dialogue,
-        () => {
-          this.startWildBattle(createPokemon(speciesId, 50));
-          this.playerState.storyFlags[`${npc.id}_cleared`] = true;
-        }
-      );
-      return;
-    }
-
-    // Mr. Fuji gives Poke Flute
-    if (npc.id === 'mr_fuji') {
-      if (!this.playerState.storyFlags['got_poke_flute']) {
-        this.textBox.show(
-          [
-            "MR. FUJI: Thank you\nfor saving me!",
-            "Those TEAM ROCKET\nruffians held me\nhostage!",
-            "Please, take this\nPOKe FLUTE as thanks!",
-            `${this.playerState.name} received\nPOKe FLUTE!`,
-          ],
-          () => {
-            this.playerState.addItem('poke_flute');
-            this.playerState.storyFlags['got_poke_flute'] = true;
-          }
-        );
-        return;
-      }
-      this.textBox.show([
-        "MR. FUJI: Rest their\nsouls in peace...",
-        "Use the POKe FLUTE\nto wake sleeping\nPOKeMON!",
-      ]);
-      return;
-    }
-
-    // Celadon Tea Lady gives Tea
-    if (npc.id === 'celadon_tea_lady') {
-      if (!this.playerState.hasItem('tea') && !this.playerState.storyFlags['saffron_open']) {
-        this.textBox.show(
-          [
-            "I work at CELADON\nMANSION.",
-            "Here, have some TEA!\nIt's very refreshing!",
-            `${this.playerState.name} received\nTEA!`,
-          ],
-          () => {
-            this.playerState.addItem('tea');
-          }
-        );
-        return;
-      }
-      this.textBox.show([
-        "Give the TEA to the\nguard at SAFFRON CITY!",
-        "He loves a good cup\nof TEA!",
-      ]);
-      return;
-    }
-
-    // Pokemon Fan Club Chairman gives Bike Voucher
-    if (npc.id === 'fan_club_chairman') {
-      if (!this.playerState.storyFlags['got_bike_voucher']) {
-        this.textBox.show(
-          [
-            "CHAIRMAN: Welcome to\nthe POKeMON FAN CLUB!",
-            "I'm the chairman!\nLet me tell you about\nmy darling RAPIDASH!",
-            "It gallops at\n150 mph! Isn't that\namazing?!",
-            "...Oh, you listened\nto my story!",
-            "Here, take this\nBIKE VOUCHER as\nmy thanks!",
-            `${this.playerState.name} received\nBIKE VOUCHER!`,
-          ],
-          () => {
-            this.playerState.addItem('bike_voucher');
-            this.playerState.storyFlags['got_bike_voucher'] = true;
-          }
-        );
-        return;
-      }
-      this.textBox.show([
-        "CHAIRMAN: Did you get\na BICYCLE yet?",
-        "Take the voucher to\nthe BIKE SHOP in\nCERULEAN CITY!",
-      ]);
-      return;
-    }
-
-    // Bike Shop Owner redeems Bike Voucher for Bicycle
-    if (npc.id === 'bike_shop_owner') {
-      if (this.playerState.hasItem('bicycle')) {
-        this.textBox.show(["How's that BICYCLE\nworking out for you?"]);
-        return;
-      }
-      if (this.playerState.hasItem('bike_voucher')) {
-        this.textBox.show(
-          [
-            "Oh! You have a\nBIKE VOUCHER!",
-            "Here you go!\nEnjoy your new\nBICYCLE!",
-            `${this.playerState.name} received\nBICYCLE!`,
-          ],
-          () => {
-            this.playerState.useItem('bike_voucher');
-            this.playerState.addItem('bicycle');
-            this.playerState.storyFlags['got_bicycle'] = true;
-          }
-        );
-        return;
-      }
-      // Fall through to default dialogue from NPC data
-    }
-
-    // Oak's Aide on Route 2 gives HM05 Flash
-    if (npc.id === 'oaks_aide_route2') {
-      if (this.playerState.storyFlags['got_hm05']) {
-        this.textBox.show(["Use FLASH to light\nup dark caves!"]);
-        return;
-      }
-      this.textBox.show(
-        [
-          "OAK's AIDE: Prof. OAK\nordered me to give\nthis to you!",
-          "It's an HM that\nteaches FLASH!",
-          `${this.playerState.name} received\nHM05 FLASH!`,
-        ],
-        () => {
-          this.playerState.addItem('hm05_flash');
-          this.playerState.storyFlags['got_hm05'] = true;
-        }
-      );
-      return;
-    }
-
-    // Route 16 girl gives HM02 Fly
-    if (npc.id === 'route16_fly_girl') {
-      if (this.playerState.storyFlags['got_hm02']) {
-        this.textBox.show(["Fly is so convenient\nfor travel!"]);
-        return;
-      }
-      this.textBox.show(
-        [
-          "I love watching my\nPOKeMON fly!",
-          "Here, you should have\nthis HM!",
-          `${this.playerState.name} received\nHM02 FLY!`,
-        ],
-        () => {
-          this.playerState.addItem('hm02_fly');
-          this.playerState.storyFlags['got_hm02'] = true;
-        }
-      );
-      return;
-    }
-
-    // Safari Zone secret house gives HM03 Surf
-    if (npc.id === 'safari_secret_house') {
-      if (this.playerState.storyFlags['got_hm03']) {
-        this.textBox.show(["You can SURF across\nwater with that!"]);
-        return;
-      }
-      this.textBox.show(
-        [
-          "Congratulations on\nmaking it this far!",
-          "You reached the\nSECRET HOUSE!",
-          "Here, take this HM\nas your prize!",
-          `${this.playerState.name} received\nHM03 SURF!`,
-        ],
-        () => {
-          this.playerState.addItem('hm03_surf');
-          this.playerState.storyFlags['got_hm03'] = true;
-        }
-      );
-      return;
-    }
-
-    // Safari Warden gives HM04 Strength (requires Gold Teeth)
-    if (npc.id === 'safari_warden') {
-      if (this.playerState.storyFlags['got_hm04']) {
-        this.textBox.show(["Those HMs are\nreally something!"]);
-        return;
-      }
-      if (this.playerState.hasItem('gold_teeth')) {
-        this.textBox.show(
-          [
-            "WARDEN: Oh! Those are\nmy teeth!",
-            "Thank you so much!\nLet me give you this!",
-            `${this.playerState.name} received\nHM04 STRENGTH!`,
-          ],
-          () => {
-            this.playerState.useItem('gold_teeth');
-            this.playerState.addItem('hm04_strength');
-            this.playerState.storyFlags['got_hm04'] = true;
-          }
-        );
-        return;
-      }
-      this.textBox.show([
-        "I lost my teeth\nsomewhere in the\nSAFARI ZONE...",
-        "I can't talk well\nwithout them...",
-      ]);
-      return;
-    }
-
-    // Slot machine NPCs
-    if (npc.id.startsWith('slot_machine_')) {
-      this.playSlotMachine();
-      return;
-    }
-
-    // Game Corner prize exchange clerk
-    if (npc.id === 'game_corner_clerk') {
-      this.showPrizeExchange();
-      return;
-    }
-
-    // Game Corner coin vendor
-    if (npc.id === 'game_corner_coin_vendor') {
-      this.buyCoinsFromVendor();
-      return;
-    }
-
-    // Celadon Mansion Coin Case giver — gives Coin Case once.
-    if (npc.id === 'celadon_mansion_coin_case_giver') {
-      if (!this.playerState.hasCoinCase()) {
-        this.playerState.addItem('coin_case', 1);
-        soundSystem.menuSelect();
-        this.textBox.show([
-          "Here, take this!",
-          "It's a COIN CASE.",
-          "You can hold up to\n9999 coins in it!",
-        ]);
-      } else {
-        this.textBox.show(["Hope you're enjoying\nthe GAME CORNER!"]);
-      }
-      return;
-    }
-
-    // Elevator NPCs
-    if (npc.id.startsWith('elevator_')) {
-      if (!this.playerState.hasItem('lift_key')) {
-        this.textBox.show(['It\'s an elevator,\nbut it won\'t move...', 'It needs a special\nkey.']);
-      } else {
-        this.showElevatorMenu();
-      }
-      return;
-    }
-
-    // Giovanni at Game Corner gives Silph Scope on defeat
-    if (npc.id === 'giovanni_game_corner' && this.playerState.defeatedTrainers.includes('giovanni_game_corner')) {
-      this.textBox.show(["The hideout has been\nabandoned..."]);
-      return;
-    }
-
-    // Giovanni at Silph Co - post-defeat gives Master Ball, sets flags
-    if (npc.id === 'giovanni_silph' && this.playerState.defeatedTrainers.includes('giovanni_silph')) {
-      this.textBox.show(["GIOVANNI has fled\nthe building!"]);
-      return;
-    }
-
-    // Silph President thanks you and gives Master Ball
-    if (npc.id === 'silph_president') {
-      if (this.playerState.storyFlags['silph_co_complete'] && !this.playerState.storyFlags['got_master_ball']) {
-        this.textBox.show(
-          [
-            "PRESIDENT: You saved\nSILPH CO.!",
-            "Please take this as\na token of our\ngratitude!",
-            `${this.playerState.name} received\nMASTER BALL!`,
-          ],
-          () => {
-            this.playerState.addItem('master_ball');
-            this.playerState.storyFlags['got_master_ball'] = true;
-          }
-        );
-        return;
-      }
-      if (this.playerState.storyFlags['got_master_ball']) {
-        this.textBox.show(["PRESIDENT: Thank you\nfor saving our\ncompany!"]);
-        return;
-      }
-      // During Rocket takeover
-      this.textBox.show([
-        "PRESIDENT: Please,\ndefeat GIOVANNI!",
-        "He's taken over\nour company!",
-      ]);
-      return;
-    }
-
-    // Route 23 badge check NPCs
-    if (npc.id.startsWith('badge_check')) {
-      const requiredBadges: Record<string, { badge: string; name: string }> = {
-        'badge_check1': { badge: 'BOULDER', name: 'BOULDER BADGE' },
-        'badge_check2': { badge: 'CASCADE', name: 'CASCADE BADGE' },
-        'badge_check3': { badge: 'THUNDER', name: 'THUNDER BADGE' },
-      };
-      const req = requiredBadges[npc.id];
-      if (req && this.playerState.badges.includes(req.badge)) {
-        this.textBox.show([
-          `GUARD: ${req.name}?\nVery good!`,
-          "You may pass!",
-        ]);
-      } else if (req) {
-        this.textBox.show([
-          `GUARD: You need the\n${req.name} to pass!`,
-          "Come back when you\nhave it!",
-        ]);
-      } else {
-        if (this.playerState.badges.length >= 8) {
-          this.textBox.show(["GUARD: All BADGES\nverified! Go ahead!"]);
-        } else {
-          this.textBox.show(["GUARD: You need more\nBADGES to pass!"]);
-        }
-      }
-      return;
-    }
-
-    // Bulbasaur gift - girl in Cerulean house (requires happy Pikachu)
-    if (npc.id === 'cerulean_bulbasaur_girl') {
-      if (this.playerState.storyFlags['got_bulbasaur']) {
-        this.textBox.show(["Take good care of\nthat BULBASAUR!"]);
-        return;
-      }
-      const pikachu = this.playerState.party.find(p => p.speciesId === 25);
-      const happiness = pikachu ? getHappiness(pikachu) : 0;
-      if (happiness >= 150) {
-        this.textBox.show(
-          [
-            "Oh wow! Your PIKACHU\nis so happy!",
-            "You must be a great\ntrainer!",
-            "I have a BULBASAUR\nthat needs a good\nhome...",
-            "Would you take care\nof it for me?",
-            `${this.playerState.name} received\nBULBASAUR!`,
-          ],
-          () => {
-            const bulbasaur = createPokemon(1, 10, this.playerState.name);
-            this.playerState.addToParty(bulbasaur);
-            this.playerState.storyFlags['got_bulbasaur'] = true;
-            soundSystem.pokemonCry(600);
-          }
-        );
-      } else {
-        this.textBox.show([
-          "I love POKeMON!",
-          "I have a BULBASAUR\nI'd like to give away...",
-          "But only to a trainer\nwhose PIKACHU is\nreally happy!",
-          "Come back when your\nPIKACHU likes you\nmore!",
-        ]);
-      }
-      return;
-    }
-
-    // Charmander gift - trainer on Route 24
-    if (npc.id === 'route24_charmander_guy') {
-      if (this.playerState.storyFlags['got_charmander']) {
-        this.textBox.show(["How's that CHARMANDER\ndoing?", "Take good care of it!"]);
-        return;
-      }
-      this.textBox.show(
-        [
-          "I found this\nCHARMANDER abandoned\non the road...",
-          "I'm not a strong\nenough trainer to\nraise it.",
-          "You look like you\ncould handle it!\nPlease, take it!",
-          `${this.playerState.name} received\nCHARMANDER!`,
-        ],
-        () => {
-          const charmander = createPokemon(4, 10, this.playerState.name);
-          this.playerState.addToParty(charmander);
-          this.playerState.storyFlags['got_charmander'] = true;
-          soundSystem.pokemonCry(700);
-        }
-      );
-      return;
-    }
-
-    // Squirtle gift - Officer Jenny in Vermilion (requires Thunder Badge)
-    if (npc.id === 'vermilion_officer_jenny') {
-      if (this.playerState.storyFlags['got_squirtle']) {
-        this.textBox.show(["That SQUIRTLE is a\ngood POKeMON!", "Keep it out of\ntrouble!"]);
-        return;
-      }
-      if (this.playerState.badges.includes('THUNDER')) {
-        this.textBox.show(
-          [
-            "OFFICER JENNY: Hey!\nYou beat LT. SURGE!",
-            "I've been looking for\na trainer to take\nthis SQUIRTLE.",
-            "It's been causing\ntrouble around town!",
-            "I think a strong\ntrainer like you could\nkeep it in line!",
-            `${this.playerState.name} received\nSQUIRTLE!`,
-          ],
-          () => {
-            const squirtle = createPokemon(7, 10, this.playerState.name);
-            this.playerState.addToParty(squirtle);
-            this.playerState.storyFlags['got_squirtle'] = true;
-            soundSystem.pokemonCry(500);
-          }
-        );
-      } else {
-        this.textBox.show([
-          "OFFICER JENNY: I'm\nkeeping the peace in\nVERMILION CITY!",
-          "There's a mischievous\nSQUIRTLE causing\ntrouble around here...",
-          "If only there were a\nstrong trainer to\ntake it...",
-        ]);
-      }
-      return;
-    }
-
-    // Fishing Guru — Old Rod (Vermilion City)
-    if (npc.id === 'fishing_guru_vermilion') {
-      if (this.playerState.storyFlags['got_old_rod']) {
-        this.textBox.show(["How's the fishing\ngoing? Keep at it!"]);
-        return;
-      }
-      this.textBox.show(
-        [
-          "FISHING GURU: Hello\nthere! I love fishing!",
-          "Do you like to fish?\nOf course you do!",
-          "I can see it in your\neyes! Here, take this!",
-          `${this.playerState.name} received\nOLD ROD!`,
-        ],
-        () => {
-          this.playerState.addItem('old_rod');
-          this.playerState.storyFlags['got_old_rod'] = true;
-        }
-      );
-      return;
-    }
-
-    // Fishing Guru — Good Rod (Route 12)
-    if (npc.id === 'fishing_guru_route12') {
-      if (this.playerState.storyFlags['got_good_rod']) {
-        this.textBox.show(["Use the GOOD ROD by\nwater to fish!"]);
-        return;
-      }
-      this.textBox.show(
-        [
-          "FISHING GURU: I'm the\nbest fisher on this\nroute!",
-          "You look like a real\ngo-getter!",
-          "Here, take my spare\nrod! It's a good one!",
-          `${this.playerState.name} received\nGOOD ROD!`,
-        ],
-        () => {
-          this.playerState.addItem('good_rod');
-          this.playerState.storyFlags['got_good_rod'] = true;
-        }
-      );
-      return;
-    }
-
-    // Fishing Guru — Super Rod (Fuchsia City)
-    if (npc.id === 'fishing_guru_fuchsia') {
-      if (this.playerState.storyFlags['got_super_rod']) {
-        this.textBox.show(["The SUPER ROD can\ncatch any POKeMON!"]);
-        return;
-      }
-      this.textBox.show(
-        [
-          "FISHING GURU: I'm the\nFISHING GURU!",
-          "You want to fish for\nrare POKeMON, yes?",
-          "Then take my best\nrod! Use it well!",
-          `${this.playerState.name} received\nSUPER ROD!`,
-        ],
-        () => {
-          this.playerState.addItem('super_rod');
-          this.playerState.storyFlags['got_super_rod'] = true;
-        }
-      );
+    // Stateful story NPCs (a false return falls through, e.g. an undefeated
+    // Giovanni continues into the trainer-battle branch below)
+    const handler = this.getNpcHandler(npc.id);
+    if (handler && handler(npc)) {
       return;
     }
 
@@ -2388,10 +1731,7 @@ export class OverworldScene extends Phaser.Scene {
       if (!this.isWarping) {
         soundSystem.startMusic(getEncounterTheme(npc.id));
       }
-      const dialogue = npc.dialogue.map(d =>
-        d.replace('{PLAYER}', this.playerState.name).replace('{RIVAL}', this.playerState.rivalName)
-      );
-      this.textBox.show(dialogue, () => {
+      this.textBox.show(npc.dialogue.map(d => this.fmt(d)), () => {
         this.startTrainerBattle(npc);
       });
       return;
@@ -2401,12 +1741,291 @@ export class OverworldScene extends Phaser.Scene {
     if (npc.isTrainer && this.playerState.defeatedTrainers.includes(npc.id)) {
       this.textBox.show(["I already lost to\nyou..."]);
     } else {
-      // Replace {PLAYER} and {RIVAL} in dialogue
-      const dialogue = npc.dialogue.map(d =>
-        d.replace('{PLAYER}', this.playerState.name).replace('{RIVAL}', this.playerState.rivalName)
-      );
-      this.textBox.show(dialogue);
+      this.textBox.show(npc.dialogue.map(d => this.fmt(d)));
     }
+  }
+
+  private pickUpItemBall(npc: NPCData): void {
+    const item = ITEMS[npc.itemId!];
+    if (!item) return;
+    this.textBox.show(
+      [`${this.playerState.name} found\n${item.name}!`],
+      () => {
+        this.playerState.addItem(npc.itemId!);
+        this.playerState.storyFlags[`picked_up_${npc.id}`] = true;
+        // Remove sprite from map
+        const ballSprite = this.npcSprites.get(npc.id);
+        if (ballSprite) {
+          ballSprite.destroy();
+          this.npcSprites.delete(npc.id);
+        }
+        // Mt. Moon fossils: picking one removes the other
+        if (npc.id === 'mt_moon_helix_fossil' || npc.id === 'mt_moon_dome_fossil') {
+          this.playerState.storyFlags['got_fossil'] = true;
+          const otherId = npc.id === 'mt_moon_helix_fossil' ? 'mt_moon_dome_fossil' : 'mt_moon_helix_fossil';
+          const otherSprite = this.npcSprites.get(otherId);
+          if (otherSprite) {
+            otherSprite.destroy();
+            this.npcSprites.delete(otherId);
+          }
+        }
+      }
+    );
+  }
+
+  /** Shows a gift NPC's dialogue, then applies its rewards in order. */
+  private runGiftNpc(result: GiftNpcResult): void {
+    const dialogue = result.dialogue.map(d => this.fmt(d));
+    const { onComplete, grantsPokemon } = result;
+    if (!onComplete && !grantsPokemon) {
+      this.textBox.show(dialogue);
+      return;
+    }
+    this.textBox.show(dialogue, () => {
+      if (grantsPokemon) {
+        const gifted = createPokemon(grantsPokemon.speciesId, grantsPokemon.level, this.playerState.name);
+        this.playerState.addToParty(gifted);
+      }
+      onComplete?.(this.playerState);
+      if (grantsPokemon) {
+        soundSystem.pokemonCry(grantsPokemon.cryPitch);
+      }
+    });
+  }
+
+  /**
+   * Registry for story NPCs whose interactions need scene state. Handlers
+   * return true when they handled the interaction; false falls through to
+   * the trainer/default-dialogue branches.
+   */
+  private npcHandlers?: Map<string, (npc: NPCData) => boolean>;
+
+  private getNpcHandler(id: string): ((npc: NPCData) => boolean) | undefined {
+    if (!this.npcHandlers) {
+      const h = new Map<string, (npc: NPCData) => boolean>();
+      h.set('oak', (npc) => this.handleOak(npc));
+      h.set('rival', () => this.handleRivalInLab());
+      h.set('snorlax_route12', (npc) => this.handleSnorlax(npc));
+      h.set('snorlax_route16', (npc) => this.handleSnorlax(npc));
+      h.set('articuno_seafoam', (npc) => this.handleLegendaryBird(npc));
+      h.set('zapdos_power_plant', (npc) => this.handleLegendaryBird(npc));
+      h.set('moltres_victory_road', (npc) => this.handleLegendaryBird(npc));
+      h.set('game_corner_clerk', () => { this.showPrizeExchange(); return true; });
+      h.set('game_corner_coin_vendor', () => { this.buyCoinsFromVendor(); return true; });
+      h.set('celadon_mansion_coin_case_giver', () => this.handleCoinCaseGiver());
+      h.set('giovanni_game_corner', () => this.handleDefeatedGiovanni('giovanni_game_corner', 'The hideout has been\nabandoned...'));
+      h.set('giovanni_silph', () => this.handleDefeatedGiovanni('giovanni_silph', 'GIOVANNI has fled\nthe building!'));
+      this.npcHandlers = h;
+    }
+    const exact = this.npcHandlers.get(id);
+    if (exact) return exact;
+    if (id.startsWith('slot_machine_')) return () => { this.playSlotMachine(); return true; };
+    if (id.startsWith('elevator_')) return () => this.handleElevatorNpc();
+    if (id.startsWith('badge_check')) return (npc) => this.handleBadgeCheck(npc);
+    return undefined;
+  }
+
+  /** Oak's story progression chain. */
+  private handleOak(_npc: NPCData): boolean {
+    if (this.currentMap.id !== 'oaks_lab') {
+      soundSystem.startMusic('oaks_theme');
+    }
+    if (!this.playerState.storyFlags['has_pikachu']) {
+      // Give Pikachu
+      this.textBox.show(
+        [
+          this.fmt('OAK: Ah, {PLAYER}!\nI\'ve been waiting\nfor you!'),
+          'I have a POKeMON\nhere for you!',
+          'This PIKACHU is quite\nenergetic!',
+          'Go on! Take it with\nyou on your journey!',
+          this.fmt('{PLAYER} received\nPIKACHU!'),
+        ],
+        () => {
+          const pikachu = createPokemon(25, 5);
+          this.playerState.addToParty(pikachu);
+          this.playerState.storyFlags['has_pikachu'] = true;
+          soundSystem.pokemonCry(800);
+
+          // Update Pikachu follower visibility
+          this.pikachuVisible = true;
+          this.pikachuGridX = this.playerGridX;
+          this.pikachuGridY = this.playerGridY;
+          this.pikachu.setPosition(
+            this.pikachuGridX * TILE_SIZE + TILE_SIZE / 2,
+            this.pikachuGridY * TILE_SIZE + TILE_SIZE / 2
+          );
+        }
+      );
+      return true;
+    }
+    if (this.playerState.hasItem('oaks_parcel') && !this.playerState.storyFlags['delivered_parcel']) {
+      // Parcel delivery sequence
+      this.textBox.show(
+        [
+          'OAK: Oh! That\'s the\nparcel I was waiting\nfor!',
+          this.fmt('Thank you, {PLAYER}!'),
+          'OAK: I have something\nfor you in return!',
+          this.fmt('{PLAYER} handed over\nthe OAK\'S PARCEL!'),
+          'OAK: This is a\nPOKeDEX!',
+          'It automatically\nrecords data on\nPOKeMON you\'ve seen\nor caught!',
+          this.fmt('{PLAYER} received\nthe POKeDEX!'),
+          "Here, take these\ntoo!",
+          this.fmt('{PLAYER} received\n5 POKe BALLs!'),
+        ],
+        () => {
+          this.playerState.useItem('oaks_parcel');
+          this.playerState.addItem('pokedex');
+          this.playerState.addItem('poke_ball', 5);
+          this.playerState.storyFlags['delivered_parcel'] = true;
+          this.playerState.storyFlags['has_pokedex'] = true;
+        }
+      );
+      return true;
+    }
+    if (this.playerState.storyFlags['delivered_parcel']) {
+      this.textBox.show([
+        'OAK: Good luck filling\nup that POKeDEX!',
+        'The world is full of\namazing POKeMON!',
+      ]);
+      return true;
+    }
+    // Has Pikachu but no parcel yet
+    this.textBox.show([
+      'OAK: Go explore the\nworld with PIKACHU!',
+      'The VIRIDIAN CITY\nMart might have\nsomething for me...',
+    ]);
+    return true;
+  }
+
+  /** Rival NPC in the lab - context-dependent. */
+  private handleRivalInLab(): boolean {
+    if (!this.playerState.storyFlags['has_pikachu']) {
+      this.textBox.show([
+        `${this.playerState.rivalName}: What?\nGramps isn't here?`,
+        "I want my POKeMON!",
+      ]);
+      return true;
+    }
+    if (this.playerState.storyFlags['rival_battle_lab']) {
+      this.textBox.show([
+        `${this.playerState.rivalName}: I'll get\nstronger and beat\nyou next time!`,
+      ]);
+      return true;
+    }
+    // Rival wants to battle (triggered automatically after getting Pikachu)
+    soundSystem.startMusic('rival_theme');
+    this.textBox.show([
+      this.fmt(`${this.playerState.rivalName}: Wait,\n{PLAYER}!`),
+      "Let's check out our\nnew POKeMON!",
+    ], () => {
+      this.startRivalBattle('rival_lab');
+    });
+    return true;
+  }
+
+  /** Sleeping Snorlax: wake with the Poke Flute for a wild battle. */
+  private handleSnorlax(npc: NPCData): boolean {
+    if (this.playerState.hasItem('poke_flute')) {
+      this.textBox.show(
+        [
+          `${this.playerState.name} used the\nPOKe FLUTE!`,
+          "SNORLAX woke up!\nIt looks angry!",
+        ],
+        () => {
+          // Start wild Snorlax battle (level 30)
+          this.startWildBattle(createPokemon(143, 30));
+          // Set flag to remove Snorlax after battle
+          this.playerState.storyFlags[`${npc.id}_cleared`] = true;
+        }
+      );
+      return true;
+    }
+    this.textBox.show([
+      "A huge POKeMON is\nblocking the path!",
+      "It's sleeping soundly...",
+      "Zzz... Zzz...",
+      "Maybe a melody could\nwake it up?",
+    ]);
+    return true;
+  }
+
+  /** Legendary bird encounters (Articuno, Zapdos, Moltres). */
+  private handleLegendaryBird(npc: NPCData): boolean {
+    const birdSpecies: Record<string, number> = {
+      articuno_seafoam: 144,
+      zapdos_power_plant: 145,
+      moltres_victory_road: 146,
+    };
+    const speciesId = birdSpecies[npc.id];
+    this.textBox.show(
+      npc.dialogue,
+      () => {
+        this.startWildBattle(createPokemon(speciesId, 50));
+        this.playerState.storyFlags[`${npc.id}_cleared`] = true;
+      }
+    );
+    return true;
+  }
+
+  /** Celadon Mansion Coin Case giver — gives Coin Case once. */
+  private handleCoinCaseGiver(): boolean {
+    if (!this.playerState.hasCoinCase()) {
+      this.playerState.addItem('coin_case', 1);
+      soundSystem.menuSelect();
+      this.textBox.show([
+        "Here, take this!",
+        "It's a COIN CASE.",
+        "You can hold up to\n9999 coins in it!",
+      ]);
+    } else {
+      this.textBox.show(["Hope you're enjoying\nthe GAME CORNER!"]);
+    }
+    return true;
+  }
+
+  /** Post-defeat Giovanni dialogue; undefeated falls through to the battle. */
+  private handleDefeatedGiovanni(trainerId: string, message: string): boolean {
+    if (!this.playerState.defeatedTrainers.includes(trainerId)) return false;
+    this.textBox.show([message]);
+    return true;
+  }
+
+  /** Rocket Hideout elevator: needs the Lift Key. */
+  private handleElevatorNpc(): boolean {
+    if (!this.playerState.hasItem('lift_key')) {
+      this.textBox.show(['It\'s an elevator,\nbut it won\'t move...', 'It needs a special\nkey.']);
+    } else {
+      this.showElevatorMenu();
+    }
+    return true;
+  }
+
+  /** Route 23 badge check NPCs. */
+  private handleBadgeCheck(npc: NPCData): boolean {
+    const requiredBadges: Record<string, { badge: string; name: string }> = {
+      'badge_check1': { badge: 'BOULDER', name: 'BOULDER BADGE' },
+      'badge_check2': { badge: 'CASCADE', name: 'CASCADE BADGE' },
+      'badge_check3': { badge: 'THUNDER', name: 'THUNDER BADGE' },
+    };
+    const req = requiredBadges[npc.id];
+    if (req && this.playerState.badges.includes(req.badge)) {
+      this.textBox.show([
+        `GUARD: ${req.name}?\nVery good!`,
+        "You may pass!",
+      ]);
+    } else if (req) {
+      this.textBox.show([
+        `GUARD: You need the\n${req.name} to pass!`,
+        "Come back when you\nhave it!",
+      ]);
+    } else {
+      if (this.playerState.badges.length >= 8) {
+        this.textBox.show(["GUARD: All BADGES\nverified! Go ahead!"]);
+      } else {
+        this.textBox.show(["GUARD: You need more\nBADGES to pass!"]);
+      }
+    }
+    return true;
   }
 
   private showPikachuFace(frame: number, messages: string[]): void {
@@ -2474,37 +2093,8 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private readSign(x: number, y: number): void {
-    // Look up sign text from a registry based on map + position
+    // Look up sign text from the registry based on map + position
     const signKey = `${this.currentMap.id}:${x},${y}`;
-    const signs: Record<string, string[]> = {
-      'pallet_town:7,9': ['PALLET TOWN', 'Shades of your journey\nawait!'],
-      'pallet_town:11,16': ["PROF. OAK's LAB"],
-      'viridian_city:7,13': ['VIRIDIAN CITY', 'The Eternally Green\nParadise!'],
-      'viridian_city:12,13': ['TRAINER TIPS', "If your POKeMON's HP\nreaches 0, it faints!"],
-      'route1:7,10': ['ROUTE 1', 'PALLET TOWN -\nVIRIDIAN CITY'],
-      'pewter_city:3,9': ['PEWTER CITY GYM\nLEADER: BROCK', 'The Rock-Solid\nPOKeMON Trainer!'],
-      'route3:41,6': ['ROUTE 3', 'MT. MOON ahead'],
-      'celadon_city:12,12': ['CELADON CITY GYM\nLEADER: ERIKA', 'The Nature-Loving\nPrincess!'],
-      'celadon_city:9,10': ['CELADON CITY', 'The City of Rainbow\nDreams!'],
-      'route5:12,18': ['UNDERGROUND PATH', 'Route 5 - Route 6'],
-      'route6:12,3': ['UNDERGROUND PATH', 'Route 5 - Route 6'],
-      'route7:12,3': ['UNDERGROUND PATH', 'Route 7 - Route 8'],
-      'route8:13,3': ['UNDERGROUND PATH', 'Route 7 - Route 8'],
-      // Pewter Museum 1F — Fossil Wing
-      'pewter_museum_1f:2,3': ['KABUTOPS FOSSIL', 'A vicious POKeMON\nthat lived in\nprimordial seas.'],
-      'pewter_museum_1f:6,3': ['AERODACTYL FOSSIL', 'A ferocious POKeMON\nfrom the age of\ndinosaurs.'],
-      'pewter_museum_1f:10,3': ['OMANYTE SHELL', 'A spiral shell of an\nancient POKeMON that\nlived in the sea.'],
-      'pewter_museum_1f:14,3': ['FOSSIL DIG TOOLS', 'Tools used to\ncarefully excavate\nfossils from rock.'],
-      // Pewter Museum 2F — Space Wing
-      'pewter_museum_2f:2,3': ['MOON STONE', 'A mysterious stone\nfound at MT. MOON.\nIt radiates light.'],
-      'pewter_museum_2f:6,3': ['METEORITE SAMPLE', 'A meteorite that\ncontains amino acids\nfrom outer space.'],
-      'pewter_museum_2f:10,3': ['STAR CHART', 'A chart showing the\nconstellations as\nseen from KANTO.'],
-      'pewter_museum_2f:14,3': ['ROCKET FUEL SAMPLE', 'Fuel used to launch\nthe first POKeMON\ninto space!'],
-      'pewter_museum_2f:7,5': ['SPACE SHUTTLE', 'A model of the space\nshuttle that carried\nthe first POKeMON.'],
-      'pewter_museum_2f:10,5': ['SPACE SHUTTLE', 'CLEFAIRY was the\nfirst POKeMON to\nride a shuttle!'],
-      'pewter_museum_2f:2,8': ['SPACE PIKACHU PHOTO', "A photo of PIKACHU\nin a tiny space\nsuit. How cute!"],
-      'pewter_museum_2f:14,8': ['LUNAR SOIL SAMPLE', 'Soil brought back\nfrom the moon.\nIt sparkles faintly.'],
-    };
 
     // Game Corner poster puzzle
     if (signKey === 'game_corner:11,2') {
@@ -2523,7 +2113,7 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    this.textBox.show(signs[signKey] || [this.currentMap.name]);
+    this.textBox.show(SIGNS[signKey] || [this.currentMap.name]);
   }
 
   private playSlotMachine(): void {
