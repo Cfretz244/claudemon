@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { PokemonInstance } from '../types/pokemon.types';
 import { MOVES_DATA } from '../data/moves';
 import { soundSystem } from '../systems/SoundSystem';
+import { bindMenuKeys, clampIndex } from './MenuInput';
 
 /**
  * Full-screen overlay that lets the player choose which move to forget
@@ -115,25 +116,18 @@ export class MoveForgetUI {
     if (this.inputBound) return;
     this.inputBound = true;
 
-    const kb = this.scene.input.keyboard!;
-    const up = kb.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
-    const down = kb.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
-    const z = kb.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
-    const enter = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-    const x = kb.addKey(Phaser.Input.Keyboard.KeyCodes.X);
-
-    up.on('down', () => { if (this.active) this.navigate(-1); });
-    down.on('down', () => { if (this.active) this.navigate(1); });
-    z.on('down', () => { if (this.active) this.confirm(); });
-    enter.on('down', () => { if (this.active) this.confirm(); });
-    x.on('down', () => { if (this.active) this.cancel(); });
+    bindMenuKeys(this.scene, {
+      isActive: () => this.active,
+      onUp: () => this.navigate(-1),
+      onDown: () => this.navigate(1),
+      onConfirm: () => this.confirm(),
+      onCancel: () => this.cancel(),
+    });
   }
 
   private navigate(dir: number): void {
     soundSystem.menuMove();
-    this.cursorIndex += dir;
-    if (this.cursorIndex < 0) this.cursorIndex = 0;
-    if (this.cursorIndex >= this.totalRows) this.cursorIndex = this.totalRows - 1;
+    this.cursorIndex = clampIndex(this.cursorIndex, dir, this.totalRows);
     this.updateCursor();
   }
 

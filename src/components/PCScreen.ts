@@ -4,6 +4,7 @@ import { PokemonInstance } from '../types/pokemon.types';
 import { POKEMON_DATA } from '../data/pokemon';
 import { ITEMS } from '../data/items';
 import { soundSystem } from '../systems/SoundSystem';
+import { bindMenuKeys, clampIndex } from './MenuInput';
 import { PlayerState } from '../entities/Player';
 
 type PCMode =
@@ -208,18 +209,13 @@ export class PCScreen {
     if (this.inputBound) return;
     this.inputBound = true;
 
-    const kb = this.scene.input.keyboard!;
-    const up = kb.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
-    const down = kb.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
-    const z = kb.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
-    const enter = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-    const x = kb.addKey(Phaser.Input.Keyboard.KeyCodes.X);
-
-    up.on('down', () => { if (this.visible) this.navigate(-1); });
-    down.on('down', () => { if (this.visible) this.navigate(1); });
-    z.on('down', () => { if (this.visible) this.confirm(); });
-    enter.on('down', () => { if (this.visible) this.confirm(); });
-    x.on('down', () => { if (this.visible) this.back(); });
+    bindMenuKeys(this.scene, {
+      isActive: () => this.visible,
+      onUp: () => this.navigate(-1),
+      onDown: () => this.navigate(1),
+      onConfirm: () => this.confirm(),
+      onCancel: () => this.back(),
+    });
   }
 
   // --- Navigation ---
@@ -229,8 +225,7 @@ export class PCScreen {
     soundSystem.menuMove();
 
     if (this.mode === 'main') {
-      this.mainCursorIndex += dir;
-      this.mainCursorIndex = Math.max(0, Math.min(this.mainMenuLabels.length - 1, this.mainCursorIndex));
+      this.mainCursorIndex = clampIndex(this.mainCursorIndex, dir, this.mainMenuLabels.length);
       this.mainMenuCursor.setY(34 + this.mainCursorIndex * 18);
     } else if (this.mode === 'pokemon_list' || this.mode === 'pokemon_deposit' ||
                this.mode === 'item_list' || this.mode === 'item_deposit') {

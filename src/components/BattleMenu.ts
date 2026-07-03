@@ -5,6 +5,7 @@ import { MOVES_DATA } from '../data/moves';
 import { POKEMON_DATA } from '../data/pokemon';
 import { ITEMS } from '../data/items';
 import { soundSystem } from '../systems/SoundSystem';
+import { bindMenuKeys } from './MenuInput';
 
 export interface BagItem {
   id: string;
@@ -244,23 +245,15 @@ export class BattleMenu {
     if (this.inputBound) return;
     this.inputBound = true;
 
-    const keyboard = this.scene.input.keyboard!;
-
-    const upKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
-    const downKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
-    const leftKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
-    const rightKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
-    const zKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
-    const xKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X);
-    const enterKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-
-    upKey.on('down', () => { if (this.active) this.navigate('up'); });
-    downKey.on('down', () => { if (this.active) this.navigate('down'); });
-    leftKey.on('down', () => { if (this.active) this.navigate('left'); });
-    rightKey.on('down', () => { if (this.active) this.navigate('right'); });
-    zKey.on('down', () => { if (this.active) this.confirm(); });
-    enterKey.on('down', () => { if (this.active) this.confirm(); });
-    xKey.on('down', () => { if (this.active) this.cancel(); });
+    bindMenuKeys(this.scene, {
+      isActive: () => this.active,
+      onUp: () => this.navigate('up'),
+      onDown: () => this.navigate('down'),
+      onLeft: () => this.navigate('left'),
+      onRight: () => this.navigate('right'),
+      onConfirm: () => this.confirm(),
+      onCancel: () => this.cancel(),
+    });
   }
 
   private navigate(dir: string): void {

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { ITEMS, ItemData } from '../data/items';
 import { soundSystem } from '../systems/SoundSystem';
+import { bindMenuKeys, clampIndex } from './MenuInput';
 import { PlayerState } from '../entities/Player';
 
 export class ShopScreen {
@@ -225,18 +226,13 @@ export class ShopScreen {
     if (this.inputBound) return;
     this.inputBound = true;
 
-    const kb = this.scene.input.keyboard!;
-    const up = kb.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
-    const down = kb.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
-    const z = kb.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
-    const enter = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-    const x = kb.addKey(Phaser.Input.Keyboard.KeyCodes.X);
-
-    up.on('down', () => { if (this.visible) this.navigate(-1); });
-    down.on('down', () => { if (this.visible) this.navigate(1); });
-    z.on('down', () => { if (this.visible) this.confirm(); });
-    enter.on('down', () => { if (this.visible) this.confirm(); });
-    x.on('down', () => { if (this.visible) this.back(); });
+    bindMenuKeys(this.scene, {
+      isActive: () => this.visible,
+      onUp: () => this.navigate(-1),
+      onDown: () => this.navigate(1),
+      onConfirm: () => this.confirm(),
+      onCancel: () => this.back(),
+    });
   }
 
   private navigate(dir: number): void {
@@ -244,23 +240,17 @@ export class ShopScreen {
     soundSystem.menuMove();
 
     if (this.mode === 'main') {
-      this.mainIndex += dir;
-      if (this.mainIndex < 0) this.mainIndex = 0;
-      if (this.mainIndex >= this.mainLabels.length) this.mainIndex = this.mainLabels.length - 1;
+      this.mainIndex = clampIndex(this.mainIndex, dir, this.mainLabels.length);
       this.mainCursor.setY(4 + this.mainIndex * 14);
     } else if (this.mode === 'buy_list') {
-      this.buyIndex += dir;
-      if (this.buyIndex < 0) this.buyIndex = 0;
-      if (this.buyIndex >= this.shopStock.length) this.buyIndex = this.shopStock.length - 1;
+      this.buyIndex = clampIndex(this.buyIndex, dir, this.shopStock.length);
       if (this.buyIndex < this.buyScroll) this.buyScroll = this.buyIndex;
       if (this.buyIndex >= this.buyScroll + this.buyVisibleRows) {
         this.buyScroll = this.buyIndex - this.buyVisibleRows + 1;
       }
       this.updateBuyList();
     } else if (this.mode === 'sell_list') {
-      this.sellIndex += dir;
-      if (this.sellIndex < 0) this.sellIndex = 0;
-      if (this.sellIndex >= this.sellItems.length) this.sellIndex = this.sellItems.length - 1;
+      this.sellIndex = clampIndex(this.sellIndex, dir, this.sellItems.length);
       if (this.sellIndex < this.sellScroll) this.sellScroll = this.sellIndex;
       if (this.sellIndex >= this.sellScroll + this.buyVisibleRows) {
         this.sellScroll = this.sellIndex - this.buyVisibleRows + 1;

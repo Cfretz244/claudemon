@@ -8,6 +8,7 @@ import { soundSystem } from '../systems/SoundSystem';
 import { PlayerState } from '../entities/Player';
 import { addExperience, learnMove } from '../systems/ExperienceSystem';
 import { MoveForgetUI } from './MoveForgetUI';
+import { bindMenuKeys, clampIndex } from './MenuInput';
 
 export class BagScreen {
   private scene: Phaser.Scene;
@@ -223,18 +224,13 @@ export class BagScreen {
     if (this.inputBound) return;
     this.inputBound = true;
 
-    const kb = this.scene.input.keyboard!;
-    const up = kb.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
-    const down = kb.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
-    const z = kb.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
-    const enter = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-    const x = kb.addKey(Phaser.Input.Keyboard.KeyCodes.X);
-
-    up.on('down', () => { if (this.visible) this.navigate(-1); });
-    down.on('down', () => { if (this.visible) this.navigate(1); });
-    z.on('down', () => { if (this.visible) this.confirm(); });
-    enter.on('down', () => { if (this.visible) this.confirm(); });
-    x.on('down', () => { if (this.visible) this.back(); });
+    bindMenuKeys(this.scene, {
+      isActive: () => this.visible,
+      onUp: () => this.navigate(-1),
+      onDown: () => this.navigate(1),
+      onConfirm: () => this.confirm(),
+      onCancel: () => this.back(),
+    });
   }
 
   private navigate(dir: number): void {
@@ -253,14 +249,10 @@ export class BagScreen {
       }
       this.updateList();
     } else if (this.mode === 'options') {
-      this.optionsIndex += dir;
-      if (this.optionsIndex < 0) this.optionsIndex = 0;
-      if (this.optionsIndex >= this.optionLabels.length) this.optionsIndex = this.optionLabels.length - 1;
+      this.optionsIndex = clampIndex(this.optionsIndex, dir, this.optionLabels.length);
       this.optionsCursor.setY(4 + this.optionsIndex * 14);
     } else if (this.mode === 'party_pick') {
-      this.partyIndex += dir;
-      if (this.partyIndex < 0) this.partyIndex = 0;
-      if (this.partyIndex >= this.playerState.party.length) this.partyIndex = this.playerState.party.length - 1;
+      this.partyIndex = clampIndex(this.partyIndex, dir, this.playerState.party.length);
       this.partyCursor.setY(18 + this.partyIndex * 18);
     } else if (this.mode === 'toss_qty') {
       const item = this.itemList[this.cursorIndex];
