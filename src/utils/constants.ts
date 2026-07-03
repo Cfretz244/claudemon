@@ -40,3 +40,10 @@ export const DIR_VECTORS: Record<Direction, { x: number; y: number }> = {
   [Direction.LEFT]: { x: -1, y: 0 },
   [Direction.RIGHT]: { x: 1, y: 0 },
 };
+
+export const OPPOSITE_DIR: Record<Direction, Direction> = {
+  [Direction.UP]: Direction.DOWN,
+  [Direction.DOWN]: Direction.UP,
+  [Direction.LEFT]: Direction.RIGHT,
+  [Direction.RIGHT]: Direction.LEFT,
+};
