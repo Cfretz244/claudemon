@@ -62,7 +62,6 @@ export class OverworldScene extends Phaser.Scene {
   private pikachuGridY = 0;
   private pikachuDirection: Direction = Direction.DOWN;
   private pikachuVisible = false;
-  private playerMoveHistory: Array<{ x: number; y: number; dir: Direction }> = [];
   private walkStepCounter = 0; // Counts steps for happiness gain
 
   // NPCs
@@ -251,7 +250,6 @@ export class OverworldScene extends Phaser.Scene {
     );
     this.pikachu.setDepth(9);
     this.pikachu.setVisible(false); // Hidden until player takes first step
-    this.playerMoveHistory = [];
 
     // Create NPCs
     this.createNPCs();
