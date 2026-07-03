@@ -1,29 +1,16 @@
 import { MapData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
+import { createMapShape, SOLID_TILES } from './mapBuilder';
 
 const T = TileType;
 
-function fill2D<V>(w: number, h: number, v: V): V[][] {
-  return Array.from({ length: h }, () => Array(w).fill(v));
-}
-
-const SOLID_TILES = new Set([
-  T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
-  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN, T.TOMBSTONE,
-]);
+const TOWER_SOLID = new Set([...SOLID_TILES, T.TOMBSTONE]);
 
 // ─── 1. LAVENDER TOWN ────────────────────────────────────────────────────────
 
 export const LAVENDER_TOWN: MapData = (() => {
   const W = 20, H = 20;
-  const tiles = fill2D(W, H, T.GRASS);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
 
   // Tree borders (2 tiles thick)
   for (let x = 0; x < W; x++) { setTile(x, 0, T.TREE); setTile(x, 1, T.TREE); }
@@ -121,14 +108,7 @@ export const LAVENDER_TOWN: MapData = (() => {
 // --- 1F: Lobby ---
 export const POKEMON_TOWER_1F: MapData = (() => {
   const W = 12, H = 14;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls: top 2 rows, sides 1 tile
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -189,14 +169,7 @@ export const POKEMON_TOWER_1F: MapData = (() => {
 // --- 2F: First Graveyard ---
 export const POKEMON_TOWER_2F: MapData = (() => {
   const W = 12, H = 14;
-  const tiles = fill2D(W, H, T.CAVE_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR, { solid: TOWER_SOLID });
 
   // Walls: top 2 rows, sides 1 tile
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -275,14 +248,7 @@ export const POKEMON_TOWER_2F: MapData = (() => {
 // --- 3F: Second Graveyard ---
 export const POKEMON_TOWER_3F: MapData = (() => {
   const W = 12, H = 14;
-  const tiles = fill2D(W, H, T.CAVE_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR, { solid: TOWER_SOLID });
 
   // Walls: top 2 rows, sides 1 tile
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -374,14 +340,7 @@ export const POKEMON_TOWER_3F: MapData = (() => {
 // --- 4F: Transition Floor ---
 export const POKEMON_TOWER_4F: MapData = (() => {
   const W = 12, H = 14;
-  const tiles = fill2D(W, H, T.CAVE_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR, { solid: TOWER_SOLID });
 
   // Walls: top 2 rows, sides 1 tile
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -452,14 +411,7 @@ export const POKEMON_TOWER_4F: MapData = (() => {
 // --- 5F: Team Rocket / Mr. Fuji Rescue ---
 export const POKEMON_TOWER_5F: MapData = (() => {
   const W = 12, H = 14;
-  const tiles = fill2D(W, H, T.CAVE_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR, { solid: TOWER_SOLID });
 
   // Walls: top 2 rows, sides 1 tile
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -563,14 +515,7 @@ export const POKEMON_TOWER_5F: MapData = (() => {
 
 export const POKEMON_CENTER_LAVENDER: MapData = (() => {
   const W = 10, H = 8;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls: top 2 rows, sides
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -621,14 +566,7 @@ export const POKEMON_CENTER_LAVENDER: MapData = (() => {
 
 export const ROUTE7: MapData = (() => {
   const W = 20, H = 10;
-  const tiles = fill2D(W, H, T.GRASS);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
 
   // Horizontal path
   fillRect(0, 4, 20, 2, T.PATH);
@@ -681,14 +619,7 @@ export const ROUTE7: MapData = (() => {
 
 export const ROUTE8: MapData = (() => {
   const W = 25, H = 10;
-  const tiles = fill2D(W, H, T.GRASS);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
 
   // Horizontal path
   fillRect(0, 4, 25, 2, T.PATH);
@@ -782,14 +713,7 @@ export const ROUTE8: MapData = (() => {
 
 export const ROUTE11: MapData = (() => {
   const W = 25, H = 10;
-  const tiles = fill2D(W, H, T.GRASS);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
 
   // Horizontal path
   fillRect(0, 4, 25, 2, T.PATH);
@@ -866,14 +790,7 @@ export const ROUTE11: MapData = (() => {
 
 export const CELADON_CITY: MapData = (() => {
   const W = 30, H = 25;
-  const tiles = fill2D(W, H, T.GRASS);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
 
   // Tree borders (2 tiles thick on all four sides — Celadon has no north/south exits)
   for (let x = 0; x < W; x++) { setTile(x, 0, T.TREE); setTile(x, 1, T.TREE); setTile(x, H - 2, T.TREE); setTile(x, H - 1, T.TREE); }
@@ -1004,14 +921,7 @@ export const CELADON_CITY: MapData = (() => {
 
 export const CELADON_GYM: MapData = (() => {
   const W = 10, H = 14;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls: top 2 rows, sides
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -1085,14 +995,7 @@ export const CELADON_GYM: MapData = (() => {
 
 export const POKEMON_CENTER_CELADON: MapData = (() => {
   const W = 10, H = 8;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls: top 2 rows, sides
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -1143,14 +1046,7 @@ export const POKEMON_CENTER_CELADON: MapData = (() => {
 
 export const SAFFRON_CITY: MapData = (() => {
   const W = 30, H = 28;
-  const tiles = fill2D(W, H, T.GRASS);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
 
   // Tree borders (2 tiles thick)
   for (let x = 0; x < W; x++) { setTile(x, 0, T.TREE); setTile(x, 1, T.TREE); }
@@ -1270,14 +1166,7 @@ export const SAFFRON_CITY: MapData = (() => {
 
 export const SAFFRON_GYM: MapData = (() => {
   const W = 10, H = 14;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls: top 2 rows, sides
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -1352,14 +1241,7 @@ export const SAFFRON_GYM: MapData = (() => {
 
 export const POKEMON_CENTER_SAFFRON: MapData = (() => {
   const W = 10, H = 8;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls: top 2 rows, sides
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -1409,14 +1291,7 @@ export const POKEMON_CENTER_SAFFRON: MapData = (() => {
 // ─── POKeMON MART (LAVENDER)  (8x8 indoor) ───────────────────────
 const POKEMART_LAVENDER: MapData = (() => {
   const W = 8, H = 8;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
   fillRect(0, 0, W, 2, T.WALL);
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
@@ -1440,14 +1315,7 @@ const POKEMART_LAVENDER: MapData = (() => {
 // 1F — Lobby
 const CELADON_DEPT_1F: MapData = (() => {
   const W = 12, H = 10;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
   // Walls: top 2 rows, left/right columns
   fillRect(0, 0, W, 2, T.WALL);
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
@@ -1475,14 +1343,7 @@ const CELADON_DEPT_1F: MapData = (() => {
 // 2F — TM Counter
 const CELADON_DEPT_2F: MapData = (() => {
   const W = 12, H = 10;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
   fillRect(0, 0, W, 2, T.WALL);
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   // Counter
@@ -1512,14 +1373,7 @@ const CELADON_DEPT_2F: MapData = (() => {
 // 3F — General Items
 const CELADON_DEPT_3F: MapData = (() => {
   const W = 12, H = 10;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
   fillRect(0, 0, W, 2, T.WALL);
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   // Counter
@@ -1546,14 +1400,7 @@ const CELADON_DEPT_3F: MapData = (() => {
 // 4F — Power TMs & Battle Items
 const CELADON_DEPT_4F: MapData = (() => {
   const W = 12, H = 10;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
   fillRect(0, 0, W, 2, T.WALL);
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   // Counter
@@ -1577,14 +1424,7 @@ const CELADON_DEPT_4F: MapData = (() => {
 // 5F — Wiseman Floor
 const CELADON_DEPT_5F: MapData = (() => {
   const W = 12, H = 10;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
   fillRect(0, 0, W, 2, T.WALL);
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   // Stairs down (left) and up (right)
@@ -1615,14 +1455,7 @@ const CELADON_DEPT_5F: MapData = (() => {
 // Rooftop — Vending Machines
 const CELADON_DEPT_ROOF: MapData = (() => {
   const W = 12, H = 10;
-  const tiles = fill2D(W, H, T.PATH);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.PATH);
   // Fence border (except stairs entry)
   for (let x = 0; x < W; x++) { setTile(x, 0, T.FENCE); setTile(x, H - 1, T.FENCE); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.FENCE); setTile(W - 1, y, T.FENCE); }
@@ -1653,14 +1486,7 @@ const CELADON_DEPT_ROOF: MapData = (() => {
 // ─── POKeMON MART (SAFFRON)  (8x8 indoor) ───────────────────────
 const POKEMART_SAFFRON: MapData = (() => {
   const W = 8, H = 8;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
   fillRect(0, 0, W, 2, T.WALL);
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   setTile(1, 3, T.COUNTER); setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
@@ -1683,14 +1509,7 @@ const POKEMART_SAFFRON: MapData = (() => {
 
 const GAME_CORNER: MapData = (() => {
   const W = 14, H = 12;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -1840,14 +1659,7 @@ const GAME_CORNER: MapData = (() => {
 
 const ROCKET_HIDEOUT_B1F: MapData = (() => {
   const W = 16, H = 16;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -1941,14 +1753,7 @@ const ROCKET_HIDEOUT_B1F: MapData = (() => {
 
 const ROCKET_HIDEOUT_B2F: MapData = (() => {
   const W = 16, H = 16;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -2046,14 +1851,7 @@ const ROCKET_HIDEOUT_B2F: MapData = (() => {
 
 const ROCKET_HIDEOUT_B3F: MapData = (() => {
   const W = 14, H = 14;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -2119,14 +1917,7 @@ const ROCKET_HIDEOUT_B3F: MapData = (() => {
 
 const ROCKET_HIDEOUT_B4F: MapData = (() => {
   const W = 12, H = 12;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
 
   // Walls
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -2203,15 +1994,7 @@ const ROCKET_HIDEOUT_B4F: MapData = (() => {
 
 const DIGLETTS_CAVE: MapData = (() => {
   const W = 12, H = 20;
-  const tiles = fill2D(W, H, T.CAVE_WALL);
-  const collision = fill2D(W, H, true);
-
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  function fillRect(x: number, y: number, w: number, h: number, type: TileType) {
-    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) setTile(x + dx, y + dy, type);
-  }
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_WALL, { startSolid: true });
 
   // Carve out main cave interior (leave 2-tile border)
   fillRect(2, 2, 8, 16, T.CAVE_FLOOR);
@@ -2256,11 +2039,7 @@ const DIGLETTS_CAVE: MapData = (() => {
 // ─── Lavender House (generic NPC house) ──────────────────────────────────────
 export const LAVENDER_HOUSE: MapData = (() => {
   const W = 8, H = 8;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
+  const { tiles, collision, setTile } = createMapShape(W, H, T.INDOOR_FLOOR);
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   setTile(3, 4, T.CARPET); setTile(4, 4, T.CARPET);
@@ -2282,11 +2061,7 @@ export const LAVENDER_HOUSE: MapData = (() => {
 // ─── Celadon Mansion ─────────────────────────────────────────────────────────
 export const CELADON_MANSION: MapData = (() => {
   const W = 8, H = 8;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
+  const { tiles, collision, setTile } = createMapShape(W, H, T.INDOOR_FLOOR);
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   setTile(3, 4, T.CARPET); setTile(4, 4, T.CARPET);
@@ -2316,11 +2091,7 @@ export const CELADON_MANSION: MapData = (() => {
 // ─── Fighting Dojo ───────────────────────────────────────────────────────────
 export const FIGHTING_DOJO: MapData = (() => {
   const W = 10, H = 10;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
+  const { tiles, collision, setTile } = createMapShape(W, H, T.INDOOR_FLOOR);
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   // Carpet arena
@@ -2359,12 +2130,7 @@ export const FIGHTING_DOJO: MapData = (() => {
 // ─── Route 7 Gate (horizontal pass-through) ─────────────────────────────────
 export const ROUTE7_GATE: MapData = (() => {
   const W = 8, H = 6;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  // Walls: top, bottom, sides
+  const { tiles, collision, setTile } = createMapShape(W, H, T.INDOOR_FLOOR);
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, H - 1, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   // Open side doorways at y=2-3
@@ -2392,12 +2158,7 @@ export const ROUTE7_GATE: MapData = (() => {
 // ─── Route 11/12 Gate (horizontal pass-through, connects Route 11 to Route 12) ─
 export const ROUTE11_GATE: MapData = (() => {
   const W = 8, H = 6;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  // Walls: top, bottom, sides
+  const { tiles, collision, setTile } = createMapShape(W, H, T.INDOOR_FLOOR);
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, H - 1, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   // Open side doorways at y=2-3
@@ -2425,12 +2186,7 @@ export const ROUTE11_GATE: MapData = (() => {
 // ─── Saffron Gate North (vertical pass-through, Route 5 side) ────────────────
 export const SAFFRON_GATE_NORTH: MapData = (() => {
   const W = 6, H = 8;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  // Walls: top row, side columns
+  const { tiles, collision, setTile } = createMapShape(W, H, T.INDOOR_FLOOR);
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   // Counter and guard
@@ -2455,12 +2211,7 @@ export const SAFFRON_GATE_NORTH: MapData = (() => {
 // ─── Saffron Gate South (vertical pass-through, Route 6 side) ────────────────
 export const SAFFRON_GATE_SOUTH: MapData = (() => {
   const W = 6, H = 8;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  // Walls: top row, side columns
+  const { tiles, collision, setTile } = createMapShape(W, H, T.INDOOR_FLOOR);
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   // Counter and guard
@@ -2485,12 +2236,7 @@ export const SAFFRON_GATE_SOUTH: MapData = (() => {
 // ─── Saffron Gate East (horizontal pass-through, Route 8 side) ──────────────
 export const SAFFRON_GATE_EAST: MapData = (() => {
   const W = 8, H = 6;
-  const tiles = fill2D(W, H, T.INDOOR_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  // Walls: all borders
+  const { tiles, collision, setTile } = createMapShape(W, H, T.INDOOR_FLOOR);
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, H - 1, T.WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
   // Counter
@@ -2515,12 +2261,7 @@ export const SAFFRON_GATE_EAST: MapData = (() => {
 // ─── Underground Path North-South (Route 5 ↔ Route 6) ──────────────────────
 export const UNDERGROUND_NS: MapData = (() => {
   const W = 5, H = 30;
-  const tiles = fill2D(W, H, T.CAVE_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  // Cave walls on all borders
+  const { tiles, collision, setTile } = createMapShape(W, H, T.CAVE_FLOOR);
   for (let x = 0; x < W; x++) { setTile(x, 0, T.CAVE_WALL); setTile(x, H - 1, T.CAVE_WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.CAVE_WALL); setTile(W - 1, y, T.CAVE_WALL); }
   return {
@@ -2541,12 +2282,7 @@ export const UNDERGROUND_NS: MapData = (() => {
 // ─── Underground Path East-West (Route 7 ↔ Route 8) ────────────────────────
 export const UNDERGROUND_EW: MapData = (() => {
   const W = 30, H = 5;
-  const tiles = fill2D(W, H, T.CAVE_FLOOR);
-  const collision = fill2D(W, H, false);
-  function setTile(x: number, y: number, type: TileType) {
-    if (x >= 0 && x < W && y >= 0 && y < H) { tiles[y][x] = type; collision[y][x] = SOLID_TILES.has(type); }
-  }
-  // Cave walls on all borders
+  const { tiles, collision, setTile } = createMapShape(W, H, T.CAVE_FLOOR);
   for (let x = 0; x < W; x++) { setTile(x, 0, T.CAVE_WALL); setTile(x, H - 1, T.CAVE_WALL); }
   for (let y = 0; y < H; y++) { setTile(0, y, T.CAVE_WALL); setTile(W - 1, y, T.CAVE_WALL); }
   return {
