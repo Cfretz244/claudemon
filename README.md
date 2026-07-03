@@ -41,7 +41,7 @@ Open `http://localhost:5173` in your browser.
 
 ```bash
 npm run build          # Type-check + production build
-npm test               # Run tests (187 tests across 16 files)
+npm test               # Run tests (339 tests across 26 files)
 npm run test:coverage  # Tests + V8 coverage report
 npm run preview        # Preview the production build
 ```
@@ -62,17 +62,18 @@ All changes go through pull requests. The `main` branch requires passing CI (typ
 - `http://localhost:5173/sounds.html` — sound/music tester
 - `http://localhost:5173/pokedex.html` — Pokedex browser
 - `http://localhost:5173/editor.html` — save editor for playtesting (edit party, badges, flags, items, location)
+- `http://localhost:5173/maps.html` — top-down map viewer for debugging layouts
 
 ## Project Structure
 
 ```
 src/
-  scenes/       # BootScene, TitleScene, OverworldScene, BattleScene
-  systems/      # AI, damage calc, catch/evolution/experience, save, sound
+  scenes/       # BootScene, IntroScene, TitleScene, OverworldScene, BattleScene
+  systems/      # Battle engine, AI, damage calc, catch/evolution/experience, save, sound
   components/   # TextBox, BattleHUD, PartyScreen, BagScreen, PC, Shop, etc.
   data/         # Pokemon, moves, trainers, gym leaders, maps, music
   entities/     # Player state, Pokemon factory, NPC definitions
-  logic/        # Extracted pure-logic modules (NPC visibility)
+  logic/        # Pure-logic modules (trainer sight, encounters, puzzles, story flags)
   utils/        # Sprite generation, battle transitions, constants
   sprites/      # 151 individual Pokemon sprite definitions
 tests/          # Vitest test suite (systems, entities, data integrity, story logic)
