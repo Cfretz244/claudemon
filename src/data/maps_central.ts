@@ -1,10 +1,8 @@
 import { MapData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
-import { createMapShape, SOLID_TILES } from './mapBuilder';
+import { createMapShape } from './mapBuilder';
 
 const T = TileType;
-
-const TOWER_SOLID = new Set([...SOLID_TILES, T.TOMBSTONE]);
 
 // ─── 1. LAVENDER TOWN ────────────────────────────────────────────────────────
 
@@ -169,7 +167,7 @@ export const POKEMON_TOWER_1F: MapData = (() => {
 // --- 2F: First Graveyard ---
 export const POKEMON_TOWER_2F: MapData = (() => {
   const W = 12, H = 14;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR, { solid: TOWER_SOLID });
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR);
 
   // Walls: top 2 rows, sides 1 tile
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -248,7 +246,7 @@ export const POKEMON_TOWER_2F: MapData = (() => {
 // --- 3F: Second Graveyard ---
 export const POKEMON_TOWER_3F: MapData = (() => {
   const W = 12, H = 14;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR, { solid: TOWER_SOLID });
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR);
 
   // Walls: top 2 rows, sides 1 tile
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -340,7 +338,7 @@ export const POKEMON_TOWER_3F: MapData = (() => {
 // --- 4F: Transition Floor ---
 export const POKEMON_TOWER_4F: MapData = (() => {
   const W = 12, H = 14;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR, { solid: TOWER_SOLID });
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR);
 
   // Walls: top 2 rows, sides 1 tile
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
@@ -411,7 +409,7 @@ export const POKEMON_TOWER_4F: MapData = (() => {
 // --- 5F: Team Rocket / Mr. Fuji Rescue ---
 export const POKEMON_TOWER_5F: MapData = (() => {
   const W = 12, H = 14;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR, { solid: TOWER_SOLID });
+  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR);
 
   // Walls: top 2 rows, sides 1 tile
   for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }

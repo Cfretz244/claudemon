@@ -202,7 +202,7 @@ export const MY_MAP: MapData = (() => {
 })();
 ```
 
-Options: `createMapShape(W, H, base, { startSolid: true })` starts with all-solid collision (carve-out style for caves); `{ solid: CUSTOM_SET }` overrides tile solidity (the museum maps add exhibit tiles, Pokemon Tower adds TOMBSTONE — note tombstones are intentionally-preserved as walkable in the endgame maps' base set).
+Options: `createMapShape(W, H, base, { startSolid: true })` starts with all-solid collision (carve-out style for caves); `{ solid: CUSTOM_SET }` overrides tile solidity (e.g. the museum maps add exhibit tiles).
 
 ### Map Registry
 
@@ -224,7 +224,7 @@ export const ALL_MAPS: Record<string, MapData> = {
 
 ### Tile Types
 
-Solid (block movement): `WALL, WATER, TREE, BUILDING, FENCE, COUNTER, MART_SHELF, CAVE_WALL, PC`
+Solid (block movement): `WALL, WATER, TREE, BUILDING, FENCE, COUNTER, MART_SHELF, CAVE_WALL, PC, TOMBSTONE`
 
 Walkable: `GRASS, PATH, TALL_GRASS, DOOR, SIGN, LEDGE, FLOWER, INDOOR_FLOOR, CARPET, SAND, CAVE_FLOOR`
 
