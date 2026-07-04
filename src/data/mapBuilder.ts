@@ -10,7 +10,7 @@ export function fill2D<V>(width: number, height: number, value: V): V[][] {
 // Collision lookup: which tiles block movement
 export const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
-  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN,
+  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN, T.TOMBSTONE,
 ]);
 
 export interface MapShape {
@@ -27,7 +27,7 @@ export interface MapShape {
  * - `base` pre-fills every tile; collision starts all-false (or all-true with
  *   `startSolid`, for carve-out style maps like caves).
  * - `solid` overrides the tile-solidity set for files whose local copy had
- *   extra entries (e.g. TOMBSTONE in the central maps).
+ *   extra entries (e.g. the museum exhibit tiles).
  */
 export function createMapShape(
   W: number,
