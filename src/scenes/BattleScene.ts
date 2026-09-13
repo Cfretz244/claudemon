@@ -608,10 +608,11 @@ export class BattleScene extends Phaser.Scene {
           this.textBox.show([`${name} is frozen\nsolid!`], resolve);
           return;
         case 'thaw':
-          // Preserved quirk: the thaw message resolves the turn AND the attack
-          // still executes immediately (original code fell through here).
-          this.textBox.show([`${name} thawed out!`], resolve);
-          attack();
+          // Show the thaw message, then attack once the player advances it
+          // (same shape as 'confusion-snap'). Previously attack() ran in the
+          // same tick, and doExecuteMove's textBox.show() replaced this
+          // message before it was ever drawn.
+          this.textBox.show([`${name} thawed out!`], attack);
           return;
         case 'attack':
           attack();
