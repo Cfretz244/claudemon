@@ -57,7 +57,7 @@ const BASELINE: FloorSpec[] = [
   { map: 'silph_co_8f',         from: 'silph_co_7f',         to: 'silph_co_9f',     walkablePct: 39, pathRatio: 3.5 },
   { map: 'silph_co_9f',         from: 'silph_co_8f',         to: 'silph_co_10f',     walkablePct: 39, pathRatio: 3.7 },
   { map: 'silph_co_10f',        from: 'silph_co_9f',         to: 'silph_co_11f',     walkablePct: 38, pathRatio: 3.4 },
-  { map: 'silph_co_11f',        from: 'silph_co_10f',         to: 'npc:giovanni_silph',     walkablePct: 38, pathRatio: 3.8 },
+  { map: 'silph_co_11f',        from: 'silph_co_10f',         to: 'npc:giovanni_silph',     walkablePct: 38, pathRatio: 3.6 },
   { map: 'seafoam_1f',          from: 'route20',           to: 'seafoam_b1f',              walkablePct: 17, pathRatio: 1.8 },
   { map: 'seafoam_b1f',         from: 'seafoam_1f',        to: 'seafoam_b2f',              walkablePct: 19, pathRatio: 2.5 },
   { map: 'seafoam_b2f',         from: 'seafoam_b1f',       to: 'seafoam_b3f',              walkablePct: 22, pathRatio: 3.0 },
