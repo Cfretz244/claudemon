@@ -231,3 +231,65 @@ describe('shouldSkipNPC', () => {
     }
   });
 });
+
+// Gaps found during the 2026-09 refactor review: branches that existed in the
+// scene for months without a test.
+describe('shouldSkipNPC — remaining story branches', () => {
+  it('Pewter guide leaves once the Boulder Badge is earned', () => {
+    const npc = makeNPC('pewter_guide');
+    expect(shouldSkipNPC(npc, noFlags, noBadges, noDefeated, noItems)).toBe(false);
+    expect(shouldSkipNPC(npc, noFlags, ['BOULDER'], noDefeated, noItems)).toBe(true);
+  });
+
+  it('Cerulean officer leaves after Bill is helped; Cerulean rocket after defeat', () => {
+    expect(shouldSkipNPC(makeNPC('cerulean_officer'), { bill_helped: true }, noBadges, noDefeated, noItems)).toBe(true);
+    expect(shouldSkipNPC(makeNPC('cerulean_officer'), noFlags, noBadges, noDefeated, noItems)).toBe(false);
+    expect(shouldSkipNPC(makeNPC('cerulean_rocket'), noFlags, noBadges, ['cerulean_rocket'], noItems)).toBe(true);
+  });
+
+  it('Game Corner poster rocket and hideout grunts clear out once Giovanni is beaten', () => {
+    const beat = ['giovanni_game_corner'];
+    expect(shouldSkipNPC(makeNPC('game_corner_poster_rocket'), noFlags, noBadges, beat, noItems)).toBe(true);
+    expect(shouldSkipNPC(makeNPC('rocket_hideout_b1f_grunt1', { isTrainer: true }), noFlags, noBadges, beat, noItems)).toBe(true);
+    expect(shouldSkipNPC(makeNPC('rocket_hideout_b4f_grunt1'), noFlags, noBadges, beat, noItems)).toBe(true);
+    // Non-trainer hideout NPCs (e.g. the Lift Key item ball) stay
+    expect(shouldSkipNPC(makeNPC('rocket_hideout_b2f_lift_key'), noFlags, noBadges, beat, noItems)).toBe(false);
+    // Nothing leaves before the boss falls
+    expect(shouldSkipNPC(makeNPC('rocket_hideout_b1f_grunt1', { isTrainer: true }), noFlags, noBadges, ['rocket_hideout_b1f_grunt1'], noItems)).toBe(false);
+  });
+
+  it('Silph Co grunts leave after Giovanni at Silph; the president stays', () => {
+    const beat = ['giovanni_silph'];
+    expect(shouldSkipNPC(makeNPC('silph_5f_grunt1'), noFlags, noBadges, beat, noItems)).toBe(true);
+    expect(shouldSkipNPC(makeNPC('silph_5f_grunt1'), noFlags, noBadges, noDefeated, noItems)).toBe(false);
+    expect(shouldSkipNPC(makeNPC('silph_president'), { silph_co_complete: true }, noBadges, beat, noItems)).toBe(false);
+  });
+
+  it('Mt. Moon rocket guard leaves with Jessie & James', () => {
+    expect(shouldSkipNPC(makeNPC('mt_moon_rocket_guard'), noFlags, noBadges, ['jessie_mtmoon'], noItems)).toBe(true);
+    expect(shouldSkipNPC(makeNPC('mt_moon_rocket_guard'), noFlags, noBadges, noDefeated, noItems)).toBe(false);
+  });
+
+  it('Jessie & James at the Game Corner leave when beaten OR when Giovanni is beaten', () => {
+    for (const id of ['jessie_gamecorner', 'james_gamecorner']) {
+      expect(shouldSkipNPC(makeNPC(id), noFlags, noBadges, ['jessie_gamecorner'], noItems)).toBe(true);
+      expect(shouldSkipNPC(makeNPC(id), noFlags, noBadges, ['giovanni_game_corner'], noItems)).toBe(true);
+      expect(shouldSkipNPC(makeNPC(id), noFlags, noBadges, noDefeated, noItems)).toBe(false);
+    }
+  });
+
+  it('tower and Silph rivals leave after their battles', () => {
+    expect(shouldSkipNPC(makeNPC('rival_tower'), noFlags, noBadges, ['rival_tower'], noItems)).toBe(true);
+    expect(shouldSkipNPC(makeNPC('rival_silph'), noFlags, noBadges, ['rival_silph'], noItems)).toBe(true);
+    expect(shouldSkipNPC(makeNPC('rival_tower'), noFlags, noBadges, ['rival_silph'], noItems)).toBe(false);
+  });
+
+  it.each([
+    ['articuno_seafoam', 'articuno_seafoam_cleared'],
+    ['zapdos_power_plant', 'zapdos_power_plant_cleared'],
+    ['moltres_victory_road', 'moltres_victory_road_cleared'],
+  ])('%s vanishes once %s is set', (id, flag) => {
+    expect(shouldSkipNPC(makeNPC(id), noFlags, noBadges, noDefeated, noItems)).toBe(false);
+    expect(shouldSkipNPC(makeNPC(id), { [flag]: true }, noBadges, noDefeated, noItems)).toBe(true);
+  });
+});
