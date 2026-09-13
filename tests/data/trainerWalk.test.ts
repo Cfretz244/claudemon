@@ -73,4 +73,42 @@ describe('a spotting trainer never walls the player in', () => {
     }
     expect(problems, problems.join('\n')).toEqual([]);
   });
+
+  // The same walk on a puzzle floor: the trainer's stop tile becomes an
+  // obstacle the solver tests never saw (they take every NPC at its post).
+  // Parked on a switch plate no boulder can press it; parked in a hole's
+  // mouth or beside a boulder, a push lane is gone; parked on a spin tile the
+  // ride is cut. Nothing in the puzzle state undoes any of that, so on such
+  // floors a spotting trainer must not be able to stop on or next to a
+  // puzzle tile. Today every dungeon trainer has range 1 (never moves); this
+  // keeps the next map honest.
+  it('on a puzzle floor no stop tile is a plate, hole or spin tile, or next to a boulder, plate or hole', () => {
+    const puzzleTiles = new Set([TileType.SWITCH_PLATE, TileType.BOULDER_HOLE, TileType.BOULDER]);
+    const problems: string[] = [];
+    for (const m of Object.values(ALL_MAPS)) {
+      const spin = m.spinTiles ?? {};
+      const isPuzzle = (m.gates?.length ?? 0) > 0 || (m.holes?.length ?? 0) > 0 || Object.keys(spin).length > 0 ||
+        m.tiles.some(row => row.some(t => puzzleTiles.has(t)));
+      if (!isPuzzle) continue;
+      for (const t of m.npcs) {
+        if (!t.isTrainer || (t.sightRange ?? 0) < 2) continue;
+        const none = () => false;
+        if (shouldSkipNPC(t, {}, [], [t.id], none) && !shouldSkipNPC(t, {}, [], [], none)) continue;
+        const line = sightLine(m, t);
+        for (const stop of line.slice(0, -1)) {
+          const tile = m.tiles[stop.y][stop.x];
+          const why: string[] = [];
+          if (puzzleTiles.has(tile)) why.push(`stops on ${TileType[tile]}`);
+          if (spin[k(stop)]) why.push('stops on a spin tile');
+          for (const d of Object.values(DIR_VECTORS)) {
+            const n = { x: stop.x + d.x, y: stop.y + d.y };
+            const nt = m.tiles[n.y]?.[n.x];
+            if (nt !== undefined && puzzleTiles.has(nt)) why.push(`stops next to ${TileType[nt]} at ${k(n)}`);
+          }
+          if (why.length) problems.push(`${m.id}: ${t.id} at ${k(t)} facing ${t.direction} (range ${t.sightRange}) ${why.join(', ')} at ${k(stop)}`);
+        }
+      }
+    }
+    expect(problems, problems.join('\n')).toEqual([]);
+  });
 });
