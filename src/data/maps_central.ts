@@ -1129,7 +1129,7 @@ export const SAFFRON_CITY: MapData = (() => {
       // Pokemart door
       { x: 24, y: 21, targetMap: 'pokemart_saffron', targetX: 3, targetY: 7 },
       // Silph Co door
-      { x: 15, y: 9, targetMap: 'silph_co_1f', targetX: 7, targetY: 12 },
+      { x: 15, y: 9, targetMap: 'silph_co_1f', targetX: 9, targetY: 13 },
       // Fighting Dojo
       { x: 25, y: 8, targetMap: 'fighting_dojo', targetX: 4, targetY: 9 },
     ],

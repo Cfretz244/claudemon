@@ -7,6 +7,13 @@ import { describe, it, expect } from 'vitest';
 import { ALL_MAPS } from '../../src/data/maps';
 import { MapData, TileType } from '../../src/types/map.types';
 import { canDropBoulders, canPressPlate, canReach, dropFlag, instantiateMap, landedBoulders, reachableFlags, statueToggles, tileUnder } from '../../src/logic/boulders';
+import { DOOR_KEY_ITEMS, doorKeyFlag } from '../../src/logic/storyFlagSync';
+
+/** Flags a door key item sets once carried (Silph Co Card Key doors are flag gates on these). */
+const KEY_FLAGS = new Set(DOOR_KEY_ITEMS.map(doorKeyFlag));
+/** Item balls holding a door key, with the flag their pickup implies. */
+const keyBalls = (map: MapData) => map.npcs.filter(n => n.isItemBall && n.itemId && (DOOR_KEY_ITEMS as readonly string[]).includes(n.itemId))
+  .map(n => ({ x: n.x, y: n.y, flag: doorKeyFlag(n.itemId!) }));
 
 /** Dungeon family root: victory_road_2f, seafoam_b1f, pokemon_tower_3f -> victory_road, seafoam, pokemon_tower. */
 const root = (id: string) => id.replace(/_b?\d+f$/, '');
@@ -49,15 +56,24 @@ describe('switch plates and gates', () => {
     }
   });
 
-  it('every flag gate has a statue switch on the same map, and every statue switch drives a gate there', () => {
+  it('every flag gate has a statue switch on the same map (or is a door key flag), and every statue switch drives a gate there', () => {
     for (const map of Object.values(ALL_MAPS)) {
-      const gateFlags = new Set((map.gates ?? []).flatMap(g => (g.flag ? [g.flag] : [])));
+      const gateFlags = new Set((map.gates ?? []).flatMap(g => (g.flag && !KEY_FLAGS.has(g.flag) ? [g.flag] : [])));
       const statueFlags = new Set(map.npcs.flatMap(n => (n.toggleFlag ? [n.toggleFlag] : [])));
       expect([...gateFlags].sort(), `${map.id}: flag gates and statue switches (toggleFlag) do not match`).toEqual([...statueFlags].sort());
       for (const n of map.npcs) {
         if (!n.toggleFlag) continue;
         expect(n.isTrainer, `${map.id}/${n.id}: a statue switch cannot be a trainer`).toBeFalsy();
         expect(n.isItemBall, `${map.id}/${n.id}: a statue switch cannot be an item ball`).toBeFalsy();
+      }
+    }
+  });
+
+  it('every door key flag used by a gate has an item ball for that key in the same dungeon', () => {
+    for (const map of Object.values(ALL_MAPS)) {
+      for (const flag of new Set((map.gates ?? []).flatMap(g => (g.flag && KEY_FLAGS.has(g.flag) ? [g.flag] : [])))) {
+        const family = Object.values(ALL_MAPS).filter(m => root(m.id) === root(map.id));
+        expect(family.some(m => keyBalls(m).some(k => k.flag === flag)), `${map.id}: door flag ${flag} but no key ball in ${root(map.id)}`).toBe(true);
       }
     }
   });
@@ -91,6 +107,8 @@ describe('switch plates and gates', () => {
       const switchStates = new Map<string, Map<string, Record<string, boolean>>>(family.map(m => [m.id, new Map([['', {}]])]));
       const flagKey = (f: Record<string, boolean>) => Object.keys(f).filter(x => f[x]).sort().join(',');
       const dropFlags: Record<string, boolean> = {};
+      // door keys picked up: a key ball's flag is set for the whole dungeon once the player can stand next to it
+      const keyFlags: Record<string, boolean> = {};
       const k = (p: { x: number; y: number }) => `${p.x},${p.y}`;
       let entrances = 0;
       for (const m of Object.values(ALL_MAPS)) {
@@ -118,13 +136,22 @@ describe('switch plates and gates', () => {
         expect(rounds, `${gated.id}: fixpoint did not settle`).toBeLessThan(50);
         changed = false;
         for (const m of family) {
-          const npcs = m.npcs.map(n => ({ x: n.x, y: n.y }));
+          const keys = keyBalls(m);
+          // a picked-up key ball no longer blocks its tile
+          const npcs = m.npcs.filter(n => !keys.some(kb => kb.x === n.x && kb.y === n.y && keyFlags[kb.flag])).map(n => ({ x: n.x, y: n.y }));
           const toggles = statueToggles(m);
           const blockedExcept = (goal?: { x: number; y: number }) => [...npcs, ...m.warps.filter(w => !(goal && w.x === goal.x && w.y === goal.y)).map(w => ({ x: w.x, y: w.y }))];
-          for (const key of [...reached.get(m.id)!]) for (const storyFlags of [...switchStates.get(m.id)!.values()]) {
+          for (const key of [...reached.get(m.id)!]) for (const switchFlags of [...switchStates.get(m.id)!.values()]) {
+            const storyFlags = { ...keyFlags, ...switchFlags };
             const live = liveMap(m);
             const [x, y] = key.split(',').map(Number);
             const from = { x, y };
+            for (const kb of keys) {
+              if (keyFlags[kb.flag]) continue;
+              const sides = [{ x: kb.x + 1, y: kb.y }, { x: kb.x - 1, y: kb.y }, { x: kb.x, y: kb.y + 1 }, { x: kb.x, y: kb.y - 1 }]
+                .filter(p => !live.collision[p.y]?.[p.x] && !npcs.some(n => n.x === p.x && n.y === p.y));
+              if (sides.some(p => solve(m, () => canReach(live, from, p, { blocked: blockedExcept(p), storyFlags, toggles })).found)) { keyFlags[kb.flag] = true; changed = true; }
+            }
             for (const g of m.gates ?? []) {
               if (!g.switch || pressed.get(m.id)!.has(k(g.switch))) continue;
               if (solve(m, () => canPressPlate(live, from, g.switch!, { blocked: blockedExcept(), storyFlags, toggles })).found) { pressed.get(m.id)!.add(k(g.switch)); changed = true; }
@@ -158,7 +185,7 @@ describe('switch plates and gates', () => {
         }
       }
       for (const m of family) {
-        const npcs = m.npcs.map(n => ({ x: n.x, y: n.y }));
+        const npcs = m.npcs.filter(n => !keyBalls(m).some(kb => kb.x === n.x && kb.y === n.y && keyFlags[kb.flag])).map(n => ({ x: n.x, y: n.y }));
         const toggles = statueToggles(m);
         const live = liveMap(m);
         expect(reached.get(m.id)!.size, `${m.id}: no ladder or entrance ever lands here`).toBeGreaterThan(0);
@@ -166,7 +193,7 @@ describe('switch plates and gates', () => {
           const blocked = [...npcs, ...m.warps.filter(o => o !== w).map(o => ({ x: o.x, y: o.y }))];
           const ok = [...reached.get(m.id)!].some(key => {
             const [x, y] = key.split(',').map(Number);
-            return [...switchStates.get(m.id)!.values()].some(storyFlags => canReach(live, { x, y }, w, { blocked, storyFlags, toggles }).found);
+            return [...switchStates.get(m.id)!.values()].some(switchFlags => canReach(live, { x, y }, w, { blocked, storyFlags: { ...keyFlags, ...switchFlags }, toggles }).found);
           });
           expect(ok, `${m.id}: warp at ${w.x},${w.y} (to ${w.targetMap}) is unreachable from every landing and switch state the player can arrive in`).toBe(true);
         }

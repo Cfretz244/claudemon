@@ -22,7 +22,7 @@ describe('map entry gates (migrated from warpTo)', () => {
     expect(gated).toEqual([
       'cinnabar_gym', 'elite_four_lorelei', 'pewter_museum_2f', 'pokemon_tower_5f', 'rocket_hideout_b1f',
       'route16', 'route17', 'route2', 'route4', 'saffron_city',
-      'silph_co_1f', 'silph_co_2f', 'silph_co_3f', 'silph_co_4f', 'silph_co_5f', 'silph_co_6f', 'silph_co_7f',
+      'silph_co_10f', 'silph_co_11f', 'silph_co_1f', 'silph_co_2f', 'silph_co_3f', 'silph_co_4f', 'silph_co_5f', 'silph_co_6f', 'silph_co_7f', 'silph_co_8f', 'silph_co_9f',
       'ss_anne', 'viridian_gym',
     ]);
   });

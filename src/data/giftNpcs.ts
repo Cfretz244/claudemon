@@ -329,6 +329,30 @@ export const GIFT_NPCS: Record<string, GiftNpcEntry> = {
     },
   },
 
+  // Silph employee on 7F: LAPRAS once the rival has been beaten on that floor
+  silph_lapras_employee: {
+    id: 'silph_lapras_employee',
+    resolve(state) {
+      if (state.storyFlags['got_lapras']) {
+        return { dialogue: ['Take good care of\nLAPRAS!', 'And please, get rid\nof TEAM ROCKET!'] };
+      }
+      if (state.defeatedTrainers.includes('rival_silph')) {
+        return {
+          dialogue: [
+            'You beat that other\ntrainer? Then you can\nbeat TEAM ROCKET!',
+            'Take this LAPRAS. It\nwill help you, and it\nis safer with you.',
+            '{PLAYER} received\nLAPRAS!',
+          ],
+          grantsPokemon: { speciesId: 131, level: 15, cryPitch: 400 },
+          onComplete: (s) => {
+            s.storyFlags['got_lapras'] = true;
+          },
+        };
+      }
+      return null;
+    },
+  },
+
   // Bulbasaur gift - girl in Cerulean house (requires happy Pikachu)
   cerulean_bulbasaur_girl: {
     id: 'cerulean_bulbasaur_girl',
