@@ -101,6 +101,7 @@ src/
     storyFlagSync.ts                # Derived story flags/catch-up grants from defeated trainers
     saveMigration.ts                # Legacy map-id remaps for old saves
     cutTrees.ts                     # cut_<map>_<x>_<y> flag parsing
+    learnset.ts                     # effectiveMovesAt(): stone evolutions inherit the pre-evo's moves
     slotMachine.ts                  # Game Corner slot machine reel/payout logic
   components/
     TextBox.ts                      # Typewriter text display
