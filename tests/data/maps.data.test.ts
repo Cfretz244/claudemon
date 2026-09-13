@@ -55,6 +55,21 @@ describe('ALL_MAPS', () => {
     }
   });
 
+  it('every TOMBSTONE tile is solid (players cannot walk over graves)', () => {
+    for (const [id, map] of mapEntries) {
+      for (let y = 0; y < map.height; y++) {
+        for (let x = 0; x < map.width; x++) {
+          if (map.tiles[y][x] === TileType.TOMBSTONE) {
+            expect(
+              map.collision[y][x],
+              `Map ${id}: tombstone at (${x},${y}) is walkable`,
+            ).toBe(true);
+          }
+        }
+      }
+    }
+  });
+
   it('every warp targetMap exists in ALL_MAPS', () => {
     for (const [id, map] of mapEntries) {
       for (const warp of map.warps) {
