@@ -40,6 +40,7 @@ const TILE_COLORS: Record<number, string> = {
   [TileType.TOMBSTONE]: '#909098',
   [TileType.BOULDER_HOLE]: '#302820',
   [TileType.CURRENT]: '#2070d0',
+  [TileType.HEAL_TILE]: '#d8d0e8',
 };
 
 // ─── Map region grouping ───

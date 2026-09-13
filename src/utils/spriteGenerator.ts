@@ -286,6 +286,21 @@ export function generateTileset(scene: Phaser.Scene): void {
       ctx.fillRect(5, 5, 6, 2);
       ctx.fillRect(6, 4, 4, 2);
     },
+    [TileType.HEAL_TILE]: (ctx) => {
+      // Purifying square: pale floor with a soft glowing diamond
+      ctx.fillStyle = '#d8d0e8';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#f0ecf8';
+      ctx.fillRect(4, 7, 8, 2);
+      ctx.fillRect(7, 4, 2, 8);
+      ctx.fillRect(5, 6, 6, 4);
+      ctx.fillRect(6, 5, 4, 6);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(7, 7, 2, 2);
+      ctx.fillStyle = '#b8b0d0';
+      ctx.fillRect(0, 0, 16, 1);
+      ctx.fillRect(0, 0, 1, 16);
+    },
     [TileType.SPIN_TILE]: (ctx) => {
       // Default spin tile (up arrow) - directional variants generated below
       ctx.fillStyle = '#f8f0d0';
@@ -1575,6 +1590,37 @@ export function generateItemBallSprite(scene: Phaser.Scene, key: string): void {
     }
   }
 
+  addCanvasSpriteSheet(scene, key, canvas, TILE_SIZE, TILE_SIZE);
+}
+
+export function generateStatueSprite(scene: Phaser.Scene, key: string): void {
+  // A stone bust on a plinth (statue switches); same 4x2 sheet format, all frames identical
+  const canvas = document.createElement('canvas');
+  canvas.width = TILE_SIZE * 4;
+  canvas.height = TILE_SIZE * 2;
+  const ctx = canvas.getContext('2d')!;
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 4; col++) {
+      const ox = col * TILE_SIZE;
+      const oy = row * TILE_SIZE;
+      // Plinth
+      ctx.fillStyle = '#585868';
+      ctx.fillRect(ox + 3, oy + 11, 10, 4);
+      ctx.fillStyle = '#787890';
+      ctx.fillRect(ox + 4, oy + 11, 8, 1);
+      // Shoulders and head
+      ctx.fillStyle = '#9898a8';
+      ctx.fillRect(ox + 4, oy + 8, 8, 3);
+      ctx.fillRect(ox + 6, oy + 3, 4, 5);
+      ctx.fillStyle = '#c0c0d0';
+      ctx.fillRect(ox + 6, oy + 3, 2, 3);
+      ctx.fillRect(ox + 4, oy + 8, 2, 1);
+      // Eyes
+      ctx.fillStyle = '#404050';
+      ctx.fillRect(ox + 6, oy + 5, 1, 1);
+      ctx.fillRect(ox + 9, oy + 5, 1, 1);
+    }
+  }
   addCanvasSpriteSheet(scene, key, canvas, TILE_SIZE, TILE_SIZE);
 }
 

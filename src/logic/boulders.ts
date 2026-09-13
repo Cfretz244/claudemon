@@ -11,7 +11,7 @@
 //   boulder_dropped_<mapId>_<originX>_<originY>_in_<holeX>_<holeY>
 // Everything here is pure; OverworldScene owns the sprites and the sounds.
 
-import { HoleData, MapData, TileType } from '../types/map.types';
+import { GateData, HoleData, MapData, TileType } from '../types/map.types';
 
 export interface Pos { x: number; y: number }
 export interface BoulderLock { origin: Pos; plate: Pos }
@@ -98,6 +98,18 @@ export function isPlatePressed(base: MapData, live: MapData, plate: Pos): boolea
   return base.tiles[plate.y]?.[plate.x] === TileType.SWITCH_PLATE && live.tiles[plate.y]?.[plate.x] === TileType.BOULDER;
 }
 
+/** A flag gate is open when its flag state matches its sense (set opens it unless `closedWhenSet`). */
+export function isFlagGateOpen(gate: Pick<GateData, 'flag' | 'closedWhenSet'>, storyFlags: Record<string, boolean>): boolean {
+  if (!gate.flag) return false;
+  return !!storyFlags[gate.flag] !== !!gate.closedWhenSet;
+}
+
+/** Whether a gate is open: plate gates by the live boulder on their plate, flag gates by story flags. */
+export function isGateOpen(base: MapData, live: MapData, gate: GateData, storyFlags: Record<string, boolean>): boolean {
+  if (gate.switch) return isPlatePressed(base, live, gate.switch);
+  return isFlagGateOpen(gate, storyFlags);
+}
+
 /** A live copy of a map: cloned tiles/collision plus where each boulder came from. */
 export interface MapInstance {
   map: MapData;
@@ -155,7 +167,7 @@ export function instantiateMap(base: MapData, storyFlags: Record<string, boolean
     setTile(map, lock.plate, TileType.BOULDER, true);
   }
   for (const gate of base.gates ?? []) {
-    if (isPlatePressed(base, map, gate.switch)) setTile(map, gate, tileUnder(base, gate.x, gate.y), false);
+    if (isGateOpen(base, map, gate, storyFlags)) setTile(map, gate, tileUnder(base, gate.x, gate.y), false);
   }
   return { map, origins };
 }
@@ -199,6 +211,7 @@ export function pushBoulder(
     changed.push(to);
   }
   for (const gate of base.gates ?? []) {
+    if (!gate.switch) continue; // flag gates are toggled by statue switches, not boulders
     const open = isPlatePressed(base, map, gate.switch);
     const cur = map.tiles[gate.y][gate.x];
     if (cur === TileType.BOULDER) continue; // a boulder sits in the doorway; leave it
@@ -215,6 +228,8 @@ export interface SolveOptions {
   blocked?: Pos[];
   /** state-space cap; the search reports `exhausted` when hit */
   maxStates?: number;
+  /** story flags in force during the search: flag gates open or close by them (none set by default) */
+  storyFlags?: Record<string, boolean>;
 }
 export interface SolveResult { found: boolean; states: number; exhausted: boolean }
 
@@ -222,7 +237,8 @@ const DIRS: Pos[] = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y:
 
 /**
  * Breadth-first search over (player, boulder positions) on the base map data.
- * Gates open exactly when a boulder sits on their plate; ledges are hop-down
+ * Plate gates open exactly when a boulder sits on their plate and flag gates
+ * follow `opts.storyFlags` (fixed for the whole search); ledges are hop-down
  * only; the boulder beyond a push must be a free, non-ledge tile; a boulder
  * pushed onto a BOULDER_HOLE leaves the map. Every boulder starts at its
  * base-data tile (a fresh visit; nothing has been dropped in from above).
@@ -239,9 +255,14 @@ export function solve(
     const t = tile(p);
     return base.collision[p.y][p.x] && t !== TileType.BOULDER && t !== TileType.GATE;
   };
+  const storyFlags = opts.storyFlags ?? {};
   const gateClosed = (p: Pos, boulders: Pos[]) => {
     if (tile(p) !== TileType.GATE) return false;
-    return !gates.some(g => same(g, p) && boulders.some(b => same(b, g.switch)));
+    return !gates.some(g => {
+      if (!same(g, p)) return false;
+      const plate = g.switch;
+      return plate ? boulders.some(b => same(b, plate)) : isFlagGateOpen(g, storyFlags);
+    });
   };
   const free = (p: Pos, boulders: Pos[]) =>
     inBounds(p) && !staticSolid(p) && !blocked.has(key(p)) && !boulders.some(b => same(b, p)) && !gateClosed(p, boulders);

@@ -5,7 +5,7 @@ import { computeCurrentSlide } from '../../src/logic/spinTiles';
 import { Direction as D } from '../../src/utils/constants';
 import {
   lockFlag, getBoulderLocks, tileUnder, isPlatePressed, instantiateMap, pushBoulder,
-  solve, canReach, canPressPlate, dropFlag, getBoulderDrops, holeAt, landedBoulders, canDropBoulders,
+  solve, canReach, canPressPlate, dropFlag, getBoulderDrops, holeAt, landedBoulders, canDropBoulders, isFlagGateOpen,
 } from '../../src/logic/boulders';
 
 // Build a map from an ASCII sketch: # wall, . floor, O boulder, S plate, G gate,
@@ -317,5 +317,42 @@ describe('boulder holes', () => {
     // The state after a drop has one boulder fewer.
     const r = solve(m, { x: 1, y: 1 }, (_p, bs) => bs.length === 1);
     expect(r.found).toBe(true);
+  });
+});
+
+describe('flag gates (statue switches)', () => {
+  it('open when the flag is set, or when it is clear for closedWhenSet gates', () => {
+    expect(isFlagGateOpen({ flag: 'm1' }, {})).toBe(false);
+    expect(isFlagGateOpen({ flag: 'm1' }, { m1: true })).toBe(true);
+    expect(isFlagGateOpen({ flag: 'm1', closedWhenSet: true }, {})).toBe(true);
+    expect(isFlagGateOpen({ flag: 'm1', closedWhenSet: true }, { m1: true })).toBe(false);
+    expect(isFlagGateOpen({}, { m1: true })).toBe(false);
+  });
+  it('instantiateMap opens flag gates from story flags and leaves them out of the boulder logic', () => {
+    const m = sketch(['#######', '#..G.G#', '#######'], [{ x: 3, y: 1, flag: 'sw' }, { x: 5, y: 1, flag: 'sw', closedWhenSet: true }]);
+    const off = instantiateMap(m, {});
+    expect(at(off.map, 3, 1)).toBe(T.GATE);
+    expect(off.map.collision[1][3]).toBe(true);
+    expect(at(off.map, 5, 1)).toBe(T.CAVE_FLOOR);
+    expect(off.map.collision[1][5]).toBe(false);
+    const on = instantiateMap(m, { sw: true });
+    expect(at(on.map, 3, 1)).toBe(T.CAVE_FLOOR);
+    expect(at(on.map, 5, 1)).toBe(T.GATE);
+    // A boulder push never touches flag gates.
+    const withBoulder = sketch(['#######', '#.O.G.#', '#######'], [{ x: 4, y: 1, flag: 'sw' }]);
+    const inst = instantiateMap(withBoulder, {});
+    const r = pushBoulder(withBoulder, inst, {}, { x: 2, y: 1 }, { x: 1, y: 0 });
+    expect(r.ok).toBe(true);
+    expect(at(inst.map, 3, 1)).toBe(T.BOULDER);
+    expect(at(inst.map, 4, 1)).toBe(T.GATE);
+    expect(r.changed.some(c => c.x === 4 && c.y === 1)).toBe(false);
+  });
+  it('the solver honours flag gates through opts.storyFlags', () => {
+    const m = sketch(['#######', '#..G..#', '#######'], [{ x: 3, y: 1, flag: 'sw' }]);
+    expect(canReach(m, { x: 1, y: 1 }, { x: 5, y: 1 }).found).toBe(false);
+    expect(canReach(m, { x: 1, y: 1 }, { x: 5, y: 1 }, { storyFlags: { sw: true } }).found).toBe(true);
+    const inverted = sketch(['#######', '#..G..#', '#######'], [{ x: 3, y: 1, flag: 'sw', closedWhenSet: true }]);
+    expect(canReach(inverted, { x: 1, y: 1 }, { x: 5, y: 1 }).found).toBe(true);
+    expect(canReach(inverted, { x: 1, y: 1 }, { x: 5, y: 1 }, { storyFlags: { sw: true } }).found).toBe(false);
   });
 });

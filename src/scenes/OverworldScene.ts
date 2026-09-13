@@ -11,7 +11,7 @@ import { PCScreen } from '../components/PCScreen';
 import { TrainerCard } from '../components/TrainerCard';
 import { SlotMachineScreen } from '../components/SlotMachineScreen';
 import { PrizeExchangeScreen } from '../components/PrizeExchangeScreen';
-import { generateNPCSprite, generateItemBallSprite, generateJessieSprite, generateJamesSprite, generateSnorlaxNPCSprite, generateArticunoNPCSprite, generateZapdosNPCSprite, generateMoltresNPCSprite } from '../utils/spriteGenerator';
+import { generateNPCSprite, generateItemBallSprite, generateStatueSprite, generateJessieSprite, generateJamesSprite, generateSnorlaxNPCSprite, generateArticunoNPCSprite, generateZapdosNPCSprite, generateMoltresNPCSprite } from '../utils/spriteGenerator';
 import { ITEMS } from '../data/items';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
@@ -30,7 +30,8 @@ import { resyncMobileInput } from '../utils/mobileControls';
 import { shouldSkipNPC as shouldSkipNPCLogic } from '../logic/npcVisibility';
 import { shouldGiveOaksParcel } from '../logic/oaksParcel';
 import { checkEntryGates } from '../logic/warpGate';
-import { MapInstance, instantiateMap, landedBoulders, pushBoulder } from '../logic/boulders';
+import { MapInstance, instantiateMap, landedBoulders, pushBoulder, isFlagGateOpen, tileUnder } from '../logic/boulders';
+import { restoreParty } from '../logic/healing';
 import { computeCurrentSlide, computeSlide, Slide } from '../logic/spinTiles';
 import { computeTrainerSight } from '../logic/trainerSight';
 import { pickWildEncounter, getEncounterTheme, rollsEncounterOn, encounterTableOf, itemBallAction } from '../logic/encounters';
@@ -457,6 +458,8 @@ export class OverworldScene extends Phaser.Scene {
       if (!this.textures.exists(spriteKey)) {
         if (npc.isItemBall) {
           generateItemBallSprite(this, spriteKey);
+        } else if (npc.toggleFlag) {
+          generateStatueSprite(this, spriteKey);
         } else if (npc.id.startsWith('snorlax_')) {
           generateSnorlaxNPCSprite(this, spriteKey);
         } else if (npc.id.startsWith('jessie_')) {
@@ -672,6 +675,13 @@ export class OverworldScene extends Phaser.Scene {
         }
 
         this.stepCounter++;
+
+        // Healing square (Pokemon Tower 5F): restore the party, jingle only if it did something
+        if (this.currentMap.tiles[newY]?.[newX] === TileType.HEAL_TILE && restoreParty(this.playerState.party)) {
+          soundSystem.heal();
+          this.textBox.show(['A purifying aura\nsurrounds you!', 'Your POKEMON were\nhealed!']);
+          return;
+        }
 
         // Check for trainer line-of-sight
         if (this.checkTrainerSight()) return;
@@ -1590,6 +1600,12 @@ export class OverworldScene extends Phaser.Scene {
       sprite.setFrame(dirIndex);
     }
 
+    // Statue switch: flip its flag and the gates wired to it
+    if (npc.toggleFlag) {
+      this.toggleStatueSwitch(npc);
+      return;
+    }
+
     // Item ball pickup (or a fake ball that ambushes the player)
     const ballAction = itemBallAction(npc);
     if (ballAction) {
@@ -1694,6 +1710,27 @@ export class OverworldScene extends Phaser.Scene {
         }
       }
     );
+  }
+
+  /** Flip a statue switch's flag, open/close the flag gates on this map, then talk. */
+  private toggleStatueSwitch(npc: NPCData): void {
+    const flag = npc.toggleFlag!;
+    this.playerState.storyFlags[flag] = !this.playerState.storyFlags[flag];
+    soundSystem.menuSelect();
+    this.applyFlagGates();
+    if (npc.dialogue.length > 0) this.textBox.show(npc.dialogue.map(d => this.fmt(d)));
+  }
+
+  /** Redraw every flag-driven gate on the live map from the current story flags. */
+  private applyFlagGates(): void {
+    const base = ALL_MAPS[this.currentMap.id];
+    for (const gate of base.gates ?? []) {
+      if (!gate.flag) continue;
+      const open = isFlagGateOpen(gate, this.playerState.storyFlags);
+      this.currentMap.tiles[gate.y][gate.x] = open ? tileUnder(base, gate.x, gate.y) : TileType.GATE;
+      this.currentMap.collision[gate.y][gate.x] = !open;
+      this.redrawTile(gate.x, gate.y);
+    }
   }
 
   /** A fake item ball: the ball is gone and a wild Pokemon attacks (Power Plant Voltorb). */
@@ -2629,14 +2666,8 @@ export class OverworldScene extends Phaser.Scene {
         this.healMachineLightGfx?.fillCircle(lightX, lightY, 1.5);
         soundSystem.heal();
 
-        for (const pokemon of this.playerState.party) {
-          pokemon.currentHp = pokemon.stats.hp;
-          pokemon.status = StatusCondition.NONE;
-          for (const move of pokemon.moves) {
-            move.currentPp = move.maxPp;
-          }
-          gainHappiness(pokemon, 3);
-        }
+        restoreParty(this.playerState.party);
+        for (const pokemon of this.playerState.party) gainHappiness(pokemon, 3);
         this.playerState.lastHealMap = this.currentMap.id;
         this.playerState.lastHealX = this.playerGridX;
         this.playerState.lastHealY = this.playerGridY;
