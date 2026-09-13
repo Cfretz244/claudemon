@@ -514,7 +514,7 @@ export const CINNABAR_ISLAND: MapData = (() => {
       // Pokemon Center warp
       { x: 14, y: 8, targetMap: 'pokemon_center_cinnabar', targetX: 4, targetY: 7 },
       // Pokemon Mansion warp
-      { x: 5, y: 16, targetMap: 'pokemon_mansion', targetX: 7, targetY: 14 },
+      { x: 5, y: 16, targetMap: 'pokemon_mansion', targetX: 11, targetY: 18 },
       // Pokemart
       { x: 14, y: 15, targetMap: 'pokemart_cinnabar', targetX: 3, targetY: 7 },
     ],
