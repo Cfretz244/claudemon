@@ -37,11 +37,11 @@ const SILPH_CO_CLOSED: EntryGate[] = [
 const SC_LEGEND: Record<string, TileType> = {
   '#': T.WALL, '.': T.INDOOR_FLOOR, D: T.GATE, E: T.DOORMAT, u: T.DOOR, d: T.DOOR, h: T.HEAL_TILE,
   '1': T.TELEPORT_PAD, '2': T.TELEPORT_PAD, '3': T.TELEPORT_PAD, '4': T.TELEPORT_PAD, '5': T.TELEPORT_PAD, '6': T.TELEPORT_PAD,
-  v: T.INDOOR_FLOOR, i: T.INDOOR_FLOOR, K: T.INDOOR_FLOOR, L: T.INDOOR_FLOOR, G: T.INDOOR_FLOOR,
+  v: T.INDOOR_FLOOR, i: T.INDOOR_FLOOR, K: T.INDOOR_FLOOR, L: T.INDOOR_FLOOR, G: T.INDOOR_FLOOR, P: T.INDOOR_FLOOR,
   // People at desks: the tile is a solid COUNTER in the data, so a grunt between two corridors
   // never becomes a shortcut (not in the layout metrics, and not when the grunts leave). The
   // elevator NPC stands in the wall as its door.
-  A: T.COUNTER, B: T.COUNTER, J: T.COUNTER, M: T.COUNTER, R: T.COUNTER, P: T.COUNTER, N: T.COUNTER, Q: T.COUNTER,
+  A: T.COUNTER, B: T.COUNTER, J: T.COUNTER, M: T.COUNTER, R: T.COUNTER, N: T.COUNTER, Q: T.COUNTER,
   V: T.WALL,
 };
 const CARD_KEY_FLAG = doorKeyFlag('card_key');
@@ -234,13 +234,13 @@ const SC_10F = createMapFromSketch([
 const SC_11F = createMapFromSketch([
   '####################',
   '#d.v..#...........##',
-  '###V#.#.####B####.##',
+  '###V#.#.###B#####.##',
   '#...#.#.......#5#.##',
   '#.#.#.###.###.#.#.##',
   '#.#.#...#.#...#.#.##',
   '###.###.#.#.###D#.##',
-  '#.....#.#.#.#G#...##',
-  '#.#####.###.#.P.####',
+  '#.....#.#.#.#P#...##',
+  '#.#####.###.#G#.####',
   '#.#.....#...#.#.#.##',
   '#.#.#####.###D#.#.##',
   '#.........#.......##',
@@ -410,7 +410,7 @@ const SILPH_CO_10F = silphFloor(10, {
 });
 
 // 11F: Giovanni's office behind a door at the end of the long way round, or straight
-// out of the pad 5 pocket; the president cowers beside him.
+// out of the pad 5 pocket; the president is trapped behind him at the end of the room.
 const SILPH_CO_11F = silphFloor(11, {
   warps: [pad(SC_11F, '5', SC_7F, 'silph_co_7f')],
   npcs: [
@@ -421,7 +421,7 @@ const SILPH_CO_11F = silphFloor(11, {
       "You have interfered\nwith TEAM ROCKET\nfor the last time!",
       "Prepare to feel my\nwrath!",
     ], 0x604020),
-    scTalker(SC_11F, 'P', 'silph_president', Direction.LEFT, [
+    scTalker(SC_11F, 'P', 'silph_president', Direction.DOWN, [
       "PRESIDENT: Thank\ngoodness you're here!",
       "TEAM ROCKET has taken\nover our company!",
       "Please, defeat their\nboss!",

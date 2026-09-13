@@ -156,7 +156,7 @@ describe('Silph Co', () => {
     expect(reach(F(10), down(10), pocket, { storyFlags: KEY })).toBe(false);
   });
 
-  it('11F: Giovanni\'s office opens only with the key, from the stairs and from the pad 5 pocket; the president sits beside him', () => {
+  it('11F: Giovanni\'s office opens only with the key, from the stairs and from the pad 5 pocket; the president stands behind him', () => {
     const f11 = F(11);
     const gio = npc(f11, 'giovanni_silph');
     expect(gio.isTrainer && gio.sightRange).toBe(1);
@@ -167,11 +167,10 @@ describe('Silph Co', () => {
     expect(reachNpc(f11, pocket, 'giovanni_silph')).toBe(false);
     expect(reachNpc(f11, pocket, 'giovanni_silph', { storyFlags: KEY })).toBe(true);
     expect(reach(f11, pocket, down(11), { storyFlags: KEY }), 'the pocket joins the rest of the floor once the doors are open').toBe(true);
-    // the president can only be spoken to from the tile in front of Giovanni
+    // the president stands at the end of the office: the only floor tile next to him is Giovanni's
     const pres = npc(f11, 'silph_president');
-    const v = DIR_VECTORS[gio.direction];
-    const front = { x: gio.x + v.x, y: gio.y + v.y };
-    expect(sidesOf(f11, pres)).toEqual([front]);
+    const free = Object.values(DIR_VECTORS).map(d => ({ x: pres.x + d.x, y: pres.y + d.y })).filter(p => !f11.collision[p.y]?.[p.x]);
+    expect(free).toEqual([{ x: gio.x, y: gio.y }]);
   });
 
   it('every trainer sits at a desk with sight range 1, facing a corridor tile that every route across the floor must cross', () => {
