@@ -1,7 +1,7 @@
-import { MapData, TileType } from '../types/map.types';
+import { MapData, NPCData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
 import { ELITE_FOUR, CHAMPION } from './eliteFour';
-import { createMapShape } from './mapBuilder';
+import { createMapFromSketch, createMapShape, SketchShape } from './mapBuilder';
 
 const T = TileType;
 
@@ -956,7 +956,7 @@ export const ROUTE23: MapData = (() => {
     collision,
     warps: [
       // North exit → Victory Road
-      { x: 7, y: 0, targetMap: 'victory_road', targetX: 9, targetY: 19 },
+      { x: 7, y: 0, targetMap: 'victory_road', targetX: 10, targetY: 25 },
       // South entrance → Route 22
       { x: 7, y: 24, targetMap: 'route22', targetX: 1, targetY: 4 },
     ],
@@ -1011,150 +1011,211 @@ export const ROUTE23: MapData = (() => {
 // ─────────────────────────────────────────────────────────────
 // 11. VICTORY ROAD  (20x20 cave)
 // ─────────────────────────────────────────────────────────────
+// Victory Road is three floors drawn as sketches (see `createMapFromSketch`).
+// Legend: # wall, . floor, O/o boulder, S/s switch plate, G/g gate (opened by
+// the matching plate), H boulder hole, ^ ledge (hop down only), 1/2/3 ladders,
+// E/X the Route 23 / Indigo Plateau exits, a-d trainers (in niches facing
+// across the corridor: a trainer keeps blocking its tile after the battle),
+// i items, M Moltres. Solvability is proven by tests/data/victoryRoad.test.ts.
+const VR_LEGEND: Record<string, TileType> = {
+  '#': T.CAVE_WALL, '.': T.CAVE_FLOOR, O: T.BOULDER, o: T.BOULDER, S: T.SWITCH_PLATE, s: T.SWITCH_PLATE,
+  G: T.GATE, g: T.GATE, H: T.BOULDER_HOLE, '^': T.LEDGE, '1': T.CAVE_ENTRANCE, '2': T.CAVE_ENTRANCE, '3': T.CAVE_ENTRANCE,
+  E: T.CAVE_FLOOR, X: T.CAVE_FLOOR, a: T.CAVE_FLOOR, b: T.CAVE_FLOOR, c: T.CAVE_FLOOR, d: T.CAVE_FLOOR,
+  i: T.CAVE_FLOOR, M: T.CAVE_FLOOR,
+};
+
+const vrTrainer = (sketch: SketchShape, ch: string, id: string, direction: Direction, dialogue: string[]): NPCData => ({
+  id, ...sketch.findOne(ch), spriteColor: 0xc06060, direction, dialogue, isTrainer: true, sightRange: 4,
+});
+const vrItems = (sketch: SketchShape, prefix: string, itemIds: string[]): NPCData[] => {
+  const spots = sketch.find('i');
+  if (spots.length !== itemIds.length) throw new Error(`${prefix}: ${spots.length} item tiles for ${itemIds.length} items`);
+  return spots.map((p, n) => ({ id: `${prefix}_${itemIds[n]}`, ...p, spriteColor: 0x000000, direction: Direction.DOWN, dialogue: [], isItemBall: true, itemId: itemIds[n] }));
+};
+
+// 1F: the ladder up (1) is behind gate G, which opens once boulder O is pushed
+// four tiles west onto plate S. The player reaches the wrong (west) side of
+// the boulder first and has to loop through the bottom corridor to get behind
+// it. The exit pocket at the top (ladder 3 from 2F, X to Indigo Plateau) is
+// sealed from the rest of the floor; its ledge drops back to the entrance side.
 export const VICTORY_ROAD: MapData = (() => {
-  const W = 20, H = 20;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR);
-
-  // Cave wall borders (2 tiles thick)
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.CAVE_WALL);
-    setTile(x, 1, T.CAVE_WALL);
-    setTile(x, H - 1, T.CAVE_WALL);
-    setTile(x, H - 2, T.CAVE_WALL);
-  }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.CAVE_WALL);
-    setTile(1, y, T.CAVE_WALL);
-    setTile(W - 1, y, T.CAVE_WALL);
-    setTile(W - 2, y, T.CAVE_WALL);
-  }
-
-  // Open entrance/exit tiles
-  setTile(9, 18, T.CAVE_FLOOR);
-  setTile(9, 19, T.CAVE_FLOOR);
-  setTile(9, 0, T.CAVE_FLOOR);
-  setTile(9, 1, T.CAVE_FLOOR);
-
-  // Complex winding corridors (the final dungeon!)
-  // Horizontal walls creating maze
-  fillRect(4, 4, 5, 2, T.CAVE_WALL);
-  fillRect(12, 3, 4, 2, T.CAVE_WALL);
-  fillRect(3, 8, 3, 2, T.CAVE_WALL);
-  fillRect(8, 7, 2, 3, T.CAVE_WALL);
-  fillRect(13, 8, 4, 2, T.CAVE_WALL);
-  fillRect(5, 12, 4, 2, T.CAVE_WALL);
-  fillRect(12, 12, 3, 2, T.CAVE_WALL);
-  fillRect(3, 15, 3, 2, T.CAVE_WALL);
-  fillRect(14, 15, 3, 2, T.CAVE_WALL);
-
-  // Strength puzzle: boulders in corridors
-  setTile(6, 7, T.BOULDER);
-  setTile(11, 10, T.BOULDER);
-  setTile(7, 15, T.BOULDER);
-  setTile(10, 14, T.BOULDER);
-
+  const s = createMapFromSketch([
+    '####################',
+    '#########X####3#####',
+    '##.....#...#......##',
+    '##.###.#.#.#.###..##',
+    '##.#...#.#.#...#..##',
+    '##.#.###.#.###.#..##',
+    '##.#.i.........#..##',
+    '##.#########a###..##',
+    '##................##',
+    '##^^#########1######',
+    '##..##............##',
+    '##..##.######.###.##',
+    '##..##......#.#...##',
+    '##..##.#.##.#.#.#b##',
+    '##.#####.#i.#.#..i##',
+    '##.##########.######',
+    '##.##########.######',
+    '##.##########G######',
+    '##.#####..S...O...##',
+    '##.#####.#######.###',
+    '##.##i#c.#######.###',
+    '##.#.....#######.###',
+    '##.#.###.........###',
+    '##.#.#########d#####',
+    '##................##',
+    '##########E#########',
+  ], VR_LEGEND);
   return {
     id: 'victory_road',
     name: 'VICTORY ROAD',
-    width: W,
-    height: H,
-    tiles,
-    collision,
+    width: s.width, height: s.height, tiles: s.tiles, collision: s.collision,
     warps: [
-      // South entrance → Route 23
-      { x: 9, y: 19, targetMap: 'route23', targetX: 7, targetY: 1 },
-      // North exit → Indigo Plateau
-      { x: 9, y: 0, targetMap: 'indigo_plateau', targetX: 10, targetY: 19 },
+      { ...s.findOne('E'), targetMap: 'route23', targetX: 7, targetY: 1 },
+      { ...s.findOne('X'), targetMap: 'indigo_plateau', targetX: 10, targetY: 19 },
+      { ...s.findOne('1'), targetMap: 'victory_road_2f', targetX: 2, targetY: 22 },
+      { ...s.findOne('3'), targetMap: 'victory_road_2f', targetX: 19, targetY: 22 },
+    ],
+    gates: [{ ...s.findOne('G'), switch: s.findOne('S') }],
+    npcs: [
+      ...vrItems(s, 'vr1', ['full_heal', 'tm43_sky_attack', 'rare_candy', 'escape_rope']),
+      vrTrainer(s, 'a', 'vr_trainer1', Direction.UP, ['COOLTRAINER: The\nELITE FOUR awaits!', 'Only the best make\nit through here!']),
+      vrTrainer(s, 'b', 'vr_trainer2', Direction.DOWN, ['COOLTRAINER: My\nPOKeMON are trained', 'to perfection!']),
+      vrTrainer(s, 'c', 'vr_trainer3', Direction.RIGHT, ["BLACKBELT: You can't\nget past me!", 'My fighting POKeMON\nwill stop you!']),
+      vrTrainer(s, 'd', 'vr_trainer4', Direction.UP, ['JUGGLER: I juggle\nand battle!', 'Watch me juggle\nyour team around!']),
+    ],
+    wildEncounters: {
+      grassRate: 0.08,
+      encounters: [
+        { speciesId: 74, minLevel: 36, maxLevel: 40, weight: 25 },  // Geodude
+        { speciesId: 41, minLevel: 36, maxLevel: 40, weight: 20 },  // Zubat
+        { speciesId: 66, minLevel: 36, maxLevel: 40, weight: 20 },  // Machop
+        { speciesId: 95, minLevel: 36, maxLevel: 42, weight: 20 },  // Onix
+        { speciesId: 67, minLevel: 38, maxLevel: 42, weight: 15 },  // Machoke
+      ],
+    },
+  };
+})();
+
+// 2F: boulder O has to be steered around the pillar onto plate S (up, east,
+// then down from the top doorway, so the room needs both its doors) to open
+// gate G on the way to ladder 2 (up to 3F). Moltres waits in a side chamber
+// behind boulder o (plain Strength). Ladder 3 (down to the 1F exit pocket) is
+// behind gate g, whose plate s is pressed by the boulder dropped from 3F.
+export const VICTORY_ROAD_2F: MapData = (() => {
+  const s = createMapFromSketch([
+    '######################',
+    '####i######2..########',
+    '##.........##.########',
+    '##.#######.##.########',
+    '##.#.......G..a#######',
+    '##.#...##..##.########',
+    '##...O.##.S##.########',
+    '##.#...##..##.########',
+    '##.#.......##.########',
+    '##.#######.##.#....###',
+    '##.##########.o..M.###',
+    '##.##b#######.#...i###',
+    '##.......####.########',
+    '########.#i...########',
+    '########.###s.########',
+    '########.####.########',
+    '########.####.......##',
+    '##.......##########.##',
+    '##.################g##',
+    '##.################.##',
+    '##.###############c.##',
+    '##.################.##',
+    '##1################3##',
+    '######################',
+  ], VR_LEGEND);
+  return {
+    id: 'victory_road_2f',
+    name: 'VICTORY ROAD',
+    width: s.width, height: s.height, tiles: s.tiles, collision: s.collision,
+    warps: [
+      { ...s.findOne('1'), targetMap: 'victory_road', targetX: 13, targetY: 9 },
+      { ...s.findOne('2'), targetMap: 'victory_road_3f', targetX: 2, targetY: 16 },
+      { ...s.findOne('3'), targetMap: 'victory_road', targetX: 14, targetY: 1 },
+    ],
+    gates: [
+      { ...s.findOne('G'), switch: s.findOne('S') },
+      { ...s.findOne('g'), switch: s.findOne('s') },
     ],
     npcs: [
-      {
-        id: 'vr_rare_candy',
-        x: 12, y: 5,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'rare_candy',
-      },
-      {
-        id: 'vr_full_heal',
-        x: 7, y: 11,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'full_heal',
-      },
-      {
-        id: 'vr_trainer1',
-        x: 4, y: 6,
-        spriteColor: 0xc06060,
-        direction: Direction.RIGHT,
-        dialogue: [
-          'COOLTRAINER: Welcome\nto VICTORY ROAD!',
-          'Only the best make\nit through here!',
-        ],
-        isTrainer: true,
-        sightRange: 4,
-      },
-      {
-        id: 'vr_trainer2',
-        x: 15, y: 6,
-        spriteColor: 0x6060c0,
-        direction: Direction.LEFT,
-        dialogue: [
-          'COOLTRAINER: My\nPOKeMON are trained',
-          'to perfection!',
-        ],
-        isTrainer: true,
-        sightRange: 4,
-      },
-      {
-        id: 'vr_trainer3',
-        x: 5, y: 14,
-        spriteColor: 0xc0c060,
-        direction: Direction.RIGHT,
-        dialogue: [
-          "BLACKBELT: You can't\nget past me!",
-          'My fighting POKeMON\nwill stop you!',
-        ],
-        isTrainer: true,
-        sightRange: 4,
-      },
-      {
-        id: 'vr_trainer4',
-        x: 14, y: 11,
-        spriteColor: 0x60c060,
-        direction: Direction.DOWN,
-        dialogue: [
-          "COOLTRAINER: You've\nmade it this far?",
-          'Impressive! But this\nis where it ends!',
-        ],
-        isTrainer: true,
-        sightRange: 4,
-      },
+      ...vrItems(s, 'vr2', ['tm17_submission', 'tm05_mega_kick', 'rare_candy']),
+      vrTrainer(s, 'a', 'vr_trainer5', Direction.LEFT, ['TAMER: My POKeMON\nobey my every word!', 'Let me show you\nreal discipline!']),
+      vrTrainer(s, 'b', 'vr_trainer6', Direction.DOWN, ['POKeMANIAC: I love\nrare POKeMON!', 'Show me yours and\nI will crush them!']),
+      vrTrainer(s, 'c', 'vr_trainer7', Direction.RIGHT, ['COOLTRAINER: So\nclose to the top!', 'Not on my watch!']),
       {
         id: 'moltres_victory_road',
-        x: 17, y: 4,
+        ...s.findOne('M'),
         spriteColor: 0xf08830,
         direction: Direction.DOWN,
-        dialogue: [
-          'A legendary bird\nPOKeMON is here!',
-          "It's radiating\nintense heat!",
-          "It's MOLTRES!",
-        ],
+        dialogue: ['A legendary bird\nPOKeMON is here!', "It's radiating\nintense heat!", "It's MOLTRES!"],
         isTrainer: false,
       },
     ],
     wildEncounters: {
       grassRate: 0.08,
       encounters: [
-        { speciesId: 67, minLevel: 36, maxLevel: 42, weight: 20 },  // Machoke
-        { speciesId: 75, minLevel: 36, maxLevel: 42, weight: 20 },  // Graveler
-        { speciesId: 95, minLevel: 36, maxLevel: 42, weight: 15 },  // Onix
-        { speciesId: 42, minLevel: 36, maxLevel: 42, weight: 15 },  // Golbat
-        { speciesId: 105, minLevel: 38, maxLevel: 42, weight: 15 }, // Marowak
-        { speciesId: 74, minLevel: 36, maxLevel: 40, weight: 15 },  // Geodude
+        { speciesId: 74, minLevel: 38, maxLevel: 42, weight: 20 },  // Geodude
+        { speciesId: 42, minLevel: 38, maxLevel: 42, weight: 20 },  // Golbat
+        { speciesId: 67, minLevel: 38, maxLevel: 42, weight: 20 },  // Machoke
+        { speciesId: 95, minLevel: 38, maxLevel: 42, weight: 20 },  // Onix
+        { speciesId: 105, minLevel: 38, maxLevel: 42, weight: 20 }, // Marowak
+      ],
+    },
+  };
+})();
+
+// 3F: small. Boulder O sits above hole H; pushing it in drops it onto the 2F
+// plate s directly below, which opens gate g on 2F. The TM beyond the hole is
+// only reachable once the boulder is gone.
+export const VICTORY_ROAD_3F: MapData = (() => {
+  const s = createMapFromSketch([
+    '##################',
+    '##################',
+    '######a###########',
+    '##........########',
+    '##.######.#####i##',
+    '##.######.#####.##',
+    '##.######.#####.##',
+    '##.######.......##',
+    '##.############.##',
+    '##.############.##',
+    '##.##b#########.##',
+    '##.......###....c#',
+    '########.###O#####',
+    '########.###.#####',
+    '########.###H..i##',
+    '########.#########',
+    '##2......#########',
+    '##################',
+  ], VR_LEGEND);
+  return {
+    id: 'victory_road_3f',
+    name: 'VICTORY ROAD',
+    width: s.width, height: s.height, tiles: s.tiles, collision: s.collision,
+    warps: [
+      { ...s.findOne('2'), targetMap: 'victory_road_2f', targetX: 11, targetY: 1 },
+    ],
+    holes: [{ ...s.findOne('H'), targetMap: 'victory_road_2f', targetX: 12, targetY: 14 }],
+    npcs: [
+      ...vrItems(s, 'vr3', ['revive', 'tm47_explosion']),
+      vrTrainer(s, 'a', 'vr_trainer8', Direction.DOWN, ['BLACKBELT: The peak\nis near!', 'But you must get\npast my fists!']),
+      vrTrainer(s, 'b', 'vr_trainer9', Direction.DOWN, ['COOLTRAINER: Rock\nsolid defense!', 'Nothing gets\nthrough me!']),
+      vrTrainer(s, 'c', 'vr_trainer10', Direction.LEFT, ["JUGGLER: You've\nmade it this far?", 'Impressive! But this\nis where it ends!']),
+    ],
+    wildEncounters: {
+      grassRate: 0.08,
+      encounters: [
+        { speciesId: 75, minLevel: 40, maxLevel: 44, weight: 20 },  // Graveler
+        { speciesId: 42, minLevel: 40, maxLevel: 44, weight: 20 },  // Golbat
+        { speciesId: 67, minLevel: 40, maxLevel: 44, weight: 20 },  // Machoke
+        { speciesId: 95, minLevel: 40, maxLevel: 44, weight: 20 },  // Onix
+        { speciesId: 105, minLevel: 40, maxLevel: 44, weight: 20 }, // Marowak
       ],
     },
   };
@@ -1870,6 +1931,8 @@ export const ENDGAME_MAPS: Record<string, MapData> = {
   route22: ROUTE22,
   route23: ROUTE23,
   victory_road: VICTORY_ROAD,
+  victory_road_2f: VICTORY_ROAD_2F,
+  victory_road_3f: VICTORY_ROAD_3F,
   indigo_plateau: INDIGO_PLATEAU,
   indigo_league_lobby: INDIGO_LEAGUE_LOBBY,
   elite_four_lorelei: ELITE_FOUR_LORELEI,

@@ -1,10 +1,15 @@
 // Switch plates and gates must be wired consistently in every map, and every
 // gated map must be completable from each of its entrances by pushing
-// boulders. Vacuous until the first dungeon with gates lands (Phase 2).
+// boulders. A plate may also be pressed by a boulder dropped through a hole on
+// another floor: exits are checked with every such boulder landed, and the
+// floor above must be able to drop it. The first gated dungeon is Victory Road.
 import { describe, it, expect } from 'vitest';
 import { ALL_MAPS } from '../../src/data/maps';
-import { TileType } from '../../src/types/map.types';
-import { canReach } from '../../src/logic/boulders';
+import { MapData, TileType } from '../../src/types/map.types';
+import { canDropBoulders, canPressPlate, canReach, dropFlag, instantiateMap, landedBoulders, tileUnder } from '../../src/logic/boulders';
+
+/** Dungeon family root: victory_road_2f, seafoam_b1f, pokemon_tower_3f -> victory_road, seafoam, pokemon_tower. */
+const root = (id: string) => id.replace(/_b?\d+f$/, '');
 
 const gatedMaps = Object.values(ALL_MAPS).filter(m => (m.gates?.length ?? 0) > 0 ||
   m.tiles.some(row => row.some(t => t === TileType.SWITCH_PLATE || t === TileType.GATE)));
@@ -56,16 +61,95 @@ describe('switch plates and gates', () => {
     }
   });
 
-  it('each gated map is completable: from every entrance landing, every exit warp is reachable', () => {
-    for (const map of gatedMaps) {
+  it('each gated dungeon is completable: walking its floors and taking its ladders, every warp is reachable from its outside entrances', () => {
+    // A dungeon is the family of maps sharing an id root (victory_road,
+    // victory_road_2f, ...). Reachability is computed to a fixpoint: a plate
+    // stays pressed once the player could press it from a landing they have
+    // reached (Gen I locks boulders on switches), a hole's boulder stays
+    // dropped once it could be dropped, and every ladder landing reached opens
+    // that floor. Starting from every outside entrance at once models a player
+    // who has been through in whatever order; the per-dungeon walkthrough
+    // tests pin the intended order. Every NPC is an obstacle (trainers keep
+    // blocking after the battle, item balls until picked up), and so is every
+    // warp tile other than the one being walked to (stepping on it leaves).
+    const families = new Map<string, MapData[]>();
+    for (const m of Object.values(ALL_MAPS)) families.set(root(m.id), [...(families.get(root(m.id)) ?? []), m]);
+    for (const gated of gatedMaps) {
+      const family = families.get(root(gated.id))!;
+      const inFamily = (id: string) => root(id) === root(gated.id);
+      const reached = new Map<string, Set<string>>(family.map(m => [m.id, new Set()]));
+      const pressed = new Map<string, Set<string>>(family.map(m => [m.id, new Set()]));
+      const dropFlags: Record<string, boolean> = {};
+      const k = (p: { x: number; y: number }) => `${p.x},${p.y}`;
+      let entrances = 0;
+      for (const m of Object.values(ALL_MAPS)) {
+        if (inFamily(m.id)) continue;
+        for (const w of m.warps) if (inFamily(w.targetMap)) { reached.get(w.targetMap)!.add(k({ x: w.targetX, y: w.targetY })); entrances++; }
+      }
+      expect(entrances, `${gated.id}: dungeon has no outside entrance`).toBeGreaterThan(0);
+      const liveMap = (m: MapData): MapData => {
+        const live = instantiateMap(m, {}, landedBoulders(ALL_MAPS, m.id, dropFlags)).map;
+        for (const g of m.gates ?? []) {
+          if (!g.switch || !pressed.get(m.id)!.has(k(g.switch))) continue;
+          live.tiles[g.y][g.x] = tileUnder(m, g.x, g.y);
+          live.collision[g.y][g.x] = false;
+        }
+        return { ...live, gates: (m.gates ?? []).filter(g => !(g.switch && pressed.get(m.id)!.has(k(g.switch)))) };
+      };
+      const solve = <T>(m: MapData, run: () => T & { exhausted: boolean }) => { const r = run(); expect(r.exhausted, `${m.id}: solver hit the state cap`).toBe(false); return r; };
+      for (let changed = true, rounds = 0; changed; rounds++) {
+        expect(rounds, `${gated.id}: fixpoint did not settle`).toBeLessThan(50);
+        changed = false;
+        for (const m of family) {
+          const npcs = m.npcs.map(n => ({ x: n.x, y: n.y }));
+          const blockedExcept = (goal?: { x: number; y: number }) => [...npcs, ...m.warps.filter(w => !(goal && w.x === goal.x && w.y === goal.y)).map(w => ({ x: w.x, y: w.y }))];
+          for (const key of [...reached.get(m.id)!]) {
+            const live = liveMap(m);
+            const [x, y] = key.split(',').map(Number);
+            const from = { x, y };
+            for (const g of m.gates ?? []) {
+              if (!g.switch || pressed.get(m.id)!.has(k(g.switch))) continue;
+              if (solve(m, () => canPressPlate(live, from, g.switch!, { blocked: blockedExcept() })).found) { pressed.get(m.id)!.add(k(g.switch)); changed = true; }
+            }
+            const holes = m.holes ?? [];
+            if (holes.length && !holes.every(h => Object.keys(dropFlags).some(f => f.startsWith(`boulder_dropped_${m.id}_`) && f.endsWith(`_in_${h.x}_${h.y}`)))) {
+              if (solve(m, () => canDropBoulders(live, from, holes.length, { blocked: blockedExcept() })).found) {
+                for (const h of holes) m.tiles.forEach((row, by) => row.forEach((t, bx) => { if (t === TileType.BOULDER) dropFlags[dropFlag(m.id, { x: bx, y: by }, h)] = true; }));
+                changed = true;
+              }
+            }
+            for (const w of m.warps) {
+              if (!inFamily(w.targetMap)) continue;
+              const target = reached.get(w.targetMap)!;
+              if (target.has(k({ x: w.targetX, y: w.targetY }))) continue;
+              if (solve(m, () => canReach(live, from, w, { blocked: blockedExcept(w) })).found) { target.add(k({ x: w.targetX, y: w.targetY })); changed = true; }
+            }
+          }
+        }
+      }
+      for (const m of family) {
+        const npcs = m.npcs.map(n => ({ x: n.x, y: n.y }));
+        const live = liveMap(m);
+        expect(reached.get(m.id)!.size, `${m.id}: no ladder or entrance ever lands here`).toBeGreaterThan(0);
+        for (const w of m.warps) {
+          const blocked = [...npcs, ...m.warps.filter(o => o !== w).map(o => ({ x: o.x, y: o.y }))];
+          const ok = [...reached.get(m.id)!].some(key => { const [x, y] = key.split(',').map(Number); return canReach(live, { x, y }, w, { blocked }).found; });
+          expect(ok, `${m.id}: warp at ${w.x},${w.y} (to ${w.targetMap}) is unreachable from every landing the player can arrive at`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('every floor with holes can drop a boulder into each of them from each of its entrances', () => {
+    for (const map of Object.values(ALL_MAPS)) {
+      if (!map.holes?.length) continue;
       const entrances = Object.values(ALL_MAPS).flatMap(m => m.warps.filter(w => w.targetMap === map.id).map(w => ({ x: w.targetX, y: w.targetY })));
-      const exits = map.warps.map(w => ({ x: w.x, y: w.y }));
-      const trainers = map.npcs.filter(n => n.isTrainer).map(n => ({ x: n.x, y: n.y }));
+      const trainers = map.npcs.map(n => ({ x: n.x, y: n.y }));
       expect(entrances.length, `${map.id}: no entrance`).toBeGreaterThan(0);
-      for (const e of entrances) for (const x of exits) {
-        const r = canReach(map, e, x, { blocked: trainers });
+      for (const e of entrances) {
+        const r = canDropBoulders(map, e, map.holes.length, { blocked: trainers });
         expect(r.exhausted, `${map.id}: solver hit the state cap from ${e.x},${e.y}`).toBe(false);
-        expect(r.found, `${map.id}: exit ${x.x},${x.y} unreachable from entrance ${e.x},${e.y}`).toBe(true);
+        expect(r.found, `${map.id}: cannot drop ${map.holes.length} boulder(s) from entrance ${e.x},${e.y}`).toBe(true);
       }
     }
   });
