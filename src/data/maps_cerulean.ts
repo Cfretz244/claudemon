@@ -1,505 +1,290 @@
-import { MapData, TileType } from '../types/map.types';
+import { MapData, NPCData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
-import { createMapShape } from './mapBuilder';
+import { createMapFromSketch, createMapShape, SketchShape } from './mapBuilder';
 
 const T = TileType;
 
 // ─────────────────────────────────────────────────────────────
-// 1a. MT MOON 1F  (28x26 cave - entrance floor)
+// 1. MT MOON  1F, B1F, B2F — three floors drawn as sketches
 // ─────────────────────────────────────────────────────────────
-export const MT_MOON: MapData = (() => {
-  const W = 28, H = 26;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR);
+//
+// Sketches are checked by tools/moon-floors.mjs in the helper repo;
+// tests/data/mtMoon.test.ts proves the same facts on this data.
+//
+// 1F has two sealed halves. The entrance half: the mouth from Route 3, the
+// ladders a, b, c down to B1F, four trainers in niches, the scientist, a
+// POTION and an ESCAPE ROPE. The exit half: the mouth to Route 4, the ladder
+// d that the fossil chamber's way out comes up, and a RARE CANDY. The only
+// way from Route 3 to Route 4 is down a, across B1F and B2F, and up d.
+// B1F is four landings that never touch (Gen I): each has one ladder up and
+// one ladder down. a's landing (the way on) has a Rocket and the REVIVE; b's
+// and c's have a trainer each; d's (the way home) is quiet.
+// B2F: p (from a's landing) lands beside the fossil chamber, but a wall is in
+// the way. The corridor climbs, runs the top and right edges past two Rockets
+// and a side passage where Jessie & James wait, to the Rocket guard who
+// blocks the corridor and will not move until they are beaten; then along the
+// bottom and back up the middle to the Super Nerd, who blocks the corridor
+// before the chamber. The two fossils sit in the chamber's stubs, and s (the
+// way home, up to d) is two tiles from p. q and r (from b's and c's landings)
+// are item pockets: a SUPER POTION and TM12.
+// Every ladder and mouth sits in a one-tile stub (a warp fires on entry, not
+// on the tile you land on); items in dead ends; trainers in niches with
+// sight range 1 facing the only corridor.
+// Legend: # wall, . floor, E the mouth from Route 3, X the mouth to Route 4,
+// a-d ladders 1F<->B1F, p-s ladders B1F<->B2F (p under a ... s under d),
+// i item ball, 1-4 trainers, S scientist, J/j Jessie/James, G the Rocket
+// guard, N the fossil Super Nerd, F the two fossils.
+const MM_LEGEND: Record<string, TileType> = {
+  '#': T.CAVE_WALL, '.': T.CAVE_FLOOR, E: T.CAVE_FLOOR, X: T.CAVE_FLOOR,
+  a: T.CAVE_ENTRANCE, b: T.CAVE_ENTRANCE, c: T.CAVE_ENTRANCE, d: T.CAVE_ENTRANCE,
+  p: T.CAVE_ENTRANCE, q: T.CAVE_ENTRANCE, r: T.CAVE_ENTRANCE, s: T.CAVE_ENTRANCE,
+  i: T.CAVE_FLOOR, '1': T.CAVE_FLOOR, '2': T.CAVE_FLOOR, '3': T.CAVE_FLOOR, '4': T.CAVE_FLOOR,
+  S: T.CAVE_FLOOR, J: T.CAVE_FLOOR, j: T.CAVE_FLOOR, G: T.CAVE_FLOOR, N: T.CAVE_FLOOR, F: T.CAVE_FLOOR,
+};
 
-  // Cave wall borders (2 tiles thick)
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.CAVE_WALL); setTile(x, 1, T.CAVE_WALL);
-    setTile(x, H - 1, T.CAVE_WALL); setTile(x, H - 2, T.CAVE_WALL);
-  }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.CAVE_WALL); setTile(1, y, T.CAVE_WALL);
-    setTile(W - 1, y, T.CAVE_WALL); setTile(W - 2, y, T.CAVE_WALL);
-  }
+const MM_1F = createMapFromSketch([
+  '####X#######################',
+  '####.#######################',
+  '####.....###################',
+  '########.###################',
+  '##.......###########3#######',
+  '##.#########...........a####',
+  '##......####.###############',
+  '##i####d####.#####i#########',
+  '############.#####.#########',
+  '############...........#####',
+  '########c#############.#####',
+  '#######4.#############.2####',
+  '########.#############.#####',
+  '####...................#####',
+  '####.#############.#########',
+  '####.#############S#########',
+  '####.#######################',
+  '####.................#######',
+  '##########.#########..######',
+  '#########1.#########..######',
+  '##########b#########.#######',
+  '####################.#######',
+  '######...............#######',
+  '######..####.###############',
+  '######..####i###############',
+  '######E#####################',
+], MM_LEGEND);
+const MM_B1F = createMapFromSketch([
+  '######################',
+  '##a################b##',
+  '##.......#####......##',
+  '########.#####.#######',
+  '##1......#####......2#',
+  '###.###############.##',
+  '###......#####......##',
+  '###i####p#####q#######',
+  '######################',
+  '########c#######d#####',
+  '###......#####....####',
+  '###.##########.#######',
+  '###.....######....####',
+  '#####3#.#########.####',
+  '#######.######....####',
+  '###r....######s#######',
+  '######################',
+  '######################',
+], MM_LEGEND);
+const MM_B2F = createMapFromSketch([
+  '########################',
+  '##q###########2#########',
+  '##.###................##',
+  '##..i#.##############.##',
+  '######.##############.##',
+  '#####1.##############.##',
+  '######.##############.##',
+  '######.##############.##',
+  '######.##F###########.##',
+  '######p#s...F########.##',
+  '#########...####J.....##',
+  '###########N####j####.##',
+  '###########.#########.##',
+  '###########.#########.##',
+  '###########.#########G##',
+  '####i######.#########.##',
+  '##...######.#########.##',
+  '##.########...........##',
+  '##r#####################',
+  '########################',
+], MM_LEGEND);
 
-  // Open entrance (south, from Route 3)
-  setTile(6, H - 2, T.CAVE_FLOOR); setTile(6, H - 1, T.CAVE_FLOOR);
+/** The one open tile beside a stub (where a ladder lands the player). */
+const mmBeside = (s: SketchShape, ch: string) => {
+  const p = s.findOne(ch);
+  const open = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }]
+    .map(d => ({ x: p.x + d.x, y: p.y + d.y }))
+    .filter(q => s.tiles[q.y]?.[q.x] === T.CAVE_FLOOR);
+  if (open.length !== 1) throw new Error(`mt. moon: '${ch}' is not in a stub`);
+  return open[0];
+};
+/** Ladder `ch` on `s` to the same letter on `other` (landing on the tile beside it). */
+const mmLadder = (s: SketchShape, ch: string, other: SketchShape, otherId: string) => {
+  const land = mmBeside(other, ch);
+  return { ...s.findOne(ch), targetMap: otherId, targetX: land.x, targetY: land.y };
+};
+const mmItems = (s: SketchShape, prefix: string, itemIds: string[]): NPCData[] => {
+  const spots = s.find('i');
+  if (spots.length !== itemIds.length) throw new Error(`${prefix}: ${spots.length} item tiles for ${itemIds.length} items`);
+  return spots.map((p, n) => ({ id: `${prefix}_${itemIds[n]}`, ...p, spriteColor: 0x000000, direction: Direction.DOWN, dialogue: [], isItemBall: true, itemId: itemIds[n] }));
+};
+const mmTrainer = (s: SketchShape, ch: string, id: string, direction: Direction, dialogue: string[], spriteColor: number): NPCData => ({
+  id, ...s.findOne(ch), spriteColor, direction, dialogue, isTrainer: true, sightRange: 1,
+});
+const mmTalker = (s: SketchShape, ch: string, id: string, direction: Direction, dialogue: string[], spriteColor: number): NPCData => ({
+  id, ...s.findOne(ch), spriteColor, direction, dialogue,
+});
+const mmFloor = (id: string, name: string, s: SketchShape, extras: Pick<MapData, 'warps' | 'npcs' | 'wildEncounters'>): MapData => ({
+  id, name, width: s.width, height: s.height, tiles: s.tiles, collision: s.collision, ...extras,
+});
+const ROCKET = 0x404040;
 
-  // Open exit (north, to Route 4)
-  setTile(4, 0, T.CAVE_FLOOR); setTile(4, 1, T.CAVE_FLOOR);
-
-  // === Interior maze walls ===
-  // Large wall block upper-right (forces detour)
-  fillRect(10, 2, 8, 3, T.CAVE_WALL);
-  fillRect(20, 2, 4, 2, T.CAVE_WALL);
-
-  // Wall creating corridor south of entrance area
-  fillRect(8, 6, 2, 3, T.CAVE_WALL);
-  fillRect(11, 5, 5, 2, T.CAVE_WALL);
-
-  // Central dividing wall
-  fillRect(4, 9, 6, 2, T.CAVE_WALL);
-  fillRect(13, 8, 2, 4, T.CAVE_WALL);
-
-  // Lower-left room walls
-  fillRect(3, 14, 3, 2, T.CAVE_WALL);
-  fillRect(8, 13, 2, 3, T.CAVE_WALL);
-
-  // Right side corridors
-  fillRect(17, 7, 4, 2, T.CAVE_WALL);
-  fillRect(22, 5, 2, 5, T.CAVE_WALL);
-  fillRect(18, 11, 3, 2, T.CAVE_WALL);
-
-  // Lower corridor walls
-  fillRect(12, 15, 5, 2, T.CAVE_WALL);
-  fillRect(19, 14, 3, 3, T.CAVE_WALL);
-
-  // Bottom area walls (near entrance)
-  fillRect(10, 19, 4, 2, T.CAVE_WALL);
-  fillRect(16, 18, 3, 2, T.CAVE_WALL);
-  fillRect(22, 17, 2, 4, T.CAVE_WALL);
-
-  // Far bottom left
-  fillRect(3, 19, 2, 3, T.CAVE_WALL);
-
-  // Water pools
-  fillRect(15, 9, 2, 2, T.WATER);
-  fillRect(3, 6, 2, 2, T.WATER);
-  setTile(24, 12, T.WATER);
-  setTile(25, 12, T.WATER);
-
-  // Ladder tiles (using DOOR type for warp points in caves)
-  setTile(24, 4, T.DOOR);   // Ladder 1: down to B1F (right side)
-  setTile(5, 12, T.DOOR);   // Ladder 2: up from B1F (left side, near exit)
-
-  return {
-    id: 'mt_moon',
-    name: 'MT. MOON 1F',
-    width: W,
-    height: H,
-    tiles,
-    collision,
-    warps: [
-      // South entrance → Route 3
-      { x: 6, y: 25, targetMap: 'route3', targetX: 48, targetY: 8 },
-      // North exit → Route 4
-      { x: 4, y: 0, targetMap: 'route4', targetX: 2, targetY: 5 },
-      // Ladder down to B1F (right side of 1F)
-      { x: 24, y: 4, targetMap: 'mt_moon_b1f', targetX: 15, targetY: 3 },
-      // Ladder up from B1F (left side of 1F, near exit)
-      { x: 5, y: 12, targetMap: 'mt_moon_b1f', targetX: 3, targetY: 14 },
+export const MT_MOON: MapData = mmFloor('mt_moon', 'MT. MOON 1F', MM_1F, {
+  warps: [
+    // The mouths: south to Route 3 (first, so it is the floor's entry point), north to Route 4.
+    { ...MM_1F.findOne('E'), targetMap: 'route3', targetX: 48, targetY: 8 },
+    { ...MM_1F.findOne('X'), targetMap: 'route4', targetX: 2, targetY: 5 },
+    mmLadder(MM_1F, 'a', MM_B1F, 'mt_moon_b1f'),   // the way on (first, so it is the floor's goal)
+    mmLadder(MM_1F, 'b', MM_B1F, 'mt_moon_b1f'),
+    mmLadder(MM_1F, 'c', MM_B1F, 'mt_moon_b1f'),
+    mmLadder(MM_1F, 'd', MM_B1F, 'mt_moon_b1f'),   // the exit half: where the way home comes up
+  ],
+  npcs: [
+    mmTrainer(MM_1F, '1', 'mt_moon_bug_catcher', Direction.RIGHT, [
+      'BUG CATCHER: Even\ncaves have bugs!',
+      "Don't underestimate\nthem!",
+    ], 0xd09040),
+    mmTrainer(MM_1F, '2', 'mt_moon_lass', Direction.LEFT, [
+      "LASS: I'm looking for\nCLEFAIRY!",
+      'I heard they live\nin this cave!',
+    ], 0xd06090),
+    mmTrainer(MM_1F, '3', 'mt_moon_rocket1', Direction.DOWN, [
+      'ROCKET: Get out!\nThis cave belongs to\nTEAM ROCKET!',
+      "We're after the\nfossils!",
+    ], ROCKET),
+    mmTrainer(MM_1F, '4', 'mt_moon_hiker', Direction.RIGHT, [
+      'HIKER: I love these\nunderground trails!',
+      'The rocks here are\namazing!',
+    ], 0x908060),
+    ...mmItems(MM_1F, 'mt_moon', ['rare_candy', 'escape_rope', 'potion']),
+    mmTalker(MM_1F, 'S', 'mt_moon_scientist', Direction.UP, [
+      'I study rare fossils\nfound in MT. MOON.',
+      'CLEFAIRY are said to\ndance here on full',
+      'moon nights!',
+    ], 0xf0f0f0),
+  ],
+  wildEncounters: {
+    grassRate: 0.08,
+    encounters: [
+      { speciesId: 41, minLevel: 7, maxLevel: 11, weight: 40 },  // Zubat
+      { speciesId: 74, minLevel: 8, maxLevel: 11, weight: 25 },  // Geodude
+      { speciesId: 46, minLevel: 8, maxLevel: 10, weight: 15 },  // Paras
+      { speciesId: 35, minLevel: 8, maxLevel: 12, weight: 15 },  // Clefairy
+      { speciesId: 104, minLevel: 8, maxLevel: 10, weight: 5 },  // Cubone
     ],
-    npcs: [
-      // Trainers (4 on 1F)
-      {
-        id: 'mt_moon_bug_catcher',
-        x: 5, y: 5,
-        spriteColor: 0xd09040,
-        direction: Direction.RIGHT,
-        dialogue: [
-          'BUG CATCHER: Even\ncaves have bugs!',
-          "Don't underestimate\nthem!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'mt_moon_lass',
-        x: 16, y: 6,
-        spriteColor: 0xd06090,
-        direction: Direction.DOWN,
-        dialogue: [
-          "LASS: I'm looking for\nCLEFAIRY!",
-          'I heard they live\nin this cave!',
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'mt_moon_rocket1',
-        x: 20, y: 10,
-        spriteColor: 0x404040,
-        direction: Direction.LEFT,
-        dialogue: [
-          'ROCKET: Get out!\nThis cave belongs to\nTEAM ROCKET!',
-          "We're after the\nfossils!",
-        ],
-        isTrainer: true,
-        sightRange: 4,
-      },
-      {
-        id: 'mt_moon_hiker',
-        x: 9, y: 17,
-        spriteColor: 0x908060,
-        direction: Direction.UP,
-        dialogue: [
-          'HIKER: I love these\nunderground trails!',
-          "The rocks here are\namazing!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      // Items
-      {
-        id: 'mt_moon_potion',
-        x: 3, y: 4,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'potion',
-      },
-      {
-        id: 'mt_moon_rare_candy',
-        x: 25, y: 8,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'rare_candy',
-      },
-      {
-        id: 'mt_moon_escape_rope',
-        x: 7, y: 21,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'escape_rope',
-      },
-      // Flavor NPC
-      {
-        id: 'mt_moon_scientist',
-        x: 12, y: 12,
-        spriteColor: 0xf0f0f0,
-        direction: Direction.DOWN,
-        dialogue: [
-          'I study rare fossils\nfound in MT. MOON.',
-          'CLEFAIRY are said to\ndance here on full',
-          'moon nights!',
-        ],
-      },
+  },
+});
+
+export const MT_MOON_B1F: MapData = mmFloor('mt_moon_b1f', 'MT. MOON B1F', MM_B1F, {
+  warps: [
+    mmLadder(MM_B1F, 'a', MM_1F, 'mt_moon'),        // up (first: the floor's entry point)
+    mmLadder(MM_B1F, 'b', MM_1F, 'mt_moon'),
+    mmLadder(MM_B1F, 'c', MM_1F, 'mt_moon'),
+    mmLadder(MM_B1F, 'd', MM_1F, 'mt_moon'),
+    mmLadder(MM_B1F, 'p', MM_B2F, 'mt_moon_b2f'),   // down (first: the floor's goal)
+    mmLadder(MM_B1F, 'q', MM_B2F, 'mt_moon_b2f'),
+    mmLadder(MM_B1F, 'r', MM_B2F, 'mt_moon_b2f'),
+    mmLadder(MM_B1F, 's', MM_B2F, 'mt_moon_b2f'),
+  ],
+  npcs: [
+    mmTrainer(MM_B1F, '1', 'mt_moon_rocket2', Direction.RIGHT, [
+      'ROCKET: We need these\nfossils for the boss!',
+      'Get lost, kid!',
+    ], ROCKET),
+    mmTrainer(MM_B1F, '2', 'mt_moon_super_nerd', Direction.LEFT, [
+      'SUPER NERD: I study\nfossils in this cave!',
+      "Don't disturb me!",
+    ], 0xc06060),
+    mmTrainer(MM_B1F, '3', 'mt_moon_rocket3', Direction.UP, [
+      'ROCKET: No one gets\npast me!',
+      'TEAM ROCKET will\nrule this cave!',
+    ], ROCKET),
+    ...mmItems(MM_B1F, 'mt_moon_b1f', ['revive']),
+  ],
+  wildEncounters: {
+    grassRate: 0.08,
+    encounters: [
+      { speciesId: 41, minLevel: 8, maxLevel: 12, weight: 35 },  // Zubat
+      { speciesId: 74, minLevel: 9, maxLevel: 12, weight: 25 },  // Geodude
+      { speciesId: 46, minLevel: 9, maxLevel: 11, weight: 15 },  // Paras
+      { speciesId: 35, minLevel: 9, maxLevel: 12, weight: 15 },  // Clefairy
+      { speciesId: 104, minLevel: 9, maxLevel: 11, weight: 10 }, // Cubone
     ],
-    wildEncounters: {
-      grassRate: 0.08,
-      encounters: [
-        { speciesId: 41, minLevel: 7, maxLevel: 11, weight: 40 },  // Zubat
-        { speciesId: 74, minLevel: 8, maxLevel: 11, weight: 25 },  // Geodude
-        { speciesId: 46, minLevel: 8, maxLevel: 10, weight: 15 },  // Paras
-        { speciesId: 35, minLevel: 8, maxLevel: 12, weight: 15 },  // Clefairy
-        { speciesId: 104, minLevel: 8, maxLevel: 10, weight: 5 },  // Cubone
-      ],
-    },
-  };
-})();
+  },
+});
 
-// ─────────────────────────────────────────────────────────────
-// 1b. MT MOON B1F  (20x18 cave - intermediate floor)
-// ─────────────────────────────────────────────────────────────
-export const MT_MOON_B1F: MapData = (() => {
-  const W = 20, H = 18;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR);
-
-  // Cave wall borders
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.CAVE_WALL); setTile(x, 1, T.CAVE_WALL);
-    setTile(x, H - 1, T.CAVE_WALL); setTile(x, H - 2, T.CAVE_WALL);
-  }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.CAVE_WALL); setTile(1, y, T.CAVE_WALL);
-    setTile(W - 1, y, T.CAVE_WALL); setTile(W - 2, y, T.CAVE_WALL);
-  }
-
-  // Interior walls - creates an L-shaped corridor system
-  // Upper right block
-  fillRect(8, 2, 4, 3, T.CAVE_WALL);
-  // Central horizontal wall
-  fillRect(4, 7, 6, 2, T.CAVE_WALL);
-  // Right side wall
-  fillRect(13, 5, 2, 5, T.CAVE_WALL);
-  // Lower left block
-  fillRect(5, 11, 3, 2, T.CAVE_WALL);
-  // Lower right area
-  fillRect(11, 11, 3, 2, T.CAVE_WALL);
-  // Small wall upper left
-  fillRect(4, 3, 2, 2, T.CAVE_WALL);
-
-  // Water
-  fillRect(16, 7, 2, 2, T.WATER);
-  setTile(3, 10, T.WATER);
-
-  // Ladder tiles
-  setTile(15, 3, T.DOOR);   // Ladder up to 1F (from right side)
-  setTile(3, 14, T.DOOR);   // Ladder up to 1F (left side, near exit)
-  setTile(16, 14, T.DOOR);  // Ladder down to B2F
-
-  return {
-    id: 'mt_moon_b1f',
-    name: 'MT. MOON B1F',
-    width: W,
-    height: H,
-    tiles,
-    collision,
-    warps: [
-      // Ladder up to 1F (right side)
-      { x: 15, y: 3, targetMap: 'mt_moon', targetX: 24, targetY: 4 },
-      // Ladder up to 1F (left, near exit)
-      { x: 3, y: 14, targetMap: 'mt_moon', targetX: 5, targetY: 12 },
-      // Ladder down to B2F
-      { x: 16, y: 14, targetMap: 'mt_moon_b2f', targetX: 17, targetY: 3 },
+export const MT_MOON_B2F: MapData = mmFloor('mt_moon_b2f', 'MT. MOON B2F', MM_B2F, {
+  warps: [
+    mmLadder(MM_B2F, 'p', MM_B1F, 'mt_moon_b1f'),   // the arrival (first: the floor's entry point)
+    mmLadder(MM_B2F, 'q', MM_B1F, 'mt_moon_b1f'),
+    mmLadder(MM_B2F, 'r', MM_B1F, 'mt_moon_b1f'),
+    mmLadder(MM_B2F, 's', MM_B1F, 'mt_moon_b1f'),   // the way home, beyond the fossil chamber
+  ],
+  npcs: [
+    mmTrainer(MM_B2F, '1', 'mt_moon_rocket4', Direction.RIGHT, [
+      'ROCKET: The fossils\nare ours!',
+      "You'll never get\nthem!",
+    ], ROCKET),
+    mmTrainer(MM_B2F, '2', 'mt_moon_rocket5', Direction.DOWN, [
+      'ROCKET: Scram, kid!\nThis is ROCKET turf!',
+      'We guard the fossils!',
+    ], ROCKET),
+    // Fossil Super Nerd: stands in the corridor below the chamber, gone once beaten.
+    mmTrainer(MM_B2F, 'N', 'mt_moon_fossil_nerd', Direction.DOWN, [
+      'SUPER NERD: Hands off\nmy fossils!',
+      "I found them first!\nThey're mine!",
+    ], 0xc06060),
+    // Fossil item balls in the chamber's two stubs (only visible after the nerd is beaten)
+    { id: 'mt_moon_helix_fossil', ...MM_B2F.find('F')[0], spriteColor: 0x000000, direction: Direction.DOWN, dialogue: [], isItemBall: true, itemId: 'helix_fossil' },
+    { id: 'mt_moon_dome_fossil', ...MM_B2F.find('F')[1], spriteColor: 0x000000, direction: Direction.DOWN, dialogue: [], isItemBall: true, itemId: 'dome_fossil' },
+    // Rocket guard: blocks the right-edge corridor until Jessie & James are defeated
+    mmTalker(MM_B2F, 'G', 'mt_moon_rocket_guard', Direction.UP, [
+      'ROCKET: No one gets\nnear those fossils!',
+      'JESSIE and JAMES\nwill deal with you!',
+    ], ROCKET),
+    // Jessie & James wait at the end of the side passage off the right edge
+    mmTrainer(MM_B2F, 'J', 'jessie_mtmoon', Direction.RIGHT, [
+      'JESSIE & JAMES: Prepare\nfor trouble!',
+      'And make it double!',
+      'To protect the world\nfrom devastation!',
+      'To unite all peoples\nwithin our nation!',
+      'JESSIE!',
+      'JAMES!',
+      'TEAM ROCKET blasts off\nat the speed of light!',
+      'Surrender now or\nprepare to fight!',
+      'MEOWTH: Meowth,\nthat\'s right!',
+    ], 0xd02070),
+    mmTalker(MM_B2F, 'j', 'james_mtmoon', Direction.RIGHT, [
+      'JAMES: We\'re here on\nbehalf of the boss!',
+      'These fossils are the\nproperty of TEAM\nROCKET!',
+    ], 0x6060d0),
+    ...mmItems(MM_B2F, 'mt_moon_b2f', ['super_potion', 'tm12_water_gun']),
+  ],
+  wildEncounters: {
+    grassRate: 0.08,
+    encounters: [
+      { speciesId: 41, minLevel: 9, maxLevel: 12, weight: 30 },  // Zubat
+      { speciesId: 74, minLevel: 9, maxLevel: 12, weight: 25 },  // Geodude
+      { speciesId: 46, minLevel: 9, maxLevel: 12, weight: 15 },  // Paras
+      { speciesId: 35, minLevel: 9, maxLevel: 12, weight: 20 },  // Clefairy (more common)
+      { speciesId: 104, minLevel: 9, maxLevel: 12, weight: 10 }, // Cubone
     ],
-    npcs: [
-      // Trainers (3 on B1F)
-      {
-        id: 'mt_moon_rocket2',
-        x: 6, y: 5,
-        spriteColor: 0x404040,
-        direction: Direction.RIGHT,
-        dialogue: [
-          'ROCKET: We need these\nfossils for the boss!',
-          "Get lost, kid!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'mt_moon_super_nerd',
-        x: 12, y: 4,
-        spriteColor: 0xc06060,
-        direction: Direction.DOWN,
-        dialogue: [
-          'SUPER NERD: I study\nfossils in this cave!',
-          "Don't disturb me!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'mt_moon_rocket3',
-        x: 10, y: 13,
-        spriteColor: 0x404040,
-        direction: Direction.UP,
-        dialogue: [
-          'ROCKET: No one gets\npast me!',
-          'TEAM ROCKET will\nrule this cave!',
-        ],
-        isTrainer: true,
-        sightRange: 4,
-      },
-      // Items
-      {
-        id: 'mt_moon_b1f_revive',
-        x: 17, y: 5,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'revive',
-      },
-    ],
-    wildEncounters: {
-      grassRate: 0.08,
-      encounters: [
-        { speciesId: 41, minLevel: 8, maxLevel: 12, weight: 35 },  // Zubat
-        { speciesId: 74, minLevel: 9, maxLevel: 12, weight: 25 },  // Geodude
-        { speciesId: 46, minLevel: 9, maxLevel: 11, weight: 15 },  // Paras
-        { speciesId: 35, minLevel: 9, maxLevel: 12, weight: 15 },  // Clefairy
-        { speciesId: 104, minLevel: 9, maxLevel: 11, weight: 10 }, // Cubone
-      ],
-    },
-  };
-})();
-
-// ─────────────────────────────────────────────────────────────
-// 1c. MT MOON B2F  (22x18 cave - fossil floor)
-// ─────────────────────────────────────────────────────────────
-export const MT_MOON_B2F: MapData = (() => {
-  const W = 22, H = 18;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR);
-
-  // Cave wall borders
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.CAVE_WALL); setTile(x, 1, T.CAVE_WALL);
-    setTile(x, H - 1, T.CAVE_WALL); setTile(x, H - 2, T.CAVE_WALL);
-  }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.CAVE_WALL); setTile(1, y, T.CAVE_WALL);
-    setTile(W - 1, y, T.CAVE_WALL); setTile(W - 2, y, T.CAVE_WALL);
-  }
-
-  // Interior walls - winding path to fossil room
-  // Upper corridor walls
-  fillRect(4, 2, 5, 2, T.CAVE_WALL);
-  fillRect(12, 2, 3, 3, T.CAVE_WALL);
-
-  // Central maze
-  fillRect(3, 6, 3, 2, T.CAVE_WALL);
-  fillRect(8, 5, 2, 4, T.CAVE_WALL);
-  fillRect(12, 7, 4, 2, T.CAVE_WALL);
-
-  // Lower walls
-  fillRect(4, 10, 4, 2, T.CAVE_WALL);
-  fillRect(10, 11, 2, 3, T.CAVE_WALL);
-  fillRect(15, 10, 2, 3, T.CAVE_WALL);
-
-  // Fossil room enclosure (top-right area)
-  // Wall surrounds the fossil area, with one opening
-  fillRect(16, 5, 4, 1, T.CAVE_WALL);
-  setTile(16, 6, T.CAVE_WALL);
-  setTile(19, 6, T.CAVE_WALL);
-  setTile(16, 7, T.CAVE_WALL);
-  setTile(19, 7, T.CAVE_WALL);
-  setTile(16, 8, T.CAVE_WALL);
-  setTile(19, 8, T.CAVE_WALL);
-  fillRect(16, 9, 1, 1, T.CAVE_WALL);
-  fillRect(19, 9, 1, 1, T.CAVE_WALL);
-  // Opening at bottom (y=9, x=17-18)
-
-  // Extend corridor south from fossil room (forces passage through Jessie & James gate)
-  for (let y = 10; y <= 14; y++) {
-    setTile(16, y, T.CAVE_WALL);  // Left wall (extends existing)
-    setTile(18, y, T.CAVE_WALL);  // Right wall (new)
-  }
-
-  // Water pool
-  fillRect(3, 13, 2, 2, T.WATER);
-  setTile(13, 5, T.WATER);
-
-  // Ladder tile
-  setTile(17, 3, T.DOOR);  // Ladder up to B1F
-
-  return {
-    id: 'mt_moon_b2f',
-    name: 'MT. MOON B2F',
-    width: W,
-    height: H,
-    tiles,
-    collision,
-    warps: [
-      // Ladder up to B1F
-      { x: 17, y: 3, targetMap: 'mt_moon_b1f', targetX: 16, targetY: 14 },
-    ],
-    npcs: [
-      // Trainers (3 on B2F)
-      {
-        id: 'mt_moon_rocket4',
-        x: 6, y: 4,
-        spriteColor: 0x404040,
-        direction: Direction.DOWN,
-        dialogue: [
-          'ROCKET: The fossils\nare ours!',
-          "You'll never get\nthem!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'mt_moon_rocket5',
-        x: 12, y: 13,
-        spriteColor: 0x404040,
-        direction: Direction.LEFT,
-        dialogue: [
-          "ROCKET: Scram, kid!\nThis is ROCKET turf!",
-          "We guard the fossils!",
-        ],
-        isTrainer: true,
-        sightRange: 4,
-      },
-      // Fossil Super Nerd - guards the fossils
-      {
-        id: 'mt_moon_fossil_nerd',
-        x: 17, y: 9,
-        spriteColor: 0xc06060,
-        direction: Direction.DOWN,
-        dialogue: [
-          'SUPER NERD: Hands off\nmy fossils!',
-          "I found them first!\nThey're mine!",
-        ],
-        isTrainer: true,
-        sightRange: 2,
-      },
-      // Fossil item balls (only visible after fossil nerd defeated)
-      {
-        id: 'mt_moon_helix_fossil',
-        x: 17, y: 6,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'helix_fossil',
-      },
-      {
-        id: 'mt_moon_dome_fossil',
-        x: 18, y: 6,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'dome_fossil',
-      },
-      // Rocket guard - blocks fossil corridor until Jessie & James defeated
-      {
-        id: 'mt_moon_rocket_guard',
-        x: 17, y: 13,
-        spriteColor: 0x404040,
-        direction: Direction.UP,
-        dialogue: [
-          'ROCKET: No one gets\nnear those fossils!',
-          'JESSIE and JAMES\nwill deal with you!',
-        ],
-      },
-      // Jessie & James - guarding approach to fossil room
-      {
-        id: 'jessie_mtmoon',
-        x: 13, y: 10,
-        spriteColor: 0xd02070,
-        direction: Direction.LEFT,
-        dialogue: [
-          'JESSIE & JAMES: Prepare\nfor trouble!',
-          'And make it double!',
-          'To protect the world\nfrom devastation!',
-          'To unite all peoples\nwithin our nation!',
-          'JESSIE!',
-          'JAMES!',
-          'TEAM ROCKET blasts off\nat the speed of light!',
-          'Surrender now or\nprepare to fight!',
-          'MEOWTH: Meowth,\nthat\'s right!',
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'james_mtmoon',
-        x: 14, y: 10,
-        spriteColor: 0x6060d0,
-        direction: Direction.LEFT,
-        dialogue: [
-          'JAMES: We\'re here on\nbehalf of the boss!',
-          'These fossils are the\nproperty of TEAM\nROCKET!',
-        ],
-      },
-      // Items
-      {
-        id: 'mt_moon_b2f_super_potion',
-        x: 3, y: 8,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'super_potion',
-      },
-    ],
-    wildEncounters: {
-      grassRate: 0.08,
-      encounters: [
-        { speciesId: 41, minLevel: 9, maxLevel: 12, weight: 30 },  // Zubat
-        { speciesId: 74, minLevel: 9, maxLevel: 12, weight: 25 },  // Geodude
-        { speciesId: 46, minLevel: 9, maxLevel: 12, weight: 15 },  // Paras
-        { speciesId: 35, minLevel: 9, maxLevel: 12, weight: 20 },  // Clefairy (more common)
-        { speciesId: 104, minLevel: 9, maxLevel: 12, weight: 10 }, // Cubone
-      ],
-    },
-  };
-})();
+  },
+});
 
 // ─────────────────────────────────────────────────────────────
 // 2. ROUTE 4  (25x12 horizontal)
