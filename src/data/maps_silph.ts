@@ -153,7 +153,7 @@ const SC_5F = createMapFromSketch([
 ], SC_LEGEND);
 const SC_6F = createMapFromSketch([
   '####################',
-  '#...........#.....##',
+  '#i..........#.....##',
   '###########.#.#A#.##',
   '#......u#...#.#...##',
   '#.#.#####.###.#.####',
@@ -163,7 +163,7 @@ const SC_6F = createMapFromSketch([
   '###.#.#####.#.###.##',
   '#i#...#.....#.#...##',
   '#.#####.#B###.#.####',
-  '#..i..D.......#...##',
+  '#.....D.......#...##',
   '####################',
   '####################',
 ], SC_LEGEND);
@@ -348,7 +348,7 @@ const SILPH_CO_5F = silphFloor(5, {
   ],
 });
 
-// 6F: a long floor; a locked wing with two items.
+// 6F: a long floor; a locked wing with an item at its end, two more in dead ends.
 const SILPH_CO_6F = silphFloor(6, {
   npcs: [
     ...scItems(SC_6F, 'silph_6f', ['hp_up', 'x_accuracy', 'rare_candy']),
