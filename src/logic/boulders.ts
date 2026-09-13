@@ -133,7 +133,13 @@ export function instantiateMap(base: MapData, storyFlags: Record<string, boolean
   for (const p of landed) {
     const t = base.tiles[p.y]?.[p.x];
     if (t === undefined) continue;
-    if (t === TileType.CURRENT) { setTile(map, p, TileType.WATER, true); continue; }
+    if (t === TileType.CURRENT) {
+      // Still water now: the tile type and its flow direction both go.
+      setTile(map, p, TileType.WATER, true);
+      if (map.currents === base.currents) map.currents = { ...base.currents };
+      delete map.currents?.[key(p)];
+      continue;
+    }
     if (t === TileType.WATER || map.collision[p.y][p.x]) continue;
     if (!origins.has(key(p))) origins.set(key(p), p);
     setTile(map, p, TileType.BOULDER, true);

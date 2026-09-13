@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { MapData, TileType as T } from '../../src/types/map.types';
 import { createMapShape } from '../../src/data/mapBuilder';
+import { computeCurrentSlide } from '../../src/logic/spinTiles';
+import { Direction as D } from '../../src/utils/constants';
 import {
   lockFlag, getBoulderLocks, tileUnder, isPlatePressed, instantiateMap, pushBoulder,
   solve, canReach, canPressPlate, dropFlag, getBoulderDrops, holeAt, landedBoulders, canDropBoulders,
@@ -16,6 +18,7 @@ function sketch(rows: string[], gates: MapData['gates'] = [], id = 'test_cave', 
   return { id, name: id, width: W, height: H, tiles, collision, warps: [], npcs: [], gates, holes };
 }
 const at = (m: MapData, x: number, y: number) => m.tiles[y][x];
+const xy = (s: { path: { x: number; y: number }[] }) => s.path.map(p => `${p.x},${p.y}`);
 
 describe('lock flags', () => {
   it('round-trips through the flag name', () => {
@@ -203,13 +206,14 @@ describe('boulder holes', () => {
     '#.O..#',
     '######',
   ], [], 'upper', [{ x: 3, y: 1, targetMap: 'lower', targetX: 2, targetY: 1 }]);
-  // Lower floor: a river of currents, and a plate the second hole lands on.
+  // Lower floor: a river of currents flowing east.
   const lower = sketch([
     '######',
     '#~==~#',
     '#.S..#',
     '######',
   ], [], 'lower');
+  lower.currents = { '2,1': D.RIGHT, '3,1': D.RIGHT };
   const maps = { upper, lower };
 
   it('drop flags round-trip and ignore other maps', () => {
@@ -265,6 +269,11 @@ describe('boulder holes', () => {
     expect(map.collision[1][2]).toBe(true);
     expect(at(map, 3, 1)).toBe(T.CURRENT);
     expect(at(lower, 2, 1)).toBe(T.CURRENT);
+    // The flow direction goes with the tile, so a slide stops there; the base data keeps both.
+    expect(map.currents).toEqual({ '3,1': D.RIGHT });
+    expect(lower.currents).toEqual({ '2,1': D.RIGHT, '3,1': D.RIGHT });
+    expect(computeCurrentSlide(map, 2, 1, (x, y) => map.collision[y][x] && map.tiles[y][x] !== T.WATER && map.tiles[y][x] !== T.CURRENT)).toEqual({ path: [], end: 'stop' });
+    expect(xy(computeCurrentSlide(map, 3, 1, (x, y) => map.tiles[y][x] === T.CAVE_WALL))).toEqual(['4,1']);
   });
 
   it('landing on a floor tile leaves a boulder there; on a plate it presses it', () => {
