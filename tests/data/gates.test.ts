@@ -2,7 +2,8 @@
 // gated map must be completable from each of its entrances by pushing
 // boulders. A plate may also be pressed by a boulder dropped through a hole on
 // another floor: exits are checked with every such boulder landed, and the
-// floor above must be able to drop it. The first gated dungeon is Victory Road.
+// floor above must be able to drop it. Spinner floors (Rocket Hideout) are in
+// too: the solver rides the arrows. The first gated dungeon is Victory Road.
 import { describe, it, expect } from 'vitest';
 import { ALL_MAPS } from '../../src/data/maps';
 import { MapData, TileType } from '../../src/types/map.types';
@@ -18,8 +19,9 @@ const keyBalls = (map: MapData) => map.npcs.filter(n => n.isItemBall && n.itemId
 /** Dungeon family root: victory_road_2f, seafoam_b1f, pokemon_tower_3f -> victory_road, seafoam, pokemon_tower. */
 const root = (id: string) => id.replace(/_b?\d+f$/, '');
 
-/** Maps with a boulder puzzle: gates/plates, or holes (drops that change another floor). */
+/** Maps with a puzzle the solver models: gates/plates, holes (drops that change another floor), or spin tiles. */
 const gatedMaps = Object.values(ALL_MAPS).filter(m => (m.gates?.length ?? 0) > 0 || (m.holes?.length ?? 0) > 0 ||
+  Object.keys(m.spinTiles ?? {}).length > 0 ||
   m.tiles.some(row => row.some(t => t === TileType.SWITCH_PLATE || t === TileType.GATE)));
 
 describe('switch plates and gates', () => {

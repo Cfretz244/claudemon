@@ -15,6 +15,8 @@
 // Everything here is pure; OverworldScene owns the sprites and the sounds.
 
 import { GateData, HoleData, MapData, TileType } from '../types/map.types';
+import { DIR_VECTORS } from '../utils/constants';
+import { computeSlideWith } from './spinTiles';
 
 export interface Pos { x: number; y: number }
 export interface BoulderLock { origin: Pos; plate: Pos }
@@ -359,6 +361,26 @@ function walk(
         } else if (!free(n, bs, flags)) {
           continue;
         }
+      }
+      // Stepping onto a spin tile slides the player (see spinTiles.ts): they end
+      // up wherever the arrows lead. A slide that would carry them onto a blocked
+      // warp tile (every warp but the goal, in the tests) leaves the floor: no state.
+      const arrow = base.spinTiles?.[key(n)];
+      if (arrow && tile(n) === TileType.SPIN_TILE) {
+        const s = computeSlideWith(base, n.x, n.y, {
+          arrows: base.spinTiles!,
+          isBlocked: (x, y) => !free({ x, y }, nbs, flags),
+          isStop: (x, y) => tile({ x, y }) === TileType.STOP_TILE,
+        });
+        if (s.end === 'loop') continue;
+        const last = s.path[s.path.length - 1];
+        const end = last ? { x: last.x, y: last.y } : n;
+        if (s.end === 'blocked') {
+          const v = DIR_VECTORS[last ? last.dir : arrow];
+          if (base.warps.some(w => w.x === end.x + v.x && w.y === end.y + v.y)) continue;
+        }
+        push(end, nbs, flags);
+        continue;
       }
       push(n, nbs, flags);
     }

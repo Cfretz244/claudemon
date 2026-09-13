@@ -198,6 +198,60 @@ describe('solver', () => {
   });
 });
 
+// > < ^ v arrows, x stop; the sketch's warps are given explicitly.
+function spinSketch(rows: string[], warps: MapData['warps'] = []): MapData {
+  const H = rows.length, W = rows[0].length;
+  const { tiles, collision, setTile } = createMapShape(W, H, T.INDOOR_FLOOR);
+  const arrows: Record<string, D> = { '<': D.LEFT, '>': D.RIGHT, '^': D.UP, v: D.DOWN };
+  const spinTiles: Record<string, D> = {};
+  rows.forEach((r, y) => [...r].forEach((c, x) => {
+    if (c === '#') setTile(x, y, T.CAVE_WALL);
+    else if (c === 'x') setTile(x, y, T.STOP_TILE);
+    else if (c === 'O') setTile(x, y, T.BOULDER);
+    else if (arrows[c]) { setTile(x, y, T.SPIN_TILE); spinTiles[`${x},${y}`] = arrows[c]; }
+  }));
+  return { id: 'spin', name: 'spin', width: W, height: H, tiles, collision, warps, npcs: [], spinTiles };
+}
+
+describe('solver: spin tiles', () => {
+  it('stepping onto an arrow ends where the slide ends; the tiles slid over are not stood on', () => {
+    const m = spinSketch(['########', '#.>.>.x#', '#.#.#.##', '########']);
+    // from (1,1) the only move east is onto the arrow, which rides (redirected by the
+    // second arrow) to the stop at (6,1); the branch at (3,2) is only under the slide
+    expect(canReach(m, { x: 1, y: 1 }, { x: 6, y: 1 }).found).toBe(true);
+    expect(canReach(m, { x: 1, y: 1 }, { x: 5, y: 2 }).found).toBe(true);
+    expect(canReach(m, { x: 1, y: 1 }, { x: 3, y: 2 }).found).toBe(false);
+    // and there is no way back west past an arrow
+    expect(canReach(m, { x: 6, y: 1 }, { x: 5, y: 1 }).found).toBe(true);
+    expect(canReach(m, { x: 6, y: 1 }, { x: 1, y: 1 }).found).toBe(false);
+    expect(canReach(m, { x: 6, y: 1 }, { x: 1, y: 2 }).found).toBe(false);
+  });
+  it('a slide stops before a wall, a trainer or a boulder; an arrow into a wall is a tile to stand on', () => {
+    const m = spinSketch(['#######', '#.>...#', '#.....#', '#######']);
+    expect(canReach(m, { x: 1, y: 1 }, { x: 5, y: 1 }).found).toBe(true);
+    expect(canReach(m, { x: 1, y: 1 }, { x: 4, y: 1 }, { blocked: [{ x: 5, y: 1 }] }).found).toBe(true);
+    expect(canReach(m, { x: 1, y: 1 }, { x: 5, y: 1 }, { blocked: [{ x: 5, y: 1 }] }).found).toBe(false);
+    const b = spinSketch(['#######', '#.>.O.#', '#.....#', '#######']);
+    expect(canReach(b, { x: 1, y: 1 }, { x: 3, y: 1 }).found).toBe(true);
+    const noop = spinSketch(['#####', '#.v.#', '#####']);
+    expect(canReach(noop, { x: 1, y: 1 }, { x: 3, y: 1 }).found).toBe(true);
+  });
+  it('a slide onto a blocked warp tile leaves the floor (no state); onto the goal warp it arrives', () => {
+    const warp = { x: 5, y: 1, targetMap: 'elsewhere', targetX: 0, targetY: 0 };
+    const m = spinSketch(['#######', '#.>...#', '#.#####', '#######'], [warp]);
+    expect(canReach(m, { x: 1, y: 1 }, warp).found).toBe(true);
+    // the warp is not the goal: it is blocked, and the ride onto it means the player is gone
+    expect(canReach(m, { x: 1, y: 1 }, { x: 4, y: 1 }, { blocked: [warp] }).found).toBe(false);
+    expect(canReach(m, { x: 1, y: 1 }, { x: 1, y: 2 }, { blocked: [warp] }).found).toBe(true);
+  });
+  it('arrows facing each other are a dead branch, not an infinite search', () => {
+    const m = spinSketch(['#######', '#.>.<.#', '#.....#', '#######']);
+    const r = canReach(m, { x: 1, y: 1 }, { x: 5, y: 1 });
+    expect(r.exhausted).toBe(false);
+    expect(r.found).toBe(true); // along row 2
+  });
+});
+
 describe('boulder holes', () => {
   // Upper floor: a boulder beside a hole; the hole drops onto the lower floor's current.
   const upper = sketch([

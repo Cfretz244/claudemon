@@ -2291,6 +2291,35 @@ export const TRAINERS: Record<string, TrainerData> = {
       after: ['The BOSS will\nclobber you!'],
     },
   },
+  rocket_hideout_b4f_grunt2: {
+    id: 'rocket_hideout_b4f_grunt2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 41, level: 25 },  // Zubat
+      { speciesId: 42, level: 25 },  // Golbat
+    ],
+    prizeMoney: 1000,
+    dialogue: {
+      before: ['ROCKET: How did you\nget the lift working?!'],
+      after: ['The BOSS won\'t like\nthis...'],
+    },
+  },
+  rocket_hideout_b4f_grunt3: {
+    id: 'rocket_hideout_b4f_grunt3',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 27, level: 25 },  // Sandshrew
+      { speciesId: 23, level: 24 },  // Ekans
+      { speciesId: 28, level: 26 },  // Sandslash
+    ],
+    prizeMoney: 1040,
+    dialogue: {
+      before: ['ROCKET: The BOSS\'s\noffice is right there.\nYou won\'t see it!'],
+      after: ['Go on then... the\nBOSS will finish you.'],
+    },
+  },
 
   // Pokemon Tower Rockets
   tower_rocket1: {
