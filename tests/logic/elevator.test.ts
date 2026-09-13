@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { elevatorAccess, elevatorTarget, DEFAULT_LOCKED_MESSAGE, NO_ELEVATOR_MESSAGE } from '../../src/logic/elevator';
+import { elevatorAccess, elevatorTarget, visitedFlag, DEFAULT_LOCKED_MESSAGE, NO_ELEVATOR_MESSAGE } from '../../src/logic/elevator';
 import { GateState } from '../../src/logic/warpGate';
 
 const FLOORS = [
@@ -24,6 +24,14 @@ describe('elevatorAccess', () => {
   it('a met (or absent) requirement returns the floor list', () => {
     expect(elevatorAccess({ elevator: { floors: FLOORS, requires: { item: 'lift_key' } } }, state(['lift_key']))).toEqual({ ok: true, floors: FLOORS });
     expect(elevatorAccess({ elevator: { floors: FLOORS } }, state())).toEqual({ ok: true, floors: FLOORS });
+  });
+  it('stops with their own unmet requirement are left out of the menu (Silph Co: floors not yet visited)', () => {
+    const visited = FLOORS.map(f => ({ ...f, requires: { flag: visitedFlag(f.targetMap) } }));
+    const data = { elevator: { floors: visited } };
+    expect(elevatorAccess(data, state())).toEqual({ ok: true, floors: [] });
+    expect(elevatorAccess(data, state([], { visited_a_1f: true }))).toEqual({ ok: true, floors: [visited[0]] });
+    expect(elevatorAccess(data, state([], { visited_a_1f: true, visited_a_5f: true }))).toEqual({ ok: true, floors: visited });
+    expect(visitedFlag('silph_co_3f')).toBe('visited_silph_co_3f');
   });
 });
 

@@ -121,13 +121,18 @@ export interface ElevatorFloor {
   targetMap: string;
   targetX: number;
   targetY: number;
+  /**
+   * The stop is listed only while this holds (Silph Co: `visited_<map id>`,
+   * set whenever the player arrives on a floor that has an elevator).
+   */
+  requires?: WarpRequirement;
 }
 
 /**
  * An elevator shared by several floors. Every floor that has an `elevator_`
- * NPC declares the same `ElevatorData`; the menu lists `floors` and greys out
- * the current one. While `requires` is unmet the elevator shows
- * `lockedMessage` instead (Rocket Hideout: the Lift Key).
+ * NPC declares the same `ElevatorData`; the menu lists the `floors` whose
+ * `requires` holds and greys out the current one. While `requires` is unmet
+ * the elevator shows `lockedMessage` instead (Rocket Hideout: the Lift Key).
  */
 export interface ElevatorData {
   floors: ElevatorFloor[];
