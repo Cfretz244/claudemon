@@ -2510,7 +2510,9 @@ const MAP_MUSIC: Record<string, string> = {
   victory_road: 'cave',
   victory_road_2f: 'cave',
   victory_road_3f: 'cave',
-  cerulean_cave: 'cave',
+  cerulean_cave_1f: 'cave',
+  cerulean_cave_2f: 'cave',
+  cerulean_cave_b1f: 'cave',
   pokemon_mansion: 'pokemon_mansion',
 
   // Lavender Town area

@@ -164,7 +164,7 @@ const MAP_GROUPS: { label: string; maps: string[] }[] = [
   },
   {
     label: 'Post-Game',
-    maps: ['cerulean_cave'],
+    maps: ['cerulean_cave_1f', 'cerulean_cave_2f', 'cerulean_cave_b1f'],
   },
 ];
 

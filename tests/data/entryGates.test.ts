@@ -20,7 +20,7 @@ describe('map entry gates (migrated from warpTo)', () => {
   it('only the expected maps carry gates', () => {
     const gated = Object.values(ALL_MAPS).filter(m => m.entryGates?.length).map(m => m.id).sort();
     expect(gated).toEqual([
-      'cinnabar_gym', 'elite_four_lorelei', 'pewter_museum_2f', 'pokemon_tower_7f', 'rocket_hideout_b1f',
+      'cerulean_cave_1f', 'cinnabar_gym', 'elite_four_lorelei', 'pewter_museum_2f', 'pokemon_tower_7f', 'rocket_hideout_b1f',
       'route16', 'route17', 'route2', 'route4', 'saffron_city',
       'silph_co_10f', 'silph_co_11f', 'silph_co_1f', 'silph_co_2f', 'silph_co_3f', 'silph_co_4f', 'silph_co_5f', 'silph_co_6f', 'silph_co_7f', 'silph_co_8f', 'silph_co_9f',
       'ss_anne', 'viridian_gym',

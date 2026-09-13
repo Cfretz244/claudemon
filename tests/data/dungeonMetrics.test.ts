@@ -29,6 +29,7 @@ interface FloorSpec {
   map: string;
   from: string;          // warp targetMap the player arrives from
   to: string;            // warp targetMap of the goal, or `npc:<id>`
+  goal?: number;         // which of the warps to `to` is the goal (default: the nearest)
   walkablePct: number;   // baseline: today's value, rounded up
   pathRatio: number;     // baseline: today's value, rounded down
 }
@@ -76,7 +77,9 @@ const BASELINE: FloorSpec[] = [
   { map: 'victory_road',        from: 'route23',           to: 'victory_road_2f',          walkablePct: 36, pathRatio: 1.5 },
   { map: 'victory_road_2f',     from: 'victory_road',      to: 'victory_road_3f',          walkablePct: 24, pathRatio: 1.5 },
   { map: 'victory_road_3f',     from: 'victory_road_2f',   to: 'npc:vr_trainer10',         walkablePct: 19, pathRatio: 2.5 },
-  { map: 'cerulean_cave',       from: 'cerulean_city',     to: 'npc:mewtwo',               walkablePct: 43, pathRatio: 1.7 },
+  { map: 'cerulean_cave_1f',    from: 'cerulean_city',     to: 'cerulean_cave_2f', goal: 0, walkablePct: 14, pathRatio: 2.8 },
+  { map: 'cerulean_cave_2f',    from: 'cerulean_cave_1f',  to: 'cerulean_cave_1f', goal: 4, walkablePct: 20, pathRatio: 2.3 },
+  { map: 'cerulean_cave_b1f',   from: 'cerulean_cave_1f',  to: 'npc:mewtwo',               walkablePct: 10, pathRatio: 2.0 },
 ];
 
 function walkableShare(map: MapData): number {
@@ -118,7 +121,7 @@ function bfs(map: MapData, sx: number, sy: number): number[][] {
 }
 
 /** Where the player stands for a goal: on the warp tile, or adjacent to the NPC. */
-function goalTiles(map: MapData, to: string): [number, number][] {
+function goalTiles(map: MapData, to: string, goal?: number): [number, number][] {
   if (to.startsWith('npc:')) {
     const npc = map.npcs.find(n => n.id === to.slice(4));
     if (!npc) return [];
@@ -126,13 +129,14 @@ function goalTiles(map: MapData, to: string): [number, number][] {
       .map(([dx, dy]) => [npc.x + dx, npc.y + dy] as [number, number])
       .filter(([x, y]) => x >= 0 && y >= 0 && x < map.width && y < map.height && (!map.collision[y][x] || surfable(map, x, y)));
   }
-  return map.warps.filter(w => w.targetMap === to).map(w => [w.x, w.y]);
+  const warps = map.warps.filter(w => w.targetMap === to);
+  return (goal === undefined ? warps : warps.slice(goal, goal + 1)).map(w => [w.x, w.y]);
 }
 
-function pathRatio(map: MapData, from: string, to: string): number {
+function pathRatio(map: MapData, from: string, to: string, goal?: number): number {
   const start = map.warps.find(w => w.targetMap === from);
   if (!start) throw new Error(`${map.id}: no warp from ${from}`);
-  const goals = goalTiles(map, to);
+  const goals = goalTiles(map, to, goal);
   if (goals.length === 0) throw new Error(`${map.id}: no goal ${to}`);
   const dist = bfs(map, start.x, start.y);
   let best = Infinity;
@@ -155,7 +159,7 @@ describe('dungeon layout ratchet', () => {
         expect(walkableShare(map)).toBeLessThanOrEqual(spec.walkablePct);
       });
       it(`path ${spec.from} -> ${spec.to} is at least ${spec.pathRatio}x the straight line`, () => {
-        expect(pathRatio(map, spec.from, spec.to)).toBeGreaterThanOrEqual(spec.pathRatio);
+        expect(pathRatio(map, spec.from, spec.to, spec.goal)).toBeGreaterThanOrEqual(spec.pathRatio);
       });
     });
   }
@@ -167,7 +171,8 @@ describe('dungeon layout ratchet', () => {
     'pokemon_mansion', 'pokemon_mansion_2f', 'pokemon_mansion_3f', 'pokemon_mansion_b1f',
     ...Array.from({ length: 11 }, (_, i) => `silph_co_${i + 1}f`),
     'rocket_hideout_b1f', 'rocket_hideout_b2f', 'rocket_hideout_b3f', 'rocket_hideout_b4f',
-    ...Array.from({ length: 6 }, (_, i) => `pokemon_tower_${i + 2}f`)]);
+    ...Array.from({ length: 6 }, (_, i) => `pokemon_tower_${i + 2}f`),
+    'cerulean_cave_1f', 'cerulean_cave_2f', 'cerulean_cave_b1f']);
 
   it('rebuilt floors meet the plan bar; the reference floor (Viridian Forest) is still better than every floor not yet rebuilt', () => {
     const forest = BASELINE.find(s => s.map === 'viridian_forest')!;
