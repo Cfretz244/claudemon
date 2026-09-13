@@ -2463,6 +2463,131 @@ export const TRAINERS: Record<string, TrainerData> = {
       after: ['The boss will\navenge me!'],
     },
   },
+  silph_6f_grunt2: {
+    id: 'silph_6f_grunt2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 24, level: 34 },  // Arbok
+      { speciesId: 109, level: 34 }, // Koffing
+    ],
+    prizeMoney: 1360,
+    dialogue: {
+      before: ['ROCKET: Nobody gets\npast this floor!'],
+      after: ['Somebody got past...'],
+    },
+  },
+  silph_8f_grunt1: {
+    id: 'silph_8f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 20, level: 35 },  // Raticate
+      { speciesId: 42, level: 35 },  // Golbat
+    ],
+    prizeMoney: 1400,
+    dialogue: {
+      before: ['ROCKET: Still\nclimbing? The stairs\nonly get longer!'],
+      after: ['Take the elevator\nnext time!'],
+    },
+  },
+  silph_8f_grunt2: {
+    id: 'silph_8f_grunt2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 105, level: 36 }, // Marowak
+    ],
+    prizeMoney: 1440,
+    dialogue: {
+      before: ['ROCKET: We took the\nwhole building. What\ncan one kid do?'],
+      after: ['Apparently plenty.'],
+    },
+  },
+  silph_9f_grunt1: {
+    id: 'silph_9f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 96, level: 35 },  // Drowzee
+      { speciesId: 97, level: 35 },  // Hypno
+    ],
+    prizeMoney: 1400,
+    dialogue: {
+      before: ['ROCKET: The employees\nare locked in their\nrooms. Stay out!'],
+      after: ['Fine, go on in.'],
+    },
+  },
+  silph_9f_grunt2: {
+    id: 'silph_9f_grunt2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 28, level: 36 },  // Sandslash
+      { speciesId: 67, level: 36 },  // Machoke
+    ],
+    prizeMoney: 1440,
+    dialogue: {
+      before: ['ROCKET: Two more\nfloors and you meet\nthe boss. If you\nlive!'],
+      after: ['You... lived.'],
+    },
+  },
+  silph_10f_grunt1: {
+    id: 'silph_10f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 110, level: 36 }, // Weezing
+      { speciesId: 101, level: 36 }, // Electrode
+    ],
+    prizeMoney: 1440,
+    dialogue: {
+      before: ['ROCKET: The boss\nsaid no visitors!'],
+      after: ['The boss will not\nlike this.'],
+    },
+  },
+  silph_10f_grunt2: {
+    id: 'silph_10f_grunt2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 47, level: 37 },  // Parasect
+      { speciesId: 89, level: 37 },  // Muk
+    ],
+    prizeMoney: 1480,
+    dialogue: {
+      before: ['ROCKET: Turn back,\nor be turned back!'],
+      after: ['I was the one turned\nback...'],
+    },
+  },
+  silph_11f_grunt1: {
+    id: 'silph_11f_grunt1',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 42, level: 37 },  // Golbat
+      { speciesId: 24, level: 37 },  // Arbok
+    ],
+    prizeMoney: 1480,
+    dialogue: {
+      before: ['ROCKET: The top\nfloor! Only the boss\nand his guests come\nup here!'],
+      after: ['You are no guest of\nthe boss!'],
+    },
+  },
+  silph_11f_grunt2: {
+    id: 'silph_11f_grunt2',
+    name: 'ROCKET GRUNT',
+    class: 'Team Rocket',
+    team: [
+      { speciesId: 97, level: 38 },  // Hypno
+      { speciesId: 110, level: 38 }, // Weezing
+    ],
+    prizeMoney: 1520,
+    dialogue: {
+      before: ['ROCKET: You will\nnot disturb the\nboss!'],
+      after: ['The boss... is\nright there...'],
+    },
+  },
   giovanni_silph: {
     id: 'giovanni_silph',
     name: 'GIOVANNI',

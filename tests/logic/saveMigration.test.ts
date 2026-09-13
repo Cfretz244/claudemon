@@ -14,7 +14,7 @@ describe('migrateLegacyLocation', () => {
 
   it('remaps silph_co to silph_co_1f', () => {
     expect(migrateLegacyLocation({ mapId: 'silph_co' }))
-      .toEqual({ mapId: 'silph_co_1f', x: 7, y: 12 });
+      .toEqual({ mapId: 'silph_co_1f', x: 9, y: 12 });
   });
 
   it('remaps seafoam_islands to the 1F west pocket', () => {

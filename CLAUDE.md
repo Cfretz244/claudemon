@@ -140,7 +140,7 @@ src/
     maps_central.ts                 # Lavender, Celadon, Saffron (CENTRAL_MAPS)
     maps_south.ts                   # Fuchsia, Safari Zone, Cycling Road (SOUTH_MAPS)
     maps_endgame.ts                 # Cinnabar, Victory Road, Indigo Plateau (ENDGAME_MAPS)
-    maps_silph.ts                   # Silph Co 1F-7F with teleport pads (SILPH_MAPS)
+    maps_silph.ts                   # Silph Co 1F-11F: sketch mazes, Card Key doors, pads, elevator (SILPH_MAPS)
   types/
     pokemon.types.ts                # PokemonSpecies, PokemonInstance, Move interfaces
     battle.types.ts                 # BattleType enum

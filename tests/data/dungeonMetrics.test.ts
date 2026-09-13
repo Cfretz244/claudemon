@@ -47,8 +47,17 @@ const BASELINE: FloorSpec[] = [
   { map: 'rocket_hideout_b2f',  from: 'rocket_hideout_b1f', to: 'rocket_hideout_b3f',      walkablePct: 63, pathRatio: 1.0 },
   { map: 'rocket_hideout_b3f',  from: 'rocket_hideout_b2f', to: 'rocket_hideout_b4f',      walkablePct: 62, pathRatio: 1.0 },
   { map: 'rocket_hideout_b4f',  from: 'rocket_hideout_b3f', to: 'npc:giovanni_game_corner', walkablePct: 62, pathRatio: 1.0 },
-  { map: 'silph_co_1f',         from: 'saffron_city',      to: 'silph_co_2f',              walkablePct: 69, pathRatio: 1.0 },
-  { map: 'silph_co_7f',         from: 'silph_co_3f',       to: 'npc:giovanni_silph',       walkablePct: 67, pathRatio: 1.0 },
+  { map: 'silph_co_1f',         from: 'saffron_city',         to: 'silph_co_2f',     walkablePct: 39, pathRatio: 4.2 },
+  { map: 'silph_co_2f',         from: 'silph_co_1f',         to: 'silph_co_3f',     walkablePct: 39, pathRatio: 4.7 },
+  { map: 'silph_co_3f',         from: 'silph_co_2f',         to: 'silph_co_4f',     walkablePct: 39, pathRatio: 3.5 },
+  { map: 'silph_co_4f',         from: 'silph_co_3f',         to: 'silph_co_5f',     walkablePct: 39, pathRatio: 3.0 },
+  { map: 'silph_co_5f',         from: 'silph_co_4f',         to: 'silph_co_6f',     walkablePct: 39, pathRatio: 3.7 },
+  { map: 'silph_co_6f',         from: 'silph_co_5f',         to: 'silph_co_7f',     walkablePct: 39, pathRatio: 5.3 },
+  { map: 'silph_co_7f',         from: 'silph_co_6f',         to: 'silph_co_8f',     walkablePct: 38, pathRatio: 3.7 },
+  { map: 'silph_co_8f',         from: 'silph_co_7f',         to: 'silph_co_9f',     walkablePct: 39, pathRatio: 3.5 },
+  { map: 'silph_co_9f',         from: 'silph_co_8f',         to: 'silph_co_10f',     walkablePct: 39, pathRatio: 3.7 },
+  { map: 'silph_co_10f',        from: 'silph_co_9f',         to: 'silph_co_11f',     walkablePct: 38, pathRatio: 3.4 },
+  { map: 'silph_co_11f',        from: 'silph_co_10f',         to: 'npc:giovanni_silph',     walkablePct: 38, pathRatio: 3.6 },
   { map: 'seafoam_1f',          from: 'route20',           to: 'seafoam_b1f',              walkablePct: 17, pathRatio: 1.8 },
   { map: 'seafoam_b1f',         from: 'seafoam_1f',        to: 'seafoam_b2f',              walkablePct: 19, pathRatio: 2.5 },
   { map: 'seafoam_b2f',         from: 'seafoam_b1f',       to: 'seafoam_b3f',              walkablePct: 22, pathRatio: 3.0 },
@@ -141,7 +150,8 @@ describe('dungeon layout ratchet', () => {
   // (at most 40% walkable, path at least 1.5x the straight line) and are
   // allowed to beat the reference. Every other floor is still worse than it.
   const REBUILT = new Set(['victory_road', 'victory_road_2f', 'victory_road_3f', 'seafoam_1f', 'seafoam_b1f', 'seafoam_b2f', 'seafoam_b3f', 'seafoam_b4f',
-    'pokemon_mansion', 'pokemon_mansion_2f', 'pokemon_mansion_3f', 'pokemon_mansion_b1f']);
+    'pokemon_mansion', 'pokemon_mansion_2f', 'pokemon_mansion_3f', 'pokemon_mansion_b1f',
+    ...Array.from({ length: 11 }, (_, i) => `silph_co_${i + 1}f`)]);
 
   it('rebuilt floors meet the plan bar; the reference floor (Viridian Forest) is still better than every floor not yet rebuilt', () => {
     const forest = BASELINE.find(s => s.map === 'viridian_forest')!;

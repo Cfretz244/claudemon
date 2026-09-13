@@ -1,6 +1,8 @@
-import { EntryGate, MapData, TileType } from '../types/map.types';
+import { ElevatorData, EntryGate, MapData, NPCData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
-import { createMapShape } from './mapBuilder';
+import { createMapFromSketch, SketchShape } from './mapBuilder';
+import { doorKeyFlag } from '../logic/storyFlagSync';
+import { visitedFlag } from '../logic/elevator';
 
 const T = TileType;
 
@@ -12,515 +14,422 @@ const SILPH_CO_CLOSED: EntryGate[] = [
   ] },
 ];
 
-// ─── SILPH CO. 1F — Lobby ───────────────────────────────────────────────────
-
-const SILPH_CO_1F: MapData = (() => {
-  const W = 14, H = 14;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
-
-  // Walls: top 2 rows, sides, bottom
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
-  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
-
-  // Reception counter
-  fillRect(3, 3, 4, 1, T.COUNTER);
-
-  // Office partitions
-  fillRect(9, 3, 1, 4, T.WALL);
-  setTile(9, 5, T.INDOOR_FLOOR); // gap
-
-  // Desks in office area
-  setTile(10, 3, T.COUNTER);
-  setTile(11, 3, T.COUNTER);
-  setTile(10, 6, T.COUNTER);
-
-  // Carpet lobby
-  fillRect(5, 9, 4, 4, T.CARPET);
-  setTile(6, 13, T.DOORMAT);
-  setTile(7, 13, T.DOORMAT);
-
-  // Stairs area (top-right) — leads to 2F
-  setTile(12, 2, T.DOOR);
-
-  // Exit door (bottom center) — carpet mats placed on warp tiles
-  // (carpet set above in lobby carpet section)
-
-  return {
-    id: 'silph_co_1f',
-    entryGates: SILPH_CO_CLOSED,
-    name: 'SILPH CO. 1F',
-    width: W, height: H,
-    tiles, collision,
-    warps: [
-      // Exit to Saffron City
-      { x: 6, y: 13, targetMap: 'saffron_city', targetX: 15, targetY: 10 },
-      { x: 7, y: 13, targetMap: 'saffron_city', targetX: 15, targetY: 10 },
-      // Stairs to 2F
-      { x: 12, y: 2, targetMap: 'silph_co_2f', targetX: 12, targetY: 12 },
-    ],
-    npcs: [
-      {
-        id: 'silph_1f_grunt1',
-        x: 6, y: 6,
-        spriteColor: 0x383838,
-        direction: Direction.DOWN,
-        dialogue: ['ROCKET: SILPH CO. is\nunder our control!', 'No one gets in\nor out!'],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'silph_receptionist',
-        x: 5, y: 2,
-        spriteColor: 0xc0a060,
-        direction: Direction.DOWN,
-        dialogue: [
-          "Please, you have to\nhelp us!",
-          "TEAM ROCKET has\ntaken over the\nbuilding!",
-          "The PRESIDENT is on\nthe top floor!",
-        ],
-      },
-    ],
-  };
-})();
-
-// ─── SILPH CO. 2F — Office ──────────────────────────────────────────────────
-
-const SILPH_CO_2F: MapData = (() => {
-  const W = 14, H = 14;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
-
-  // Walls
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
-  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
-
-  // Office partitions
-  fillRect(4, 4, 1, 4, T.WALL);
-  setTile(4, 6, T.INDOOR_FLOOR); // gap
-  fillRect(8, 3, 1, 5, T.WALL);
-  setTile(8, 5, T.INDOOR_FLOOR); // gap
-
-  // Desks
-  setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
-  setTile(9, 3, T.COUNTER); setTile(10, 3, T.COUNTER);
-  setTile(6, 8, T.COUNTER);
-
-  // Teleport pads
-  setTile(5, 7, T.TELEPORT_PAD);   // Pad A → 4F
-  setTile(10, 10, T.TELEPORT_PAD); // Pad B → 6F (trap)
-
-  // Stairs area (bottom-right) — from 1F; (top-right) — to 3F
-  setTile(12, 12, T.DOOR); // stairs from 1F
-  setTile(12, 2, T.DOOR);  // stairs to 3F
-
-  return {
-    id: 'silph_co_2f',
-    entryGates: SILPH_CO_CLOSED,
-    name: 'SILPH CO. 2F',
-    width: W, height: H,
-    tiles, collision,
-    warps: [
-      // Stairs down to 1F
-      { x: 12, y: 12, targetMap: 'silph_co_1f', targetX: 12, targetY: 2 },
-      // Stairs up to 3F
-      { x: 12, y: 2, targetMap: 'silph_co_3f', targetX: 12, targetY: 12 },
-      // Pad A → 4F
-      { x: 5, y: 7, targetMap: 'silph_co_4f', targetX: 5, targetY: 5 },
-      // Pad B → 6F (trap)
-      { x: 10, y: 10, targetMap: 'silph_co_6f', targetX: 5, targetY: 8 },
-    ],
-    npcs: [
-      {
-        id: 'silph_2f_grunt1',
-        x: 3, y: 6,
-        spriteColor: 0x383838,
-        direction: Direction.RIGHT,
-        dialogue: ['ROCKET: This floor\nis off limits!'],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'silph_2f_grunt2',
-        x: 9, y: 8,
-        spriteColor: 0x383838,
-        direction: Direction.LEFT,
-        dialogue: ['ROCKET: You think you\ncan stop us?'],
-        isTrainer: true,
-        sightRange: 3,
-      },
-    ],
-  };
-})();
-
-// ─── SILPH CO. 3F — Lab ─────────────────────────────────────────────────────
-
-const SILPH_CO_3F: MapData = (() => {
-  const W = 14, H = 14;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
-
-  // Walls
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
-  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
-
-  // Lab partitions — divide into sections
-  fillRect(5, 3, 1, 5, T.WALL);
-  setTile(5, 5, T.INDOOR_FLOOR); // gap
-  fillRect(9, 6, 1, 5, T.WALL);
-  setTile(9, 8, T.INDOOR_FLOOR); // gap
-
-  // Lab benches / equipment
-  setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
-  setTile(10, 3, T.COUNTER); setTile(11, 3, T.COUNTER);
-  setTile(2, 8, T.COUNTER);
-
-  // Teleport pads — main junction
-  setTile(3, 5, T.TELEPORT_PAD);   // Pad C → 5F (trap)
-  setTile(11, 5, T.TELEPORT_PAD);  // Pad D → 7F (trap - isolated corner)
-  setTile(7, 11, T.TELEPORT_PAD);  // Pad E → 4F (critical path)
-
-  // Stairs (bottom-right) — from 2F
-  setTile(12, 12, T.DOOR);
-
-  return {
-    id: 'silph_co_3f',
-    entryGates: SILPH_CO_CLOSED,
-    name: 'SILPH CO. 3F',
-    width: W, height: H,
-    tiles, collision,
-    warps: [
-      // Stairs down to 2F
-      { x: 12, y: 12, targetMap: 'silph_co_2f', targetX: 12, targetY: 2 },
-      // Pad C → 5F (trap — blocked area)
-      { x: 3, y: 5, targetMap: 'silph_co_5f', targetX: 3, targetY: 6 },
-      // Pad D → 7F (trap — isolated corner)
-      { x: 11, y: 5, targetMap: 'silph_co_7f', targetX: 3, targetY: 9 },
-      // Pad E → 4F (critical path)
-      { x: 7, y: 11, targetMap: 'silph_co_4f', targetX: 10, targetY: 5 },
-    ],
-    npcs: [
-      {
-        id: 'silph_3f_grunt1',
-        x: 3, y: 9,
-        spriteColor: 0x383838,
-        direction: Direction.UP,
-        dialogue: ['ROCKET: The lab\nequipment is ours now!'],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'silph_3f_grunt2',
-        x: 8, y: 4,
-        spriteColor: 0x383838,
-        direction: Direction.LEFT,
-        dialogue: ['ROCKET: Get out of\nhere, kid!'],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'silph_3f_scientist',
-        x: 2, y: 4,
-        spriteColor: 0xf0f0f0,
-        direction: Direction.RIGHT,
-        dialogue: [
-          "SCIENTIST: The\nteleport pads are\nconfusing...",
-          "I think the one in\nthe center of the\nbottom goes forward.",
-        ],
-      },
-    ],
-  };
-})();
-
-// ─── SILPH CO. 4F — Server Room ─────────────────────────────────────────────
-
-const SILPH_CO_4F: MapData = (() => {
-  const W = 14, H = 14;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
-
-  // Walls
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
-  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
-
-  // Server rack partitions
-  fillRect(4, 2, 1, 5, T.WALL);
-  setTile(4, 4, T.INDOOR_FLOOR); // gap
-  fillRect(8, 7, 1, 4, T.WALL);
-  setTile(8, 9, T.INDOOR_FLOOR); // gap
-
-  // Server equipment
-  setTile(2, 2, T.MART_SHELF); setTile(3, 2, T.MART_SHELF);
-  setTile(6, 2, T.MART_SHELF); setTile(7, 2, T.MART_SHELF);
-  setTile(10, 8, T.COUNTER); setTile(11, 8, T.COUNTER);
-
-  // Teleport pads
-  setTile(5, 5, T.TELEPORT_PAD);   // Pad F → 2F (return from Pad A)
-  setTile(10, 5, T.TELEPORT_PAD);  // Pad G → 3F (return from Pad E)
-  setTile(3, 10, T.TELEPORT_PAD);  // Pad H → 5F (critical path)
-
-  return {
-    id: 'silph_co_4f',
-    entryGates: SILPH_CO_CLOSED,
-    name: 'SILPH CO. 4F',
-    width: W, height: H,
-    tiles, collision,
-    warps: [
-      // Pad F → 2F (bidirectional with Pad A)
-      { x: 5, y: 5, targetMap: 'silph_co_2f', targetX: 5, targetY: 7 },
-      // Pad G → 3F (bidirectional with Pad E)
-      { x: 10, y: 5, targetMap: 'silph_co_3f', targetX: 7, targetY: 11 },
-      // Pad H → 5F (critical path)
-      { x: 3, y: 10, targetMap: 'silph_co_5f', targetX: 10, targetY: 6 },
-    ],
-    npcs: [
-      {
-        id: 'silph_4f_grunt1',
-        x: 6, y: 5,
-        spriteColor: 0x383838,
-        direction: Direction.DOWN,
-        dialogue: ['ROCKET: The servers\ncontain valuable\ndata!'],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'silph_4f_grunt2',
-        x: 9, y: 10,
-        spriteColor: 0x383838,
-        direction: Direction.LEFT,
-        dialogue: ['ROCKET: You made it\nthis far? Impressive!'],
-        isTrainer: true,
-        sightRange: 3,
-      },
-    ],
-  };
-})();
-
-// ─── SILPH CO. 5F — Executive ───────────────────────────────────────────────
-
-const SILPH_CO_5F: MapData = (() => {
-  const W = 14, H = 14;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
-
-  // Walls
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
-  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
-
-  // Partition creating a trapped zone (top-left area where Pad C lands)
-  fillRect(1, 8, 5, 1, T.WALL);
-  // Gap in partition — only the teleport pad is in the blocked area
-  // The trap zone is (1,2)-(5,7) — Pad J at (3,6) is the only exit
-
-  // Executive desks
-  setTile(7, 2, T.COUNTER); setTile(8, 2, T.COUNTER);
-  setTile(10, 2, T.COUNTER); setTile(11, 2, T.COUNTER);
-  setTile(6, 9, T.COUNTER);
-
-  // Carpet executive area
-  fillRect(6, 3, 3, 2, T.CARPET);
-
-  // Teleport pads
-  setTile(10, 6, T.TELEPORT_PAD);  // Pad I → 4F (return from Pad H)
-  setTile(3, 6, T.TELEPORT_PAD);   // Pad J → 3F (return from Pad C, in trapped zone)
-  setTile(7, 3, T.TELEPORT_PAD);   // Pad K → 7F (critical path — guarded by J&J)
-
-  return {
-    id: 'silph_co_5f',
-    entryGates: SILPH_CO_CLOSED,
-    name: 'SILPH CO. 5F',
-    width: W, height: H,
-    tiles, collision,
-    warps: [
-      // Pad I → 4F (bidirectional with Pad H)
-      { x: 10, y: 6, targetMap: 'silph_co_4f', targetX: 3, targetY: 10 },
-      // Pad J → 3F (bidirectional with Pad C)
-      { x: 3, y: 6, targetMap: 'silph_co_3f', targetX: 3, targetY: 5 },
-      // Pad K → 7F (critical path)
-      { x: 7, y: 3, targetMap: 'silph_co_7f', targetX: 10, targetY: 9 },
-    ],
-    npcs: [
-      {
-        id: 'silph_5f_grunt1',
-        x: 10, y: 10,
-        spriteColor: 0x383838,
-        direction: Direction.LEFT,
-        dialogue: ['ROCKET: The boss is\nupstairs! You will\nnever reach him!'],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'jessie_silph',
-        x: 6, y: 5,
-        spriteColor: 0xd02070,
-        direction: Direction.UP,
-        dialogue: [
-          'JESSIE & JAMES: Well,\nwell, well...',
-          "If it isn't the\ntwerp who keeps\nruining our plans!",
-          'Prepare for trouble,\nfor the very last time!',
-          'And make it double,\nthis will be sublime!',
-          "MEOWTH: The boss\nwon't be happy if we\nlose again!",
-          "Then let's not lose!\nGo, ARBOK! Go, WEEZING!",
-        ],
-        isTrainer: true,
-        sightRange: 4,
-      },
-      {
-        id: 'james_silph',
-        x: 8, y: 5,
-        spriteColor: 0x6060d0,
-        direction: Direction.UP,
-        dialogue: [
-          "JAMES: This is our\nbiggest operation yet!",
-          "SILPH CO. will soon\nbelong to TEAM ROCKET!",
-        ],
-      },
-    ],
-  };
-})();
-
-// ─── SILPH CO. 6F — Dead End / Rival ────────────────────────────────────────
-
-const SILPH_CO_6F: MapData = (() => {
-  const W = 14, H = 14;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
-
-  // Walls
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
-  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
-
-  // Office partitions
-  fillRect(5, 3, 1, 5, T.WALL);
-  setTile(5, 5, T.INDOOR_FLOOR); // gap
-  fillRect(9, 3, 1, 5, T.WALL);
-  setTile(9, 5, T.INDOOR_FLOOR); // gap
-
-  // Desks
-  setTile(2, 3, T.COUNTER); setTile(3, 3, T.COUNTER);
-  setTile(10, 3, T.COUNTER); setTile(11, 3, T.COUNTER);
-
-  // Teleport pads — both lead back (dead end floor)
-  setTile(5, 8, T.TELEPORT_PAD);   // Pad L → 2F (return from Pad B)
-  setTile(10, 5, T.TELEPORT_PAD);  // Pad M → 3F
-
-  return {
-    id: 'silph_co_6f',
-    entryGates: SILPH_CO_CLOSED,
-    name: 'SILPH CO. 6F',
-    width: W, height: H,
-    tiles, collision,
-    warps: [
-      // Pad L → 2F (bidirectional with Pad B)
-      { x: 5, y: 8, targetMap: 'silph_co_2f', targetX: 10, targetY: 10 },
-      // Pad M → 3F
-      { x: 10, y: 5, targetMap: 'silph_co_3f', targetX: 11, targetY: 5 },
-    ],
-    npcs: [
-      {
-        id: 'silph_6f_grunt1',
-        x: 7, y: 10,
-        spriteColor: 0x383838,
-        direction: Direction.UP,
-        dialogue: ['ROCKET: Ha! You fell\nfor the trap!'],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'rival_silph',
-        x: 7, y: 6,
-        spriteColor: 0x6080c0,
-        direction: Direction.DOWN,
-        dialogue: [
-          "{RIVAL}: {PLAYER}!\nWhat a surprise!",
-          "TEAM ROCKET is all\nover SILPH CO.!",
-          "But first, let's\nhave a battle!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-    ],
-  };
-})();
-
-// ─── SILPH CO. 7F — President's Office / Giovanni ───────────────────────────
-
-const SILPH_CO_7F: MapData = (() => {
-  const W = 14, H = 14;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
-
-  // Walls
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.WALL); setTile(x, 1, T.WALL); }
-  for (let y = 0; y < H; y++) { setTile(0, y, T.WALL); setTile(W - 1, y, T.WALL); }
-
-  // Isolated corner (top-left) — trap from Pad D lands here
-  fillRect(1, 7, 5, 1, T.WALL);
-  fillRect(5, 2, 1, 5, T.WALL);
-  // Pad N at (3,9) is the only exit from this trapped area
-
-  // President's desk area
-  setTile(7, 2, T.COUNTER); // president desk
-  fillRect(9, 2, 2, 1, T.COUNTER); // side desk
-
-  // Carpet
-  fillRect(6, 3, 3, 2, T.CARPET);
-
-  // Teleport pads
-  setTile(3, 9, T.TELEPORT_PAD);   // Pad N → 3F (return from Pad D)
-  setTile(10, 9, T.TELEPORT_PAD);  // Landing pad from Pad K (critical path arrival)
-
-  return {
-    id: 'silph_co_7f',
-    entryGates: SILPH_CO_CLOSED,
-    name: 'SILPH CO. 7F',
-    width: W, height: H,
-    tiles, collision,
-    warps: [
-      // Pad N → 3F (bidirectional with Pad D)
-      { x: 3, y: 9, targetMap: 'silph_co_3f', targetX: 11, targetY: 5 },
-      // Pad at (10,9) is a landing pad — warp back to 5F
-      { x: 10, y: 9, targetMap: 'silph_co_5f', targetX: 7, targetY: 3 },
-    ],
-    npcs: [
-      {
-        id: 'silph_7f_grunt1',
-        x: 10, y: 5,
-        spriteColor: 0x383838,
-        direction: Direction.LEFT,
-        dialogue: ['ROCKET: The boss is\nright here! You will\nnot pass!'],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'giovanni_silph',
-        x: 7, y: 5,
-        spriteColor: 0x604020,
-        direction: Direction.DOWN,
-        dialogue: [
-          "GIOVANNI: We meet\nagain, child!",
-          "You have interfered\nwith TEAM ROCKET\nfor the last time!",
-          "Prepare to feel my\nwrath!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'silph_president',
-        x: 8, y: 2,
-        spriteColor: 0xc0a060,
-        direction: Direction.DOWN,
-        dialogue: [
-          "PRESIDENT: Thank\ngoodness you're here!",
-          "TEAM ROCKET has taken\nover our company!",
-          "Please, defeat their\nboss!",
-        ],
-      },
-    ],
-  };
-})();
-
-// ─── Combined export ────────────────────────────────────────────────────────
-
-export const SILPH_MAPS: Record<string, MapData> = {
-  silph_co_1f: SILPH_CO_1F,
-  silph_co_2f: SILPH_CO_2F,
-  silph_co_3f: SILPH_CO_3F,
-  silph_co_4f: SILPH_CO_4F,
-  silph_co_5f: SILPH_CO_5F,
-  silph_co_6f: SILPH_CO_6F,
-  silph_co_7f: SILPH_CO_7F,
+// ─── Silph Co: 11 office floors drawn as sketches ──────────────────────────
+//
+// Every floor is a one-tile corridor maze. Stairs chain the floors (u on floor
+// n lands on d of floor n+1); the CARD KEY doors (D) and the teleport pads are
+// the puzzle. Trainers sit at desks facing across a corridor with sight range
+// 1: a spotting trainer walks up to the player and keeps that tile, which in a
+// one-tile corridor would wall it off, so nobody may ever see down a corridor.
+// Legend: # wall, . floor, D locked door (opens with the Card Key),
+// E entrance mat, u/d stairs up/down, 1-6 teleport pads (the same digit on two
+// floors is a pair), V elevator, v where the elevator lands you, i item ball,
+// K the Card Key, h heal tile, A/B grunts, J/M Jessie & James, R rival,
+// L Lapras employee, G Giovanni, P president, N/Q talkers.
+//
+// Route: 1F..5F by stairs. The Card Key lies in a sealed pocket on 5F that
+// only pad 2 (3F, behind a grunt) reaches; with it the pocket's door opens and
+// so does every other D. 7F: the rival ambushes on the way to the stairs, an
+// employee behind a door gives LAPRAS, and pad 5 behind another door lands in
+// a pocket on 11F whose door opens straight into Giovanni's office. Stairs
+// through 8F-10F (items, a healer behind a door on 9F) are the long way to
+// 11F. The elevator on every floor only stops at floors already visited.
+const SC_LEGEND: Record<string, TileType> = {
+  '#': T.WALL, '.': T.INDOOR_FLOOR, D: T.GATE, E: T.DOORMAT, u: T.DOOR, d: T.DOOR, h: T.HEAL_TILE,
+  '1': T.TELEPORT_PAD, '2': T.TELEPORT_PAD, '3': T.TELEPORT_PAD, '4': T.TELEPORT_PAD, '5': T.TELEPORT_PAD, '6': T.TELEPORT_PAD,
+  v: T.INDOOR_FLOOR, i: T.INDOOR_FLOOR, K: T.INDOOR_FLOOR, L: T.INDOOR_FLOOR, G: T.INDOOR_FLOOR, P: T.INDOOR_FLOOR,
+  // People at desks: the tile is a solid COUNTER in the data, so a grunt between two corridors
+  // never becomes a shortcut (not in the layout metrics, and not when the grunts leave). The
+  // elevator NPC stands in the wall as its door.
+  A: T.COUNTER, B: T.COUNTER, J: T.COUNTER, M: T.COUNTER, R: T.COUNTER, N: T.COUNTER, Q: T.COUNTER,
+  V: T.WALL,
 };
+const CARD_KEY_FLAG = doorKeyFlag('card_key');
+const ROCKET = 0x383838, EMPLOYEE = 0xc0a060, SCIENTIST = 0xf0f0f0;
+
+const to = (p: { x: number; y: number }) => ({ targetX: p.x, targetY: p.y });
+const scTrainer = (s: SketchShape, ch: string, id: string, direction: Direction, dialogue: string[], spriteColor = ROCKET): NPCData => ({
+  id, ...s.findOne(ch), spriteColor, direction, dialogue, isTrainer: true, sightRange: 1,
+});
+const scTalker = (s: SketchShape, ch: string, id: string, direction: Direction, dialogue: string[], spriteColor = EMPLOYEE): NPCData => ({
+  id, ...s.findOne(ch), spriteColor, direction, dialogue,
+});
+/** Item balls on the floor's `i` tiles, row-major. */
+const scItems = (s: SketchShape, prefix: string, itemIds: string[]): NPCData[] => {
+  const spots = s.find('i');
+  if (spots.length !== itemIds.length) throw new Error(`${prefix}: ${spots.length} item tiles for ${itemIds.length} items`);
+  return spots.map((p, n) => ({ id: `${prefix}_${itemIds[n]}`, ...p, spriteColor: 0x000000, direction: Direction.DOWN, dialogue: [], isItemBall: true, itemId: itemIds[n] }));
+};
+const scElevator = (s: SketchShape, floor: string): NPCData => ({
+  id: `elevator_silph_${floor}`, ...s.findOne('V'), spriteColor: 0x808080, direction: Direction.DOWN, dialogue: ["It's an elevator."],
+});
+/** Every D tile is a Card Key door. */
+const scDoors = (s: SketchShape) => s.find('D').map(p => ({ ...p, flag: CARD_KEY_FLAG }));
+/** Stairs: `d` lands on the floor below's `u` and vice versa. */
+const stairsDown = (s: SketchShape, below: SketchShape, belowId: string) => ({ ...s.findOne('d'), targetMap: belowId, ...to(below.findOne('u')) });
+const stairsUp = (s: SketchShape, above: SketchShape, aboveId: string) => ({ ...s.findOne('u'), targetMap: aboveId, ...to(above.findOne('d')) });
+/** Teleport pad `digit` on this floor warps onto the same digit on `other`. */
+const pad = (s: SketchShape, digit: string, other: SketchShape, otherId: string) => ({ ...s.findOne(digit), targetMap: otherId, ...to(other.findOne(digit)) });
+
+const SC_1F = createMapFromSketch([
+  '####################',
+  '#.......#.........##',
+  '#######.#.#####.#.##',
+  '#.#...#.#.....#.#.##',
+  '#.#.#.#.#####.#.#.##',
+  '#.#.#.#.....#.#.#.##',
+  '#.#.#.#####.#.#.A###',
+  '#...#...#...#u#...##',
+  '#.###.#.#.#####.#.##',
+  '#.#.#.#.#.#...#.#.##',
+  '#.#.#.###.#.#.###.##',
+  '#...#.....v.#.....##',
+  '#######N#.V#########',
+  '#########E##########',
+], SC_LEGEND);
+const SC_2F = createMapFromSketch([
+  '####################',
+  '#...#u#..........1##',
+  '###.#.#.#######.####',
+  '#...#.B.....#i#...##',
+  '#.###.#####.#.###.##',
+  '#...#.....#...Di#.##',
+  '###.#####.#.#####.##',
+  '#.#.....#...#...#.##',
+  '#.V####.#####.#.#.##',
+  '#.v...#.#.....#...##',
+  '#.#.###.#.#######.##',
+  '#d#.......#.......##',
+  '#########A##########',
+  '####################',
+], SC_LEGEND);
+const SC_3F = createMapFromSketch([
+  '####################',
+  '#u......#.........##',
+  '###N###.A.#####.#.##',
+  '#i#...#.#.#.....#.##',
+  '#.#.#.#.#.#.#####.##',
+  '#...#...#2#.#.....##',
+  '#.#########.#.######',
+  '#.......#...#.....##',
+  '#######.#.#######.##',
+  '#...D3#...#.....B.##',
+  '#.#.#######.###.#.##',
+  '#.#........v.d#...##',
+  '###########V########',
+  '####################',
+], SC_LEGEND);
+const SC_4F = createMapFromSketch([
+  '####################',
+  '#u..#...........#.##',
+  '###.#.###A#####.#.##',
+  '#.#...#.......#...##',
+  '#.#####.#.###.###.##',
+  '#..1#...#...#6#...##',
+  '#.###.#####.###.####',
+  '#.#...#...#...B...##',
+  '#.#.###.#.###.###.##',
+  '#.#.....#.#i#.....##',
+  '#.#######.#D########',
+  '#..............v.d##',
+  '###############V####',
+  '####################',
+], SC_LEGEND);
+const SC_5F = createMapFromSketch([
+  '####################',
+  '#...#.....#.D.....##',
+  '###.#.#.#.#.#.JM#.##',
+  '#d#.#.#.#.#K#.#...##',
+  '#.#.###.#.#.#.#.####',
+  '#vV.#...#.#2#.#...##',
+  '#.#.A.###.###.###.##',
+  '#...#...#.....#...##',
+  '#.#####.#######.####',
+  '#.#...#...#4#...#u##',
+  '#.#.#.###.#.#.###.##',
+  '#...#.....#.......##',
+  '####################',
+  '####################',
+], SC_LEGEND);
+const SC_6F = createMapFromSketch([
+  '####################',
+  '#i..........#.....##',
+  '###########.#.#A#.##',
+  '#......u#...#.#...##',
+  '#.#.#####.###.#.####',
+  '#.#.......#i..#.#d##',
+  '#.###########.#.#.##',
+  '#...#.......#.#..vV#',
+  '###.#.#####.#.###.##',
+  '#i#...#.....#.#...##',
+  '#.#####.#B###.#.####',
+  '#.....D.......#...##',
+  '####################',
+  '####################',
+], SC_LEGEND);
+const SC_7F = createMapFromSketch([
+  '####################',
+  '#.....#u..#......i##',
+  '#####.###.#.#.######',
+  '#...#...#...#.#...##',
+  '#.#.###.#D###.#.#.##',
+  '#.#.....#..L#...#.##',
+  '#.#############D#.##',
+  '#.#3....D.....#.#.A#',
+  '#.#######.###.#.#.##',
+  '#...#...#.#...#5#.##',
+  '###.#.#.#.#.#####.##',
+  '#d.v..#...#.......##',
+  '###V#########R######',
+  '####################',
+], SC_LEGEND);
+const SC_8F = createMapFromSketch([
+  '####################',
+  '#u....#i..........##',
+  '#####.#####.###.#.##',
+  '#...#.....#i#...#.##',
+  '#.#######.###.###.##',
+  '#.......B.#...#i#.##',
+  '#.#.#####.#.###.#.##',
+  '#.#.......#...#.#.##',
+  '#.###A#######.#.#.##',
+  '#.#.......#...#.#.##',
+  '#.#.#####.#.###D#.##',
+  '#...#.......#d.v..##',
+  '###############V####',
+  '####################',
+], SC_LEGEND);
+const SC_9F = createMapFromSketch([
+  '####################',
+  '#u..#...#......v.d##',
+  '###.#.#.#.###.#V####',
+  '#...#.#i#.#.#.#...##',
+  '#.###.###.#.#.#.#.##',
+  '#.#4D.#...#.A...#.##',
+  '#.###.#.###.#####.##',
+  '#...#...#...#.....##',
+  '###.#.###.#D#.###.##',
+  '#...#.....#hQ...#.##',
+  '#.###########B#.#.##',
+  '#...............#.##',
+  '####################',
+  '####################',
+], SC_LEGEND);
+const SC_10F = createMapFromSketch([
+  '####################',
+  '#u..#.........#i..##',
+  '###.#.#######.###.##',
+  '#.#.B.#....6#...#.##',
+  '#.#.#.#.#######.#.##',
+  '#.#.#.#...#.....#.##',
+  '#.#.#.###.#.#####D##',
+  '#...#.#i..#.Vv....##',
+  '#.###.#####.#.###.##',
+  '#...A.#...#.#d#...##',
+  '###.#.#.#.#.###.#.##',
+  '#.....#i#.......#.##',
+  '####################',
+  '####################',
+], SC_LEGEND);
+const SC_11F = createMapFromSketch([
+  '####################',
+  '#d.v..#...........##',
+  '###V#.#.###B#####.##',
+  '#...#.#.......#5#.##',
+  '#.#.#.###.###.#.#.##',
+  '#.#.#...#.#...#.#.##',
+  '###.###.#.#.###D#.##',
+  '#.....#.#.#.#P#...##',
+  '#.#####.###.#G#.####',
+  '#.#.....#...#.#.#.##',
+  '#.#.#####.###D#.#.##',
+  '#.........#.......##',
+  '#####A##############',
+  '####################',
+], SC_LEGEND);
+
+const SKETCHES: Array<[string, SketchShape]> = [
+  ['silph_co_1f', SC_1F], ['silph_co_2f', SC_2F], ['silph_co_3f', SC_3F], ['silph_co_4f', SC_4F], ['silph_co_5f', SC_5F], ['silph_co_6f', SC_6F],
+  ['silph_co_7f', SC_7F], ['silph_co_8f', SC_8F], ['silph_co_9f', SC_9F], ['silph_co_10f', SC_10F], ['silph_co_11f', SC_11F],
+];
+const floorId = (n: number) => SKETCHES[n - 1][0];
+const sketchOf = (n: number) => SKETCHES[n - 1][1];
+
+// The lift stops at every floor, but only at floors the player has already
+// reached on foot (a `visited_` flag is set on arrival): a way back down, never
+// a way to skip ahead. Shared by every floor (the elevator tests require it).
+const SILPH_CO_ELEVATOR: ElevatorData = {
+  floors: SKETCHES.map(([id, s], n) => ({ label: `${n + 1}F`, targetMap: id, ...to(s.findOne('v')), requires: { flag: visitedFlag(id) } })),
+};
+
+/** The common shape of a floor: sketch tiles, stairs to the floors around it, doors, the elevator. */
+function silphFloor(n: number, extras: { warps?: MapData['warps']; npcs: NPCData[] }): MapData {
+  const [id, s] = SKETCHES[n - 1];
+  const warps: MapData['warps'] = [...(extras.warps ?? [])];
+  if (n > 1) warps.push(stairsDown(s, sketchOf(n - 1), floorId(n - 1)));
+  if (n < SKETCHES.length) warps.push(stairsUp(s, sketchOf(n + 1), floorId(n + 1)));
+  return {
+    id, name: `SILPH CO. ${n}F`, entryGates: SILPH_CO_CLOSED,
+    width: s.width, height: s.height, tiles: s.tiles, collision: s.collision,
+    floorTile: T.INDOOR_FLOOR,
+    gates: scDoors(s),
+    elevator: SILPH_CO_ELEVATOR,
+    warps,
+    npcs: [scElevator(s, `${n}f`), ...extras.npcs],
+  };
+}
+
+// 1F lobby: the reception, one grunt on the top corridor, stairs at the end of the loop.
+const SILPH_CO_1F = silphFloor(1, {
+  warps: [{ ...SC_1F.findOne('E'), targetMap: 'saffron_city', targetX: 15, targetY: 10 }],
+  npcs: [
+    scTrainer(SC_1F, 'A', 'silph_1f_grunt1', Direction.LEFT, ['ROCKET: SILPH CO. is\nunder our control!', 'No one gets in\nor out!']),
+    scTalker(SC_1F, 'N', 'silph_receptionist', Direction.UP, [
+      "Please, you have to\nhelp us!",
+      "TEAM ROCKET has\ntaken over the\nbuilding!",
+      "The PRESIDENT is on\nthe top floor!",
+    ]),
+  ],
+});
+
+// 2F: pad 1 to 4F in the top-right corner; a locked one-tile room; an item in a dead end.
+const SILPH_CO_2F = silphFloor(2, {
+  warps: [pad(SC_2F, '1', SC_4F, 'silph_co_4f')],
+  npcs: [
+    ...scItems(SC_2F, 'silph_2f', ['tm36_self_destruct', 'protein']),
+    scTrainer(SC_2F, 'A', 'silph_2f_grunt1', Direction.UP, ['ROCKET: This floor\nis off limits!']),
+    scTrainer(SC_2F, 'B', 'silph_2f_grunt2', Direction.RIGHT, ['ROCKET: You think you\ncan stop us?']),
+  ],
+});
+
+// 3F: pad 2 (top, behind a grunt) is the only way into the 5F key pocket; pad 3 to 7F is behind a door.
+const SILPH_CO_3F = silphFloor(3, {
+  warps: [pad(SC_3F, '2', SC_5F, 'silph_co_5f'), pad(SC_3F, '3', SC_7F, 'silph_co_7f')],
+  npcs: [
+    ...scItems(SC_3F, 'silph_3f', ['hyper_potion']),
+    scTrainer(SC_3F, 'A', 'silph_3f_grunt1', Direction.RIGHT, ['ROCKET: The lab\nequipment is ours now!']),
+    scTrainer(SC_3F, 'B', 'silph_3f_grunt2', Direction.LEFT, ['ROCKET: Get out of\nhere, kid!']),
+    scTalker(SC_3F, 'N', 'silph_3f_scientist', Direction.UP, [
+      "SCIENTIST: The\nteleport pads are\nconfusing...",
+      "The one past the\nguard on this floor\ngoes somewhere\nno stairs reach.",
+    ], SCIENTIST),
+  ],
+});
+
+// 4F: pad 1 back to 2F; pad 6 to the sealed pocket on 10F; a locked room.
+const SILPH_CO_4F = silphFloor(4, {
+  warps: [pad(SC_4F, '1', SC_2F, 'silph_co_2f'), pad(SC_4F, '6', SC_10F, 'silph_co_10f')],
+  npcs: [
+    ...scItems(SC_4F, 'silph_4f', ['max_revive']),
+    scTrainer(SC_4F, 'A', 'silph_4f_grunt1', Direction.DOWN, ['ROCKET: The servers\ncontain valuable\ndata!']),
+    scTrainer(SC_4F, 'B', 'silph_4f_grunt2', Direction.RIGHT, ['ROCKET: You made it\nthis far? Impressive!']),
+  ],
+});
+
+// 5F: the CARD KEY pocket (pad 2, the key, a door out); Jessie & James watch the corridor outside
+// it; pad 4 to the 9F healer.
+const SILPH_CO_5F = silphFloor(5, {
+  warps: [pad(SC_5F, '2', SC_3F, 'silph_co_3f'), pad(SC_5F, '4', SC_9F, 'silph_co_9f')],
+  npcs: [
+    { id: 'silph_5f_card_key', ...SC_5F.findOne('K'), spriteColor: 0x000000, direction: Direction.DOWN, dialogue: [], isItemBall: true, itemId: 'card_key' },
+    scTrainer(SC_5F, 'A', 'silph_5f_grunt1', Direction.RIGHT, ['ROCKET: The boss is\nupstairs! You will\nnever reach him!']),
+    scTrainer(SC_5F, 'J', 'jessie_silph', Direction.UP, [
+      'JESSIE & JAMES: Well,\nwell, well...',
+      "If it isn't the\ntwerp who keeps\nruining our plans!",
+      'Prepare for trouble,\nfor the very last time!',
+      'And make it double,\nthis will be sublime!',
+      "MEOWTH: The boss\nwon't be happy if we\nlose again!",
+      "Then let's not lose!\nGo, ARBOK! Go, WEEZING!",
+    ], 0xd02070),
+    scTalker(SC_5F, 'M', 'james_silph', Direction.UP, [
+      "JAMES: This is our\nbiggest operation yet!",
+      "SILPH CO. will soon\nbelong to TEAM ROCKET!",
+    ], 0x6060d0),
+  ],
+});
+
+// 6F: a long floor; a locked wing with an item at its end, two more in dead ends.
+const SILPH_CO_6F = silphFloor(6, {
+  npcs: [
+    ...scItems(SC_6F, 'silph_6f', ['hp_up', 'x_accuracy', 'rare_candy']),
+    scTrainer(SC_6F, 'A', 'silph_6f_grunt1', Direction.DOWN, ['ROCKET: Ha! You fell\nfor the trap!']),
+    scTrainer(SC_6F, 'B', 'silph_6f_grunt2', Direction.UP, ['ROCKET: Nobody gets\npast this floor!']),
+  ],
+});
+
+// 7F: the rival waits by the stairs corridor; LAPRAS behind a door; pad 3 pocket from 3F;
+// pad 5 to 11F behind a door.
+const SILPH_CO_7F = silphFloor(7, {
+  warps: [pad(SC_7F, '3', SC_3F, 'silph_co_3f'), pad(SC_7F, '5', SC_11F, 'silph_co_11f')],
+  npcs: [
+    ...scItems(SC_7F, 'silph_7f', ['calcium']),
+    scTrainer(SC_7F, 'A', 'silph_7f_grunt1', Direction.LEFT, ['ROCKET: The boss is\nright upstairs! You\nwill not pass!']),
+    scTrainer(SC_7F, 'R', 'rival_silph', Direction.UP, [
+      "{RIVAL}: {PLAYER}!\nWhat a surprise!",
+      "TEAM ROCKET is all\nover SILPH CO.!",
+      "But first, let's\nhave a battle!",
+    ], 0x6080c0),
+    scTalker(SC_7F, 'L', 'silph_lapras_employee', Direction.LEFT, [
+      'I hid in here when\nTEAM ROCKET came.',
+      'Please, get rid of\nthem!',
+    ]),
+  ],
+});
+
+// 8F: items in the dead ends, one behind a door.
+const SILPH_CO_8F = silphFloor(8, {
+  npcs: [
+    ...scItems(SC_8F, 'silph_8f', ['tm09_take_down', 'escape_rope', 'max_potion']),
+    scTrainer(SC_8F, 'A', 'silph_8f_grunt1', Direction.DOWN, ['ROCKET: Still\nclimbing? The stairs\nonly get longer!']),
+    scTrainer(SC_8F, 'B', 'silph_8f_grunt2', Direction.RIGHT, ['ROCKET: We took the\nwhole building. What\ncan one kid do?']),
+  ],
+});
+
+// 9F: a healer behind a door; pad 4 from 5F lands behind another.
+const SILPH_CO_9F = silphFloor(9, {
+  warps: [pad(SC_9F, '4', SC_5F, 'silph_co_5f')],
+  npcs: [
+    ...scItems(SC_9F, 'silph_9f', ['carbos']),
+    scTrainer(SC_9F, 'A', 'silph_9f_grunt1', Direction.RIGHT, ['ROCKET: The employees\nare locked in their\nrooms. Stay out!']),
+    scTrainer(SC_9F, 'B', 'silph_9f_grunt2', Direction.UP, ['ROCKET: Two more\nfloors and you meet\nthe boss. If you\nlive!']),
+    scTalker(SC_9F, 'Q', 'silph_9f_healer', Direction.LEFT, [
+      'You look worn out.',
+      'Rest on the bed\nhere. TEAM ROCKET\nnever checks this\nroom.',
+    ]),
+  ],
+});
+
+// 10F: pad 6 pocket (from 4F) with an item; a locked room; items.
+const SILPH_CO_10F = silphFloor(10, {
+  warps: [pad(SC_10F, '6', SC_4F, 'silph_co_4f')],
+  npcs: [
+    ...scItems(SC_10F, 'silph_10f', ['tm26_earthquake', 'rare_candy', 'pp_up']),
+    scTrainer(SC_10F, 'A', 'silph_10f_grunt1', Direction.LEFT, ['ROCKET: The boss\nsaid no visitors!']),
+    scTrainer(SC_10F, 'B', 'silph_10f_grunt2', Direction.RIGHT, ['ROCKET: Turn back,\nor be turned back!']),
+  ],
+});
+
+// 11F: Giovanni's office behind a door at the end of the long way round, or straight
+// out of the pad 5 pocket; the president is trapped behind him at the end of the room.
+const SILPH_CO_11F = silphFloor(11, {
+  warps: [pad(SC_11F, '5', SC_7F, 'silph_co_7f')],
+  npcs: [
+    scTrainer(SC_11F, 'A', 'silph_11f_grunt1', Direction.UP, ['ROCKET: The top\nfloor! Only the boss\nand his guests come\nup here!']),
+    scTrainer(SC_11F, 'B', 'silph_11f_grunt2', Direction.UP, ['ROCKET: You will\nnot disturb the\nboss!']),
+    scTrainer(SC_11F, 'G', 'giovanni_silph', Direction.DOWN, [
+      "GIOVANNI: We meet\nagain, child!",
+      "You have interfered\nwith TEAM ROCKET\nfor the last time!",
+      "Prepare to feel my\nwrath!",
+    ], 0x604020),
+    scTalker(SC_11F, 'P', 'silph_president', Direction.DOWN, [
+      "PRESIDENT: Thank\ngoodness you're here!",
+      "TEAM ROCKET has taken\nover our company!",
+      "Please, defeat their\nboss!",
+    ]),
+  ],
+});
+
+export const SILPH_MAPS: Record<string, MapData> = Object.fromEntries(
+  [SILPH_CO_1F, SILPH_CO_2F, SILPH_CO_3F, SILPH_CO_4F, SILPH_CO_5F, SILPH_CO_6F, SILPH_CO_7F, SILPH_CO_8F, SILPH_CO_9F, SILPH_CO_10F, SILPH_CO_11F]
+    .map(m => [m.id, m]),
+);
