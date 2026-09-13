@@ -13,8 +13,11 @@ const VR_LEGEND: Record<string, TileType> = {
   i: T.CAVE_FLOOR, M: T.CAVE_FLOOR,
 };
 
+// Sight range 1, like every dungeon after these three: a niche trainer catches
+// the player on the corridor tile in front of it. A longer range would make it
+// walk down the corridor and stand there for the visit (tests/data/trainerWalk.test.ts).
 const vrTrainer = (sketch: SketchShape, ch: string, id: string, direction: Direction, dialogue: string[]): NPCData => ({
-  id, ...sketch.findOne(ch), spriteColor: 0xc06060, direction, dialogue, isTrainer: true, sightRange: 4,
+  id, ...sketch.findOne(ch), spriteColor: 0xc06060, direction, dialogue, isTrainer: true, sightRange: 1,
 });
 const vrItems = (sketch: SketchShape, prefix: string, itemIds: string[]): NPCData[] => {
   const spots = sketch.find('i');
