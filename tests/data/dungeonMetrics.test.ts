@@ -40,7 +40,8 @@ const BASELINE: FloorSpec[] = [
   { map: 'mt_moon',             from: 'route3',            to: 'mt_moon_b1f', goal: 0,     walkablePct: 19, pathRatio: 2.3 },
   { map: 'mt_moon_b1f',         from: 'mt_moon',           to: 'mt_moon_b2f', goal: 0,     walkablePct: 22, pathRatio: 1.8 },
   { map: 'mt_moon_b2f',         from: 'mt_moon_b1f',       to: 'npc:mt_moon_fossil_nerd',  walkablePct: 18, pathRatio: 5.6 },
-  { map: 'digletts_cave',       from: 'route2',            to: 'route11',                  walkablePct: 49, pathRatio: 1.0 },
+  { map: 'digletts_cave',       from: 'route2',            to: 'digletts_cave_b1f', goal: 0, walkablePct: 23, pathRatio: 2.4 },
+  { map: 'digletts_cave_b1f',   from: 'digletts_cave',     to: 'digletts_cave', goal: 1,   walkablePct: 21, pathRatio: 5.2 },
   { map: 'rock_tunnel',         from: 'route10',           to: 'rock_tunnel_b1f', goal: 0, walkablePct: 22, pathRatio: 3.5 },
   { map: 'rock_tunnel_b1f',     from: 'rock_tunnel',       to: 'rock_tunnel', goal: 1,     walkablePct: 16, pathRatio: 2.7 },
   { map: 'pokemon_tower_1f',    from: 'lavender_town',     to: 'pokemon_tower_2f',         walkablePct: 56, pathRatio: 1.0 },
@@ -173,7 +174,7 @@ describe('dungeon layout ratchet', () => {
     ...Array.from({ length: 11 }, (_, i) => `silph_co_${i + 1}f`),
     'rocket_hideout_b1f', 'rocket_hideout_b2f', 'rocket_hideout_b3f', 'rocket_hideout_b4f',
     ...Array.from({ length: 6 }, (_, i) => `pokemon_tower_${i + 2}f`),
-    'cerulean_cave_1f', 'cerulean_cave_2f', 'cerulean_cave_b1f', 'mt_moon', 'mt_moon_b1f', 'mt_moon_b2f', 'rock_tunnel', 'rock_tunnel_b1f', 'power_plant']);
+    'cerulean_cave_1f', 'cerulean_cave_2f', 'cerulean_cave_b1f', 'mt_moon', 'mt_moon_b1f', 'mt_moon_b2f', 'rock_tunnel', 'rock_tunnel_b1f', 'power_plant', 'digletts_cave', 'digletts_cave_b1f']);
 
   it('rebuilt floors meet the plan bar; the reference floor (Viridian Forest) is still better than every floor not yet rebuilt', () => {
     const forest = BASELINE.find(s => s.map === 'viridian_forest')!;

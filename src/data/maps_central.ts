@@ -1,6 +1,6 @@
 import { MapData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
-import { createMapShape } from './mapBuilder';
+import { createMapFromSketch, createMapShape, SketchShape } from './mapBuilder';
 
 const T = TileType;
 
@@ -1262,49 +1262,120 @@ const GAME_CORNER: MapData = (() => {
 
 // ─── DIGLETT'S CAVE ─────────────────────────────────────────────────────────
 
-const DIGLETTS_CAVE: MapData = (() => {
-  const W = 12, H = 20;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_WALL, { startSolid: true });
+// Two floors drawn as sketches by tools/diglett-floors.mjs in the helper repo
+// (which also checks them); tests/data/diglettsCave.test.ts proves the same
+// facts on this data.
+//
+// `digletts_cave` keeps its id and both route landings ((6,2) from Route 2,
+// (6,18) from Route 11) but is two sealed entrance caves: the north one winds
+// from the Route 2 mouth to ladder a, the south one from ladder b to the
+// Route 11 mouth. B1F is one serpentine corridor from a to b (~88 steps) with
+// Diglett and Dugtrio on every tile; the entrance caves roll no encounters.
+// No trainers, no items (Gen I). Every ladder and mouth sits in a one-tile
+// stub (a warp fires on entry, not on the tile you land on); the short
+// pockets off the corridors are cave texture, not puzzle (it is lit).
+// Legend: # wall, . floor, E north mouth (Route 2), X south mouth (Route 11),
+// a/b ladders (the same letter on both floors).
+const DC_LEGEND: Record<string, TileType> = {
+  '#': T.CAVE_WALL, '.': T.CAVE_FLOOR, E: T.CAVE_FLOOR, X: T.CAVE_FLOOR,
+  a: T.CAVE_ENTRANCE, b: T.CAVE_ENTRANCE,
+};
 
-  // Carve out main cave interior (leave 2-tile border)
-  fillRect(2, 2, 8, 16, T.CAVE_FLOOR);
+const DC_1F = createMapFromSketch([
+  '######E#####',
+  '######.#####',
+  '##.....#####',
+  '##.#.#######',
+  '##.#########',
+  '##.........#',
+  '#########.##',
+  '###a......##',
+  '############',
+  '############',
+  '############',
+  '############',
+  '#.......b###',
+  '##.#########',
+  '##........##',
+  '####.####.##',
+  '#########.##',
+  '######....##',
+  '######.#####',
+  '######X#####',
+], DC_LEGEND);
+const DC_B1F = createMapFromSketch([
+  '##########################',
+  '##########################',
+  '#a.......................#',
+  '##########.###########.###',
+  '##########.###########.###',
+  '######################.###',
+  '###....................###',
+  '######.########.##########',
+  '######.########.##########',
+  '######.###################',
+  '######...................#',
+  '##################.###.###',
+  '########.#########.###.###',
+  '########.#############.###',
+  '##.....................###',
+  '##.#########.#############',
+  '##.#########.#############',
+  '##.#######################',
+  '##b#######################',
+  '##########################',
+], DC_LEGEND);
 
-  // North entrance corridor
-  fillRect(5, 0, 3, 3, T.CAVE_FLOOR);
-  // South entrance corridor
-  fillRect(5, 17, 3, 3, T.CAVE_FLOOR);
+/** The one open tile beside a stub (where a ladder lands the player). */
+const dcBeside = (s: SketchShape, ch: string) => {
+  const p = s.findOne(ch);
+  const open = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }]
+    .map(d => ({ x: p.x + d.x, y: p.y + d.y }))
+    .filter(q => s.tiles[q.y]?.[q.x] === T.CAVE_FLOOR);
+  if (open.length !== 1) throw new Error(`digletts cave: '${ch}' is not in a stub`);
+  return open[0];
+};
+/** Ladder `ch` on `s` to the same letter on `other` (landing on the tile beside it). */
+const dcLadder = (s: SketchShape, ch: string, other: SketchShape, otherId: string) => {
+  const land = dcBeside(other, ch);
+  return { ...s.findOne(ch), targetMap: otherId, targetX: land.x, targetY: land.y };
+};
+const DC_ENCOUNTERS = {
+  grassRate: 0.15,
+  encounters: [
+    { speciesId: 50, minLevel: 15, maxLevel: 22, weight: 90 }, // Diglett
+    { speciesId: 51, minLevel: 29, maxLevel: 31, weight: 10 }, // Dugtrio
+  ],
+};
 
-  // Interior obstacles — winding tunnel
-  fillRect(2, 5, 3, 2, T.CAVE_WALL);
-  fillRect(7, 8, 3, 2, T.CAVE_WALL);
-  fillRect(2, 11, 3, 2, T.CAVE_WALL);
-  fillRect(7, 14, 3, 2, T.CAVE_WALL);
+const DIGLETTS_CAVE: MapData = {
+  id: 'digletts_cave',
+  name: "DIGLETT's CAVE",
+  width: DC_1F.width, height: DC_1F.height,
+  tiles: DC_1F.tiles, collision: DC_1F.collision,
+  warps: [
+    // The mouths: north (first: the floor's entry point) to Route 2, south to Route 11.
+    { ...DC_1F.findOne('E'), targetMap: 'route2', targetX: 15, targetY: 24 },
+    { ...DC_1F.findOne('X'), targetMap: 'route11', targetX: 22, targetY: 4 },
+    // The ladders, in walkthrough order: a (north cave, first: the floor's goal), b (south cave).
+    dcLadder(DC_1F, 'a', DC_B1F, 'digletts_cave_b1f'),
+    dcLadder(DC_1F, 'b', DC_B1F, 'digletts_cave_b1f'),
+  ],
+  npcs: [],
+};
 
-  return {
-    id: 'digletts_cave',
-    name: "DIGLETT's CAVE",
-    width: W, height: H,
-    tiles, collision,
-    warps: [
-      // North exit → Route 2
-      { x: 5, y: 0, targetMap: 'route2', targetX: 15, targetY: 24 },
-      { x: 6, y: 0, targetMap: 'route2', targetX: 15, targetY: 24 },
-      { x: 7, y: 0, targetMap: 'route2', targetX: 15, targetY: 24 },
-      // South exit → Route 11
-      { x: 5, y: 19, targetMap: 'route11', targetX: 22, targetY: 4 },
-      { x: 6, y: 19, targetMap: 'route11', targetX: 22, targetY: 4 },
-      { x: 7, y: 19, targetMap: 'route11', targetX: 22, targetY: 4 },
-    ],
-    npcs: [],
-    wildEncounters: {
-      grassRate: 0.15,
-      encounters: [
-        { speciesId: 50, minLevel: 15, maxLevel: 22, weight: 90 }, // Diglett
-        { speciesId: 51, minLevel: 29, maxLevel: 31, weight: 10 }, // Dugtrio
-      ],
-    },
-  };
-})();
+const DIGLETTS_CAVE_B1F: MapData = {
+  id: 'digletts_cave_b1f',
+  name: "DIGLETT's CAVE B1F",
+  width: DC_B1F.width, height: DC_B1F.height,
+  tiles: DC_B1F.tiles, collision: DC_B1F.collision,
+  warps: [
+    dcLadder(DC_B1F, 'a', DC_1F, 'digletts_cave'),   // first: where the player arrives from Route 2
+    dcLadder(DC_B1F, 'b', DC_1F, 'digletts_cave'),   // the floor's goal
+  ],
+  npcs: [],
+  wildEncounters: DC_ENCOUNTERS,
+};
 
 // ─── Lavender House (generic NPC house) ──────────────────────────────────────
 export const LAVENDER_HOUSE: MapData = (() => {
@@ -1594,6 +1665,7 @@ export const CENTRAL_MAPS: Record<string, MapData> = {
   pokemart_saffron: POKEMART_SAFFRON,
   game_corner: GAME_CORNER,
   digletts_cave: DIGLETTS_CAVE,
+  digletts_cave_b1f: DIGLETTS_CAVE_B1F,
   lavender_house: LAVENDER_HOUSE,
   celadon_mansion: CELADON_MANSION,
   fighting_dojo: FIGHTING_DOJO,
