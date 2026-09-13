@@ -223,6 +223,27 @@ const SPECIAL_STRIKE_EFFECTS = new Set<MoveEffect>([
 /** Hard ceiling; the animation is serial with the battle text, so it matters. */
 export const MAX_DURATION_MS = 900;
 
+/**
+ * Ceiling for a tier-3 set-piece. Overrides are hand-written one-offs for a
+ * handful of iconic moves, so they are allowed a longer beat than the generic
+ * body - but not an unbounded one, because the animation is still serial with
+ * the battle text.
+ */
+export const MAX_OVERRIDE_DURATION_MS = 1200;
+
+/**
+ * Budget for a tier-3 override that needs more room than its motion/intensity
+ * would give it. Keyed by the MOVE_OVERRIDES value, clamped to
+ * MAX_OVERRIDE_DURATION_MS. Overrides not listed here keep the generic budget.
+ *
+ * thunder: the strike is a sequence - sky darkens, three staggered bolts fall,
+ * impact, afterglow - and at the generic beam budget (520 ms) each bolt would
+ * be on screen for barely three frames.
+ */
+export const OVERRIDE_DURATION: Record<string, number> = {
+  thunder: 1000,
+};
+
 const MOTION_BASE_MS: Record<BaseMotion, number> = {
   contact: 240,
   barrage: 380,
@@ -251,7 +272,10 @@ export interface AnimationSpec {
   particle: ParticleShape;
   accent: Accent;
   sfx: SfxId;
-  /** Total budget for the whole animation, always <= MAX_DURATION_MS. */
+  /**
+   * Total budget for the whole animation: <= MAX_DURATION_MS for the generic
+   * body, <= MAX_OVERRIDE_DURATION_MS for a tier-3 set-piece (OVERRIDE_DURATION).
+   */
   duration: number;
   /** Key into the renderer's OVERRIDES table (tier 3), when this move has one. */
   override?: string;
@@ -323,7 +347,11 @@ export function resolveAnimation(moveId: number): AnimationSpec {
   };
 
   const override = MOVE_OVERRIDES[moveId];
-  if (override) spec.override = override;
+  if (override) {
+    spec.override = override;
+    const budget = OVERRIDE_DURATION[override];
+    if (budget !== undefined) spec.duration = Math.min(MAX_OVERRIDE_DURATION_MS, budget);
+  }
   if (motion === 'charge') spec.twoTurn = 'charge';
 
   return spec;

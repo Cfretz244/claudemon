@@ -87,7 +87,7 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
  84 THUNDER SHOCK  ELECTRIC beam           light bolt    zap       400 #FFCC00 -
  85 THUNDERBOLT    ELECTRIC beam           heavy bolt    zap       520 #FFCC00 thunderbolt
  86 THUNDER WAVE   ELECTRIC status-cloud   light bolt    zap       340 #FFCC00 thunderWave
- 87 THUNDER        ELECTRIC beam           heavy bolt    zap       520 #FFCC00 thunder
+ 87 THUNDER        ELECTRIC beam           heavy bolt    zap       1000 #FFCC00 thunder
  88 ROCK THROW     ROCK     projectile     mid   block   thud      380 #BBAA66 -
  89 EARTHQUAKE     GROUND   contact        heavy grit    rumble    360 #DDBB55 earthquake
  90 FISSURE        GROUND   special-strike light grit    rumble    460 #DDBB55 -
