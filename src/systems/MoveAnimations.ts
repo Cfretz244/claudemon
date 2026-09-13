@@ -694,16 +694,38 @@ export function afterimage(
 }
 
 /** Psychic: a brief inverted frame. Falls back to a white flash if unsupported. */
-export function screenInvert(scene: Phaser.Scene, duration: number): Promise<void> {
+/**
+ * A psychic "reality bends" distortion: two counter-rotating arcs of the type
+ * colour closing in on a point.
+ *
+ * This used to be a full-screen DIFFERENCE-blended white rect. Phaser's WebGL
+ * renderer only supports a subset of blend modes and silently falls back to
+ * NORMAL for DIFFERENCE, so instead of inverting the screen it painted an
+ * opaque white rectangle over the whole battle - the frame went blank white.
+ * A local, type-coloured distortion cannot fail that way and keeps the move's
+ * own colour on screen.
+ */
+export function warpArcs(
+  scene: Phaser.Scene,
+  x: number, y: number,
+  color: number,
+  accentColor: number,
+  duration: number,
+): Promise<void> {
   const g = newGraphics(scene, 900);
-  g.fillStyle(0xFFFFFF, 1);
-  g.fillRect(0, 0, 160, 144);
-  try {
-    g.setBlendMode(Phaser.BlendModes.DIFFERENCE);
-  } catch {
-    g.setAlpha(0.5);
-  }
-  return delay(scene, duration).then(() => { g.destroy(); });
+  return animateFrames(scene, duration, t => {
+    g.clear();
+    g.setAlpha(t < 0.7 ? 1 : Math.max(0, 1 - (t - 0.7) / 0.3));
+    for (let i = 0; i < 2; i++) {
+      const dir = i === 0 ? 1 : -1;
+      const spin = dir * t * Math.PI * 1.6 + (i * Math.PI) / 2;
+      const r = 26 - t * 12 + i * 5;
+      g.lineStyle(3, i === 0 ? color : accentColor, 1);
+      g.beginPath();
+      g.arc(x, y, Math.max(3, r), spin, spin + Math.PI * 0.75);
+      g.strokePath();
+    }
+  }).then(() => { g.destroy(); });
 }
 
 /** Particles spawning along the attacker -> defender line (beams, drains). */
@@ -946,7 +968,7 @@ async function typeImpact(spec: AnimationSpec, ctx: AnimationContext, weight = 1
       }));
       break;
     case 'invert':
-      jobs.push(screenInvert(scene, 50));
+      jobs.push(warpArcs(scene, defenderSprite.x, defenderSprite.y, spec.color, spec.accentColor, dur));
       jobs.push(ring(scene, defenderSprite.x, defenderSprite.y, spec.color, 20, dur, 3));
       break;
     case 'heavy-shake':
