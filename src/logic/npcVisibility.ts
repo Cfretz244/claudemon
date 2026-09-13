@@ -47,6 +47,21 @@ export function shouldSkipNPC(
   if (npc.id === 'rival_silph' && defeatedTrainers.includes('rival_silph')) {
     return true;
   }
+  // Route 22 rival, first (optional) fight: Gen I makes him appear once the
+  // Pokedex is in hand (parcel delivered) and removes him for good once the
+  // player holds the Boulder Badge, or after the battle.
+  if (npc.id === 'rival_route22' &&
+      (!storyFlags['delivered_parcel'] ||
+       badges.includes('BOULDER') ||
+       defeatedTrainers.includes('rival_route22'))) {
+    return true;
+  }
+  // Route 22 rival, mandatory rematch on the way to Victory Road: only with
+  // all eight badges, and gone after the battle.
+  if (npc.id === 'rival_route22_2' &&
+      (badges.length < 8 || defeatedTrainers.includes('rival_route22_2'))) {
+    return true;
+  }
   // Cerulean rival disappears after battle
   if (npc.id === 'rival_cerulean' && defeatedTrainers.includes('rival_cerulean')) {
     return true;
