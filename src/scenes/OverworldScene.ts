@@ -31,6 +31,7 @@ import { shouldSkipNPC as shouldSkipNPCLogic } from '../logic/npcVisibility';
 import { shouldGiveOaksParcel } from '../logic/oaksParcel';
 import { checkEntryGates } from '../logic/warpGate';
 import { MapInstance, instantiateMap, pushBoulder } from '../logic/boulders';
+import { computeSlide, Slide } from '../logic/spinTiles';
 import { computeTrainerSight } from '../logic/trainerSight';
 import { pickWildEncounter, getEncounterTheme } from '../logic/encounters';
 import { SurgePuzzle } from '../logic/surgePuzzle';
@@ -647,13 +648,10 @@ export class OverworldScene extends Phaser.Scene {
           return;
         }
 
-        // Check for spin tile
-        if (this.currentMap.spinTiles) {
-          const spinDir = this.currentMap.spinTiles[`${newX},${newY}`];
-          if (spinDir) {
-            this.performSpinSlide(spinDir);
-            return;
-          }
+        // Landed on a spin tile: slide where the arrows lead
+        if (this.currentMap.spinTiles?.[`${newX},${newY}`]) {
+          this.performSpinSlide(computeSlide(this.currentMap, newX, newY, (x, y) => this.isSpinBlocked(x, y)));
+          return;
         }
 
         this.stepCounter++;
@@ -772,53 +770,50 @@ export class OverworldScene extends Phaser.Scene {
     return false;
   }
 
-  private performSpinSlide(dir: Direction): void {
+  /** Animate a precomputed slide one tile at a time, then apply how it ended. */
+  private performSpinSlide(slide: Slide, index = 0): void {
     this.isMoving = true;
-    const vec = DIR_VECTORS[dir];
-    const nextX = this.playerGridX + vec.x;
-    const nextY = this.playerGridY + vec.y;
-
-    // If blocked immediately, just stop
-    if (this.isSpinBlocked(nextX, nextY)) {
+    if (slide.path.length === 0) {
+      // Arrow points straight into something: stay put
       this.isMoving = false;
       this.player.play(`player_idle_${this.playerDirection}`, true);
       this.stepCounter++;
-      if (this.checkTrainerSight()) return;
+      this.checkTrainerSight();
       return;
     }
+    const step = slide.path[index];
+    const isLast = index === slide.path.length - 1;
 
     // Cycle sprite through directions for spinning visual
     const spinDirs: Direction[] = [Direction.DOWN, Direction.LEFT, Direction.UP, Direction.RIGHT];
-    const curIdx = spinDirs.indexOf(this.playerDirection);
-    const nextDirIdx = (curIdx + 1) % 4;
-    this.playerDirection = spinDirs[nextDirIdx];
+    this.playerDirection = spinDirs[(spinDirs.indexOf(this.playerDirection) + 1) % 4];
     this.player.play(`player_walk_${this.playerDirection}`, true);
 
-    // Slide to next tile
     const prevX = this.playerGridX;
     const prevY = this.playerGridY;
-    this.playerGridX = nextX;
-    this.playerGridY = nextY;
+    this.playerGridX = step.x;
+    this.playerGridY = step.y;
 
     this.tweens.add({
       targets: this.player,
-      x: nextX * TILE_SIZE + TILE_SIZE / 2,
-      y: nextY * TILE_SIZE + TILE_SIZE / 2,
+      x: step.x * TILE_SIZE + TILE_SIZE / 2,
+      y: step.y * TILE_SIZE + TILE_SIZE / 2,
       duration: Math.floor(MOVE_DURATION * 0.6),
       onComplete: () => {
-        // Move pikachu follower
         if (this.pikachuVisible) {
           if (!this.pikachu.visible) this.pikachu.setVisible(true);
-          this.movePikachu(prevX, prevY, dir);
+          this.movePikachu(prevX, prevY, step.dir);
         }
-
-        // Check warp on landing
-        const warp = this.currentMap.warps.find(w => w.x === nextX && w.y === nextY);
-        if (warp) {
-          this.isMoving = false;
-          this.playerDirection = dir;
-          this.player.play(`player_idle_${this.playerDirection}`, true);
-          if (this.currentMap.tiles[nextY]?.[nextX] === TileType.TELEPORT_PAD) {
+        if (!isLast) {
+          this.performSpinSlide(slide, index + 1);
+          return;
+        }
+        this.isMoving = false;
+        this.playerDirection = step.dir;
+        this.player.play(`player_idle_${this.playerDirection}`, true);
+        if (slide.end === 'warp') {
+          const warp = this.currentMap.warps.find(w => w.x === step.x && w.y === step.y)!;
+          if (this.currentMap.tiles[step.y]?.[step.x] === TileType.TELEPORT_PAD) {
             soundSystem.teleportWarp();
           } else {
             soundSystem.doorOpen();
@@ -826,42 +821,8 @@ export class OverworldScene extends Phaser.Scene {
           this.warpTo(warp.targetMap, warp.targetX, warp.targetY);
           return;
         }
-
-        // Check if landed on another spin tile -> change direction, keep going
-        if (this.currentMap.spinTiles) {
-          const nextSpin = this.currentMap.spinTiles[`${nextX},${nextY}`];
-          if (nextSpin) {
-            this.performSpinSlide(nextSpin);
-            return;
-          }
-        }
-
-        // Check if landed on a stop tile -> stop
-        const landedTile = this.currentMap.tiles[nextY]?.[nextX];
-        if (landedTile === TileType.STOP_TILE) {
-          this.isMoving = false;
-          this.playerDirection = dir;
-          this.player.play(`player_idle_${this.playerDirection}`, true);
-          this.stepCounter++;
-          if (this.checkTrainerSight()) return;
-          return;
-        }
-
-        // Otherwise keep sliding in the same direction
-        const aheadX = nextX + vec.x;
-        const aheadY = nextY + vec.y;
-        if (this.isSpinBlocked(aheadX, aheadY)) {
-          // Hit a wall — stop here
-          this.isMoving = false;
-          this.playerDirection = dir;
-          this.player.play(`player_idle_${this.playerDirection}`, true);
-          this.stepCounter++;
-          if (this.checkTrainerSight()) return;
-          return;
-        }
-
-        // Continue sliding
-        this.performSpinSlide(dir);
+        this.stepCounter++;
+        this.checkTrainerSight();
       },
     });
   }
