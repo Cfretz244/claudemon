@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TILE_SIZE, GAME_WIDTH, GAME_HEIGHT, MOVE_DURATION, Direction, DIR_VECTORS, OPPOSITE_DIR } from '../utils/constants';
 import { ALL_MAPS } from '../data/maps';
-import { MapData, TileType, NPCData } from '../types/map.types';
+import { MapData, TileType, NPCData, ElevatorFloor } from '../types/map.types';
 import { TextBox } from '../components/TextBox';
 import { PokedexScreen } from '../components/PokedexScreen';
 import { PartyScreen } from '../components/PartyScreen';
@@ -32,6 +32,7 @@ import { shouldGiveOaksParcel } from '../logic/oaksParcel';
 import { checkEntryGates } from '../logic/warpGate';
 import { MapInstance, instantiateMap, landedBoulders, pushBoulder, isFlagGateOpen, tileUnder } from '../logic/boulders';
 import { restoreParty } from '../logic/healing';
+import { elevatorAccess, elevatorTarget } from '../logic/elevator';
 import { computeCurrentSlide, computeSlide, Slide } from '../logic/spinTiles';
 import { computeTrainerSight } from '../logic/trainerSight';
 import { pickWildEncounter, getEncounterTheme, rollsEncounterOn, encounterTableOf, itemBallAction } from '../logic/encounters';
@@ -1965,13 +1966,11 @@ export class OverworldScene extends Phaser.Scene {
     return true;
   }
 
-  /** Rocket Hideout elevator: needs the Lift Key. */
+  /** Elevator NPC: the floors and the key come from the map's `elevator` data. */
   private handleElevatorNpc(): boolean {
-    if (!this.playerState.hasItem('lift_key')) {
-      this.textBox.show(['It\'s an elevator,\nbut it won\'t move...', 'It needs a special\nkey.']);
-    } else {
-      this.showElevatorMenu();
-    }
+    const access = elevatorAccess(this.currentMap, this.playerState);
+    if (access.ok) this.showElevatorMenu(access.floors);
+    else this.textBox.show(access.message);
     return true;
   }
 
@@ -2141,13 +2140,7 @@ export class OverworldScene extends Phaser.Scene {
     this.textBox.show([`Here you go!`, `Got 50 coins for\n$${COST}.`]);
   }
 
-  private showElevatorMenu(): void {
-    const floors = [
-      { label: 'B1F', map: 'rocket_hideout_b1f', x: 2, y: 13 },
-      { label: 'B2F', map: 'rocket_hideout_b2f', x: 2, y: 13 },
-      { label: 'B4F', map: 'rocket_hideout_b4f', x: 2, y: 9 },
-    ];
-
+  private showElevatorMenu(floors: ElevatorFloor[]): void {
     this.screenOpen = true;
 
     let cursorIdx = 0;
@@ -2168,7 +2161,7 @@ export class OverworldScene extends Phaser.Scene {
     container.add(bg);
 
     floors.forEach((opt, i) => {
-      const isCurrent = opt.map === this.currentMap.id;
+      const isCurrent = opt.targetMap === this.currentMap.id;
       const t = this.add.text(14, 4 + i * 14, opt.label, {
         fontSize: '8px',
         color: isCurrent ? '#a0a0a0' : '#383838',
@@ -2203,11 +2196,11 @@ export class OverworldScene extends Phaser.Scene {
         cursor.setY(4 + cursorIdx * 14);
         soundSystem.menuSelect();
       } else if (event.key === 'z' || event.key === 'Enter') {
-        const target = floors[cursorIdx];
-        if (target.map === this.currentMap.id) return; // Already on this floor
+        const target = elevatorTarget(floors, cursorIdx, this.currentMap.id);
+        if (!target) return; // Already on this floor
         cleanup();
         soundSystem.doorOpen();
-        this.warpTo(target.map, target.x, target.y);
+        this.warpTo(target.targetMap, target.targetX, target.targetY);
       } else if (event.key === 'x' || event.key === 'Escape') {
         cleanup();
       }

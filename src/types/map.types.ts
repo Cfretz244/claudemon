@@ -115,6 +115,26 @@ export interface EntryGate {
   message: string[];
 }
 
+/** One stop of an elevator: the menu label and where the player lands. */
+export interface ElevatorFloor {
+  label: string;
+  targetMap: string;
+  targetX: number;
+  targetY: number;
+}
+
+/**
+ * An elevator shared by several floors. Every floor that has an `elevator_`
+ * NPC declares the same `ElevatorData`; the menu lists `floors` and greys out
+ * the current one. While `requires` is unmet the elevator shows
+ * `lockedMessage` instead (Rocket Hideout: the Lift Key).
+ */
+export interface ElevatorData {
+  floors: ElevatorFloor[];
+  requires?: WarpRequirement;
+  lockedMessage?: string[];
+}
+
 export interface NPCData {
   id: string;
   x: number;
@@ -167,6 +187,8 @@ export interface MapData {
   currents?: Record<string, Direction>;
   /** Rolled instead of `wildEncounters` while the player is surfing. */
   surfEncounters?: WildEncounterTable;
+  /** The elevator reachable from this floor's `elevator_` NPC; see `src/logic/elevator.ts`. */
+  elevator?: ElevatorData;
   /**
    * Tile types that roll `wildEncounters` on foot (default TALL_GRASS and
    * CAVE_FLOOR). Lets indoor dungeons such as the Mansion roll on INDOOR_FLOOR.
