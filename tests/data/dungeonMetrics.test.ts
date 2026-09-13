@@ -74,7 +74,7 @@ const BASELINE: FloorSpec[] = [
   { map: 'pokemon_mansion_2f',  from: 'pokemon_mansion',   to: 'pokemon_mansion_3f',       walkablePct: 23, pathRatio: 3.5 },
   { map: 'pokemon_mansion_3f',  from: 'pokemon_mansion_2f', to: 'pokemon_mansion',         walkablePct: 21, pathRatio: 3.3 },
   { map: 'pokemon_mansion_b1f', from: 'pokemon_mansion',   to: 'npc:mansion_b1f_secret_key', walkablePct: 19, pathRatio: 3.0 },
-  { map: 'power_plant',         from: 'route10',           to: 'npc:zapdos_power_plant',   walkablePct: 50, pathRatio: 1.0 },
+  { map: 'power_plant',         from: 'route10',           to: 'npc:zapdos_power_plant',   walkablePct: 28, pathRatio: 3.4 },
   { map: 'victory_road',        from: 'route23',           to: 'victory_road_2f',          walkablePct: 36, pathRatio: 1.5 },
   { map: 'victory_road_2f',     from: 'victory_road',      to: 'victory_road_3f',          walkablePct: 24, pathRatio: 1.5 },
   { map: 'victory_road_3f',     from: 'victory_road_2f',   to: 'npc:vr_trainer10',         walkablePct: 19, pathRatio: 2.5 },
@@ -173,7 +173,7 @@ describe('dungeon layout ratchet', () => {
     ...Array.from({ length: 11 }, (_, i) => `silph_co_${i + 1}f`),
     'rocket_hideout_b1f', 'rocket_hideout_b2f', 'rocket_hideout_b3f', 'rocket_hideout_b4f',
     ...Array.from({ length: 6 }, (_, i) => `pokemon_tower_${i + 2}f`),
-    'cerulean_cave_1f', 'cerulean_cave_2f', 'cerulean_cave_b1f', 'mt_moon', 'mt_moon_b1f', 'mt_moon_b2f', 'rock_tunnel', 'rock_tunnel_b1f']);
+    'cerulean_cave_1f', 'cerulean_cave_2f', 'cerulean_cave_b1f', 'mt_moon', 'mt_moon_b1f', 'mt_moon_b2f', 'rock_tunnel', 'rock_tunnel_b1f', 'power_plant']);
 
   it('rebuilt floors meet the plan bar; the reference floor (Viridian Forest) is still better than every floor not yet rebuilt', () => {
     const forest = BASELINE.find(s => s.map === 'viridian_forest')!;

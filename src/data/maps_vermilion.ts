@@ -645,8 +645,10 @@ export const ROUTE10: MapData = (() => {
   // Power Plant access — water + entrance east of path (requires Surf)
   fillRect(14, 2, 3, 2, T.WATER);
   setTile(17, 2, T.DOOR); // Power Plant entrance (reachable only by Surfing)
-  // Clear tree border so entrance tile is accessible
-  setTile(17, 2, T.DOOR);
+  // Trees above and below the door's landing strip (17,3), so the only way
+  // to the door is across the water; leaving the plant lands on the strip.
+  setTile(17, 1, T.TREE);
+  setTile(17, 4, T.TREE);
 
   // --- Mountain formation blocking passage (y=9 to y=14) ---
   // Spans full width between tree borders; extends into east/west borders
@@ -1517,128 +1519,109 @@ export const POKEMON_FAN_CLUB: MapData = (() => {
 })();
 
 // ---------------------------------------------------------------------------
-// POWER PLANT -- industrial cave east of Route 10 (requires Surf)
+// POWER PLANT -- one floor drawn as a sketch (Surf entry from Route 10)
 // ---------------------------------------------------------------------------
-export const POWER_PLANT: MapData = (() => {
-  const W = 20, H = 20;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR);
+//
+// Drawn from corridor segments by tools/plant-floors.mjs in the helper repo
+// (which also checks it); tests/data/powerPlant.test.ts proves the same facts
+// on this data. Rows of machinery walked back and forth from the door to
+// Zapdos in a stub at the far end of the top row; item balls in stubs off
+// the rows, three of them Voltorb/Electrode ambushes (`ambush`: the ball is
+// gone and a wild battle starts); an Engineer in a niche at the end of three
+// of the rows, sight range 1. Empty dead ends on purpose.
+// Legend: # wall, . floor, E the door, i item ball, v Voltorb ambush,
+// e Electrode ambush, Z Zapdos, 1-3 the Engineers.
+const PP_LEGEND: Record<string, TileType> = {
+  '#': T.CAVE_WALL, '.': T.CAVE_FLOOR, E: T.CAVE_FLOOR, i: T.CAVE_FLOOR, v: T.CAVE_FLOOR, e: T.CAVE_FLOOR,
+  Z: T.CAVE_FLOOR, '1': T.CAVE_FLOOR, '2': T.CAVE_FLOOR, '3': T.CAVE_FLOOR,
+};
 
-  // Cave wall borders (2 tiles thick)
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.CAVE_WALL); setTile(x, 1, T.CAVE_WALL);
-    setTile(x, H - 1, T.CAVE_WALL); setTile(x, H - 2, T.CAVE_WALL);
-  }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.CAVE_WALL); setTile(1, y, T.CAVE_WALL);
-    setTile(W - 1, y, T.CAVE_WALL); setTile(W - 2, y, T.CAVE_WALL);
-  }
+const PP_SKETCH = createMapFromSketch([
+  '####################',
+  '####################',
+  '##................Z#',
+  '#3.###########.#####',
+  '##.#######.#########',
+  '##................##',
+  '######i##########.##',
+  '###.#############.##',
+  '###.########e####.##',
+  '##................##',
+  '##.#####v######.####',
+  '#2.############.####',
+  '##.###########i#####',
+  '##................##',
+  '#####v###########.##',
+  '#########.#######.1#',
+  '#########.##i####.##',
+  '##................##',
+  '#########.##########',
+  '#########E##########',
+], PP_LEGEND);
 
-  // Entrance at south
-  setTile(9, 18, T.CAVE_FLOOR); setTile(9, 19, T.CAVE_FLOOR);
+const ppBall = (p: { x: number; y: number }, id: string, extra: Partial<NPCData>): NPCData =>
+  ({ id, ...p, spriteColor: 0x000000, direction: Direction.DOWN, dialogue: [], isItemBall: true, ...extra });
+const ppEngineer = (ch: string, id: string, direction: Direction, dialogue: string[], spriteColor: number): NPCData =>
+  ({ id, ...PP_SKETCH.findOne(ch), spriteColor, direction, dialogue, isTrainer: true, sightRange: 1 });
 
-  // Winding corridors with dead ends (industrial maze)
-  fillRect(4, 4, 4, 2, T.CAVE_WALL);
-  fillRect(12, 3, 4, 2, T.CAVE_WALL);
-  fillRect(3, 8, 3, 2, T.CAVE_WALL);
-  fillRect(9, 7, 2, 3, T.CAVE_WALL);
-  fillRect(14, 8, 3, 2, T.CAVE_WALL);
-  fillRect(5, 12, 3, 2, T.CAVE_WALL);
-  fillRect(11, 12, 4, 2, T.CAVE_WALL);
-  fillRect(3, 15, 3, 2, T.CAVE_WALL);
-  fillRect(14, 15, 3, 2, T.CAVE_WALL);
-
-  return {
-    id: 'power_plant',
-    name: 'POWER PLANT',
-    width: W,
-    height: H,
-    tiles,
-    collision,
-    warps: [
-      // Exit back to Route 10
-      { x: 9, y: 19, targetMap: 'route10', targetX: 17, targetY: 3 },
-    ],
-    npcs: [
-      {
-        id: 'zapdos_power_plant',
-        x: 10, y: 3,
-        spriteColor: 0xf0d030,
-        direction: Direction.DOWN,
-        dialogue: [
-          'A legendary bird\nPOKeMON is here!',
-          "Electricity crackles\nall around it!",
-          "It's ZAPDOS!",
-        ],
-        isTrainer: false,
-      },
-      {
-        id: 'pp_trainer1',
-        x: 6, y: 7,
-        spriteColor: 0x808080,
-        direction: Direction.RIGHT,
-        dialogue: [
-          'ENGINEER: This old\npower plant is full',
-          'of Electric-type\nPOKeMON!',
-        ],
-        isTrainer: true,
-        sightRange: 4,
-      },
-      {
-        id: 'pp_trainer2',
-        x: 14, y: 11,
-        spriteColor: 0x707070,
-        direction: Direction.LEFT,
-        dialogue: [
-          'ENGINEER: Something\npowerful lives deep',
-          'inside this plant!',
-        ],
-        isTrainer: true,
-        sightRange: 4,
-      },
-      {
-        id: 'pp_trainer3',
-        x: 8, y: 14,
-        spriteColor: 0x909090,
-        direction: Direction.UP,
-        dialogue: [
-          'ENGINEER: The\nelectricity here is',
-          'dangerous! Be\ncareful!',
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'pp_tm25',
-        x: 16, y: 5,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'tm25',
-      },
-      {
-        id: 'pp_elixir',
-        x: 4, y: 10,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'elixir',
-      },
-    ],
-    wildEncounters: {
-      grassRate: 0.10,
-      encounters: [
-        { speciesId: 100, minLevel: 30, maxLevel: 35, weight: 25 }, // Voltorb
-        { speciesId: 25, minLevel: 30, maxLevel: 33, weight: 15 },  // Pikachu
-        { speciesId: 81, minLevel: 30, maxLevel: 35, weight: 20 },  // Magnemite
-        { speciesId: 82, minLevel: 33, maxLevel: 37, weight: 10 },  // Magneton
-        { speciesId: 125, minLevel: 35, maxLevel: 38, weight: 15 }, // Electabuzz
-        { speciesId: 101, minLevel: 35, maxLevel: 38, weight: 15 }, // Electrode
+export const POWER_PLANT: MapData = {
+  id: 'power_plant',
+  name: 'POWER PLANT',
+  width: PP_SKETCH.width,
+  height: PP_SKETCH.height,
+  tiles: PP_SKETCH.tiles,
+  collision: PP_SKETCH.collision,
+  warps: [
+    // Exit back to Route 10
+    { ...PP_SKETCH.findOne('E'), targetMap: 'route10', targetX: 17, targetY: 3 },
+  ],
+  npcs: [
+    {
+      id: 'zapdos_power_plant',
+      ...PP_SKETCH.findOne('Z'),
+      spriteColor: 0xf0d030,
+      direction: Direction.LEFT,
+      dialogue: [
+        'A legendary bird\nPOKeMON is here!',
+        "Electricity crackles\nall around it!",
+        "It's ZAPDOS!",
       ],
+      isTrainer: false,
     },
-  };
-})();
+    ppEngineer('1', 'pp_trainer1', Direction.LEFT, [
+      'ENGINEER: This old\npower plant is full',
+      'of Electric-type\nPOKeMON!',
+    ], 0x808080),
+    ppEngineer('2', 'pp_trainer2', Direction.RIGHT, [
+      'ENGINEER: Something\npowerful lives deep',
+      'inside this plant!',
+    ], 0x707070),
+    ppEngineer('3', 'pp_trainer3', Direction.RIGHT, [
+      'ENGINEER: The\nelectricity here is',
+      'dangerous! Be\ncareful!',
+    ], 0x909090),
+    // Real item balls, in the order the player meets them ('i' tiles are row-major: TM25 is the top one).
+    ppBall(PP_SKETCH.find('i')[2], 'pp_max_potion', { itemId: 'max_potion' }),
+    ppBall(PP_SKETCH.find('i')[1], 'pp_tm33_reflect', { itemId: 'tm33_reflect' }),
+    ppBall(PP_SKETCH.find('i')[0], 'pp_tm25_thunder', { itemId: 'tm25_thunder' }),
+    // Fake ones: Voltorb and Electrode ambushes (Gen I levels).
+    ppBall(PP_SKETCH.find('v')[1], 'pp_voltorb1', { ambush: { speciesId: 100, level: 40 } }),
+    ppBall(PP_SKETCH.find('v')[0], 'pp_voltorb2', { ambush: { speciesId: 100, level: 40 } }),
+    ppBall(PP_SKETCH.find('e')[0], 'pp_electrode', { ambush: { speciesId: 101, level: 43 } }),
+  ],
+  wildEncounters: {
+    grassRate: 0.10,
+    encounters: [
+      { speciesId: 100, minLevel: 30, maxLevel: 35, weight: 25 }, // Voltorb
+      { speciesId: 25, minLevel: 30, maxLevel: 33, weight: 15 },  // Pikachu
+      { speciesId: 81, minLevel: 30, maxLevel: 35, weight: 20 },  // Magnemite
+      { speciesId: 82, minLevel: 33, maxLevel: 37, weight: 10 },  // Magneton
+      { speciesId: 125, minLevel: 35, maxLevel: 38, weight: 15 }, // Electabuzz
+      { speciesId: 101, minLevel: 35, maxLevel: 38, weight: 15 }, // Electrode
+    ],
+  },
+};
+
 
 export const VERMILION_MAPS: Record<string, MapData> = {
   route5: ROUTE5,
