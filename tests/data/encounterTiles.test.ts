@@ -12,9 +12,9 @@ import { encounterTilesOf, SURF_ENCOUNTER_TILES } from '../../src/logic/encounte
 // Maps whose land table is unreachable today (found by this test on
 // 2026-09-13). Fix the map and remove the entry; do not add to this list.
 // - route17 (Cycling Road) and route24 (Nugget Bridge): no tall grass at all.
-// - route19, route20, route21: sea routes whose tables are Tentacool/
-//   Tentacruel/Magikarp; they belong in `surfEncounters`.
-const KNOWN_UNREACHABLE = new Set(['route17', 'route19', 'route20', 'route21', 'route24']);
+// - route19, route21: sea routes whose tables are Tentacool/Tentacruel/
+//   Magikarp; they belong in `surfEncounters` (route20 was moved there).
+const KNOWN_UNREACHABLE = new Set(['route17', 'route19', 'route21', 'route24']);
 
 describe('encounter tiles', () => {
   it('every map with wildEncounters has a walkable tile that rolls them', () => {

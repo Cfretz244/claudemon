@@ -2048,6 +2048,38 @@ export const TRAINERS: Record<string, TrainerData> = {
     },
   },
 
+  // Seafoam Islands B3F (wild Lv32-38)
+  seafoam_b3f_trainer1: {
+    id: 'seafoam_b3f_trainer1',
+    name: 'HIKER LEROY',
+    class: 'Hiker',
+    team: [
+      { speciesId: 75, level: 35 },  // Graveler
+      { speciesId: 105, level: 35 }, // Marowak
+      { speciesId: 95, level: 36 },  // Onix
+    ],
+    prizeMoney: 1260,
+    dialogue: {
+      before: ['HIKER: The rocks\nhere are slick with', 'ice! Watch your\nstep!'],
+      after: ['I slipped up!'],
+    },
+  },
+  seafoam_b3f_trainer2: {
+    id: 'seafoam_b3f_trainer2',
+    name: 'SWIMMER DAWN',
+    class: 'Swimmer',
+    team: [
+      { speciesId: 120, level: 35 }, // Staryu
+      { speciesId: 121, level: 36 }, // Starmie
+      { speciesId: 87, level: 36 },  // Dewgong
+    ],
+    prizeMoney: 720,
+    dialogue: {
+      before: ['SWIMMER: I heard a\ncry from below...', 'Something is\nnesting down there!'],
+      after: ['That cry... it was\nnot a POKeMON I know!'],
+    },
+  },
+
   // Cerulean Cave (post-game; wild Lv46-54)
   cave_trainer1: {
     id: 'cave_trainer1',

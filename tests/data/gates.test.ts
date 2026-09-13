@@ -11,7 +11,8 @@ import { canDropBoulders, canPressPlate, canReach, dropFlag, instantiateMap, lan
 /** Dungeon family root: victory_road_2f, seafoam_b1f, pokemon_tower_3f -> victory_road, seafoam, pokemon_tower. */
 const root = (id: string) => id.replace(/_b?\d+f$/, '');
 
-const gatedMaps = Object.values(ALL_MAPS).filter(m => (m.gates?.length ?? 0) > 0 ||
+/** Maps with a boulder puzzle: gates/plates, or holes (drops that change another floor). */
+const gatedMaps = Object.values(ALL_MAPS).filter(m => (m.gates?.length ?? 0) > 0 || (m.holes?.length ?? 0) > 0 ||
   m.tiles.some(row => row.some(t => t === TileType.SWITCH_PLATE || t === TileType.GATE)));
 
 describe('switch plates and gates', () => {

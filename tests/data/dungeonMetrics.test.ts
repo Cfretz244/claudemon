@@ -49,9 +49,11 @@ const BASELINE: FloorSpec[] = [
   { map: 'rocket_hideout_b4f',  from: 'rocket_hideout_b3f', to: 'npc:giovanni_game_corner', walkablePct: 62, pathRatio: 1.0 },
   { map: 'silph_co_1f',         from: 'saffron_city',      to: 'silph_co_2f',              walkablePct: 69, pathRatio: 1.0 },
   { map: 'silph_co_7f',         from: 'silph_co_3f',       to: 'npc:giovanni_silph',       walkablePct: 67, pathRatio: 1.0 },
-  { map: 'seafoam_b1f',         from: 'route20',           to: 'seafoam_b2f',              walkablePct: 51, pathRatio: 1.0 },
-  { map: 'seafoam_b2f',         from: 'seafoam_b1f',       to: 'seafoam_b3f',              walkablePct: 50, pathRatio: 1.0 },
-  { map: 'seafoam_b3f',         from: 'seafoam_b2f',       to: 'npc:articuno_seafoam',     walkablePct: 43, pathRatio: 1.2 },
+  { map: 'seafoam_1f',          from: 'route20',           to: 'seafoam_b1f',              walkablePct: 17, pathRatio: 1.8 },
+  { map: 'seafoam_b1f',         from: 'seafoam_1f',        to: 'seafoam_b2f',              walkablePct: 19, pathRatio: 2.5 },
+  { map: 'seafoam_b2f',         from: 'seafoam_b1f',       to: 'seafoam_b3f',              walkablePct: 22, pathRatio: 3.0 },
+  { map: 'seafoam_b3f',         from: 'seafoam_b2f',       to: 'seafoam_b4f',              walkablePct: 18, pathRatio: 2.4 },
+  { map: 'seafoam_b4f',         from: 'seafoam_b3f',       to: 'npc:articuno_seafoam',     walkablePct: 6,  pathRatio: 1.8 },
   { map: 'pokemon_mansion',     from: 'cinnabar_island',   to: 'npc:mansion_npc',          walkablePct: 68, pathRatio: 1.0 },
   { map: 'power_plant',         from: 'route10',           to: 'npc:zapdos_power_plant',   walkablePct: 50, pathRatio: 1.0 },
   { map: 'victory_road',        from: 'route23',           to: 'victory_road_2f',          walkablePct: 36, pathRatio: 1.5 },
@@ -66,6 +68,12 @@ function walkableShare(map: MapData): number {
   return (100 * walk) / (map.width * map.height);
 }
 
+/** On a floor meant to be surfed (it has a surf table) water counts as path; currents are measured stilled. */
+function surfable(map: MapData, x: number, y: number): boolean {
+  const t = map.tiles[y][x];
+  return !!map.surfEncounters && (t === TileType.WATER || t === TileType.CURRENT);
+}
+
 function bfs(map: MapData, sx: number, sy: number): number[][] {
   const dist = Array.from({ length: map.height }, () => new Array<number>(map.width).fill(-1));
   const q: [number, number][] = [[sx, sy]];
@@ -75,7 +83,7 @@ function bfs(map: MapData, sx: number, sy: number): number[][] {
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const nx = x + dx, ny = y + dy;
       if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) continue;
-      if ((map.collision[ny][nx] && map.tiles[ny][nx] !== TileType.GATE) || dist[ny][nx] >= 0) continue;
+      if ((map.collision[ny][nx] && map.tiles[ny][nx] !== TileType.GATE && !surfable(map, nx, ny)) || dist[ny][nx] >= 0) continue;
       dist[ny][nx] = dist[y][x] + 1;
       q.push([nx, ny]);
     }
@@ -90,7 +98,7 @@ function goalTiles(map: MapData, to: string): [number, number][] {
     if (!npc) return [];
     return ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const)
       .map(([dx, dy]) => [npc.x + dx, npc.y + dy] as [number, number])
-      .filter(([x, y]) => x >= 0 && y >= 0 && x < map.width && y < map.height && !map.collision[y][x]);
+      .filter(([x, y]) => x >= 0 && y >= 0 && x < map.width && y < map.height && (!map.collision[y][x] || surfable(map, x, y)));
   }
   return map.warps.filter(w => w.targetMap === to).map(w => [w.x, w.y]);
 }
@@ -129,7 +137,7 @@ describe('dungeon layout ratchet', () => {
   // Floors rebuilt under docs/dungeon-plan.md: they must meet the plan's bar
   // (at most 40% walkable, path at least 1.5x the straight line) and are
   // allowed to beat the reference. Every other floor is still worse than it.
-  const REBUILT = new Set(['victory_road', 'victory_road_2f', 'victory_road_3f']);
+  const REBUILT = new Set(['victory_road', 'victory_road_2f', 'victory_road_3f', 'seafoam_1f', 'seafoam_b1f', 'seafoam_b2f', 'seafoam_b3f', 'seafoam_b4f']);
 
   it('rebuilt floors meet the plan bar; the reference floor (Viridian Forest) is still better than every floor not yet rebuilt', () => {
     const forest = BASELINE.find(s => s.map === 'viridian_forest')!;

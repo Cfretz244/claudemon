@@ -156,7 +156,7 @@ const MAP_GROUPS: { label: string; maps: string[] }[] = [
   },
   {
     label: 'Routes 19-21 / Cinnabar',
-    maps: ['route19', 'route20', 'route21', 'seafoam_b1f', 'seafoam_b2f', 'seafoam_b3f', 'cinnabar_island', 'cinnabar_gym', 'pokemon_mansion', 'pokemon_center_cinnabar', 'pokemart_cinnabar'],
+    maps: ['route19', 'route20', 'route21', 'seafoam_1f', 'seafoam_b1f', 'seafoam_b2f', 'seafoam_b3f', 'seafoam_b4f', 'cinnabar_island', 'cinnabar_gym', 'pokemon_mansion', 'pokemon_center_cinnabar', 'pokemart_cinnabar'],
   },
   {
     label: 'Routes 22-23 / Victory Road / Indigo',
