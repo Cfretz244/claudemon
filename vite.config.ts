@@ -38,6 +38,7 @@ export default defineConfig({
         pokedex: resolve(__dirname, 'pokedex.html'),
         editor: resolve(__dirname, 'editor.html'),
         maps: resolve(__dirname, 'maps.html'),
+        battle: resolve(__dirname, 'battle.html'),
       },
     },
   },
