@@ -1,6 +1,6 @@
-import { MapData, TileType } from '../types/map.types';
+import { MapData, NPCData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
-import { createMapShape } from './mapBuilder';
+import { createMapFromSketch, createMapShape, SketchShape } from './mapBuilder';
 
 const T = TileType;
 
@@ -705,407 +705,208 @@ export const ROUTE10: MapData = (() => {
 })();
 
 // ---------------------------------------------------------------------------
-// ROCK TUNNEL 1F -- dark cave between Route 10 segments (upper floor)
+// ROCK TUNNEL 1F + B1F -- dark cave between the Route 10 segments, two floors
+// drawn as sketches
 // ---------------------------------------------------------------------------
-export const ROCK_TUNNEL: MapData = (() => {
-  const W = 32, H = 30;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_WALL, { startSolid: true });
+//
+// Sketches are drawn from corridor segments by tools/rock-floors.mjs in the
+// helper repo (which also checks them); tests/data/rockTunnel.test.ts proves
+// the same facts on this data.
+//
+// The route folds back through the floor below twice: the south mouth (from
+// Route 10's north section) -> 1F south region -> ladder d -> B1F region 1 ->
+// ladder b -> 1F middle region -> ladder a -> B1F region 2 -> ladder c -> 1F
+// north region -> the north mouth (to Route 10's south section). The three
+// 1F regions never touch, nor do the two B1F regions. Corridors are one tile
+// wide with empty dead ends on purpose: it is dark until Flash, and in the
+// dark a dead end costs steps. Every ladder and mouth sits in a one-tile stub
+// (a warp fires on entry, not on the tile you land on); items in dead ends;
+// trainers in niches with sight range 1 facing the only corridor, two per
+// region at the ladder mouths.
+// Legend: # wall, . floor, E south mouth, X north mouth, a-d ladders (the
+// same letter on both floors), i item ball, 1-6 trainers.
+const RT_LEGEND: Record<string, TileType> = {
+  '#': T.CAVE_WALL, '.': T.CAVE_FLOOR, E: T.CAVE_FLOOR, X: T.CAVE_FLOOR,
+  a: T.CAVE_ENTRANCE, b: T.CAVE_ENTRANCE, c: T.CAVE_ENTRANCE, d: T.CAVE_ENTRANCE,
+  i: T.CAVE_FLOOR, '1': T.CAVE_FLOOR, '2': T.CAVE_FLOOR, '3': T.CAVE_FLOOR, '4': T.CAVE_FLOOR, '5': T.CAVE_FLOOR, '6': T.CAVE_FLOOR,
+};
 
-  // --- Carve corridors and chambers out of solid cave wall ---
+const RT_1F = createMapFromSketch([
+  '###############X################',
+  '###############.################',
+  '######..........################',
+  '######.###.#########.###########',
+  '#####6.###i#########.###########',
+  '######.#########5###.###########',
+  '######........................##',
+  '########################c#######',
+  '######################4#########',
+  '########.....................a##',
+  '########.#####.#################',
+  '########.#######################',
+  '####.......................#####',
+  '##################2###.###.#####',
+  '############i#######.#####.#####',
+  '###b.......................#####',
+  '################################',
+  '################################',
+  '########d#######################',
+  '########....................####',
+  '############1##############.####',
+  '###################.#######.3###',
+  '###################.#######.####',
+  '####........................####',
+  '####.###########################',
+  '####.#######.###################',
+  '####.#######.#######i###########',
+  '####...................#########',
+  '###############.################',
+  '###############E################',
+], RT_LEGEND);
+const RT_B1F = createMapFromSketch([
+  '##############################',
+  '##############################',
+  '##################2###########',
+  '###........................###',
+  '##########.#####.#####.###.###',
+  '##########.#####.#####.###.###',
+  '#########4.####i######.###..i#',
+  '##########.####.##########.###',
+  '##########...........#####.###',
+  '##############.#####c#####.###',
+  '##############.###########a###',
+  '##############################',
+  '###b############3#############',
+  '###..................#########',
+  '##########.######.##.#########',
+  '##########.######.##.#########',
+  '##########.######.##.#########',
+  '####################.#########',
+  '######.....................###',
+  '######.#######.###############',
+  '######.1######.###############',
+  '######.#######.###############',
+  '######.#######i###############',
+  '######.......#################',
+  '######.#######################',
+  '######d#######################',
+  '##############################',
+  '##############################',
+], RT_LEGEND);
 
-  // South entrance chamber (player arrives at 15,27)
-  fillRect(13, 25, 5, 4, T.CAVE_FLOOR);  // Landing area
-  // Corridor north from entrance
-  fillRect(14, 20, 3, 6, T.CAVE_FLOOR);
+/** The one open tile beside a stub (where a ladder lands the player). */
+const rtBeside = (s: SketchShape, ch: string) => {
+  const p = s.findOne(ch);
+  const open = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }]
+    .map(d => ({ x: p.x + d.x, y: p.y + d.y }))
+    .filter(q => s.tiles[q.y]?.[q.x] === T.CAVE_FLOOR);
+  if (open.length !== 1) throw new Error(`rock tunnel: '${ch}' is not in a stub`);
+  return open[0];
+};
+/** Ladder `ch` on `s` to the same letter on `other` (landing on the tile beside it). */
+const rtLadder = (s: SketchShape, ch: string, other: SketchShape, otherId: string) => {
+  const land = rtBeside(other, ch);
+  return { ...s.findOne(ch), targetMap: otherId, targetX: land.x, targetY: land.y };
+};
+const rtItems = (s: SketchShape, prefix: string, itemIds: string[]): NPCData[] => {
+  const spots = s.find('i');
+  if (spots.length !== itemIds.length) throw new Error(`${prefix}: ${spots.length} item tiles for ${itemIds.length} items`);
+  return spots.map((p, n) => ({ id: `${prefix}_${itemIds[n]}`, ...p, spriteColor: 0x000000, direction: Direction.DOWN, dialogue: [], isItemBall: true, itemId: itemIds[n] }));
+};
+const rtTrainer = (s: SketchShape, ch: string, id: string, direction: Direction, dialogue: string[], spriteColor: number): NPCData => ({
+  id, ...s.findOne(ch), spriteColor, direction, dialogue, isTrainer: true, sightRange: 1,
+});
+const rtFloor = (id: string, name: string, s: SketchShape, extras: Pick<MapData, 'warps' | 'npcs' | 'wildEncounters'>): MapData => ({
+  id, name, width: s.width, height: s.height, tiles: s.tiles, collision: s.collision, isDark: true, ...extras,
+});
+const HIKER = 0x908060, POKEMANIAC = 0x609080, LASS = 0xd08080, JR_TRAINER = 0xd08080;
 
-  // Lower-west corridor (zigzag west then north)
-  fillRect(6, 20, 9, 3, T.CAVE_FLOOR);   // East-west at y=20-22
-  fillRect(6, 16, 3, 5, T.CAVE_FLOOR);   // North from west end
-  fillRect(6, 16, 8, 3, T.CAVE_FLOOR);   // East-west at y=16-18
-
-  // Lower-east dead end with item
-  fillRect(20, 20, 7, 3, T.CAVE_FLOOR);  // East branch
-  fillRect(25, 19, 3, 2, T.CAVE_FLOOR);  // Dead end nook
-
-  // Ladder D area (near entrance shortcut) - southwest
-  fillRect(8, 24, 4, 3, T.CAVE_FLOOR);   // Chamber around ladder
-  setTile(10, 25, T.DOOR);               // Ladder D down
-
-  // Central area - large open section with wall islands
-  fillRect(10, 12, 12, 4, T.CAVE_FLOOR); // Central chamber
-  fillRect(14, 10, 3, 3, T.CAVE_FLOOR);  // North connector from central
-  // L-shaped wall island in center
-  fillRect(13, 13, 3, 2, T.CAVE_WALL);
-  fillRect(13, 13, 5, 1, T.CAVE_WALL);
-
-  // East corridor to Ladder A
-  fillRect(22, 12, 6, 3, T.CAVE_FLOOR);  // East passage
-  fillRect(26, 11, 3, 5, T.CAVE_FLOOR);  // Ladder A chamber
-  setTile(27, 14, T.DOOR);               // Ladder A down
-
-  // West corridor to Ladder B
-  fillRect(3, 10, 8, 3, T.CAVE_FLOOR);   // West passage
-  fillRect(3, 9, 3, 5, T.CAVE_FLOOR);    // Ladder B chamber
-  setTile(4, 12, T.DOOR);                // Ladder B down
-
-  // Connector from lower maze to central
-  fillRect(12, 15, 3, 2, T.CAVE_FLOOR);  // Vertical connector
-
-  // Upper maze section
-  fillRect(10, 6, 8, 4, T.CAVE_FLOOR);   // Upper central chamber
-  fillRect(6, 4, 6, 3, T.CAVE_FLOOR);    // Upper-west area
-  fillRect(20, 4, 8, 4, T.CAVE_FLOOR);   // Upper-east area
-
-  // Ladder C area - upper east
-  fillRect(23, 4, 4, 3, T.CAVE_FLOOR);   // Ladder C chamber
-  setTile(25, 5, T.DOOR);                // Ladder C down
-
-  // Upper connectors
-  fillRect(17, 6, 4, 3, T.CAVE_FLOOR);   // Connect upper-central to upper-east
-  fillRect(8, 6, 3, 3, T.CAVE_FLOOR);    // Connect upper-west to upper-central
-
-  // North exit corridor (extends to y=1 so player can reach edge warp at y=0)
-  fillRect(14, 1, 3, 6, T.CAVE_FLOOR);
-
-  // Upper-west dead end with item
-  fillRect(3, 4, 4, 3, T.CAVE_FLOOR);    // Dead end chamber
-  fillRect(6, 5, 2, 2, T.CAVE_FLOOR);    // Connector to upper-west
-
-  // Near north exit item nook
-  fillRect(18, 3, 3, 2, T.CAVE_FLOOR);   // Small nook near exit
-
-  // Interior wall obstacles for winding feel
-  fillRect(11, 8, 2, 1, T.CAVE_WALL);
-  fillRect(15, 8, 2, 1, T.CAVE_WALL);
-  fillRect(9, 18, 3, 1, T.CAVE_WALL);
-  fillRect(17, 21, 2, 1, T.CAVE_WALL);
-
-  // Water pools as decoration
-  fillRect(21, 6, 2, 2, T.WATER);
-  setTile(5, 14, T.WATER);
-
-  return {
-    id: 'rock_tunnel',
-    name: 'ROCK TUNNEL 1F',
-    width: W,
-    height: H,
-    tiles,
-    collision,
-    isDark: true,
-    warps: [
-      // South edge -> Route 10 north section (above mountain)
-      { x: 15, y: 29, targetMap: 'route10', targetX: 9, targetY: 8 },
-      // North edge -> Route 10 south section (below mountain)
-      { x: 15, y: 0, targetMap: 'route10', targetX: 9, targetY: 15 },
-      // Ladder A -> B1F (east)
-      { x: 27, y: 14, targetMap: 'rock_tunnel_b1f', targetX: 24, targetY: 12 },
-      // Ladder B -> B1F (west)
-      { x: 4, y: 12, targetMap: 'rock_tunnel_b1f', targetX: 3, targetY: 10 },
-      // Ladder C -> B1F (upper east)
-      { x: 25, y: 5, targetMap: 'rock_tunnel_b1f', targetX: 22, targetY: 3 },
-      // Ladder D -> B1F (near entrance)
-      { x: 10, y: 25, targetMap: 'rock_tunnel_b1f', targetX: 8, targetY: 23 },
+export const ROCK_TUNNEL: MapData = rtFloor('rock_tunnel', 'ROCK TUNNEL 1F', RT_1F, {
+  warps: [
+    // The mouths: south (first: the floor's entry point) to Route 10's north section, north to its south section.
+    { ...RT_1F.findOne('E'), targetMap: 'route10', targetX: 9, targetY: 8 },
+    { ...RT_1F.findOne('X'), targetMap: 'route10', targetX: 9, targetY: 15 },
+    rtLadder(RT_1F, 'd', RT_B1F, 'rock_tunnel_b1f'),   // south region (first: the floor's goal)
+    rtLadder(RT_1F, 'b', RT_B1F, 'rock_tunnel_b1f'),   // middle region, where B1F region 1 comes up
+    rtLadder(RT_1F, 'a', RT_B1F, 'rock_tunnel_b1f'),   // middle region, down again
+    rtLadder(RT_1F, 'c', RT_B1F, 'rock_tunnel_b1f'),   // north region, where B1F region 2 comes up
+  ],
+  npcs: [
+    ...rtItems(RT_1F, 'rock_tunnel', ['repel', 'revive', 'escape_rope']),
+    rtTrainer(RT_1F, '1', 'rock_tunnel_trainer1', Direction.UP, [
+      "HIKER: It's pitch\nblack in here!",
+      "But I can still\nbattle!",
+    ], HIKER),
+    rtTrainer(RT_1F, '2', 'rock_tunnel_trainer2', Direction.UP, [
+      "POKEMANIAC: I love\ncave POKeMON!",
+      "Have you seen the\nONIX here?",
+    ], POKEMANIAC),
+    rtTrainer(RT_1F, '3', 'rock_tunnel_trainer3', Direction.LEFT, [
+      "HIKER: This tunnel\ngoes on forever!",
+      "Let me test your\nstrength!",
+    ], 0xc08050),
+    rtTrainer(RT_1F, '4', 'rock_tunnel_trainer4', Direction.DOWN, [
+      "HIKER: The rocks\nhere are amazing!",
+      "Let me show you!",
+    ], HIKER),
+    rtTrainer(RT_1F, '5', 'rock_tunnel_trainer5', Direction.DOWN, [
+      "LASS: I'm not\nafraid of the dark!",
+      "Are you?",
+    ], LASS),
+    rtTrainer(RT_1F, '6', 'rock_tunnel_trainer6', Direction.RIGHT, [
+      "HIKER: I've been\nlost for days!",
+      "Battle me to\npass the time!",
+    ], HIKER),
+  ],
+  wildEncounters: {
+    grassRate: 0.08,
+    encounters: [
+      { speciesId: 41, minLevel: 15, maxLevel: 18, weight: 30 }, // Zubat
+      { speciesId: 74, minLevel: 15, maxLevel: 18, weight: 25 }, // Geodude
+      { speciesId: 66, minLevel: 15, maxLevel: 18, weight: 20 }, // Machop
+      { speciesId: 95, minLevel: 16, maxLevel: 17, weight: 15 }, // Onix
+      { speciesId: 104, minLevel: 16, maxLevel: 18, weight: 10 }, // Cubone
     ],
-    npcs: [
-      // Items (3)
-      {
-        id: 'rock_tunnel_escape_rope',
-        x: 4, y: 5,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'escape_rope',
-      },
-      {
-        id: 'rock_tunnel_revive',
-        x: 26, y: 20,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'revive',
-      },
-      {
-        id: 'rock_tunnel_repel',
-        x: 19, y: 3,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'repel',
-      },
-      // Trainers (6)
-      {
-        id: 'rock_tunnel_trainer1',
-        x: 7, y: 21,
-        spriteColor: 0x908060,
-        direction: Direction.RIGHT,
-        dialogue: [
-          "HIKER: It's pitch\nblack in here!",
-          "But I can still\nbattle!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'rock_tunnel_trainer2',
-        x: 23, y: 13,
-        spriteColor: 0x609080,
-        direction: Direction.DOWN,
-        dialogue: [
-          "POKEMANIAC: I love\ncave POKeMON!",
-          "Have you seen the\nONIX here?",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'rock_tunnel_trainer3',
-        x: 12, y: 17,
-        spriteColor: 0xc08050,
-        direction: Direction.UP,
-        dialogue: [
-          "HIKER: This tunnel\ngoes on forever!",
-          "Let me test your\nstrength!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'rock_tunnel_trainer4',
-        x: 5, y: 11,
-        spriteColor: 0x908060,
-        direction: Direction.RIGHT,
-        dialogue: [
-          "HIKER: The rocks\nhere are amazing!",
-          "Let me show you!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'rock_tunnel_trainer5',
-        x: 14, y: 7,
-        spriteColor: 0xd08080,
-        direction: Direction.DOWN,
-        dialogue: [
-          "LASS: I'm not\nafraid of the dark!",
-          "Are you?",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'rock_tunnel_trainer6',
-        x: 24, y: 5,
-        spriteColor: 0x908060,
-        direction: Direction.LEFT,
-        dialogue: [
-          "HIKER: I've been\nlost for days!",
-          "Battle me to\npass the time!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
+  },
+});
+
+export const ROCK_TUNNEL_B1F: MapData = rtFloor('rock_tunnel_b1f', 'ROCK TUNNEL B1F', RT_B1F, {
+  warps: [
+    rtLadder(RT_B1F, 'd', RT_1F, 'rock_tunnel'),   // region 1's arrival (first: the floor's entry point)
+    rtLadder(RT_B1F, 'b', RT_1F, 'rock_tunnel'),   // region 1's way up
+    rtLadder(RT_B1F, 'a', RT_1F, 'rock_tunnel'),   // region 2's arrival
+    rtLadder(RT_B1F, 'c', RT_1F, 'rock_tunnel'),   // region 2's way up
+  ],
+  npcs: [
+    ...rtItems(RT_B1F, 'rock_tunnel_b1f', ['rare_candy', 'escape_rope', 'super_potion']),
+    rtTrainer(RT_B1F, '1', 'rock_tunnel_b1f_trainer1', Direction.LEFT, [
+      "POKEMANIAC: The lower\nlevels have rare ones!",
+      "Let me show you!",
+    ], POKEMANIAC),
+    rtTrainer(RT_B1F, '2', 'rock_tunnel_b1f_trainer2', Direction.DOWN, [
+      "JR. TRAINER: I came\nhere to train!",
+      "Battle me!",
+    ], JR_TRAINER),
+    rtTrainer(RT_B1F, '3', 'rock_tunnel_b1f_trainer3', Direction.DOWN, [
+      "HIKER: You made it\ndown here too?",
+      "Impressive!",
+    ], HIKER),
+    rtTrainer(RT_B1F, '4', 'rock_tunnel_b1f_trainer4', Direction.RIGHT, [
+      "LASS: My POKeMON\naren't afraid!",
+      "Neither am I!",
+    ], LASS),
+  ],
+  wildEncounters: {
+    grassRate: 0.08,
+    encounters: [
+      { speciesId: 41, minLevel: 17, maxLevel: 20, weight: 35 }, // Zubat
+      { speciesId: 74, minLevel: 17, maxLevel: 20, weight: 20 }, // Geodude
+      { speciesId: 66, minLevel: 17, maxLevel: 20, weight: 15 }, // Machop
+      { speciesId: 95, minLevel: 18, maxLevel: 19, weight: 15 }, // Onix
+      { speciesId: 104, minLevel: 17, maxLevel: 20, weight: 15 }, // Cubone
     ],
-    wildEncounters: {
-      grassRate: 0.08,
-      encounters: [
-        { speciesId: 41, minLevel: 15, maxLevel: 18, weight: 30 }, // Zubat
-        { speciesId: 74, minLevel: 15, maxLevel: 18, weight: 25 }, // Geodude
-        { speciesId: 66, minLevel: 15, maxLevel: 18, weight: 20 }, // Machop
-        { speciesId: 95, minLevel: 16, maxLevel: 17, weight: 15 }, // Onix
-        { speciesId: 104, minLevel: 16, maxLevel: 18, weight: 10 }, // Cubone
-      ],
-    },
-  };
-})();
-
-// ---------------------------------------------------------------------------
-// ROCK TUNNEL B1F -- dark cave lower floor
-// ---------------------------------------------------------------------------
-export const ROCK_TUNNEL_B1F: MapData = (() => {
-  const W = 30, H = 28;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_WALL, { startSolid: true });
-
-  // --- Carve corridors and chambers out of solid cave wall ---
-
-  // Ladder A area (east) - player arrives at 24,12
-  fillRect(22, 10, 5, 5, T.CAVE_FLOOR);  // Chamber
-  setTile(24, 12, T.DOOR);               // Ladder A up
-
-  // Ladder B area (west) - player arrives at 3,10
-  fillRect(2, 8, 4, 5, T.CAVE_FLOOR);    // Chamber
-  setTile(3, 10, T.DOOR);                // Ladder B up
-
-  // Ladder C area (upper east) - player arrives at 22,3
-  fillRect(20, 2, 5, 4, T.CAVE_FLOOR);   // Chamber
-  setTile(22, 3, T.DOOR);                // Ladder C up
-
-  // Ladder D area (south) - player arrives at 8,23
-  fillRect(6, 21, 5, 5, T.CAVE_FLOOR);   // Chamber
-  setTile(8, 23, T.DOOR);                // Ladder D up
-
-  // Northeast chamber - dead end east with rare candy
-  fillRect(24, 2, 4, 4, T.CAVE_FLOOR);   // Dead end nook
-
-  // East corridor connecting northeast to Ladder A
-  fillRect(22, 5, 3, 3, T.CAVE_FLOOR);   // Connector down from Ladder C
-  fillRect(19, 6, 6, 3, T.CAVE_FLOOR);   // East-west passage
-  fillRect(19, 8, 3, 3, T.CAVE_FLOOR);   // Down connector
-  fillRect(19, 10, 4, 3, T.CAVE_FLOOR);  // Connect to Ladder A
-
-  // Central labyrinth
-  fillRect(8, 8, 12, 3, T.CAVE_FLOOR);   // Main east-west corridor (extends to x=19 to connect east side)
-  fillRect(8, 10, 3, 4, T.CAVE_FLOOR);   // South from west end
-  fillRect(10, 12, 8, 3, T.CAVE_FLOOR);  // Lower east-west
-  fillRect(16, 10, 3, 3, T.CAVE_FLOOR);  // South from east end
-
-  // Wall islands in central labyrinth
-  fillRect(12, 9, 2, 2, T.CAVE_WALL);
-  fillRect(14, 12, 2, 1, T.CAVE_WALL);
-
-  // West corridor from Ladder B to central
-  fillRect(5, 9, 4, 3, T.CAVE_FLOOR);    // Connect Ladder B to central
-
-  // West dead end with item
-  fillRect(2, 14, 4, 3, T.CAVE_FLOOR);   // Dead end chamber
-  fillRect(4, 12, 3, 3, T.CAVE_FLOOR);   // Connector south from Ladder B area
-
-  // Southern section
-  fillRect(10, 14, 3, 5, T.CAVE_FLOOR);  // South corridor from central
-  fillRect(10, 18, 8, 3, T.CAVE_FLOOR);  // East-west southern passage
-  fillRect(16, 14, 3, 5, T.CAVE_FLOOR);  // North connector to central area (extends to y=14 to reach central)
-
-  // South corridor connecting Ladder D area
-  fillRect(10, 20, 3, 4, T.CAVE_FLOOR);  // South from southern passage
-  fillRect(8, 20, 3, 2, T.CAVE_FLOOR);   // West connector
-  // Connect Ladder D to main path
-  fillRect(8, 18, 3, 4, T.CAVE_FLOOR);   // Connector
-
-  // South dead end with escape rope
-  fillRect(15, 20, 4, 3, T.CAVE_FLOOR);  // Dead end nook
-  fillRect(17, 19, 2, 2, T.CAVE_FLOOR);  // Connector
-
-  // Upper west area connecting to Ladder C
-  fillRect(8, 4, 5, 5, T.CAVE_FLOOR);    // Upper-west chamber (extends to y=8 to connect central)
-  fillRect(12, 4, 3, 3, T.CAVE_FLOOR);   // Connector
-  fillRect(14, 3, 7, 3, T.CAVE_FLOOR);   // Upper corridor to Ladder C
-
-  // Water pools as decoration
-  fillRect(13, 19, 2, 2, T.WATER);
-  setTile(23, 7, T.WATER);
-
-  return {
-    id: 'rock_tunnel_b1f',
-    name: 'ROCK TUNNEL B1F',
-    width: W,
-    height: H,
-    tiles,
-    collision,
-    isDark: true,
-    warps: [
-      // Ladder A -> 1F (east)
-      { x: 24, y: 12, targetMap: 'rock_tunnel', targetX: 27, targetY: 14 },
-      // Ladder B -> 1F (west)
-      { x: 3, y: 10, targetMap: 'rock_tunnel', targetX: 4, targetY: 12 },
-      // Ladder C -> 1F (upper east)
-      { x: 22, y: 3, targetMap: 'rock_tunnel', targetX: 25, targetY: 5 },
-      // Ladder D -> 1F (near entrance)
-      { x: 8, y: 23, targetMap: 'rock_tunnel', targetX: 10, targetY: 25 },
-    ],
-    npcs: [
-      // Items (3)
-      {
-        id: 'rock_tunnel_b1f_rare_candy',
-        x: 26, y: 3,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'rare_candy',
-      },
-      {
-        id: 'rock_tunnel_b1f_super_potion',
-        x: 3, y: 15,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'super_potion',
-      },
-      {
-        id: 'rock_tunnel_b1f_escape_rope',
-        x: 16, y: 21,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'escape_rope',
-      },
-      // Trainers (4)
-      {
-        id: 'rock_tunnel_b1f_trainer1',
-        x: 20, y: 7,
-        spriteColor: 0x609080,
-        direction: Direction.LEFT,
-        dialogue: [
-          "POKEMANIAC: The lower\nlevels have rare ones!",
-          "Let me show you!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'rock_tunnel_b1f_trainer2',
-        x: 11, y: 9,
-        spriteColor: 0xd08080,
-        direction: Direction.DOWN,
-        dialogue: [
-          "JR. TRAINER: I came\nhere to train!",
-          "Battle me!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'rock_tunnel_b1f_trainer3',
-        x: 10, y: 15,
-        spriteColor: 0x908060,
-        direction: Direction.RIGHT,
-        dialogue: [
-          "HIKER: You made it\ndown here too?",
-          "Impressive!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'rock_tunnel_b1f_trainer4',
-        x: 14, y: 18,
-        spriteColor: 0xd08080,
-        direction: Direction.UP,
-        dialogue: [
-          "LASS: My POKeMON\naren't afraid!",
-          "Neither am I!",
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-    ],
-    wildEncounters: {
-      grassRate: 0.08,
-      encounters: [
-        { speciesId: 41, minLevel: 17, maxLevel: 20, weight: 35 }, // Zubat
-        { speciesId: 74, minLevel: 17, maxLevel: 20, weight: 20 }, // Geodude
-        { speciesId: 66, minLevel: 17, maxLevel: 20, weight: 15 }, // Machop
-        { speciesId: 95, minLevel: 18, maxLevel: 19, weight: 15 }, // Onix
-        { speciesId: 104, minLevel: 17, maxLevel: 20, weight: 15 }, // Cubone
-      ],
-    },
-  };
-})();
+  },
+});
 
 // ---------------------------------------------------------------------------
 // POKEMON CENTER ROUTE 10 (indoor)
