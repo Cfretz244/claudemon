@@ -905,8 +905,8 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    // Route 21: water route requires Surf
-    if (mapId === 'route21' && !this.isSurfing) {
+    // A warp that lands on water (the sea routes: 19, 20, 21) requires Surf
+    if (OverworldScene.isWaterTile(map.tiles[targetY]?.[targetX]) && !this.isSurfing) {
       if (this.partyHasMove(57) && this.playerState.badges.includes('SOUL')) {
         // Auto-start surfing and proceed with warp
         this.isSurfing = true;

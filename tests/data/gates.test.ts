@@ -66,8 +66,9 @@ describe('switch plates and gates', () => {
     // victory_road_2f, ...). Reachability is computed to a fixpoint: a plate
     // stays pressed once the player could press it from a landing they have
     // reached (Gen I locks boulders on switches), a hole's boulder stays
-    // dropped once it could be dropped, and every ladder landing reached opens
-    // that floor. Starting from every outside entrance at once models a player
+    // dropped once it could be dropped (a boulder landed from the floor above
+    // counts, so drops chain down through the floors), and every ladder
+    // landing reached opens that floor. Starting from every outside entrance at once models a player
     // who has been through in whatever order; the per-dungeon walkthrough
     // tests pin the intended order. Every NPC is an obstacle (trainers keep
     // blocking after the battle, item balls until picked up), and so is every
@@ -114,7 +115,7 @@ describe('switch plates and gates', () => {
             const holes = m.holes ?? [];
             if (holes.length && !holes.every(h => Object.keys(dropFlags).some(f => f.startsWith(`boulder_dropped_${m.id}_`) && f.endsWith(`_in_${h.x}_${h.y}`)))) {
               if (solve(m, () => canDropBoulders(live, from, holes.length, { blocked: blockedExcept() })).found) {
-                for (const h of holes) m.tiles.forEach((row, by) => row.forEach((t, bx) => { if (t === TileType.BOULDER) dropFlags[dropFlag(m.id, { x: bx, y: by }, h)] = true; }));
+                for (const h of holes) live.tiles.forEach((row, by) => row.forEach((t, bx) => { if (t === TileType.BOULDER) dropFlags[dropFlag(m.id, { x: bx, y: by }, h)] = true; }));
                 changed = true;
               }
             }
@@ -140,14 +141,16 @@ describe('switch plates and gates', () => {
     }
   });
 
-  it('every floor with holes can drop a boulder into each of them from each of its entrances', () => {
+  it('every floor with holes can drop a boulder into each of them from each of its entrances (with every boulder from the floors above landed)', () => {
     for (const map of Object.values(ALL_MAPS)) {
       if (!map.holes?.length) continue;
       const entrances = Object.values(ALL_MAPS).flatMap(m => m.warps.filter(w => w.targetMap === map.id).map(w => ({ x: w.targetX, y: w.targetY })));
       const trainers = map.npcs.map(n => ({ x: n.x, y: n.y }));
+      const fromAbove = Object.values(ALL_MAPS).flatMap(m => (m.holes ?? []).filter(h => h.targetMap === map.id).map(h => ({ x: h.targetX, y: h.targetY })));
+      const live = instantiateMap(map, {}, fromAbove).map;
       expect(entrances.length, `${map.id}: no entrance`).toBeGreaterThan(0);
       for (const e of entrances) {
-        const r = canDropBoulders(map, e, map.holes.length, { blocked: trainers });
+        const r = canDropBoulders(live, e, map.holes.length, { blocked: trainers });
         expect(r.exhausted, `${map.id}: solver hit the state cap from ${e.x},${e.y}`).toBe(false);
         expect(r.found, `${map.id}: cannot drop ${map.holes.length} boulder(s) from entrance ${e.x},${e.y}`).toBe(true);
       }

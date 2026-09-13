@@ -22,7 +22,9 @@ describe('boulder holes', () => {
       expect(wired.sort(), `${map.id}: holes[] does not match the BOULDER_HOLE tiles`).toEqual(holeTiles.sort());
       expect(new Set(wired).size, `${map.id}: duplicate holes[] entries`).toBe(wired.length);
       if (holeTiles.length) {
-        expect(map.tiles.flat().filter(t => t === TileType.BOULDER).length, `${map.id}: holes but no boulder to drop`).toBeGreaterThan(0);
+        // Something must be able to fall in: a boulder of this floor, or one landed from a floor above.
+        const fed = Object.values(ALL_MAPS).some(o => o.holes?.some(h => h.targetMap === map.id));
+        expect(fed || map.tiles.flat().some(t => t === TileType.BOULDER), `${map.id}: holes but no boulder to drop`).toBe(true);
       }
     }
   });

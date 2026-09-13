@@ -320,6 +320,73 @@ describe('boulder holes', () => {
   });
 });
 
+describe('chained drops: a boulder landed from above can go down the next hole', () => {
+  // top: boulder beside a hole that lands on mid's floor at (2,1).
+  // mid: that landing tile is beside mid's own hole, which lands on bottom's river.
+  const top = sketch(['######', '#.Oo.#', '######'], [], 'top', [{ x: 3, y: 1, targetMap: 'mid', targetX: 2, targetY: 1 }]);
+  const mid = sketch(['######', '#..o.#', '#....#', '######'], [], 'mid', [{ x: 3, y: 1, targetMap: 'bottom', targetX: 2, targetY: 1 }]);
+  const bottom = sketch(['######', '#~==~#', '######'], [], 'bottom');
+  bottom.currents = { '2,1': D.RIGHT, '3,1': D.RIGHT };
+  const maps = { top, mid, bottom };
+  const topDrop = dropFlag('top', { x: 2, y: 1 }, { x: 3, y: 1 });
+  const midDrop = dropFlag('mid', { x: 2, y: 1 }, { x: 3, y: 1 });
+
+  it('nothing dropped: mid has no boulder, the river flows', () => {
+    expect(landedBoulders(maps, 'mid', {})).toEqual([]);
+    expect(landedBoulders(maps, 'bottom', {})).toEqual([]);
+  });
+
+  it('after the top drop the boulder waits on mid at its landing tile and comes back there on every visit', () => {
+    const flags = { [topDrop]: true };
+    expect(landedBoulders(maps, 'mid', flags)).toEqual([{ x: 2, y: 1 }]);
+    expect(landedBoulders(maps, 'bottom', flags)).toEqual([]);
+    const inst = instantiateMap(mid, flags, landedBoulders(maps, 'mid', flags));
+    expect(at(inst.map, 2, 1)).toBe(T.BOULDER);
+    expect(inst.origins.get('2,1')).toEqual({ x: 2, y: 1 });
+    // Pushed away and left behind (no flag), it is back at the landing tile next time.
+    expect(pushBoulder(mid, inst, flags, { x: 2, y: 1 }, { x: 0, y: 1 }).ok).toBe(true);
+    expect(flags).toEqual({ [topDrop]: true });
+    expect(at(instantiateMap(mid, flags, landedBoulders(maps, 'mid', flags)).map, 2, 1)).toBe(T.BOULDER);
+  });
+
+  it('pushing the landed boulder into mid\'s hole writes a drop flag under its landing tile; it is gone from mid and stills the river', () => {
+    const flags: Record<string, boolean> = { [topDrop]: true };
+    const inst = instantiateMap(mid, flags, landedBoulders(maps, 'mid', flags));
+    const r = pushBoulder(mid, inst, flags, { x: 2, y: 1 }, { x: 1, y: 0 });
+    expect(r.ok).toBe(true);
+    expect(r.dropped).toEqual(mid.holes![0]);
+    expect(at(inst.map, 2, 1)).toBe(T.CAVE_FLOOR);
+    expect(flags).toEqual({ [topDrop]: true, [midDrop]: true });
+    expect(landedBoulders(maps, 'mid', flags)).toEqual([]);
+    expect(landedBoulders(maps, 'bottom', flags)).toEqual([{ x: 2, y: 1 }]);
+    expect(at(instantiateMap(mid, flags, landedBoulders(maps, 'mid', flags)).map, 2, 1)).toBe(T.CAVE_FLOOR);
+    const river = instantiateMap(bottom, flags, landedBoulders(maps, 'bottom', flags)).map;
+    expect(at(river, 2, 1)).toBe(T.WATER);
+    expect(river.currents).toEqual({ '3,1': D.RIGHT });
+  });
+
+  it('a mid drop flag without the top drop is stale: nothing ever landed on mid, so the river keeps flowing', () => {
+    const flags = { [midDrop]: true };
+    expect(landedBoulders(maps, 'mid', flags)).toEqual([]);
+    expect(landedBoulders(maps, 'bottom', flags)).toEqual([]);
+  });
+
+  it('the solver can drop the landed boulder from the live map', () => {
+    const flags = { [topDrop]: true };
+    const live = instantiateMap(mid, flags, landedBoulders(maps, 'mid', flags)).map;
+    expect(canDropBoulders(mid, { x: 1, y: 2 }, 1).found).toBe(false);
+    expect(canDropBoulders(live, { x: 1, y: 2 }, 1).found).toBe(true);
+  });
+
+  it('hole data that loops does not recurse forever', () => {
+    const a = sketch(['#####', '#Oo.#', '#####'], [], 'a', [{ x: 2, y: 1, targetMap: 'b', targetX: 1, targetY: 1 }]);
+    const b = sketch(['#####', '#.o.#', '#####'], [], 'b', [{ x: 2, y: 1, targetMap: 'a', targetX: 3, targetY: 1 }]);
+    const flags = { [dropFlag('a', { x: 1, y: 1 }, { x: 2, y: 1 })]: true, [dropFlag('b', { x: 1, y: 1 }, { x: 2, y: 1 })]: true };
+    expect(landedBoulders({ a, b }, 'b', flags)).toEqual([]);
+    expect(landedBoulders({ a, b }, 'a', flags)).toEqual([{ x: 3, y: 1 }]);
+  });
+});
+
 describe('flag gates (statue switches)', () => {
   it('open when the flag is set, or when it is clear for closedWhenSet gates', () => {
     expect(isFlagGateOpen({ flag: 'm1' }, {})).toBe(false);

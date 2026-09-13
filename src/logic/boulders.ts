@@ -5,7 +5,10 @@
 // and keeps the plate pressed. A pressed plate opens every gate wired to it.
 // A boulder pushed onto a BOULDER_HOLE drops to the floor below (`MapData.holes`)
 // and never comes back: it turns a CURRENT tile there into still WATER, or sits
-// as a boulder on a floor tile (pressing a switch plate if one is there).
+// as a boulder on a floor tile (pressing a switch plate if one is there). A
+// boulder that landed on a floor tile resets to that tile on every visit and
+// can be pushed into one of that floor's holes in turn (Seafoam: B2F -> B3F ->
+// B4F), so its "origin" is its landing tile.
 // Persisted state is one story flag per locked or dropped boulder:
 //   boulder_lock_<mapId>_<originX>_<originY>_on_<plateX>_<plateY>
 //   boulder_dropped_<mapId>_<originX>_<originY>_in_<holeX>_<holeY>
@@ -58,29 +61,58 @@ export function holeAt(map: Pick<MapData, 'tiles' | 'holes'>, p: Pos): HoleData 
   return map.holes?.find(h => h.x === p.x && h.y === p.y);
 }
 
-/** A drop flag counts only while the map data still has that boulder and that hole. */
-function validDrops(base: MapData, storyFlags: Record<string, boolean>): Array<BoulderDrop & { hole: HoleData }> {
+/** Every BOULDER tile in the base data. */
+function baseBoulders(map: MapData): Pos[] {
+  const out: Pos[] = [];
+  map.tiles.forEach((row, y) => row.forEach((t, x) => { if (t === TileType.BOULDER) out.push({ x, y }); }));
+  return out;
+}
+
+/** Drop flags of `map` that name one of `origins` and a hole the map data still has (stale saves are ignored). */
+function validDrops(map: MapData, origins: Pos[], storyFlags: Record<string, boolean>): Array<BoulderDrop & { hole: HoleData }> {
   const out: Array<BoulderDrop & { hole: HoleData }> = [];
-  for (const d of getBoulderDrops(storyFlags, base.id)) {
-    if (base.tiles[d.origin.y]?.[d.origin.x] !== TileType.BOULDER) continue;
-    const hole = holeAt(base, d.hole);
+  for (const d of getBoulderDrops(storyFlags, map.id)) {
+    if (!origins.some(o => same(o, d.origin))) continue;
+    const hole = holeAt(map, d.hole);
     if (hole) out.push({ origin: d.origin, hole });
   }
   return out;
 }
 
-/** Landing tiles, in `targetMapId`, of every boulder dropped into it from any map. */
-export function landedBoulders(maps: Record<string, MapData>, targetMapId: string, storyFlags: Record<string, boolean>): Pos[] {
-  const landed: Pos[] = [];
+/**
+ * Landing tiles on `mapId` of every boulder that ever dropped in from a floor
+ * above, whether or not it has been pushed on since. A boulder from above can
+ * only have dropped if it was on the floor above: in its base data, or landed
+ * there from higher up still (hence the recursion; `visiting` guards against
+ * hole data that loops).
+ */
+function arrivedBoulders(maps: Record<string, MapData>, mapId: string, storyFlags: Record<string, boolean>, visiting: Set<string>): Pos[] {
+  if (visiting.has(mapId)) return [];
+  visiting.add(mapId);
+  const arrived: Pos[] = [];
   for (const src of Object.values(maps)) {
-    if (!src.holes?.some(h => h.targetMap === targetMapId)) continue;
-    for (const d of validDrops(src, storyFlags)) {
-      if (d.hole.targetMap !== targetMapId) continue;
+    if (!src.holes?.some(h => h.targetMap === mapId)) continue;
+    const origins = [...baseBoulders(src), ...arrivedBoulders(maps, src.id, storyFlags, visiting)];
+    for (const d of validDrops(src, origins, storyFlags)) {
+      if (d.hole.targetMap !== mapId) continue;
       const p = { x: d.hole.targetX, y: d.hole.targetY };
-      if (!landed.some(l => same(l, p))) landed.push(p);
+      if (!arrived.some(l => same(l, p))) arrived.push(p);
     }
   }
-  return landed;
+  visiting.delete(mapId);
+  return arrived;
+}
+
+/**
+ * Landing tiles, in `targetMapId`, of every boulder dropped into it from any
+ * map that is still there: one pushed into a hole of `targetMapId` itself has
+ * moved on to the floor below.
+ */
+export function landedBoulders(maps: Record<string, MapData>, targetMapId: string, storyFlags: Record<string, boolean>): Pos[] {
+  const target = maps[targetMapId];
+  const arrived = arrivedBoulders(maps, targetMapId, storyFlags, new Set());
+  if (!target) return arrived;
+  return arrived.filter(p => validDrops(target, [p], storyFlags).length === 0);
 }
 
 export function floorTileOf(map: Pick<MapData, 'floorTile'>): TileType {
@@ -137,7 +169,7 @@ export function instantiateMap(base: MapData, storyFlags: Record<string, boolean
       if (base.tiles[y][x] === TileType.BOULDER) origins.set(key({ x, y }), { x, y });
     }
   }
-  for (const drop of validDrops(base, storyFlags)) {
+  for (const drop of validDrops(base, baseBoulders(base), storyFlags)) {
     if (!origins.has(key(drop.origin))) continue;
     origins.delete(key(drop.origin));
     setTile(map, drop.origin, tileUnder(base, drop.origin.x, drop.origin.y), false);
@@ -184,7 +216,8 @@ export interface PushResult {
  * Push the boulder at `from` one tile in `dir`. Mutates the instance and the
  * story flags. The caller has already checked that `from` holds a boulder and
  * that the tile beyond is free of NPCs. A boulder pushed onto a BOULDER_HOLE
- * drops out of the map and is remembered by a drop flag.
+ * drops out of the map and is remembered by a drop flag named after its
+ * origin: its base-data tile, or its landing tile if it came from above.
  */
 export function pushBoulder(
   base: MapData, inst: MapInstance, storyFlags: Record<string, boolean>, from: Pos, dir: Pos,
@@ -203,7 +236,7 @@ export function pushBoulder(
   const changed: Pos[] = [from];
   const hole = holeAt(map, to);
   if (map.tiles[to.y][to.x] === TileType.BOULDER_HOLE) {
-    if (base.tiles[origin.y]?.[origin.x] === TileType.BOULDER) storyFlags[dropFlag(base.id, origin, to)] = true;
+    storyFlags[dropFlag(base.id, origin, to)] = true;
   } else {
     inst.origins.set(key(to), origin);
     setTile(map, to, TileType.BOULDER, true);
