@@ -2506,6 +2506,8 @@ const MAP_MUSIC: Record<string, string> = {
   seafoam_b3f: 'cave',
   power_plant: 'cave',
   victory_road: 'cave',
+  victory_road_2f: 'cave',
+  victory_road_3f: 'cave',
   cerulean_cave: 'cave',
   pokemon_mansion: 'pokemon_mansion',
 

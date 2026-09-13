@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ALL_MAPS } from '../../src/data/maps';
-import { MapData } from '../../src/types/map.types';
+import { MapData, TileType } from '../../src/types/map.types';
 
 /**
  * Dungeon layout quality ratchet.
@@ -17,7 +17,9 @@ import { MapData } from '../../src/types/map.types';
  * up in the diff. Viridian Forest is the reference for what "good" looks like.
  *
  * Goals are either a warp to another map (the exit / next floor) or an NPC id
- * (a boss or a legendary) for dead-end floors.
+ * (a boss or a legendary) for dead-end floors. Gates are measured open and
+ * boulders in place: this is a layout metric, solvability is proven by
+ * gates.test.ts and the per-dungeon walkthrough tests.
  */
 
 interface FloorSpec {
@@ -52,7 +54,9 @@ const BASELINE: FloorSpec[] = [
   { map: 'seafoam_b3f',         from: 'seafoam_b2f',       to: 'npc:articuno_seafoam',     walkablePct: 43, pathRatio: 1.2 },
   { map: 'pokemon_mansion',     from: 'cinnabar_island',   to: 'npc:mansion_npc',          walkablePct: 68, pathRatio: 1.0 },
   { map: 'power_plant',         from: 'route10',           to: 'npc:zapdos_power_plant',   walkablePct: 50, pathRatio: 1.0 },
-  { map: 'victory_road',        from: 'route23',           to: 'indigo_plateau',           walkablePct: 48, pathRatio: 1.1 },
+  { map: 'victory_road',        from: 'route23',           to: 'victory_road_2f',          walkablePct: 36, pathRatio: 1.6 },
+  { map: 'victory_road_2f',     from: 'victory_road',      to: 'victory_road_3f',          walkablePct: 24, pathRatio: 1.5 },
+  { map: 'victory_road_3f',     from: 'victory_road_2f',   to: 'npc:vr_trainer10',         walkablePct: 19, pathRatio: 2.5 },
   { map: 'cerulean_cave',       from: 'cerulean_city',     to: 'npc:mewtwo',               walkablePct: 43, pathRatio: 1.7 },
 ];
 
@@ -71,7 +75,7 @@ function bfs(map: MapData, sx: number, sy: number): number[][] {
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const nx = x + dx, ny = y + dy;
       if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) continue;
-      if (map.collision[ny][nx] || dist[ny][nx] >= 0) continue;
+      if ((map.collision[ny][nx] && map.tiles[ny][nx] !== TileType.GATE) || dist[ny][nx] >= 0) continue;
       dist[ny][nx] = dist[y][x] + 1;
       q.push([nx, ny]);
     }
@@ -122,11 +126,21 @@ describe('dungeon layout ratchet', () => {
     });
   }
 
-  it('the reference floor (Viridian Forest) is clearly better than every other floor', () => {
+  // Floors rebuilt under docs/dungeon-plan.md: they must meet the plan's bar
+  // (at most 40% walkable, path at least 1.5x the straight line) and are
+  // allowed to beat the reference. Every other floor is still worse than it.
+  const REBUILT = new Set(['victory_road', 'victory_road_2f', 'victory_road_3f']);
+
+  it('rebuilt floors meet the plan bar; the reference floor (Viridian Forest) is still better than every floor not yet rebuilt', () => {
     const forest = BASELINE.find(s => s.map === 'viridian_forest')!;
     for (const spec of BASELINE) {
       if (spec === forest) continue;
-      expect(spec.walkablePct, spec.map).toBeGreaterThanOrEqual(forest.walkablePct);
+      if (REBUILT.has(spec.map)) {
+        expect(spec.walkablePct, spec.map).toBeLessThanOrEqual(40);
+        expect(spec.pathRatio, spec.map).toBeGreaterThanOrEqual(1.5);
+      } else {
+        expect(spec.walkablePct, spec.map).toBeGreaterThanOrEqual(forest.walkablePct);
+      }
     }
   });
 });

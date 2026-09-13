@@ -56,3 +56,49 @@ export function createMapShape(
 
   return { tiles, collision, setTile, fillRect };
 }
+
+export interface SketchShape extends MapShape {
+  width: number;
+  height: number;
+  /** Every tile drawn with `ch`, row-major. */
+  find(ch: string): Array<{ x: number; y: number }>;
+  /** The one tile drawn with `ch`; throws if there are none or several. */
+  findOne(ch: string): { x: number; y: number };
+}
+
+/**
+ * Build a map from an ASCII sketch: one string per row, one character per
+ * tile, `legend` mapping each character to its tile type. Every row must be
+ * the same length and every character must be in the legend. Markers that are
+ * not tiles (NPCs, warps, plates wired to gates) are placed by `find` /
+ * `findOne` so the sketch stays the single source of truth for coordinates.
+ */
+export function createMapFromSketch(
+  rows: string[],
+  legend: Record<string, TileType>,
+  opts: { solid?: Set<TileType> } = {},
+): SketchShape {
+  const H = rows.length;
+  const W = rows[0]?.length ?? 0;
+  if (H === 0 || W === 0) throw new Error('sketch is empty');
+  const found = new Map<string, Array<{ x: number; y: number }>>();
+  const shape = createMapShape(W, H, legend[rows[0][0]], opts);
+  rows.forEach((row, y) => {
+    if (row.length !== W) throw new Error(`sketch row ${y} is ${row.length} wide, expected ${W}`);
+    [...row].forEach((ch, x) => {
+      const t = legend[ch];
+      if (t === undefined) throw new Error(`sketch row ${y} col ${x}: '${ch}' is not in the legend`);
+      shape.setTile(x, y, t);
+      const list = found.get(ch) ?? [];
+      list.push({ x, y });
+      found.set(ch, list);
+    });
+  });
+  const find = (ch: string) => [...(found.get(ch) ?? [])];
+  const findOne = (ch: string) => {
+    const list = find(ch);
+    if (list.length !== 1) throw new Error(`sketch has ${list.length} '${ch}' tiles, expected exactly one`);
+    return list[0];
+  };
+  return { ...shape, width: W, height: H, find, findOne };
+}

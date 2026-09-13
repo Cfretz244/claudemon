@@ -1547,6 +1547,96 @@ export const TRAINERS: Record<string, TrainerData> = {
     },
   },
 
+  vr_trainer5: {
+    id: 'vr_trainer5',
+    name: 'TAMER VINCENT',
+    class: 'Tamer',
+    team: [
+      { speciesId: 24, level: 44 },  // Arbok
+      { speciesId: 22, level: 42 },  // Fearow
+      { speciesId: 121, level: 44 }, // Starmie
+    ],
+    prizeMoney: 1760,
+    dialogue: {
+      before: ['TAMER: My POKeMON\nobey my every word!'],
+      after: ['They just would not\nlisten today!'],
+    },
+  },
+  vr_trainer6: {
+    id: 'vr_trainer6',
+    name: 'POKEMANIAC DAWSON',
+    class: 'Pokemaniac',
+    team: [
+      { speciesId: 111, level: 42 }, // Rhyhorn
+      { speciesId: 108, level: 42 }, // Lickitung
+      { speciesId: 112, level: 44 }, // Rhydon
+    ],
+    prizeMoney: 2100,
+    dialogue: {
+      before: ['POKeMANIAC: I love\nrare POKeMON!'],
+      after: ['Yours are rarer\nthan mine!'],
+    },
+  },
+  vr_trainer7: {
+    id: 'vr_trainer7',
+    name: 'COOLTRAINER GEORGE',
+    class: 'Cooltrainer',
+    team: [
+      { speciesId: 78, level: 42 },  // Rapidash
+      { speciesId: 130, level: 43 }, // Gyarados
+      { speciesId: 26, level: 44 },  // Raichu
+    ],
+    prizeMoney: 1848,
+    dialogue: {
+      before: ['COOLTRAINER: So\nclose to the top!'],
+      after: ['Go on then. Show\nthe LEAGUE!'],
+    },
+  },
+  vr_trainer8: {
+    id: 'vr_trainer8',
+    name: 'BLACK BELT KOICHI',
+    class: 'Black Belt',
+    team: [
+      { speciesId: 107, level: 43 }, // Hitmonchan
+      { speciesId: 106, level: 43 }, // Hitmonlee
+    ],
+    prizeMoney: 1075,
+    dialogue: {
+      before: ['BLACK BELT: The peak\nis near!'],
+      after: ['My fists are\nbroken!'],
+    },
+  },
+  vr_trainer9: {
+    id: 'vr_trainer9',
+    name: 'COOLTRAINER COLBY',
+    class: 'Cooltrainer',
+    team: [
+      { speciesId: 31, level: 43 },  // Nidoqueen
+      { speciesId: 34, level: 43 },  // Nidoking
+      { speciesId: 36, level: 44 },  // Clefable
+    ],
+    prizeMoney: 1892,
+    dialogue: {
+      before: ['COOLTRAINER: Rock\nsolid defense!'],
+      after: ['You cracked my\ndefense!'],
+    },
+  },
+  vr_trainer10: {
+    id: 'vr_trainer10',
+    name: 'JUGGLER GREGORY',
+    class: 'Juggler',
+    team: [
+      { speciesId: 100, level: 41 }, // Voltorb
+      { speciesId: 101, level: 43 }, // Electrode
+      { speciesId: 64, level: 43 },  // Kadabra
+    ],
+    prizeMoney: 1720,
+    dialogue: {
+      before: ["JUGGLER: You've\nmade it this far?"],
+      after: ['I dropped every\nball!'],
+    },
+  },
+
   // Cerulean rival
   rival_cerulean: {
     id: 'rival_cerulean',
