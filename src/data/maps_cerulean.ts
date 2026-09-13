@@ -642,6 +642,12 @@ export const CERULEAN_CITY: MapData = (() => {
   fillRect(6, 20, 3, 2, T.WATER);
   setTile(5, 20, T.FOUNTAIN);
 
+  // CERULEAN CAVE: its mouth is in the north-west trees behind a pool that
+  // must be surfed; the grass strip in front of it is cut off from the town.
+  fillRect(2, 2, 6, 3, T.WATER);
+  fillRect(3, 2, 3, 1, T.GRASS);
+  setTile(4, 1, T.CAVE_ENTRANCE);
+
   // Open gaps for exits in tree borders
   // North exit
   setTile(11, 0, T.PATH);
@@ -698,6 +704,8 @@ export const CERULEAN_CITY: MapData = (() => {
       { x: 12, y: 1, targetMap: 'route24', targetX: 6, targetY: 19 },
       // West entrance → Route 4
       { x: 1, y: 12, targetMap: 'route4', targetX: 23, targetY: 5 },
+      // Cerulean Cave mouth (behind the pool) → 1F, in front of the door
+      { x: 4, y: 1, targetMap: 'cerulean_cave_1f', targetX: 4, targetY: 18 },
       { x: 1, y: 13, targetMap: 'route4', targetX: 23, targetY: 6 },
       // East exit → Route 9
       { x: 24, y: 12, targetMap: 'route9', targetX: 1, targetY: 5 },
