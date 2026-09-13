@@ -883,6 +883,21 @@ export const ROUTE22: MapData = (() => {
         isTrainer: true,
         sightRange: 4,
       },
+      // Pre-Victory-Road rematch. Shares the tile above; npcVisibility shows
+      // exactly one of the two (first fight until Boulder Badge, rematch at 8).
+      {
+        id: 'rival_route22_2',
+        x: 12, y: 4,
+        spriteColor: 0x6080c0,
+        direction: Direction.LEFT,
+        dialogue: [
+          "{RIVAL}: {PLAYER}!\nYou're headed to the\nPOKeMON LEAGUE too?",
+          "I've trained my\nPOKeMON to be the\nvery best!",
+          'This time I WILL\nbeat you!',
+        ],
+        isTrainer: true,
+        sightRange: 4,
+      },
     ],
     wildEncounters: {
       grassRate: 0.2,

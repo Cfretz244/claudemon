@@ -27,7 +27,6 @@ const KNOWN_UNRESOLVED_TRAINER_NPCS: string[] = [];
 // Trainer definitions that are legitimately not placed as map NPCs.
 const SCRIPTED_TRAINERS = [
   'rival_lab',        // started by OverworldScene.startRivalBattle
-  'rival_route22_2',  // pre-Victory-Road rival rematch: defined, not yet wired to the story
 ];
 // Dead definitions: no NPC anywhere uses them. Listed so new dead data is loud.
 const KNOWN_DEAD_TRAINERS: string[] = [];
