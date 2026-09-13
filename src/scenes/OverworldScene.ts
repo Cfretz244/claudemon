@@ -32,7 +32,7 @@ import { shouldGiveOaksParcel } from '../logic/oaksParcel';
 import { checkEntryGates } from '../logic/warpGate';
 import { MapInstance, instantiateMap, landedBoulders, pushBoulder, isFlagGateOpen, tileUnder } from '../logic/boulders';
 import { restoreParty } from '../logic/healing';
-import { elevatorAccess, elevatorTarget } from '../logic/elevator';
+import { elevatorAccess, elevatorTarget, visitedFlag } from '../logic/elevator';
 import { computeCurrentSlide, computeSlide, Slide } from '../logic/spinTiles';
 import { computeTrainerSight } from '../logic/trainerSight';
 import { pickWildEncounter, getEncounterTheme, rollsEncounterOn, encounterTableOf, itemBallAction } from '../logic/encounters';
@@ -188,6 +188,8 @@ export class OverworldScene extends Phaser.Scene {
     }
     this.mapInstance = lastMapInstance;
     this.currentMap = this.mapInstance.map;
+    // Elevator stops may require the floor to have been visited (Silph Co).
+    if (base.elevator) this.playerState.storyFlags[visitedFlag(base.id)] = true;
     // Reset flash when entering a non-dark map so re-entry into dark caves requires Flash again
     if (!this.currentMap.isDark) {
       this.flashUsed = false;
@@ -1693,6 +1695,9 @@ export class OverworldScene extends Phaser.Scene {
       () => {
         this.playerState.addItem(npc.itemId!);
         this.playerState.storyFlags[`picked_up_${npc.id}`] = true;
+        // A door key opens this floor's locked doors right away (has_<key> flag gates).
+        syncDerivedStoryFlags(this.playerState);
+        this.applyFlagGates();
         // Remove sprite from map
         const ballSprite = this.npcSprites.get(npc.id);
         if (ballSprite) {

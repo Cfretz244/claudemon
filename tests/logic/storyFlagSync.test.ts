@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { syncDerivedStoryFlags } from '../../src/logic/storyFlagSync';
+import { DOOR_KEY_ITEMS, doorKeyFlag, syncDerivedStoryFlags } from '../../src/logic/storyFlagSync';
 import { PlayerState } from '../../src/entities/Player';
 
 describe('syncDerivedStoryFlags', () => {
@@ -7,6 +7,16 @@ describe('syncDerivedStoryFlags', () => {
     const state = new PlayerState();
     syncDerivedStoryFlags(state);
     expect(state.storyFlags).toEqual({});
+  });
+
+  it('mirrors each door key item into a has_<item> flag (the Card Key opens Silph Co doors)', () => {
+    const state = new PlayerState();
+    syncDerivedStoryFlags(state);
+    expect(state.storyFlags['has_card_key']).toBeUndefined();
+    state.addItem('card_key');
+    syncDerivedStoryFlags(state);
+    expect(state.storyFlags[doorKeyFlag('card_key')]).toBe(true);
+    expect(DOOR_KEY_ITEMS).toContain('card_key');
   });
 
   it('sets rival_battle_lab after the lab battle', () => {

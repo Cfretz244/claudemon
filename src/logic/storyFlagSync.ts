@@ -4,6 +4,14 @@
 
 import { PlayerState } from '../entities/Player';
 
+/**
+ * Key items that open door gates. Carrying one sets the story flag
+ * `has_<item>`, so a locked door is an ordinary flag gate (`GateData.flag`)
+ * that opens on map load and, via the scene, the moment the key is picked up.
+ */
+export const DOOR_KEY_ITEMS = ['card_key'] as const;
+export const doorKeyFlag = (itemId: string) => `has_${itemId}`;
+
 export function syncDerivedStoryFlags(playerState: PlayerState): void {
   if (playerState.defeatedTrainers.includes('rival_lab')) {
     playerState.storyFlags['rival_battle_lab'] = true;
@@ -39,5 +47,10 @@ export function syncDerivedStoryFlags(playerState: PlayerState): void {
   // Saffron gate opens with Tea
   if (playerState.hasItem('tea')) {
     playerState.storyFlags['saffron_open'] = true;
+  }
+
+  // Door keys (Card Key) mirror into flags so locked doors can be flag gates
+  for (const item of DOOR_KEY_ITEMS) {
+    if (playerState.hasItem(item)) playerState.storyFlags[doorKeyFlag(item)] = true;
   }
 }

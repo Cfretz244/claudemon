@@ -284,6 +284,13 @@ export const ITEMS: Record<string, ItemData> = {
     price: 0,
     category: 'key',
   },
+  card_key: {
+    id: 'card_key',
+    name: 'CARD KEY',
+    description: 'Opens the locked\ndoors in SILPH CO.',
+    price: 0,
+    category: 'key',
+  },
   old_rod: {
     id: 'old_rod',
     name: 'OLD ROD',
