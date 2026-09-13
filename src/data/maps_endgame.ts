@@ -5,6 +5,23 @@ import { createMapFromSketch, createMapShape, SketchShape } from './mapBuilder';
 
 const T = TileType;
 
+// Sketch legend and NPC helpers shared by the sketch-built dungeons (Victory Road, Seafoam).
+const VR_LEGEND: Record<string, TileType> = {
+  '#': T.CAVE_WALL, '.': T.CAVE_FLOOR, O: T.BOULDER, o: T.BOULDER, S: T.SWITCH_PLATE, s: T.SWITCH_PLATE,
+  G: T.GATE, g: T.GATE, H: T.BOULDER_HOLE, '^': T.LEDGE, '1': T.CAVE_ENTRANCE, '2': T.CAVE_ENTRANCE, '3': T.CAVE_ENTRANCE,
+  E: T.CAVE_FLOOR, X: T.CAVE_FLOOR, a: T.CAVE_FLOOR, b: T.CAVE_FLOOR, c: T.CAVE_FLOOR, d: T.CAVE_FLOOR,
+  i: T.CAVE_FLOOR, M: T.CAVE_FLOOR,
+};
+
+const vrTrainer = (sketch: SketchShape, ch: string, id: string, direction: Direction, dialogue: string[]): NPCData => ({
+  id, ...sketch.findOne(ch), spriteColor: 0xc06060, direction, dialogue, isTrainer: true, sightRange: 4,
+});
+const vrItems = (sketch: SketchShape, prefix: string, itemIds: string[]): NPCData[] => {
+  const spots = sketch.find('i');
+  if (spots.length !== itemIds.length) throw new Error(`${prefix}: ${spots.length} item tiles for ${itemIds.length} items`);
+  return spots.map((p, n) => ({ id: `${prefix}_${itemIds[n]}`, ...p, spriteColor: 0x000000, direction: Direction.DOWN, dialogue: [], isItemBall: true, itemId: itemIds[n] }));
+};
+
 // ─────────────────────────────────────────────────────────────
 // 1. ROUTE 19  (15x20 vertical water route)
 // ─────────────────────────────────────────────────────────────
@@ -75,19 +92,17 @@ export const ROUTE20: MapData = (() => {
   const W = 30, H = 10;
   const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.WATER, { startSolid: true });
 
-  // West island (x=8-12, full height) — blocks water passage
+  // West island (x=7-12): a sand shore facing the west sea, the cave door in the rock behind it
+  for (let y = 0; y < H; y++) setTile(7, y, T.SAND);
   fillRect(8, 0, 5, 10, T.CAVE_WALL);
-  // Sand shore on east side of west island
-  for (let y = 0; y < H; y++) setTile(12, y, T.SAND);
-  setTile(12, 5, T.DOOR); // Cave entrance
+  setTile(8, 5, T.DOOR); // Seafoam 1F, west pocket
 
-  // East island (x=17-21, full height) — blocks water passage
+  // East island (x=17-22): the mirror image, facing Cinnabar
   fillRect(17, 0, 5, 10, T.CAVE_WALL);
-  // Sand shore on west side of east island
-  for (let y = 0; y < H; y++) setTile(17, y, T.SAND);
-  setTile(17, 5, T.DOOR); // Cave exit
+  for (let y = 0; y < H; y++) setTile(22, y, T.SAND);
+  setTile(21, 5, T.DOOR); // Seafoam 1F, east pocket
 
-  // Water gap between islands (x=13-16) is cosmetic — not reachable from either end
+  // The water between the islands (x=13-16) is scenery: the only way across is through the cave
 
   return {
     id: 'route20',
@@ -103,10 +118,9 @@ export const ROUTE20: MapData = (() => {
       // East exit → Cinnabar Island
       { x: 29, y: 4, targetMap: 'cinnabar_island', targetX: 2, targetY: 12 },
       { x: 29, y: 5, targetMap: 'cinnabar_island', targetX: 2, targetY: 12 },
-      // Seafoam cave entrance (west island)
-      { x: 12, y: 5, targetMap: 'seafoam_b1f', targetX: 9, targetY: 18 },
-      // Seafoam cave exit (east island) — warp target only
-      { x: 17, y: 5, targetMap: 'seafoam_b1f', targetX: 17, targetY: 2 },
+      // Seafoam Islands doors (each lands on the matching 1F exit tile)
+      { x: 8, y: 5, targetMap: 'seafoam_1f', targetX: 3, targetY: 17 },
+      { x: 21, y: 5, targetMap: 'seafoam_1f', targetX: 17, targetY: 17 },
     ],
     npcs: [
       {
@@ -134,7 +148,7 @@ export const ROUTE20: MapData = (() => {
         sightRange: 5,
       },
     ],
-    wildEncounters: {
+    surfEncounters: {
       grassRate: 0.15,
       encounters: [
         { speciesId: 72, minLevel: 25, maxLevel: 35, weight: 50 },  // Tentacool
@@ -146,267 +160,288 @@ export const ROUTE20: MapData = (() => {
 })();
 
 // ─────────────────────────────────────────────────────────────
-// 3a. SEAFOAM B1F  (20x20 cave — main through-path)
+// 3. SEAFOAM ISLANDS  (1F + B1F–B4F; dungeon plan §4.2)
 // ─────────────────────────────────────────────────────────────
+// Two doors on Route 20 open into sealed pockets of 1F that only join through
+// the floors below: west door -> ladder 1 -> B1F -> ladder 2 -> B2F -> ladder 3
+// -> B1F -> ladder 4 -> east door (no HM needed). Articuno needs Strength and
+// Surf: the two B2F boulders go down holes to B3F, then down B3F's holes into
+// the B4F river, where they still the current that otherwise sweeps a surfer
+// back to the shore. Every trainer stands in a niche, every item and ladder in
+// a stub, so nothing ever blocks the corridors (see docs/dungeon-plan.md).
+const SF_LEGEND: Record<string, TileType> = {
+  '#': T.CAVE_WALL, '.': T.CAVE_FLOOR, '~': T.WATER, v: T.CURRENT, '<': T.CURRENT, O: T.BOULDER, o: T.BOULDER_HOLE,
+  '1': T.CAVE_ENTRANCE, '2': T.CAVE_ENTRANCE, '3': T.CAVE_ENTRANCE, '4': T.CAVE_ENTRANCE, '5': T.CAVE_ENTRANCE,
+  '6': T.CAVE_ENTRANCE, '7': T.CAVE_ENTRANCE,
+  E: T.CAVE_FLOOR, X: T.CAVE_FLOOR, a: T.CAVE_FLOOR, b: T.CAVE_FLOOR, c: T.CAVE_FLOOR, d: T.CAVE_FLOOR,
+  e: T.CAVE_FLOOR, f: T.CAVE_FLOOR, i: T.CAVE_FLOOR, L: T.CAVE_FLOOR, l: T.CAVE_FLOOR, M: T.CAVE_FLOOR,
+};
+const sfCurrents = (s: SketchShape) => Object.fromEntries([
+  ...s.find('v').map(p => [`${p.x},${p.y}`, Direction.DOWN]),
+  ...s.find('<').map(p => [`${p.x},${p.y}`, Direction.LEFT]),
+]);
+const SF_ENCOUNTERS = {
+  grassRate: 0.08,
+  encounters: [
+    { speciesId: 86, minLevel: 30, maxLevel: 34, weight: 25 },  // Seel
+    { speciesId: 41, minLevel: 30, maxLevel: 32, weight: 20 },  // Zubat
+    { speciesId: 42, minLevel: 32, maxLevel: 36, weight: 15 },  // Golbat
+    { speciesId: 79, minLevel: 30, maxLevel: 34, weight: 20 },  // Slowpoke
+    { speciesId: 90, minLevel: 30, maxLevel: 34, weight: 20 },  // Shellder
+  ],
+};
+const SF_DEEP_ENCOUNTERS = {
+  grassRate: 0.08,
+  encounters: [
+    { speciesId: 86, minLevel: 32, maxLevel: 36, weight: 20 },  // Seel
+    { speciesId: 87, minLevel: 34, maxLevel: 38, weight: 15 },  // Dewgong
+    { speciesId: 42, minLevel: 34, maxLevel: 38, weight: 20 },  // Golbat
+    { speciesId: 80, minLevel: 34, maxLevel: 38, weight: 15 },  // Slowbro
+    { speciesId: 116, minLevel: 30, maxLevel: 34, weight: 15 }, // Horsea
+    { speciesId: 118, minLevel: 30, maxLevel: 34, weight: 15 }, // Goldeen
+  ],
+};
+
+// 1F: three sealed pockets. West door E leads only to ladder 1, east door X
+// only to ladder 4; the middle pocket (ladder 5, a Rare Candy) is a bonus
+// reached from B1F's east half.
+export const SEAFOAM_1F: MapData = (() => {
+  const s = createMapFromSketch([
+    '########################',
+    '##1...##########....4###',
+    '#####.####i######.######',
+    '#####.####.######.######',
+    '#####.####5######.....##',
+    '##....###############.##',
+    '##.##################.##',
+    '##.##############.....##',
+    '##.##############.######',
+    '##......#########.######',
+    '#######.#########.######',
+    '#######.#########.....##',
+    '#######.#############.##',
+    '#######.#############.##',
+    '#######.#########.....##',
+    '#######.#########.######',
+    '##......#########.######',
+    '###E#############X######',
+  ], SF_LEGEND);
+  return {
+    id: 'seafoam_1f',
+    name: 'SEAFOAM ISLANDS',
+    width: s.width, height: s.height, tiles: s.tiles, collision: s.collision,
+    warps: [
+      { ...s.findOne('E'), targetMap: 'route20', targetX: 7, targetY: 5 },
+      { ...s.findOne('X'), targetMap: 'route20', targetX: 22, targetY: 5 },
+      { ...s.findOne('1'), targetMap: 'seafoam_b1f', targetX: 2, targetY: 1 },
+      { ...s.findOne('4'), targetMap: 'seafoam_b1f', targetX: 15, targetY: 17 },
+      { ...s.findOne('5'), targetMap: 'seafoam_b1f', targetX: 7, targetY: 14 },
+    ],
+    npcs: [...vrItems(s, 'seafoam_1f', ['rare_candy'])],
+    wildEncounters: SF_ENCOUNTERS,
+  };
+})();
+
+// B1F: two halves. Ladder 1 (from the west door) winds past a Hiker to ladder
+// 2 (down to B2F); ladder 3 (up from B2F) winds past a Swimmer to ladder 4
+// (up to the east door) with ladder 5 (the 1F bonus pocket) off the way.
 export const SEAFOAM_B1F: MapData = (() => {
-  const W = 20, H = 20;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR);
-
-  // Cave wall borders (2 tiles thick)
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.CAVE_WALL); setTile(x, 1, T.CAVE_WALL);
-    setTile(x, H - 1, T.CAVE_WALL); setTile(x, H - 2, T.CAVE_WALL);
-  }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.CAVE_WALL); setTile(1, y, T.CAVE_WALL);
-    setTile(W - 1, y, T.CAVE_WALL); setTile(W - 2, y, T.CAVE_WALL);
-  }
-
-  // South entrance (from Route 20 west island)
-  setTile(9, 18, T.CAVE_FLOOR); setTile(9, 19, T.CAVE_FLOOR);
-  // East exit (to Route 20 east island) — open north wall
-  setTile(17, 0, T.CAVE_FLOOR); setTile(17, 1, T.CAVE_FLOOR);
-
-  // Interior corridors — winding path from south to east exit
-  fillRect(4, 4, 3, 2, T.CAVE_WALL);
-  fillRect(11, 3, 4, 2, T.CAVE_WALL);
-  fillRect(6, 8, 2, 3, T.CAVE_WALL);
-  fillRect(13, 7, 3, 2, T.CAVE_WALL);
-  fillRect(4, 12, 3, 2, T.CAVE_WALL);
-  fillRect(14, 12, 3, 2, T.CAVE_WALL);
-  fillRect(8, 15, 3, 2, T.CAVE_WALL);
-
-  // Underground water features
-  fillRect(10, 8, 3, 3, T.WATER);
-  fillRect(3, 14, 3, 2, T.WATER);
-
-  // Ladder down to B2F
-  setTile(4, 6, T.CAVE_ENTRANCE);
-
+  const s = createMapFromSketch([
+    '########################',
+    '##1......############3##',
+    '########.############.##',
+    '########.############.##',
+    '##a#####.############.##',
+    '##.......############.##',
+    '##.#########..........##',
+    '##.#########.###########',
+    '##.i########.###########',
+    '##.#########.########b##',
+    '##....######..........##',
+    '#####.###############.##',
+    '#####.###############.##',
+    '##2...###############.##',
+    '#######5..............##',
+    '##########.#############',
+    '##########.#############',
+    '##########.....4########',
+    '########################',
+    '########################',
+  ], SF_LEGEND);
   return {
     id: 'seafoam_b1f',
-    name: 'SEAFOAM B1F',
-    width: W,
-    height: H,
-    tiles,
-    collision,
+    name: 'SEAFOAM ISLANDS',
+    width: s.width, height: s.height, tiles: s.tiles, collision: s.collision,
     warps: [
-      // South entrance → Route 20 (west island)
-      { x: 9, y: 19, targetMap: 'route20', targetX: 12, targetY: 4 },
-      // East exit → Route 20 (east island)
-      { x: 17, y: 0, targetMap: 'route20', targetX: 17, targetY: 6 },
-      // Ladder down to B2F
-      { x: 4, y: 6, targetMap: 'seafoam_b2f', targetX: 4, targetY: 3 },
+      { ...s.findOne('1'), targetMap: 'seafoam_1f', targetX: 2, targetY: 1 },
+      { ...s.findOne('2'), targetMap: 'seafoam_b2f', targetX: 2, targetY: 1 },
+      { ...s.findOne('3'), targetMap: 'seafoam_b2f', targetX: 12, targetY: 17 },
+      { ...s.findOne('4'), targetMap: 'seafoam_1f', targetX: 20, targetY: 1 },
+      { ...s.findOne('5'), targetMap: 'seafoam_1f', targetX: 10, targetY: 4 },
     ],
     npcs: [
-      {
-        id: 'seafoam_rare_candy',
-        x: 5, y: 10,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [],
-        isItemBall: true,
-        itemId: 'rare_candy',
-      },
-      {
-        id: 'seafoam_trainer1',
-        x: 5, y: 5,
-        spriteColor: 0xc06060,
-        direction: Direction.RIGHT,
-        dialogue: [
-          'HIKER: This cave is\nfreezing cold!',
-          'There must be an\nice POKeMON nearby!',
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'seafoam_trainer2',
-        x: 15, y: 15,
-        spriteColor: 0x6060c0,
-        direction: Direction.LEFT,
-        dialogue: [
-          'SWIMMER: The\nunderground rivers',
-          'make this cave\ntreacherous!',
-        ],
-        isTrainer: true,
-        sightRange: 5,
-      },
+      ...vrItems(s, 'seafoam_b1f', ['ice_heal']),
+      vrTrainer(s, 'a', 'seafoam_trainer1', Direction.DOWN, ['HIKER: This cave is\nfreezing cold!', 'There must be an\nice POKeMON nearby!']),
+      vrTrainer(s, 'b', 'seafoam_trainer2', Direction.DOWN, ['SWIMMER: The\nunderground rivers', 'make this cave\ntreacherous!']),
     ],
-    wildEncounters: {
-      grassRate: 0.08,
-      encounters: [
-        { speciesId: 86, minLevel: 30, maxLevel: 34, weight: 30 },  // Seel
-        { speciesId: 41, minLevel: 30, maxLevel: 32, weight: 25 },  // Zubat
-        { speciesId: 42, minLevel: 32, maxLevel: 36, weight: 15 },  // Golbat
-        { speciesId: 90, minLevel: 30, maxLevel: 34, weight: 30 },  // Shellder
-      ],
-    },
+    wildEncounters: SF_ENCOUNTERS,
   };
 })();
 
-// ─────────────────────────────────────────────────────────────
-// 3b. SEAFOAM B2F  (20x20 cave — middle floor)
-// ─────────────────────────────────────────────────────────────
+// B2F: the through-corridor from ladder 2 to ladder 3 passes two rooms, each
+// with a boulder O and a hole o (push east twice, then down from above). The
+// holes drop onto B3F's landing tiles. Ladder 6 (down to B3F) is a stub at the
+// west end of the lower corridor, before the second trainer.
 export const SEAFOAM_B2F: MapData = (() => {
-  const W = 20, H = 20;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR);
-
-  // Cave wall borders (2 tiles thick)
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.CAVE_WALL); setTile(x, 1, T.CAVE_WALL);
-    setTile(x, H - 1, T.CAVE_WALL); setTile(x, H - 2, T.CAVE_WALL);
-  }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.CAVE_WALL); setTile(1, y, T.CAVE_WALL);
-    setTile(W - 1, y, T.CAVE_WALL); setTile(W - 2, y, T.CAVE_WALL);
-  }
-
-  // Interior walls creating corridors
-  fillRect(5, 5, 4, 2, T.CAVE_WALL);
-  fillRect(12, 4, 3, 3, T.CAVE_WALL);
-  fillRect(3, 9, 3, 2, T.CAVE_WALL);
-  fillRect(9, 9, 2, 3, T.CAVE_WALL);
-  fillRect(14, 10, 3, 2, T.CAVE_WALL);
-  fillRect(5, 14, 4, 2, T.CAVE_WALL);
-  fillRect(13, 14, 3, 2, T.CAVE_WALL);
-
-  // Water pools
-  fillRect(10, 5, 2, 2, T.WATER);
-  fillRect(4, 16, 3, 2, T.WATER);
-
-  // Ladder up to B1F
-  setTile(4, 3, T.CAVE_ENTRANCE);
-  // Ladder down to B3F
-  setTile(15, 16, T.CAVE_ENTRANCE);
-
+  const s = createMapFromSketch([
+    '########################',
+    '##2.....################',
+    '#######.################',
+    '#######.################',
+    '#######.##c#############',
+    '#######..........#######',
+    '################.#.....#',
+    '################...O...#',
+    '################.#...o.#',
+    '##i..............#######',
+    '####.#.....#############',
+    '####...O...#############',
+    '####.#...o.#############',
+    '###6.................###',
+    '##########d#########.###',
+    '####################.###',
+    '####################.###',
+    '############3........###',
+    '########################',
+    '########################',
+  ], SF_LEGEND);
+  const [holeWest, holeEast] = s.find('o').sort((p, q) => p.x - q.x);
   return {
     id: 'seafoam_b2f',
-    name: 'SEAFOAM B2F',
-    width: W,
-    height: H,
-    tiles,
-    collision,
+    name: 'SEAFOAM ISLANDS',
+    width: s.width, height: s.height, tiles: s.tiles, collision: s.collision,
     warps: [
-      // Ladder up to B1F
-      { x: 4, y: 3, targetMap: 'seafoam_b1f', targetX: 4, targetY: 7 },
-      // Ladder down to B3F
-      { x: 15, y: 16, targetMap: 'seafoam_b3f', targetX: 15, targetY: 3 },
+      { ...s.findOne('2'), targetMap: 'seafoam_b1f', targetX: 2, targetY: 13 },
+      { ...s.findOne('3'), targetMap: 'seafoam_b1f', targetX: 21, targetY: 1 },
+      { ...s.findOne('6'), targetMap: 'seafoam_b3f', targetX: 2, targetY: 1 },
+    ],
+    holes: [
+      { ...holeWest, targetMap: 'seafoam_b3f', targetX: 3, targetY: 12 },
+      { ...holeEast, targetMap: 'seafoam_b3f', targetX: 17, targetY: 12 },
     ],
     npcs: [
-      {
-        id: 'seafoam_b2f_trainer1',
-        x: 7, y: 8,
-        spriteColor: 0xc06060,
-        direction: Direction.DOWN,
-        dialogue: [
-          'HIKER: These caves\ngo deep!',
-          'I wonder what lies\nat the bottom...',
-        ],
-        isTrainer: true,
-        sightRange: 4,
-      },
-      {
-        id: 'seafoam_b2f_trainer2',
-        x: 12, y: 12,
-        spriteColor: 0x6060c0,
-        direction: Direction.LEFT,
-        dialogue: [
-          'SWIMMER: The water\nhere is ice cold!',
-          'Something powerful\nlives below!',
-        ],
-        isTrainer: true,
-        sightRange: 4,
-      },
+      ...vrItems(s, 'seafoam_b2f', ['nugget']),
+      vrTrainer(s, 'c', 'seafoam_b2f_trainer1', Direction.DOWN, ['HIKER: These caves\ngo deep!', 'I wonder what lies\nat the bottom...']),
+      vrTrainer(s, 'd', 'seafoam_b2f_trainer2', Direction.UP, ['SWIMMER: The water\nhere is ice cold!', 'Something powerful\nlives below!']),
     ],
-    wildEncounters: {
-      grassRate: 0.08,
-      encounters: [
-        { speciesId: 86, minLevel: 30, maxLevel: 34, weight: 25 },  // Seel
-        { speciesId: 87, minLevel: 32, maxLevel: 36, weight: 15 },  // Dewgong
-        { speciesId: 116, minLevel: 30, maxLevel: 34, weight: 20 }, // Horsea
-        { speciesId: 118, minLevel: 30, maxLevel: 34, weight: 20 }, // Goldeen
-        { speciesId: 90, minLevel: 30, maxLevel: 34, weight: 20 },  // Shellder
-      ],
-    },
+    wildEncounters: SF_DEEP_ENCOUNTERS,
   };
 })();
 
-// ─────────────────────────────────────────────────────────────
-// 3c. SEAFOAM B3F  (20x20 cave — Articuno's chamber)
-// ─────────────────────────────────────────────────────────────
+// B3F: the boulders from B2F land on L (west alcove) and l (east alcove),
+// each one push from a hole o that drops into the B4F river. A ring corridor
+// lets the player pick which trainer to face on the way to ladder 7.
 export const SEAFOAM_B3F: MapData = (() => {
-  const W = 20, H = 20;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.CAVE_FLOOR);
-
-  // Cave wall borders (2 tiles thick)
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.CAVE_WALL); setTile(x, 1, T.CAVE_WALL);
-    setTile(x, H - 1, T.CAVE_WALL); setTile(x, H - 2, T.CAVE_WALL);
-  }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.CAVE_WALL); setTile(1, y, T.CAVE_WALL);
-    setTile(W - 1, y, T.CAVE_WALL); setTile(W - 2, y, T.CAVE_WALL);
-  }
-
-  // Interior walls creating corridors to Articuno chamber
-  fillRect(5, 4, 4, 2, T.CAVE_WALL);
-  fillRect(12, 3, 4, 2, T.CAVE_WALL);
-  fillRect(3, 8, 3, 2, T.CAVE_WALL);
-  fillRect(14, 8, 3, 2, T.CAVE_WALL);
-  fillRect(6, 12, 3, 2, T.CAVE_WALL);
-  fillRect(12, 12, 4, 2, T.CAVE_WALL);
-  // Wall separating main area from Articuno chamber (y=6-7, x=7-16)
-  fillRect(7, 6, 10, 2, T.CAVE_WALL);
-  // Opening in the wall blocked by boulders
-  setTile(10, 6, T.CAVE_FLOOR); setTile(10, 7, T.CAVE_FLOOR);
-
-  // Strength boulders blocking path to Articuno
-  setTile(10, 6, T.BOULDER);
-  setTile(10, 7, T.BOULDER);
-  setTile(11, 7, T.BOULDER);
-
-  // Water pools
-  fillRect(3, 14, 4, 3, T.WATER);
-  fillRect(13, 14, 4, 3, T.WATER);
-
-  // Ladder up to B2F
-  setTile(15, 3, T.CAVE_ENTRANCE);
-
+  const s = createMapFromSketch([
+    '########################',
+    '##6.....################',
+    '#######.################',
+    '#######.################',
+    '#######.....############',
+    '########e##.############',
+    '#####...........########',
+    '#####.#########.########',
+    '#####.#########.########',
+    '#####.#########.########',
+    '#####...........########',
+    '#####.######f####o######',
+    '##oL..###########l######',
+    '#####.###########.######',
+    '##i.................####',
+    '###################.####',
+    '###################.####',
+    '#######7............####',
+    '########################',
+    '########################',
+  ], SF_LEGEND);
+  const [holeWest, holeEast] = s.find('o').sort((p, q) => p.x - q.x);
   return {
     id: 'seafoam_b3f',
-    name: 'SEAFOAM B3F',
-    width: W,
-    height: H,
-    tiles,
-    collision,
+    name: 'SEAFOAM ISLANDS',
+    width: s.width, height: s.height, tiles: s.tiles, collision: s.collision,
     warps: [
-      // Ladder up to B2F
-      { x: 15, y: 3, targetMap: 'seafoam_b2f', targetX: 15, targetY: 17 },
+      { ...s.findOne('6'), targetMap: 'seafoam_b2f', targetX: 3, targetY: 13 },
+      { ...s.findOne('7'), targetMap: 'seafoam_b4f', targetX: 2, targetY: 1 },
+    ],
+    holes: [
+      { ...holeWest, targetMap: 'seafoam_b4f', targetX: 7, targetY: 4 },
+      { ...holeEast, targetMap: 'seafoam_b4f', targetX: 8, targetY: 4 },
     ],
     npcs: [
+      ...vrItems(s, 'seafoam_b3f', ['full_restore']),
+      vrTrainer(s, 'e', 'seafoam_b3f_trainer1', Direction.DOWN, ['HIKER: The rocks\nhere are slick with', 'ice! Watch your\nstep!']),
+      vrTrainer(s, 'f', 'seafoam_b3f_trainer2', Direction.UP, ['SWIMMER: I heard a\ncry from below...', 'Something is\nnesting down there!']),
+    ],
+    wildEncounters: SF_DEEP_ENCOUNTERS,
+  };
+})();
+
+// B4F: the shore path runs down the west side. A surfer who enters the river
+// (vv) from the pool is carried south and dumped back beside the shore (<<).
+// The two boulders dropped from B3F land on the river's top tiles and turn
+// them into still water, opening the way east to the lake, Articuno's island
+// (M) and the Ultra Ball islet.
+export const SEAFOAM_B4F: MapData = (() => {
+  const s = createMapFromSketch([
+    '########################',
+    '##7...##################',
+    '#####.##################',
+    '#####.#vv###############',
+    '#####.~vv~~~~~~~~~~~~~##',
+    '#####.#vv############~##',
+    '#####.#vv###~~~~~~~~~~##',
+    '#####.#vv###~###########',
+    '#####.#vv###~~~~~~~~~~##',
+    '#####.#vv#####.M.####~##',
+    '#####.#vv#####...####~##',
+    '#####.#vv###~~~~~~~~~~##',
+    '#####.#vv###~###########',
+    '#####.#vv###~~~~~~~.i###',
+    '#####.#vv###############',
+    '#####.#vv###############',
+    '#####.~<<###############',
+    '########################',
+    '########################',
+    '########################',
+  ], SF_LEGEND);
+  return {
+    id: 'seafoam_b4f',
+    name: 'SEAFOAM ISLANDS',
+    width: s.width, height: s.height, tiles: s.tiles, collision: s.collision,
+    warps: [
+      { ...s.findOne('7'), targetMap: 'seafoam_b3f', targetX: 7, targetY: 17 },
+    ],
+    currents: sfCurrents(s),
+    npcs: [
+      ...vrItems(s, 'seafoam_b4f', ['ultra_ball']),
       {
         id: 'articuno_seafoam',
-        x: 10, y: 4,
+        ...s.findOne('M'),
         spriteColor: 0x90d0f0,
         direction: Direction.DOWN,
-        dialogue: [
-          'A legendary bird\nPOKeMON is here!',
-          "The air is freezing\ncold around it!",
-          "It's ARTICUNO!",
-        ],
+        dialogue: ['A legendary bird\nPOKeMON is here!', 'The air is freezing\ncold around it!', "It's ARTICUNO!"],
         isTrainer: false,
       },
     ],
-    wildEncounters: {
+    wildEncounters: SF_DEEP_ENCOUNTERS,
+    surfEncounters: {
       grassRate: 0.08,
       encounters: [
-        { speciesId: 86, minLevel: 30, maxLevel: 34, weight: 20 },  // Seel
-        { speciesId: 87, minLevel: 32, maxLevel: 36, weight: 15 },  // Dewgong
-        { speciesId: 90, minLevel: 30, maxLevel: 34, weight: 15 },  // Shellder
-        { speciesId: 116, minLevel: 30, maxLevel: 32, weight: 15 }, // Horsea
-        { speciesId: 118, minLevel: 30, maxLevel: 34, weight: 15 }, // Goldeen
-        { speciesId: 41, minLevel: 30, maxLevel: 34, weight: 20 },  // Zubat
+        { speciesId: 86, minLevel: 30, maxLevel: 36, weight: 30 },  // Seel
+        { speciesId: 87, minLevel: 34, maxLevel: 38, weight: 15 },  // Dewgong
+        { speciesId: 90, minLevel: 30, maxLevel: 34, weight: 20 },  // Shellder
+        { speciesId: 91, minLevel: 34, maxLevel: 38, weight: 10 },  // Cloyster
+        { speciesId: 120, minLevel: 30, maxLevel: 34, weight: 25 }, // Staryu
       ],
     },
   };
@@ -1017,21 +1052,6 @@ export const ROUTE23: MapData = (() => {
 // E/X the Route 23 / Indigo Plateau exits, a-d trainers (in niches facing
 // across the corridor: a trainer keeps blocking its tile after the battle),
 // i items, M Moltres. Solvability is proven by tests/data/victoryRoad.test.ts.
-const VR_LEGEND: Record<string, TileType> = {
-  '#': T.CAVE_WALL, '.': T.CAVE_FLOOR, O: T.BOULDER, o: T.BOULDER, S: T.SWITCH_PLATE, s: T.SWITCH_PLATE,
-  G: T.GATE, g: T.GATE, H: T.BOULDER_HOLE, '^': T.LEDGE, '1': T.CAVE_ENTRANCE, '2': T.CAVE_ENTRANCE, '3': T.CAVE_ENTRANCE,
-  E: T.CAVE_FLOOR, X: T.CAVE_FLOOR, a: T.CAVE_FLOOR, b: T.CAVE_FLOOR, c: T.CAVE_FLOOR, d: T.CAVE_FLOOR,
-  i: T.CAVE_FLOOR, M: T.CAVE_FLOOR,
-};
-
-const vrTrainer = (sketch: SketchShape, ch: string, id: string, direction: Direction, dialogue: string[]): NPCData => ({
-  id, ...sketch.findOne(ch), spriteColor: 0xc06060, direction, dialogue, isTrainer: true, sightRange: 4,
-});
-const vrItems = (sketch: SketchShape, prefix: string, itemIds: string[]): NPCData[] => {
-  const spots = sketch.find('i');
-  if (spots.length !== itemIds.length) throw new Error(`${prefix}: ${spots.length} item tiles for ${itemIds.length} items`);
-  return spots.map((p, n) => ({ id: `${prefix}_${itemIds[n]}`, ...p, spriteColor: 0x000000, direction: Direction.DOWN, dialogue: [], isItemBall: true, itemId: itemIds[n] }));
-};
 
 // 1F: the ladder up (1) is behind gate G, which opens once boulder O is pushed
 // four tiles west onto plate S. The player reaches the wrong (west) side of
@@ -1919,9 +1939,11 @@ const POKEMART_CINNABAR: MapData = (() => {
 export const ENDGAME_MAPS: Record<string, MapData> = {
   route19: ROUTE19,
   route20: ROUTE20,
+  seafoam_1f: SEAFOAM_1F,
   seafoam_b1f: SEAFOAM_B1F,
   seafoam_b2f: SEAFOAM_B2F,
   seafoam_b3f: SEAFOAM_B3F,
+  seafoam_b4f: SEAFOAM_B4F,
   cinnabar_island: CINNABAR_ISLAND,
   cinnabar_gym: CINNABAR_GYM,
   pokemon_mansion: POKEMON_MANSION,

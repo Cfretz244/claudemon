@@ -88,7 +88,7 @@ export const SUPER_ROD_ENCOUNTERS: Record<string, WildEncounter[]> = {
     { speciesId: 90, minLevel: 25, maxLevel: 30, weight: 25 },  // Shellder
     { speciesId: 118, minLevel: 25, maxLevel: 30, weight: 25 }, // Goldeen
   ],
-  seafoam_islands: [
+  seafoam_b4f: [
     { speciesId: 116, minLevel: 25, maxLevel: 35, weight: 25 }, // Horsea
     { speciesId: 90, minLevel: 25, maxLevel: 30, weight: 25 },  // Shellder
     { speciesId: 118, minLevel: 25, maxLevel: 30, weight: 25 }, // Goldeen
