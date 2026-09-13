@@ -164,7 +164,10 @@ function setTile(map: MapData, p: Pos, t: TileType, solid: boolean): void {
  * gets a boulder that resets to that spot on every visit.
  */
 export function instantiateMap(base: MapData, storyFlags: Record<string, boolean>, landed: Pos[] = []): MapInstance {
-  const map: MapData = { ...base, tiles: base.tiles.map(r => [...r]), collision: base.collision.map(r => [...r]) };
+  // NPCs are cloned too: a spotting trainer walks up to the player and keeps
+  // that tile (the scene rewrites npc.x/y), which must not leak into the shared
+  // base data — a fresh arrival puts every trainer back at its post (Gen I).
+  const map: MapData = { ...base, tiles: base.tiles.map(r => [...r]), collision: base.collision.map(r => [...r]), npcs: base.npcs.map(n => ({ ...n })) };
   const origins = new Map<string, Pos>();
   for (let y = 0; y < base.height; y++) {
     for (let x = 0; x < base.width; x++) {

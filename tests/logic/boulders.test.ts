@@ -36,6 +36,16 @@ describe('lock flags', () => {
 });
 
 describe('instantiateMap', () => {
+  it('clones the npcs: a trainer moved on the live map (the spotting walk) is back at its post on the next instantiate', () => {
+    const base = sketch(['#####', '#...#', '#####']);
+    base.npcs = [{ id: 't', x: 3, y: 1, spriteColor: 0, direction: D.LEFT, dialogue: [], isTrainer: true, sightRange: 2 }];
+    const first = instantiateMap(base, {}).map;
+    expect(first.npcs).not.toBe(base.npcs);
+    first.npcs[0].x -= 1; // OverworldScene.triggerTrainerEncounter rewrites npc.x/y in place
+    expect(base.npcs[0].x).toBe(3);
+    expect(instantiateMap(base, {}).map.npcs[0]).toEqual(base.npcs[0]);
+    expect(first.npcs[0].x).toBe(2); // the live map keeps the walk (reused when coming back from the battle)
+  });
   const base = sketch([
     '#######',
     '#.O.S.#',
@@ -51,7 +61,8 @@ describe('instantiateMap', () => {
     expect([...origins.entries()]).toEqual([['2,1', { x: 2, y: 1 }]]);
     map.tiles[1][2] = T.CAVE_FLOOR;
     expect(at(base, 2, 1)).toBe(T.BOULDER);
-    expect(map.npcs).toBe(base.npcs);
+    expect(map.npcs).toEqual(base.npcs);
+    expect(map.npcs).not.toBe(base.npcs);
   });
   it('locked boulder is restored onto its plate and the gate is open', () => {
     const flags = { [lockFlag('test_cave', { x: 2, y: 1 }, { x: 4, y: 1 })]: true };
