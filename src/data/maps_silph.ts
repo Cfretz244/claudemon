@@ -91,9 +91,9 @@ const SC_2F = createMapFromSketch([
   '####################',
   '#...#u#..........1##',
   '###.#.#.#######.####',
-  '#...#.B.....#.#...##',
+  '#...#.B.....#i#...##',
   '#.###.#####.#.###.##',
-  '#...#.....#..iDi#.##',
+  '#...#.....#...Di#.##',
   '###.#####.#.#####.##',
   '#.#.....#...#...#.##',
   '#.V####.#####.#.#.##',
@@ -292,7 +292,7 @@ const SILPH_CO_1F = silphFloor(1, {
   ],
 });
 
-// 2F: pad 1 to 4F in the top-right corner; a locked room with two items.
+// 2F: pad 1 to 4F in the top-right corner; a locked one-tile room; an item in a dead end.
 const SILPH_CO_2F = silphFloor(2, {
   warps: [pad(SC_2F, '1', SC_4F, 'silph_co_4f')],
   npcs: [
