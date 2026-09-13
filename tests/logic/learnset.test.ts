@@ -1,46 +1,52 @@
 import { describe, it, expect } from 'vitest';
-import { effectiveLearnset, inheritsPreEvolutionMoves } from '../../src/logic/learnset';
+import { effectiveMovesAt, inheritsPreEvolutionMoves } from '../../src/logic/learnset';
 import { POKEMON_DATA } from '../../src/data/pokemon';
 import { MOVES_DATA } from '../../src/data/moves';
 import { defaultMoves } from '../../src/data/battleSimConfig';
 import { createPokemon } from '../../src/entities/Pokemon';
 
-const PIKACHU = 25, RAICHU = 26, CLEFABLE = 36, NINETALES = 38, WIGGLYTUFF = 40;
-const ARCANINE = 59, POLIWAG = 60, POLIWHIRL = 61, POLIWRATH = 62;
-const METAPOD = 11, KAKUNA = 14, HARDEN = 106;
+const PIKACHU = 25, RAICHU = 26, CLEFAIRY = 35, CLEFABLE = 36, VULPIX = 37, NINETALES = 38;
+const JIGGLYPUFF = 39, WIGGLYTUFF = 40, GROWLITHE = 58, ARCANINE = 59;
+const POLIWAG = 60, POLIWHIRL = 61, POLIWRATH = 62, STARYU = 120, STARMIE = 121;
+const METAPOD = 11, KAKUNA = 14, HARDEN = 106, THUNDER_WAVE = 86, METRONOME = 118;
 const VILEPLUME = 45, JOLTEON = 135;
 
+const INHERITING = [RAICHU, CLEFABLE, NINETALES, WIGGLYTUFF, ARCANINE, POLIWRATH, STARMIE];
 const moveNames = (ids: number[]) => ids.map(id => MOVES_DATA[id].name);
 
-describe('effectiveLearnset', () => {
+/** What the code did before this fix: the species' own learnset, read literally. */
+const ownMovesAt = (speciesId: number, level: number) =>
+  POKEMON_DATA[speciesId].learnset.filter(e => e.level <= level).map(e => e.moveId);
+
+describe('effectiveMovesAt', () => {
   it('only the stone evolutions with a level-1-only learnset inherit anything', () => {
     const inheriting = Object.values(POKEMON_DATA)
       .filter(s => inheritsPreEvolutionMoves(s.id))
       .map(s => s.id);
-    expect(inheriting).toEqual([RAICHU, CLEFABLE, NINETALES, WIGGLYTUFF, ARCANINE, POLIWRATH, 121]);
+    expect(inheriting).toEqual(INHERITING);
   });
 
   it('leaves a species with level-up moves of its own untouched', () => {
-    for (const id of [PIKACHU, VILEPLUME, JOLTEON, POLIWAG, POLIWHIRL]) {
-      expect(effectiveLearnset(id)).toBe(POKEMON_DATA[id].learnset);
+    for (const id of [PIKACHU, VILEPLUME, JOLTEON, POLIWAG, POLIWHIRL, STARYU]) {
+      for (const level of [1, 20, 50, 100]) {
+        expect(effectiveMovesAt(id, level).map(e => e.moveId)).toEqual(ownMovesAt(id, level));
+      }
     }
   });
 
-  it('is memoized per species', () => {
-    expect(effectiveLearnset(RAICHU)).toBe(effectiveLearnset(RAICHU));
+  it('is memoized per species and level', () => {
+    expect(effectiveMovesAt(RAICHU, 50)).toBe(effectiveMovesAt(RAICHU, 50));
+    expect(effectiveMovesAt(RAICHU, 50)).not.toBe(effectiveMovesAt(RAICHU, 49));
   });
 
-  it('never invents a move that is outside the chain, and stays sorted by level', () => {
+  it('never lists an unknown or duplicated move, and only grows with level', () => {
     for (const species of Object.values(POKEMON_DATA)) {
-      const entries = effectiveLearnset(species.id);
-      const ids = entries.map(e => e.moveId);
-      for (const id of ids) expect(MOVES_DATA[id]).toBeDefined();
+      const low = effectiveMovesAt(species.id, 5).map(e => e.moveId);
+      const high = effectiveMovesAt(species.id, 100).map(e => e.moveId);
+      for (const id of high) expect(MOVES_DATA[id]).toBeDefined();
+      for (const id of low) expect(high).toContain(id);
       if (!inheritsPreEvolutionMoves(species.id)) continue;
-      // Deduplicated and non-decreasing in level.
-      expect(new Set(ids).size).toBe(ids.length);
-      for (let i = 1; i < entries.length; i++) {
-        expect(entries[i].level).toBeGreaterThanOrEqual(entries[i - 1].level);
-      }
+      expect(new Set(high).size).toBe(high.length);
     }
   });
 });
@@ -54,66 +60,77 @@ describe('stone evolutions carry the pre-evolution moves through the stone', () 
       .toEqual(['THUNDERBOLT', 'AGILITY', 'THUNDER', 'LIGHT SCREEN']);
   });
 
-  it('the pre-evolution\'s learn level wins over the evolved level-1 entry', () => {
-    // RAICHU lists THUNDER WAVE (86) at level 1; PIKACHU learns it at 8. The
-    // merged learnset must keep 8 -- a RAICHU "evolved at this level" learned it
-    // as a PIKACHU at 8, so at Lv24 it is still one of the last four moves.
-    // Reading it as a level-1 move instead sorts it to the front and pushes it
-    // out of the window, leaving LT. SURGE's RAICHU with no Electric move.
-    const entry = effectiveLearnset(RAICHU).find(e => e.moveId === 86);
-    expect(entry).toEqual({ level: 8, moveId: 86 });
+  it('the chain\'s learn level orders a move the species also lists at level 1', () => {
+    // RAICHU lists THUNDER WAVE at level 1; PIKACHU learns it at 8. Keeping 8
+    // is what puts it in LT. SURGE's Lv24 RAICHU's last four — read as a level-1
+    // move it sorts to the front and is pushed straight back out, leaving that
+    // RAICHU with no Electric move at all.
+    expect(effectiveMovesAt(RAICHU, 50).find(e => e.moveId === THUNDER_WAVE))
+      .toEqual({ level: 8, moveId: THUNDER_WAVE });
     expect(moveNames(defaultMoves(RAICHU, 24)))
       .toEqual(['THUNDER WAVE', 'QUICK ATTACK', 'DOUBLE TEAM', 'SLAM']);
   });
 
-  it('a Lv5 RAICHU only has what a Lv5 PIKACHU would have', () => {
-    expect(defaultMoves(RAICHU, 5)).toEqual(defaultMoves(PIKACHU, 5));
-    expect(moveNames(defaultMoves(RAICHU, 5))).toEqual(['THUNDER SHOCK', 'GROWL']);
-    // Everything it knows is still drawn from its own level-1 set at this level.
-    const own = new Set(POKEMON_DATA[RAICHU].learnset.map(e => e.moveId));
-    for (const id of defaultMoves(RAICHU, 5)) expect(own.has(id)).toBe(true);
+  it('a move the species lists natively is known even before the chain teaches it', () => {
+    // STARYU only learns HARDEN at 22, but STARMIE lists it, so MISTY's Lv21
+    // STARMIE keeps all three of the moves it has on main.
+    expect(defaultMoves(STARMIE, 21)).toEqual(ownMovesAt(STARMIE, 21));
+    expect(moveNames(defaultMoves(STARMIE, 21))).toEqual(['TACKLE', 'WATER GUN', 'HARDEN']);
+
+    // Same for CLEFABLE and METRONOME, which CLEFAIRY only learns at 31.
+    expect(POKEMON_DATA[CLEFAIRY].learnset.find(e => e.moveId === METRONOME)?.level).toBe(31);
+    expect(defaultMoves(CLEFABLE, 29)).toContain(METRONOME);
+    expect(defaultMoves(CLEFABLE, 31)).toContain(METRONOME);
   });
 
-  it('the chain supplies every level it can, the species only the rest', () => {
-    const chains: Array<[number, number]> = [
-      [RAICHU, PIKACHU], [CLEFABLE, 35], [NINETALES, 37], [WIGGLYTUFF, 39],
-      [ARCANINE, 58], [POLIWRATH, POLIWHIRL], [121, 120],
-    ];
-    for (const [id, preId] of chains) {
-      const chain = new Map<number, number>();
-      for (const e of effectiveLearnset(preId)) {
-        if (!chain.has(e.moveId)) chain.set(e.moveId, e.level);
-      }
-      for (const entry of effectiveLearnset(id)) {
-        if (chain.has(entry.moveId)) {
-          // The pre-evolution's learn level, never the evolved level-1 entry.
-          expect(entry.level).toBe(chain.get(entry.moveId));
-        } else {
-          // Only the species' own moves survive, and they sort first.
-          expect(POKEMON_DATA[id].learnset.some(o => o.moveId === entry.moveId)).toBe(true);
-          expect(entry.level).toBe(1);
-        }
-      }
-    }
+  it('a Lv5 RAICHU still knows all three of its native level-1 moves', () => {
+    expect([...defaultMoves(RAICHU, 5)].sort())
+      .toEqual([...POKEMON_DATA[RAICHU].learnset.map(e => e.moveId)].sort());
+    expect(moveNames(defaultMoves(RAICHU, 5)))
+      .toEqual(['THUNDER SHOCK', 'GROWL', 'THUNDER WAVE']);
   });
 
   it('a Lv40 POLIWRATH inherits through the two-step POLIWAG -> POLIWHIRL chain', () => {
     const ids = defaultMoves(POLIWRATH, 40);
-    const poliwag = new Set(POKEMON_DATA[POLIWAG].learnset.map(e => e.moveId));
-    const poliwhirl = new Set(POKEMON_DATA[POLIWHIRL].learnset.map(e => e.moveId));
-    // BODY SLAM (34) is a POLIWAG/POLIWHIRL level-up move POLIWRATH never lists
-    // above level 1 by itself; HYPNOSIS (95) comes from the chain too.
+    const chain = new Set([
+      ...POKEMON_DATA[POLIWAG].learnset.map(e => e.moveId),
+      ...POKEMON_DATA[POLIWHIRL].learnset.map(e => e.moveId),
+    ]);
+    // BODY SLAM (34) and HYPNOSIS (95) come from the chain's level-up entries.
     expect(ids).toContain(34);
     expect(ids).toContain(95);
-    for (const id of ids) expect(poliwag.has(id) || poliwhirl.has(id)).toBe(true);
+    for (const id of ids) expect(chain.has(id)).toBe(true);
     expect(moveNames(ids)).toEqual(['HYPNOSIS', 'BUBBLE', 'DOUBLE SLAP', 'BODY SLAM']);
   });
 
+  it('every entry comes from the chain at its own level, or is a native level-1 move', () => {
+    const chains: Array<[number, number]> = [
+      [RAICHU, PIKACHU], [CLEFABLE, CLEFAIRY], [NINETALES, VULPIX],
+      [WIGGLYTUFF, JIGGLYPUFF], [ARCANINE, GROWLITHE], [POLIWRATH, POLIWHIRL],
+      [STARMIE, STARYU],
+    ];
+    for (const [id, preId] of chains) {
+      for (const level of [5, 25, 50, 100]) {
+        const chain = new Map(effectiveMovesAt(preId, level).map(e => [e.moveId, e.level]));
+        const own = POKEMON_DATA[id].learnset;
+        for (const entry of effectiveMovesAt(id, level)) {
+          if (chain.has(entry.moveId)) {
+            expect(entry.level).toBe(chain.get(entry.moveId));
+          } else {
+            expect(own.some(o => o.moveId === entry.moveId && o.level <= 1)).toBe(true);
+          }
+        }
+        // Nothing the species natively lists is ever dropped.
+        const known = new Set(effectiveMovesAt(id, level).map(e => e.moveId));
+        for (const o of own) expect(known.has(o.moveId)).toBe(true);
+      }
+    }
+  });
+
   it('every affected species gains moves its own learnset never lists', () => {
-    for (const id of [RAICHU, CLEFABLE, NINETALES, WIGGLYTUFF, ARCANINE, POLIWRATH, 121]) {
+    for (const id of INHERITING) {
       const own = new Set(POKEMON_DATA[id].learnset.map(e => e.moveId));
-      const high = effectiveLearnset(id).map(e => e.moveId);
-      expect(high.some(m => !own.has(m))).toBe(true);
+      expect(effectiveMovesAt(id, 100).some(e => !own.has(e.moveId))).toBe(true);
     }
   });
 });
@@ -121,7 +138,7 @@ describe('stone evolutions carry the pre-evolution moves through the stone', () 
 describe('level evolutions are left alone', () => {
   it('METAPOD and KAKUNA still only know HARDEN at any level', () => {
     for (const id of [METAPOD, KAKUNA]) {
-      expect(effectiveLearnset(id)).toBe(POKEMON_DATA[id].learnset);
+      expect(inheritsPreEvolutionMoves(id)).toBe(false);
       for (const level of [1, 9, 50, 100]) {
         expect(defaultMoves(id, level)).toEqual([HARDEN]);
       }
