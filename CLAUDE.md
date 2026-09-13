@@ -142,6 +142,7 @@ src/
     maps_endgame.ts                 # Cinnabar, Victory Road, Indigo Plateau (ENDGAME_MAPS)
     maps_silph.ts                   # Silph Co 1F-11F: sketch mazes, Card Key doors, pads, elevator (SILPH_MAPS)
     maps_hideout.ts                 # Rocket Hideout B1F-B4F: sketch mazes, spinner mazes on B2F/B3F, split B4F (HIDEOUT_MAPS)
+    maps_tower.ts                   # Pokemon Tower 1F-7F: lobby + tombstone mazes, 5F heal square, 7F rockets/Fuji (TOWER_MAPS)
   types/
     pokemon.types.ts                # PokemonSpecies, PokemonInstance, Move interfaces
     battle.types.ts                 # BattleType enum
@@ -203,7 +204,7 @@ export const MY_MAP: MapData = (() => {
 })();
 ```
 
-Options: `createMapShape(W, H, base, { startSolid: true })` starts with all-solid collision (carve-out style for caves); `{ solid: CUSTOM_SET }` overrides tile solidity (the museum maps add exhibit tiles, Pokemon Tower adds TOMBSTONE — note tombstones are intentionally-preserved as walkable in the endgame maps' base set).
+Options: `createMapShape(W, H, base, { startSolid: true })` starts with all-solid collision (carve-out style for caves); `{ solid: CUSTOM_SET }` overrides tile solidity (the museum maps add exhibit tiles; `maps_tower.ts` adds TOMBSTONE — note tombstones are intentionally-preserved as walkable in the endgame maps' base set).
 
 ### Map Registry
 

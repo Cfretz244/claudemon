@@ -7,6 +7,7 @@ import { SOUTH_MAPS } from './maps_south';
 import { ENDGAME_MAPS } from './maps_endgame';
 import { SILPH_MAPS } from './maps_silph';
 import { HIDEOUT_MAPS } from './maps_hideout';
+import { TOWER_MAPS } from './maps_tower';
 import { createMapShape, SOLID_TILES } from './mapBuilder';
 
 const T = TileType;
@@ -1753,4 +1754,5 @@ export const ALL_MAPS: Record<string, MapData> = {
   ...ENDGAME_MAPS,
   ...SILPH_MAPS,
   ...HIDEOUT_MAPS,
+  ...TOWER_MAPS,
 };
