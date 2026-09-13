@@ -54,14 +54,47 @@ describe('stone evolutions carry the pre-evolution moves through the stone', () 
       .toEqual(['THUNDERBOLT', 'AGILITY', 'THUNDER', 'LIGHT SCREEN']);
   });
 
-  it('a Lv5 RAICHU still only has the level-1 set', () => {
-    const own = POKEMON_DATA[RAICHU].learnset.map(e => e.moveId);
-    expect([...defaultMoves(RAICHU, 5)].sort()).toEqual([...own].sort());
+  it('the pre-evolution\'s learn level wins over the evolved level-1 entry', () => {
+    // RAICHU lists THUNDER WAVE (86) at level 1; PIKACHU learns it at 8. The
+    // merged learnset must keep 8 -- a RAICHU "evolved at this level" learned it
+    // as a PIKACHU at 8, so at Lv24 it is still one of the last four moves.
+    // Reading it as a level-1 move instead sorts it to the front and pushes it
+    // out of the window, leaving LT. SURGE's RAICHU with no Electric move.
+    const entry = effectiveLearnset(RAICHU).find(e => e.moveId === 86);
+    expect(entry).toEqual({ level: 8, moveId: 86 });
+    expect(moveNames(defaultMoves(RAICHU, 24)))
+      .toEqual(['THUNDER WAVE', 'QUICK ATTACK', 'DOUBLE TEAM', 'SLAM']);
   });
 
-  it('LT. SURGE\'s Lv24 RAICHU gets level-appropriate moves', () => {
-    expect(moveNames(defaultMoves(RAICHU, 24)))
-      .toEqual(['TAIL WHIP', 'QUICK ATTACK', 'DOUBLE TEAM', 'SLAM']);
+  it('a Lv5 RAICHU only has what a Lv5 PIKACHU would have', () => {
+    expect(defaultMoves(RAICHU, 5)).toEqual(defaultMoves(PIKACHU, 5));
+    expect(moveNames(defaultMoves(RAICHU, 5))).toEqual(['THUNDER SHOCK', 'GROWL']);
+    // Everything it knows is still drawn from its own level-1 set at this level.
+    const own = new Set(POKEMON_DATA[RAICHU].learnset.map(e => e.moveId));
+    for (const id of defaultMoves(RAICHU, 5)) expect(own.has(id)).toBe(true);
+  });
+
+  it('the chain supplies every level it can, the species only the rest', () => {
+    const chains: Array<[number, number]> = [
+      [RAICHU, PIKACHU], [CLEFABLE, 35], [NINETALES, 37], [WIGGLYTUFF, 39],
+      [ARCANINE, 58], [POLIWRATH, POLIWHIRL], [121, 120],
+    ];
+    for (const [id, preId] of chains) {
+      const chain = new Map<number, number>();
+      for (const e of effectiveLearnset(preId)) {
+        if (!chain.has(e.moveId)) chain.set(e.moveId, e.level);
+      }
+      for (const entry of effectiveLearnset(id)) {
+        if (chain.has(entry.moveId)) {
+          // The pre-evolution's learn level, never the evolved level-1 entry.
+          expect(entry.level).toBe(chain.get(entry.moveId));
+        } else {
+          // Only the species' own moves survive, and they sort first.
+          expect(POKEMON_DATA[id].learnset.some(o => o.moveId === entry.moveId)).toBe(true);
+          expect(entry.level).toBe(1);
+        }
+      }
+    }
   });
 
   it('a Lv40 POLIWRATH inherits through the two-step POLIWAG -> POLIWHIRL chain', () => {

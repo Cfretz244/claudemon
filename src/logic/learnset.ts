@@ -49,11 +49,18 @@ const cache = new Map<number, LearnsetEntry[]>();
  *
  * For almost every species this is the species' own learnset, returned by
  * reference and untouched. For a stone evolution with a level-1-only learnset
- * it is the pre-evolution chain's effective learnset merged with the species'
- * own: sorted by level (pre-evolution entries first on a tie) and deduplicated
- * by move id, keeping the earliest level each move appears at. Callers can keep
- * doing `filter(level <= L).slice(-4)` and get the moves the species would be
- * holding if it had just been evolved at that level.
+ * it is the pre-evolution chain's effective learnset plus the species' own
+ * entries for any move the chain never teaches.
+ *
+ * The pre-evolution's level wins on a shared move, and that is the whole point:
+ * "as if it had just been evolved at this level" means a RAICHU learned THUNDER
+ * WAVE at 8 as a PIKACHU, so at Lv24 it is still one of the last four moves.
+ * Taking the evolved form's level-1 entry instead would sort THUNDER WAVE to
+ * the front and push it straight back out of the window, leaving LT. SURGE's
+ * RAICHU with no Electric move at all. A move the species lists that the chain
+ * never learns keeps level 1 and sorts ahead of everything else.
+ *
+ * Callers can keep doing `filter(level <= L).slice(-4)`.
  *
  * Memoized per species id; the result must be treated as read-only.
  */
@@ -79,10 +86,17 @@ function computeEffectiveLearnset(speciesId: number, chain: Set<number>): Learns
   const inherited = cache.get(preId) ?? computeEffectiveLearnset(preId, chain);
   chain.delete(speciesId);
 
-  const merged = [...inherited, ...species.learnset]
+  // The chain's entries win outright; the species contributes only the moves
+  // the chain never teaches, at level 1, ahead of everything else.
+  const fromChain = new Set(inherited.map(entry => entry.moveId));
+  const extras = species.learnset.filter(entry => !fromChain.has(entry.moveId));
+
+  const merged = [...extras, ...inherited]
     .map((entry, index) => ({ entry, index }))
     .sort((a, b) => a.entry.level - b.entry.level || a.index - b.index);
 
+  // A pre-evolution can list the same move at two levels; keep the first time
+  // it is learned.
   const seen = new Set<number>();
   const out: LearnsetEntry[] = [];
   for (const { entry } of merged) {
