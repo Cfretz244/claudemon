@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { pickWildEncounter, getEncounterTheme } from '../../src/logic/encounters';
-import { WildEncounterTable } from '../../src/types/map.types';
+import { pickWildEncounter, getEncounterTheme, encounterTilesOf, rollsEncounterOn, encounterTableOf, itemBallAction, DEFAULT_ENCOUNTER_TILES, SURF_ENCOUNTER_TILES } from '../../src/logic/encounters';
+import { TileType, WildEncounterTable } from '../../src/types/map.types';
 
 function seq(...values: number[]): () => number {
   let i = 0;
@@ -53,5 +53,57 @@ describe('getEncounterTheme', () => {
 
   it('unknown trainers fall back to the default theme', () => {
     expect(getEncounterTheme('nobody_in_particular')).toBe('trainer_encounter');
+  });
+});
+
+describe('encounter tiles', () => {
+
+  it('defaults to tall grass and cave floor on foot', () => {
+    expect(encounterTilesOf({}, false)).toEqual(DEFAULT_ENCOUNTER_TILES);
+    expect(rollsEncounterOn({}, TileType.TALL_GRASS, false)).toBe(true);
+    expect(rollsEncounterOn({}, TileType.CAVE_FLOOR, false)).toBe(true);
+    expect(rollsEncounterOn({}, TileType.INDOOR_FLOOR, false)).toBe(false);
+    expect(rollsEncounterOn({}, undefined, false)).toBe(false);
+  });
+
+  it('a map override replaces the default set on foot only', () => {
+    const map = { encounterTiles: [TileType.INDOOR_FLOOR] };
+    expect(rollsEncounterOn(map, TileType.INDOOR_FLOOR, false)).toBe(true);
+    expect(rollsEncounterOn(map, TileType.TALL_GRASS, false)).toBe(false);
+    expect(rollsEncounterOn(map, TileType.CAVE_FLOOR, false)).toBe(false);
+    expect(encounterTilesOf(map, true)).toEqual(SURF_ENCOUNTER_TILES);
+  });
+
+  it('surfing rolls on water and currents regardless of the override', () => {
+    const map = { encounterTiles: [TileType.INDOOR_FLOOR] };
+    expect(rollsEncounterOn(map, TileType.WATER, true)).toBe(true);
+    expect(rollsEncounterOn(map, TileType.CURRENT, true)).toBe(true);
+    expect(rollsEncounterOn(map, TileType.INDOOR_FLOOR, true)).toBe(false);
+    expect(rollsEncounterOn({}, TileType.WATER, false)).toBe(false);
+  });
+
+  it('picks the walking or surfing table by mode', () => {
+    const surf = { ...TABLE, grassRate: 0.1 };
+    expect(encounterTableOf({ wildEncounters: TABLE, surfEncounters: surf }, false)).toBe(TABLE);
+    expect(encounterTableOf({ wildEncounters: TABLE, surfEncounters: surf }, true)).toBe(surf);
+    expect(encounterTableOf({ wildEncounters: TABLE }, true)).toBeUndefined();
+  });
+});
+
+describe('itemBallAction', () => {
+
+  it('a normal ball gives its item', () => {
+    expect(itemBallAction({ isItemBall: true, itemId: 'potion' })).toEqual({ kind: 'item', itemId: 'potion' });
+  });
+
+  it('an ambush ball starts a wild battle, even if an itemId is also set', () => {
+    expect(itemBallAction({ isItemBall: true, ambush: { speciesId: 100, level: 40 } })).toEqual({ kind: 'ambush', speciesId: 100, level: 40 });
+    expect(itemBallAction({ isItemBall: true, itemId: 'potion', ambush: { speciesId: 101, level: 43 } })?.kind).toBe('ambush');
+  });
+
+  it('non-balls and empty balls do nothing', () => {
+    expect(itemBallAction({ itemId: 'potion' })).toBeNull();
+    expect(itemBallAction({ isItemBall: true })).toBeNull();
+    expect(itemBallAction({ ambush: { speciesId: 100, level: 40 } })).toBeNull();
   });
 });

@@ -633,6 +633,8 @@ export const POKEMON_MANSION: MapData = (() => {
 
   return {
     id: 'pokemon_mansion',
+    // Indoor floors roll the table (Gen I: the Mansion has no grass).
+    encounterTiles: [T.INDOOR_FLOOR],
     name: 'POKeMON MANSION',
     width: W,
     height: H,
