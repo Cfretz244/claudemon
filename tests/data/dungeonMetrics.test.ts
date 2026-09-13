@@ -54,7 +54,7 @@ const BASELINE: FloorSpec[] = [
   { map: 'seafoam_b3f',         from: 'seafoam_b2f',       to: 'npc:articuno_seafoam',     walkablePct: 43, pathRatio: 1.2 },
   { map: 'pokemon_mansion',     from: 'cinnabar_island',   to: 'npc:mansion_npc',          walkablePct: 68, pathRatio: 1.0 },
   { map: 'power_plant',         from: 'route10',           to: 'npc:zapdos_power_plant',   walkablePct: 50, pathRatio: 1.0 },
-  { map: 'victory_road',        from: 'route23',           to: 'victory_road_2f',          walkablePct: 36, pathRatio: 1.6 },
+  { map: 'victory_road',        from: 'route23',           to: 'victory_road_2f',          walkablePct: 36, pathRatio: 1.5 },
   { map: 'victory_road_2f',     from: 'victory_road',      to: 'victory_road_3f',          walkablePct: 24, pathRatio: 1.5 },
   { map: 'victory_road_3f',     from: 'victory_road_2f',   to: 'npc:vr_trainer10',         walkablePct: 19, pathRatio: 2.5 },
   { map: 'cerulean_cave',       from: 'cerulean_city',     to: 'npc:mewtwo',               walkablePct: 43, pathRatio: 1.7 },

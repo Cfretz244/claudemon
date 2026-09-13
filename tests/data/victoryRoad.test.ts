@@ -1,7 +1,9 @@
 // Victory Road walkthrough, proven on the real map data with the boulder
 // solver (src/logic/boulders.ts): every step of the intended route works and
-// every shortcut the layout is meant to forbid is closed. Trainers count as
-// solid (they keep blocking their tile after the battle).
+// every shortcut the layout is meant to forbid is closed. Every NPC counts as
+// solid: trainers keep blocking their tile after the battle, item balls until
+// they are picked up, so no NPC may stand on the only path. Warp tiles other
+// than the goal are solid too (stepping on one leaves the floor).
 import { describe, it, expect } from 'vitest';
 import { ALL_MAPS } from '../../src/data/maps';
 import { MapData, TileType } from '../../src/types/map.types';
@@ -22,7 +24,7 @@ const landing = (from: MapData, to: MapData, n = 0): Pos => {
   if (!w) throw new Error(`${from.id}: no warp ${n} to ${to.id}`);
   return { x: w.targetX, y: w.targetY };
 };
-const trainers = (map: MapData) => map.npcs.filter(n => n.isTrainer).map(n => ({ x: n.x, y: n.y }));
+const trainers = (map: MapData) => map.npcs.map(n => ({ x: n.x, y: n.y }));
 /** Tiles the player can stand on to interact with an NPC (walkable, not under a trainer). */
 const npcSides = (map: MapData, id: string): Pos[] => {
   const npc = map.npcs.find(n => n.id === id)!;
@@ -33,8 +35,10 @@ const npcSides = (map: MapData, id: string): Pos[] => {
   return sides;
 };
 const reachNpc = (map: MapData, from: Pos, id: string) => npcSides(map, id).some(p => reach(map, from, p));
+/** Warp tiles fire on entry, so any warp other than the goal is an obstacle too. */
 const reach = (map: MapData, a: Pos, b: Pos, storyFlags?: Record<string, boolean>) => {
-  const r = canReach(map, a, b, { blocked: trainers(map), storyFlags });
+  const warps = map.warps.filter(w => !(w.x === b.x && w.y === b.y)).map(w => ({ x: w.x, y: w.y }));
+  const r = canReach(map, a, b, { blocked: [...trainers(map), ...warps], storyFlags });
   expect(r.exhausted, `${map.id}: solver hit the state cap`).toBe(false);
   return r.found;
 };
