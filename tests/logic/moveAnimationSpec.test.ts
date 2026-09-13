@@ -6,6 +6,8 @@ import {
   TYPE_VOCAB,
   MOVE_OVERRIDES,
   MAX_DURATION_MS,
+  MAX_OVERRIDE_DURATION_MS,
+  OVERRIDE_DURATION,
   AnimationSpec,
   BaseMotion,
 } from '../../src/logic/moveAnimationSpec';
@@ -196,12 +198,32 @@ describe('moveAnimationSpec — intensity and duration', () => {
     expect(tackle.duration).toBeLessThan(bodySlam.duration);
   });
 
-  it('no move exceeds the 900 ms cap', () => {
+  it('no generic move exceeds the 900 ms cap', () => {
     for (const id of ALL_IDS) {
       const spec = resolveAnimation(id);
-      expect(spec.duration, `move ${id}`).toBeLessThanOrEqual(MAX_DURATION_MS);
       expect(spec.duration).toBeGreaterThan(0);
+      // A tier-3 set-piece may declare its own longer budget; everything the
+      // generic renderer draws stays under the 900 ms cap.
+      const cap = spec.override && OVERRIDE_DURATION[spec.override] !== undefined
+        ? MAX_OVERRIDE_DURATION_MS
+        : MAX_DURATION_MS;
+      expect(spec.duration, `move ${id}`).toBeLessThanOrEqual(cap);
     }
+  });
+
+  it('override budgets name a real override key and stay under the set-piece cap', () => {
+    const keys = new Set(Object.values(MOVE_OVERRIDES));
+    for (const [key, ms] of Object.entries(OVERRIDE_DURATION)) {
+      expect(keys.has(key), `OVERRIDE_DURATION key ${key}`).toBe(true);
+      expect(ms).toBeGreaterThan(MAX_DURATION_MS);
+      expect(ms).toBeLessThanOrEqual(MAX_OVERRIDE_DURATION_MS);
+    }
+  });
+
+  it('THUNDER gets the sky-strike budget, THUNDERBOLT and THUNDER SHOCK do not', () => {
+    expect(resolveAnimation(87).duration).toBe(OVERRIDE_DURATION.thunder);
+    expect(resolveAnimation(85).duration).toBeLessThanOrEqual(MAX_DURATION_MS);
+    expect(resolveAnimation(84).duration).toBeLessThanOrEqual(MAX_DURATION_MS);
   });
 
   it('duration never shrinks as intensity grows within one motion', () => {

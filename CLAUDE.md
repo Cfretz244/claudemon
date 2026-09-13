@@ -89,6 +89,7 @@ src/
       batch11_self_buff.ts          # Self-buff moves
       batch12_debuff_status.ts      # Debuff/status moves
       batch13_remaining.ts          # Remaining moves
+      overrides.ts                  # Tier-3 hand-written per-move animations (registerSpecOverride)
       index.ts                      # Re-exports all batches
   entities/
     Player.ts                       # PlayerState class (party, bag, badges, storyFlags)

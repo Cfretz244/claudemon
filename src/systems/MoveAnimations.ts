@@ -28,6 +28,23 @@ export function registerAnimation(moveId: number, fn: MoveAnimationFn): void {
   MOVE_ANIMATIONS[moveId] = fn;
 }
 
+// === Tier-3 override registry ===
+
+export type SpecOverrideFn = (spec: AnimationSpec, ctx: AnimationContext) => Promise<void>;
+
+/** Keyed by the MOVE_OVERRIDES value in the resolver, e.g. 'thunder'. */
+const SPEC_OVERRIDES: Record<string, SpecOverrideFn> = {};
+
+/**
+ * Registers a tier-3 hand-written animation. `renderSpec` consults this table
+ * before the generic tier-1/2 body, so an override is just a function keyed by
+ * the same string the resolver puts in `spec.override`. The functions live in
+ * `animations/overrides.ts`, which is pulled in by `animations/index.ts`.
+ */
+export function registerSpecOverride(key: string, fn: SpecOverrideFn): void {
+  SPEC_OVERRIDES[key] = fn;
+}
+
 // === Type Color Map ===
 
 /**
@@ -1002,10 +1019,16 @@ export async function renderSpec(spec: AnimationSpec, ctx: AnimationContext): Pr
   const before = [snapshot(attackerSprite), snapshot(defenderSprite)];
   const rank = INTENSITY_RANK[spec.intensity];
   const d = spec.duration;
+  const override = spec.override ? SPEC_OVERRIDES[spec.override] : undefined;
 
-  playTypeSfx(spec.sfx);
+  // A tier-3 override owns the whole body, its own sfx included.
+  if (!override) playTypeSfx(spec.sfx);
 
   try {
+    if (override) {
+      await override(spec, ctx);
+      return;
+    }
     switch (spec.motion) {
       case 'contact': {
         if (spec.accent === 'rise') {
