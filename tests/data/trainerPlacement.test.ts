@@ -20,19 +20,17 @@ for (const [mapId, map] of Object.entries(ALL_MAPS)) {
 const resolves = (id: string): boolean =>
   ELITE_FOUR.some(e => e.id === id) || id === CHAMPION.id || id in GYM_LEADERS || id in TRAINERS;
 
-// KNOWN BUG (pre-existing, pinned here so it is visible): these trainer NPCs
-// have no definition anywhere and therefore battle with the Rattata fallback.
-// Remove an id from this list when its TRAINERS entry is added.
-const KNOWN_UNRESOLVED_TRAINER_NPCS = [
-  'pp_trainer1', 'pp_trainer2', 'pp_trainer3',          // power_plant
-  'seafoam_b2f_trainer1', 'seafoam_b2f_trainer2',       // seafoam_b2f
-  'cave_trainer1', 'cave_trainer2',                     // cerulean_cave
-];
+// Trainer NPCs that are allowed to have no definition. Empty: every trainer on
+// every map must resolve, or it silently battles with the Lv8 Rattata fallback.
+const KNOWN_UNRESOLVED_TRAINER_NPCS: string[] = [];
 
 // Trainer definitions that are legitimately not placed as map NPCs.
-const SCRIPTED_TRAINERS = ['rival_lab']; // started by OverworldScene.startRivalBattle
+const SCRIPTED_TRAINERS = [
+  'rival_lab',        // started by OverworldScene.startRivalBattle
+  'rival_route22_2',  // pre-Victory-Road rival rematch: defined, not yet wired to the story
+];
 // Dead definitions: no NPC anywhere uses them. Listed so new dead data is loud.
-const KNOWN_DEAD_TRAINERS = ['route20_swimmer3', 'rival_route22_2', 'game_corner_rocket1', 'game_corner_rocket2'];
+const KNOWN_DEAD_TRAINERS: string[] = [];
 
 describe('trainer NPC ↔ definition mapping', () => {
   it('every trainer NPC on a map resolves to a team definition (except the known-unresolved list)', () => {

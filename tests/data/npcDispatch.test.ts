@@ -35,8 +35,6 @@ const VISIBILITY_IDS = [
   'cerulean_officer', 'cerulean_rocket',
   'giovanni_game_corner', 'giovanni_silph',
   'game_corner_poster_rocket',
-  // NOTE: npcVisibility.ts also names game_corner_rocket1/2, which no map has
-  // placed since the Game Corner rework — that branch is dead code.
   'rocket_hideout_b4f_grunt1',
   'mt_moon_helix_fossil', 'mt_moon_dome_fossil', 'mt_moon_fossil_nerd',
   'jessie_mtmoon', 'james_mtmoon', 'mt_moon_rocket_guard',
