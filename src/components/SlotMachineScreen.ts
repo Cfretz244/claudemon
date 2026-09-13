@@ -112,15 +112,6 @@ export class SlotMachineScreen {
     reelPanel.lineStyle(1, BORDER, 1);
     reelPanel.strokeRoundedRect(4, REEL_Y - 4, 76, WINDOW_H + 8, 2);
 
-    // Reel windows (white interior + border)
-    for (let r = 0; r < 3; r++) {
-      const win = scene.add.graphics();
-      win.fillStyle(FILL_BG, 1);
-      win.fillRect(REEL_X[r], REEL_Y, CELL_W, WINDOW_H);
-      win.lineStyle(1, BORDER, 1);
-      win.strokeRect(REEL_X[r] - 1, REEL_Y - 1, CELL_W + 2, WINDOW_H + 2);
-    }
-
     // ── Reel content containers (sprites stacked vertically, 2× strip) ───────
     for (let r = 0; r < 3; r++) {
       const rc = scene.add.container(REEL_X[r] + CELL_W / 2, 0);
@@ -218,21 +209,9 @@ export class SlotMachineScreen {
       wordWrap: { width: GAME_WIDTH - 16 },
     });
 
-    this.container = scene.add.container(0, 0, [
-      bg, topDiv, title, this.coinText, betLabel, ...this.betSquares, this.costText,
-      reelPanel,
-      ...this.reelContainers.map(() => scene.add.graphics()), // placeholder spacing
-      this.winLine,
-      ...this.reelContainers,
-      ...this.reelGlows,
-      ...stopArrows,
-      prizeBg, prizeTitle, ...prizeTextObjs,
-      bottomDiv, ...this.actionTexts, this.actionCursor,
-      this.statusText,
-    ]);
-
-    // Re-add reel windows + reels to ensure proper draw order. Simpler: rebuild.
-    this.container.removeAll(false);
+    // Every object goes into this (hidden) container. Anything created but left
+    // outside it would render at world coordinates on top of the map.
+    this.container = scene.add.container(0, 0);
     // Add layers in correct order
     this.container.add(bg);
     this.container.add(topDiv);
