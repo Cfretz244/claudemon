@@ -8,6 +8,7 @@ import {
 import { MAX_IV, MAX_MOVES } from '../utils/constants';
 import { POKEMON_DATA } from '../data/pokemon';
 import { MOVES_DATA } from '../data/moves';
+import { effectiveLearnset } from '../logic/learnset';
 
 // Gen 1 stat calculation
 export function calcHP(base: number, iv: number, ev: number, level: number): number {
@@ -48,8 +49,12 @@ export function createPokemon(speciesId: number, level: number, ot: string = 'RE
   const evs: BaseStats = { hp: 0, attack: 0, defense: 0, special: 0, speed: 0 };
   const stats = calculateStats(species, level, ivs, evs);
 
-  // Get moves: last 4 moves learned by this level
-  const learnedMoves = species.learnset
+  // Get moves: last 4 moves learned by this level. effectiveLearnset() folds in
+  // the pre-evolution's moves for stone evolutions whose own learnset is
+  // level-1-only (RAICHU, ARCANINE, ...), so a Lv50 RAICHU is armed like a Lv50
+  // PIKACHU rather than with PIKACHU's level-1 moves. Must stay identical to
+  // data/battleSimConfig.defaultMoves.
+  const learnedMoves = effectiveLearnset(speciesId)
     .filter(entry => entry.level <= level)
     .slice(-MAX_MOVES);
 

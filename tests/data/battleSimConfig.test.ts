@@ -22,6 +22,7 @@ import {
   validateSlot,
 } from '../../src/data/battleSimConfig';
 import { POKEMON_DATA } from '../../src/data/pokemon';
+import { effectiveLearnset } from '../../src/logic/learnset';
 import { MOVES_DATA } from '../../src/data/moves';
 import { createPokemon } from '../../src/entities/Pokemon';
 import { getTrainerSpriteKey } from '../../src/utils/trainerSpriteGenerator';
@@ -59,8 +60,12 @@ describe('move legality', () => {
       const learnable = learnableMoves(id, level);
       const ids = learnable.map(m => m.id);
       expect(new Set(ids).size).toBe(ids.length);
+      // effectiveLearnset, not the raw species learnset: a stone evolution with
+      // a level-1-only learnset (RAICHU is #26, inside this slice) legally
+      // carries its pre-evolution's moves through the stone. See
+      // src/logic/learnset.ts and tests/logic/learnset.test.ts.
       const allowed = new Set(
-        POKEMON_DATA[id].learnset.filter(e => e.level <= level).map(e => e.moveId),
+        effectiveLearnset(id).filter(e => e.level <= level).map(e => e.moveId),
       );
       for (const moveId of ids) expect(allowed.has(moveId)).toBe(true);
     }

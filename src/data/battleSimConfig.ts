@@ -12,6 +12,7 @@ import { POKEMON_DATA } from './pokemon';
 import { MOVES_DATA } from './moves';
 import { createPokemon } from '../entities/Pokemon';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
+import { effectiveLearnset } from '../logic/learnset';
 import { MAX_MOVES } from '../utils/constants';
 
 export const MAX_PARTY_SIZE = 6;
@@ -102,13 +103,18 @@ export function moveName(moveId: number): string {
 /**
  * Every move this species can legally know at this level, in learnset order.
  * Deduplicated: several species list the same move at two levels.
+ *
+ * Reads logic/learnset.effectiveLearnset, not the raw species learnset, so a
+ * stone evolution with a level-1-only learnset (RAICHU, CLEFABLE, NINETALES,
+ * WIGGLYTUFF, ARCANINE, POLIWRATH, STARMIE) offers the moves it would have
+ * carried through the stone instead of only its pre-evolution's level-1 moves.
  */
 export function learnableMoves(speciesId: number, level: number): MoveChoice[] {
   const species = POKEMON_DATA[speciesId];
   if (!species) return [];
   const seen = new Set<number>();
   const out: MoveChoice[] = [];
-  for (const entry of species.learnset) {
+  for (const entry of effectiveLearnset(speciesId)) {
     if (entry.level > level) continue;
     if (seen.has(entry.moveId)) continue;
     const data = MOVES_DATA[entry.moveId];
