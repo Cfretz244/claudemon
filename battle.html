@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <title>Claudemon - Battle Simulator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -36,7 +36,7 @@
     body {
       background: var(--bg-deep); color: var(--text);
       font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.5;
-      min-height: 100vh; overflow-x: hidden;
+      min-height: 100vh; overflow-x: hidden; overscroll-behavior: none;
     }
     body::after {
       content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
@@ -137,6 +137,24 @@
     }
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
     [hidden] { display: none !important; }
+
+    /* ── Mobile: src/utils/mobileControls.ts adds body.mobile-active while the
+       touch pad is on screen, which battleSim.ts only does during a battle.
+       Give the canvas the whole viewport above the pad and get the page
+       chrome out of the way; the setup form is untouched because the pad is
+       hidden (and the class removed) whenever the form is showing. The pad's
+       own rules land later in <head>, so these need the extra specificity. */
+    body.mobile-active { overflow: hidden; }
+    body.mobile-active .header { display: none; }
+    body.mobile-active .container { padding: 8px; max-width: 100%; }
+    body.mobile-active #sim-battle { padding-top: 0; gap: 8px; }
+    body.mobile-active #sim-battle #game-container {
+      width: 100%;
+      /* the pad (~165px) + the quit button + gutters */
+      height: calc(100vh - 250px - env(safe-area-inset-bottom, 0px));
+    }
+    body.mobile-active #sim-battle #game-container canvas { max-height: 100%; }
+    body.mobile-active #sim-quit { touch-action: manipulation; padding: 10px 16px; }
   </style>
 </head>
 <body>
