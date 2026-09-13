@@ -28,6 +28,7 @@ import { OLD_ROD_ENCOUNTER, GOOD_ROD_ENCOUNTERS, SUPER_ROD_ENCOUNTERS, DEFAULT_S
 import { rollFishingEncounter } from '../systems/EncounterSystem';
 import { resyncMobileInput } from '../utils/mobileControls';
 import { shouldSkipNPC as shouldSkipNPCLogic } from '../logic/npcVisibility';
+import { shouldGiveOaksParcel } from '../logic/oaksParcel';
 import { computeTrainerSight } from '../logic/trainerSight';
 import { pickWildEncounter, getEncounterTheme } from '../logic/encounters';
 import { SurgePuzzle } from '../logic/surgePuzzle';
@@ -1687,9 +1688,8 @@ export class OverworldScene extends Phaser.Scene {
 
     // Viridian Mart: give Oak's Parcel before opening shop
     if ((npc.shopStock || npc.id.startsWith('mart_clerk')) &&
-        this.playerState.storyFlags['has_pikachu'] &&
-        !this.playerState.hasItem('oaks_parcel') &&
-        !this.playerState.storyFlags['delivered_parcel']) {
+        shouldGiveOaksParcel(this.currentMap.id, this.playerState.storyFlags,
+                             (id) => this.playerState.hasItem(id))) {
       this.textBox.show(
         [
           "Hey! You came from\nPALLET TOWN?",
