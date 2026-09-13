@@ -11,12 +11,22 @@
 // SimLaunchScene and SimReturnScene simply register themselves under the scene
 // keys BattleScene and BootScene already jump to, so the existing transitions
 // land here instead of in the overworld.
+//
+// Two things the overworld normally owns have to be handled here instead:
+//   * music - soundSystem is a plain singleton, not a Phaser sound manager, so
+//     destroying the game does NOT silence it. Every path back to the setup
+//     form calls soundSystem.stopMusic() (see stopSimAudio).
+//   * touch controls - the same src/utils/mobileControls pad the main game
+//     mounts, shown only while a battle is on screen so it never covers the
+//     setup form.
 import Phaser from 'phaser';
 
 import { GAME_WIDTH, GAME_HEIGHT, SCALE } from './utils/constants';
 import { BootScene } from './scenes/BootScene';
 import { BattleScene } from './scenes/BattleScene';
 import { POKEMON_DATA } from './data/pokemon';
+import { soundSystem } from './systems/SoundSystem';
+import { setMobileControlsVisible, setupMobileControls } from './utils/mobileControls';
 import {
   AI_BEHAVIOURS,
   MAX_LEVEL,
@@ -77,6 +87,10 @@ class SimReturnScene extends Phaser.Scene {
   }
 
   create(): void {
+    // The natural end of a battle lands here. BattleScene stops the music on
+    // its own exit paths, but stopping again is a cheap no-op and keeps the
+    // guarantee in one place for every route back to the setup form.
+    stopSimAudio();
     this.cameras.main.setBackgroundColor('#0a0e14');
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'BATTLE OVER', {
       fontFamily: 'monospace', fontSize: '10px', color: '#9bbc0f',
@@ -86,6 +100,13 @@ class SimReturnScene extends Phaser.Scene {
 }
 
 // ── Battle lifecycle ──────────────────────────────────────────────────────────
+
+/** Silence the singleton sound engine. stopMusic() also clears the look-ahead
+ *  scheduler, the only looping audio source in SoundSystem - every SFX is a
+ *  one-shot oscillator that stops itself. */
+function stopSimAudio(): void {
+  soundSystem.stopMusic();
+}
 
 function startBattle(): void {
   const errors = validateConfig(config);
@@ -97,8 +118,14 @@ function startBattle(): void {
   pendingPayload = buildBattlePayload(config);
   persist();
 
+  // A previous battle's track must not keep playing under the new one.
+  stopSimAudio();
+
   $('sim-setup').hidden = true;
   $('sim-battle').hidden = false;
+  // The pad is mounted at load (see init) and only shown now: the setup form is
+  // a scrolling HTML page that a fixed control strip would sit on top of.
+  setMobileControlsVisible(true);
 
   game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -124,6 +151,10 @@ function endBattle(message: string): void {
     game.destroy(true);
     game = null;
   }
+  // Destroying the Phaser game does not touch soundSystem - without this the
+  // battle theme keeps playing over the setup form.
+  stopSimAudio();
+  setMobileControlsVisible(false);
   pendingPayload = null;
   $('sim-battle').hidden = true;
   $('sim-setup').hidden = false;
@@ -340,6 +371,17 @@ function init(): void {
     toast('Reset to the default matchup.');
   });
 
+  // Mount the same touch pad the main game uses. Detection happens here, at
+  // load, exactly as main.ts does it - then hide it until a battle is running.
+  setupMobileControls();
+  setMobileControlsVisible(false);
+
+  // The same global music toggle the main game binds, so the pad's music
+  // button (and the M key) work here too.
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'm' || e.key === 'M') soundSystem.toggleEnabled();
+  });
+
   const aiNote = $('ai-note');
   aiNote.textContent = `${AI_BEHAVIOURS[0].label} - ${AI_BEHAVIOURS[0].description}`;
 
@@ -351,6 +393,7 @@ function init(): void {
       setConfig: (next: SimConfig) => { config = next; changed(); },
       start: startBattle,
       end: () => endBattle('Battle ended by the test harness.'),
+      musicTrackId: () => soundSystem.getCurrentTrackId(),
     };
   }
 }

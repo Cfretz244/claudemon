@@ -295,8 +295,27 @@ body.mobile-active #game-container canvas {
 }
 `;
 
-export function setupMobileControls(): void {
-  if (!isMobile()) return;
+/** True once setupMobileControls() has mounted the pad, so a second call
+ *  (a page that mounts lazily) does not stack a duplicate control strip. */
+let mounted = false;
+
+/** Show or hide the mounted pad without tearing it down.
+ *  The main game mounts it visible once and never toggles; the battle
+ *  simulator hides it while its setup form is on screen. No-op if the pad was
+ *  never mounted (desktop / non-touch). */
+export function setMobileControlsVisible(visible: boolean): void {
+  const controls = document.getElementById('mobile-controls');
+  if (!controls) return;
+  controls.classList.toggle('visible', visible);
+  document.body.classList.toggle('mobile-active', visible);
+}
+
+/** Mounts the touch pad on coarse-pointer devices.
+ *  Returns whether the pad is mounted (false on desktop). */
+export function setupMobileControls(): boolean {
+  if (!isMobile()) return false;
+  if (mounted) return true;
+  mounted = true;
 
   // Inject CSS
   const style = document.createElement('style');
@@ -346,4 +365,5 @@ export function setupMobileControls(): void {
   controls.appendChild(actions);
 
   document.body.appendChild(controls);
+  return true;
 }
