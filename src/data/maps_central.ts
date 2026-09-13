@@ -1673,6 +1673,18 @@ const GAME_CORNER: MapData = (() => {
 
 // ─── ROCKET HIDEOUT B1F ─────────────────────────────────────────────────────
 
+// The Rocket Hideout lift: shared by every floor with an `elevator_` NPC.
+// B3F has no elevator door in Gen I. Needs the Lift Key from B4F.
+const ROCKET_HIDEOUT_ELEVATOR = {
+  floors: [
+    { label: 'B1F', targetMap: 'rocket_hideout_b1f', targetX: 2, targetY: 13 },
+    { label: 'B2F', targetMap: 'rocket_hideout_b2f', targetX: 2, targetY: 13 },
+    { label: 'B4F', targetMap: 'rocket_hideout_b4f', targetX: 2, targetY: 9 },
+  ],
+  requires: { item: 'lift_key' },
+  lockedMessage: ["It's an elevator,\nbut it won't move...", 'It needs a special\nkey.'],
+};
+
 const ROCKET_HIDEOUT_B1F: MapData = (() => {
   const W = 16, H = 16;
   const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
@@ -1724,6 +1736,7 @@ const ROCKET_HIDEOUT_B1F: MapData = (() => {
 
   return {
     id: 'rocket_hideout_b1f',
+    elevator: ROCKET_HIDEOUT_ELEVATOR,
     entryGates: [
       // From the Game Corner: stairs are hidden until the poster is found,
       // and sealed once Giovanni has been driven out
@@ -1830,6 +1843,7 @@ const ROCKET_HIDEOUT_B2F: MapData = (() => {
 
   return {
     id: 'rocket_hideout_b2f',
+    elevator: ROCKET_HIDEOUT_ELEVATOR,
     name: 'ROCKET HIDEOUT B2F',
     width: W, height: H,
     tiles, collision,
@@ -1957,6 +1971,7 @@ const ROCKET_HIDEOUT_B4F: MapData = (() => {
 
   return {
     id: 'rocket_hideout_b4f',
+    elevator: ROCKET_HIDEOUT_ELEVATOR,
     name: 'ROCKET HIDEOUT B4F',
     width: W, height: H,
     tiles, collision,
