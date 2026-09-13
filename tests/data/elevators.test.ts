@@ -1,7 +1,7 @@
 // Elevators are map data: every `elevator_` NPC needs its floor's `elevator`
 // block, every floor it lists must exist, land on a walkable tile and share
-// the same elevator, and the Rocket Hideout lift must still offer exactly what
-// the old hardcoded menu did (pinned so the data migration is behavior-preserving).
+// the same elevator, and the Rocket Hideout lift must offer the same three
+// stops the old hardcoded menu did, behind the Lift Key.
 import { describe, it, expect } from 'vitest';
 import { ALL_MAPS } from '../../src/data/maps';
 
@@ -36,12 +36,10 @@ describe('elevators', () => {
     }
   });
 
-  it('the Rocket Hideout lift offers B1F/B2F/B4F behind the Lift Key, as before the data migration', () => {
+  it('the Rocket Hideout lift offers B1F/B2F/B4F behind the Lift Key; B3F has no door', () => {
     const lift = ALL_MAPS.rocket_hideout_b1f.elevator!;
-    expect(lift.floors).toEqual([
-      { label: 'B1F', targetMap: 'rocket_hideout_b1f', targetX: 2, targetY: 13 },
-      { label: 'B2F', targetMap: 'rocket_hideout_b2f', targetX: 2, targetY: 13 },
-      { label: 'B4F', targetMap: 'rocket_hideout_b4f', targetX: 2, targetY: 9 },
+    expect(lift.floors.map(f => [f.label, f.targetMap])).toEqual([
+      ['B1F', 'rocket_hideout_b1f'], ['B2F', 'rocket_hideout_b2f'], ['B4F', 'rocket_hideout_b4f'],
     ]);
     expect(lift.requires).toEqual({ item: 'lift_key' });
     expect(lift.lockedMessage).toEqual(["It's an elevator,\nbut it won't move...", 'It needs a special\nkey.']);

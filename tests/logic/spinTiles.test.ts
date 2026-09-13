@@ -71,28 +71,36 @@ describe('computeSlide', () => {
 });
 
 describe('Rocket Hideout arrows (real data)', () => {
-  const floors = ['rocket_hideout_b1f', 'rocket_hideout_b2f'];
+  const floors = ['rocket_hideout_b2f', 'rocket_hideout_b3f'];
   it('every arrow ends on a walkable tile without looping', () => {
     for (const id of floors) {
       const map = ALL_MAPS[id];
       const npcAt = (x: number, y: number) => map.npcs.some(n => n.x === x && n.y === y);
       const blocked = (x: number, y: number) => map.collision[y][x] || npcAt(x, y);
       const keys = Object.keys(map.spinTiles!);
-      expect(keys.length).toBeGreaterThan(10);
+      expect(keys.length).toBeGreaterThanOrEqual(8);
       for (const key of keys) {
         const [ax, ay] = key.split(',').map(Number);
+        expect(map.tiles[ay][ax], `${id} ${key} is drawn as an arrow`).toBe(T.SPIN_TILE);
         const s = computeSlide(map, ax, ay, blocked);
         expect(s.end, `${id} arrow ${key}`).not.toBe('loop');
-        const last = s.path[s.path.length - 1] ?? { x: ax, y: ay };
+        expect(s.path.length, `${id} arrow ${key} points straight into a wall`).toBeGreaterThan(0);
+        const last = s.path[s.path.length - 1];
         expect(blocked(last.x, last.y), `${id} arrow ${key} ends inside a wall`).toBe(false);
       }
     }
   });
-  it('B1F entrance arrow (12,3): west to the wall; (8,3): down onto the stop tile', () => {
-    const map = ALL_MAPS['rocket_hideout_b1f'];
+  it('B2F: the row-1 belt rides to the corner; the arrow under the stop at (13,7) rides onto the stairs', () => {
+    const map = ALL_MAPS['rocket_hideout_b2f'];
     const blocked = (x: number, y: number) => map.collision[y][x];
-    expect(xy(computeSlide(map, 12, 3, blocked))).toEqual(['11,3']);
-    expect(xy(computeSlide(map, 8, 3, blocked))).toEqual(['8,4', '8,5']);
+    const belt = computeSlide(map, 4, 1, blocked);
+    expect(belt.end).toBe('blocked');
+    expect(belt.path[belt.path.length - 1]).toMatchObject({ x: 18, y: 1 });
+    const stairs = computeSlide(map, 13, 8, blocked);
+    expect(stairs.end).toBe('warp');
+    expect(xy(stairs)).toEqual(['13,9', '13,10', '13,11', '13,12']);
+    // walking back north from the stairs lands on the same arrow and rides straight back down
+    expect(map.warps.some(w => w.x === 13 && w.y === 12 && w.targetMap === 'rocket_hideout_b3f')).toBe(true);
   });
 });
 

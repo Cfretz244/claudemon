@@ -141,6 +141,7 @@ src/
     maps_south.ts                   # Fuchsia, Safari Zone, Cycling Road (SOUTH_MAPS)
     maps_endgame.ts                 # Cinnabar, Victory Road, Indigo Plateau (ENDGAME_MAPS)
     maps_silph.ts                   # Silph Co 1F-11F: sketch mazes, Card Key doors, pads, elevator (SILPH_MAPS)
+    maps_hideout.ts                 # Rocket Hideout B1F-B4F: sketch mazes, spinner mazes on B2F/B3F, split B4F (HIDEOUT_MAPS)
   types/
     pokemon.types.ts                # PokemonSpecies, PokemonInstance, Move interfaces
     battle.types.ts                 # BattleType enum

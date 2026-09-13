@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ALL_MAPS } from '../../src/data/maps';
 import { MapData, TileType } from '../../src/types/map.types';
+import { computeSlide } from '../../src/logic/spinTiles';
 
 /**
  * Dungeon layout quality ratchet.
@@ -19,7 +20,9 @@ import { MapData, TileType } from '../../src/types/map.types';
  * Goals are either a warp to another map (the exit / next floor) or an NPC id
  * (a boss or a legendary) for dead-end floors. Gates are measured open and
  * boulders in place: this is a layout metric, solvability is proven by
- * gates.test.ts and the per-dungeon walkthrough tests.
+ * gates.test.ts and the per-dungeon walkthrough tests. On a spinner floor a
+ * step onto an arrow is the whole slide (the player cannot stop midway), and
+ * the path counts every tile slid over.
  */
 
 interface FloorSpec {
@@ -43,10 +46,10 @@ const BASELINE: FloorSpec[] = [
   { map: 'pokemon_tower_3f',    from: 'pokemon_tower_2f',  to: 'pokemon_tower_4f',         walkablePct: 56, pathRatio: 1.0 },
   { map: 'pokemon_tower_4f',    from: 'pokemon_tower_3f',  to: 'pokemon_tower_5f',         walkablePct: 62, pathRatio: 1.0 },
   { map: 'pokemon_tower_5f',    from: 'pokemon_tower_4f',  to: 'npc:mr_fuji',              walkablePct: 64, pathRatio: 1.0 },
-  { map: 'rocket_hideout_b1f',  from: 'game_corner',       to: 'rocket_hideout_b2f',       walkablePct: 65, pathRatio: 1.0 },
-  { map: 'rocket_hideout_b2f',  from: 'rocket_hideout_b1f', to: 'rocket_hideout_b3f',      walkablePct: 63, pathRatio: 1.0 },
-  { map: 'rocket_hideout_b3f',  from: 'rocket_hideout_b2f', to: 'rocket_hideout_b4f',      walkablePct: 62, pathRatio: 1.0 },
-  { map: 'rocket_hideout_b4f',  from: 'rocket_hideout_b3f', to: 'npc:giovanni_game_corner', walkablePct: 62, pathRatio: 1.0 },
+  { map: 'rocket_hideout_b1f',  from: 'game_corner',       to: 'rocket_hideout_b2f',       walkablePct: 40, pathRatio: 2.2 },
+  { map: 'rocket_hideout_b2f',  from: 'rocket_hideout_b1f', to: 'rocket_hideout_b3f',      walkablePct: 39, pathRatio: 3.0 },
+  { map: 'rocket_hideout_b3f',  from: 'rocket_hideout_b2f', to: 'rocket_hideout_b4f',      walkablePct: 28, pathRatio: 1.8 },
+  { map: 'rocket_hideout_b4f',  from: 'rocket_hideout_b3f', to: 'npc:rocket_hideout_lift_key', walkablePct: 34, pathRatio: 3.6 },
   { map: 'silph_co_1f',         from: 'saffron_city',         to: 'silph_co_2f',     walkablePct: 39, pathRatio: 4.2 },
   { map: 'silph_co_2f',         from: 'silph_co_1f',         to: 'silph_co_3f',     walkablePct: 39, pathRatio: 4.7 },
   { map: 'silph_co_3f',         from: 'silph_co_2f',         to: 'silph_co_4f',     walkablePct: 39, pathRatio: 3.5 },
@@ -86,17 +89,26 @@ function surfable(map: MapData, x: number, y: number): boolean {
   return !!map.surfEncounters && (t === TileType.WATER || t === TileType.CURRENT);
 }
 
+/** Shortest walk in tiles; a step onto an arrow tile continues to wherever the slide ends. */
 function bfs(map: MapData, sx: number, sy: number): number[][] {
   const dist = Array.from({ length: map.height }, () => new Array<number>(map.width).fill(-1));
+  const blocked = (x: number, y: number) => x < 0 || y < 0 || x >= map.width || y >= map.height ||
+    (map.collision[y][x] && map.tiles[y][x] !== TileType.GATE && !surfable(map, x, y));
   const q: [number, number][] = [[sx, sy]];
   dist[sy][sx] = 0;
   while (q.length) {
     const [x, y] = q.shift()!;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nx = x + dx, ny = y + dy;
-      if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) continue;
-      if ((map.collision[ny][nx] && map.tiles[ny][nx] !== TileType.GATE && !surfable(map, nx, ny)) || dist[ny][nx] >= 0) continue;
-      dist[ny][nx] = dist[y][x] + 1;
+      let nx = x + dx, ny = y + dy, cost = 1;
+      if (blocked(nx, ny)) continue;
+      if (map.spinTiles?.[`${nx},${ny}`]) {
+        const slide = computeSlide(map, nx, ny, blocked);
+        if (slide.end === 'loop') continue;
+        const last = slide.path[slide.path.length - 1];
+        if (last) { nx = last.x; ny = last.y; cost += slide.path.length; }
+      }
+      if (dist[ny][nx] >= 0) continue;
+      dist[ny][nx] = dist[y][x] + cost;
       q.push([nx, ny]);
     }
   }
@@ -151,7 +163,8 @@ describe('dungeon layout ratchet', () => {
   // allowed to beat the reference. Every other floor is still worse than it.
   const REBUILT = new Set(['victory_road', 'victory_road_2f', 'victory_road_3f', 'seafoam_1f', 'seafoam_b1f', 'seafoam_b2f', 'seafoam_b3f', 'seafoam_b4f',
     'pokemon_mansion', 'pokemon_mansion_2f', 'pokemon_mansion_3f', 'pokemon_mansion_b1f',
-    ...Array.from({ length: 11 }, (_, i) => `silph_co_${i + 1}f`)]);
+    ...Array.from({ length: 11 }, (_, i) => `silph_co_${i + 1}f`),
+    'rocket_hideout_b1f', 'rocket_hideout_b2f', 'rocket_hideout_b3f', 'rocket_hideout_b4f']);
 
   it('rebuilt floors meet the plan bar; the reference floor (Viridian Forest) is still better than every floor not yet rebuilt', () => {
     const forest = BASELINE.find(s => s.map === 'viridian_forest')!;
