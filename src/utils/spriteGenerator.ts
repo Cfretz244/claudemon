@@ -263,6 +263,29 @@ export function generateTileset(scene: Phaser.Scene): void {
       ctx.fillStyle = '#686058';
       for (let x = 1; x < 16; x += 4) ctx.fillRect(x, 2, 1, 12);
     },
+    [TileType.BOULDER_HOLE]: (ctx) => {
+      // A hole in the cave floor, big enough for a boulder
+      ctx.fillStyle = '#a09080';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#585048';
+      ctx.fillRect(2, 3, 12, 11);
+      ctx.fillStyle = '#201810';
+      ctx.fillRect(3, 4, 10, 9);
+      ctx.fillStyle = '#383028';
+      ctx.fillRect(4, 5, 8, 2);
+    },
+    [TileType.CURRENT]: (ctx) => {
+      // Flowing water (up arrow) - directional variants generated below
+      ctx.fillStyle = '#3890f8';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#58a8f8';
+      ctx.fillRect(2, 4, 6, 2);
+      ctx.fillRect(10, 10, 4, 2);
+      ctx.fillStyle = '#d8f0ff';
+      ctx.fillRect(7, 3, 2, 10);
+      ctx.fillRect(5, 5, 6, 2);
+      ctx.fillRect(6, 4, 4, 2);
+    },
     [TileType.SPIN_TILE]: (ctx) => {
       // Default spin tile (up arrow) - directional variants generated below
       ctx.fillStyle = '#f8f0d0';
@@ -502,27 +525,27 @@ export function generateTileset(scene: Phaser.Scene): void {
   });
 
   // Generate directional spin tile textures
-  const spinArrows: Record<string, (ctx: CanvasRenderingContext2D) => void> = {
-    up: (ctx) => {
-      ctx.fillStyle = '#c04040';
+  const spinArrows: Record<string, (ctx: CanvasRenderingContext2D, color?: string) => void> = {
+    up: (ctx, color = '#c04040') => {
+      ctx.fillStyle = color;
       ctx.fillRect(7, 3, 2, 10);
       ctx.fillRect(5, 5, 6, 2);
       ctx.fillRect(6, 4, 4, 2);
     },
-    down: (ctx) => {
-      ctx.fillStyle = '#c04040';
+    down: (ctx, color = '#c04040') => {
+      ctx.fillStyle = color;
       ctx.fillRect(7, 3, 2, 10);
       ctx.fillRect(5, 9, 6, 2);
       ctx.fillRect(6, 10, 4, 2);
     },
-    left: (ctx) => {
-      ctx.fillStyle = '#c04040';
+    left: (ctx, color = '#c04040') => {
+      ctx.fillStyle = color;
       ctx.fillRect(3, 7, 10, 2);
       ctx.fillRect(5, 5, 2, 6);
       ctx.fillRect(4, 6, 2, 4);
     },
-    right: (ctx) => {
-      ctx.fillStyle = '#c04040';
+    right: (ctx, color = '#c04040') => {
+      ctx.fillStyle = color;
       ctx.fillRect(3, 7, 10, 2);
       ctx.fillRect(9, 5, 2, 6);
       ctx.fillRect(10, 6, 2, 4);
@@ -541,6 +564,17 @@ export function generateTileset(scene: Phaser.Scene): void {
     cx.fillRect(0, 0, 1, 16);
     drawArrow(cx);
     scene.textures.addCanvas(`spin_tile_${dir}`, c);
+  }
+
+  // Generate directional current textures: water with a pale arrow
+  for (const [dir, drawArrow] of Object.entries(spinArrows)) {
+    const c = document.createElement('canvas');
+    c.width = TILE_SIZE;
+    c.height = TILE_SIZE;
+    const cx = c.getContext('2d')!;
+    tileGraphics[TileType.WATER](cx);
+    drawArrow(cx, '#d8f0ff');
+    scene.textures.addCanvas(`current_${dir}`, c);
   }
 
   // Generate themed tile variants for towns

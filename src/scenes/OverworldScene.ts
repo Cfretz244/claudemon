@@ -30,8 +30,8 @@ import { resyncMobileInput } from '../utils/mobileControls';
 import { shouldSkipNPC as shouldSkipNPCLogic } from '../logic/npcVisibility';
 import { shouldGiveOaksParcel } from '../logic/oaksParcel';
 import { checkEntryGates } from '../logic/warpGate';
-import { MapInstance, instantiateMap, pushBoulder } from '../logic/boulders';
-import { computeSlide, Slide } from '../logic/spinTiles';
+import { MapInstance, instantiateMap, landedBoulders, pushBoulder } from '../logic/boulders';
+import { computeCurrentSlide, computeSlide, Slide } from '../logic/spinTiles';
 import { computeTrainerSight } from '../logic/trainerSight';
 import { pickWildEncounter, getEncounterTheme } from '../logic/encounters';
 import { SurgePuzzle } from '../logic/surgePuzzle';
@@ -182,7 +182,7 @@ export class OverworldScene extends Phaser.Scene {
     // boulders (except those locked on a switch plate, restored from flags).
     const base = ALL_MAPS[spawn.mapId];
     if (!(data.keepMapState && lastMapInstance?.map.id === spawn.mapId)) {
-      lastMapInstance = instantiateMap(base, this.playerState.storyFlags);
+      lastMapInstance = instantiateMap(base, this.playerState.storyFlags, landedBoulders(ALL_MAPS, base.id, this.playerState.storyFlags));
     }
     this.mapInstance = lastMapInstance;
     this.currentMap = this.mapInstance.map;
@@ -196,7 +196,7 @@ export class OverworldScene extends Phaser.Scene {
   private redrawTile(x: number, y: number): void {
     const old = this.tileSprites[y]?.[x];
     if (old) old.destroy();
-    const sprite = this.add.image(x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2, this.getTileKey(this.currentMap.tiles[y][x]));
+    const sprite = this.add.image(x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2, this.tileKeyAt(x, y));
     sprite.setDepth(0);
     if (this.tileSprites[y]) this.tileSprites[y][x] = sprite;
   }
@@ -366,6 +366,24 @@ export class OverworldScene extends Phaser.Scene {
     return `tile_${tileType}`;
   }
 
+  /** Texture for the tile at (x, y): spin tiles and currents use directional art. */
+  private tileKeyAt(x: number, y: number): string {
+    const tileType = this.currentMap.tiles[y][x];
+    if (tileType === TileType.SPIN_TILE) {
+      const dir = this.currentMap.spinTiles?.[`${x},${y}`];
+      if (dir) return `spin_tile_${dir}`;
+    }
+    if (tileType === TileType.CURRENT) {
+      const dir = this.currentMap.currents?.[`${x},${y}`];
+      if (dir) return `current_${dir}`;
+    }
+    return this.getTileKey(tileType);
+  }
+
+  private static isWaterTile(tileType: number | undefined): boolean {
+    return tileType === TileType.WATER || tileType === TileType.CURRENT;
+  }
+
   private drawMap(): void {
     // Clear existing tiles
     for (const row of this.tileSprites) {
@@ -379,17 +397,10 @@ export class OverworldScene extends Phaser.Scene {
     for (let y = 0; y < this.currentMap.height; y++) {
       const row: Phaser.GameObjects.Image[] = [];
       for (let x = 0; x < this.currentMap.width; x++) {
-        const tileType = this.currentMap.tiles[y][x];
-        let key = this.getTileKey(tileType);
-        // Spin tiles use directional textures
-        if (tileType === TileType.SPIN_TILE && this.currentMap.spinTiles) {
-          const dir = this.currentMap.spinTiles[`${x},${y}`];
-          if (dir) key = `spin_tile_${dir}`;
-        }
         const sprite = this.add.image(
           x * TILE_SIZE + TILE_SIZE / 2,
           y * TILE_SIZE + TILE_SIZE / 2,
-          key
+          this.tileKeyAt(x, y)
         );
         sprite.setDepth(0);
         row.push(sprite);
@@ -551,7 +562,7 @@ export class OverworldScene extends Phaser.Scene {
     // Check collision (surfing allows water tiles)
     if (this.currentMap.collision[newY]?.[newX]) {
       // Surfing: water tiles are passable
-      if (this.isSurfing && targetTile === TileType.WATER) {
+      if (this.isSurfing && OverworldScene.isWaterTile(targetTile)) {
         // Allow - fall through to movement
       } else {
         // If the blocked tile has a warp, trigger it (handles tree-bordered exits)
@@ -571,7 +582,7 @@ export class OverworldScene extends Phaser.Scene {
     }
 
     // Exit surfing when stepping onto land
-    if (this.isSurfing && targetTile !== TileType.WATER) {
+    if (this.isSurfing && !OverworldScene.isWaterTile(targetTile)) {
       this.isSurfing = false;
       this.player.setTexture('player', 0);
       this.player.play(`player_idle_${this.playerDirection}`, true);
@@ -648,9 +659,15 @@ export class OverworldScene extends Phaser.Scene {
           return;
         }
 
+        // Surfed onto a current: it carries the player to still water
+        if (this.isSurfing && this.currentMap.currents?.[`${newX},${newY}`]) {
+          this.performSlide(computeCurrentSlide(this.currentMap, newX, newY, (x, y) => this.isCurrentBlocked(x, y)), 'current');
+          return;
+        }
+
         // Landed on a spin tile: slide where the arrows lead
         if (this.currentMap.spinTiles?.[`${newX},${newY}`]) {
-          this.performSpinSlide(computeSlide(this.currentMap, newX, newY, (x, y) => this.isSpinBlocked(x, y)));
+          this.performSlide(computeSlide(this.currentMap, newX, newY, (x, y) => this.isSpinBlocked(x, y)), 'spin');
           return;
         }
 
@@ -770,13 +787,28 @@ export class OverworldScene extends Phaser.Scene {
     return false;
   }
 
-  /** Animate a precomputed slide one tile at a time, then apply how it ended. */
-  private performSpinSlide(slide: Slide, index = 0): void {
+  /** A surfing player slides only over water; land, walls and NPCs stop a current. */
+  private isCurrentBlocked(x: number, y: number): boolean {
+    if (x < 0 || x >= this.currentMap.width || y < 0 || y >= this.currentMap.height) return true;
+    if (!OverworldScene.isWaterTile(this.currentMap.tiles[y]?.[x])) return true;
+    for (const npc of this.currentMap.npcs) {
+      if (this.shouldSkipNPC(npc)) continue;
+      if (this.npcBlocksTile(npc, x, y)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Animate a precomputed slide one tile at a time, then apply how it ended.
+   * A spin slide spins the walking sprite; a current carries the surf sprite.
+   */
+  private performSlide(slide: Slide, kind: 'spin' | 'current', index = 0): void {
     this.isMoving = true;
+    const idle = (dir: Direction) => this.player.play(kind === 'current' ? `surf_${dir}` : `player_idle_${dir}`, true);
     if (slide.path.length === 0) {
       // Arrow points straight into something: stay put
       this.isMoving = false;
-      this.player.play(`player_idle_${this.playerDirection}`, true);
+      idle(this.playerDirection);
       this.stepCounter++;
       this.checkTrainerSight();
       return;
@@ -784,10 +816,15 @@ export class OverworldScene extends Phaser.Scene {
     const step = slide.path[index];
     const isLast = index === slide.path.length - 1;
 
-    // Cycle sprite through directions for spinning visual
-    const spinDirs: Direction[] = [Direction.DOWN, Direction.LEFT, Direction.UP, Direction.RIGHT];
-    this.playerDirection = spinDirs[(spinDirs.indexOf(this.playerDirection) + 1) % 4];
-    this.player.play(`player_walk_${this.playerDirection}`, true);
+    if (kind === 'current') {
+      this.playerDirection = step.dir;
+      this.player.play(`surf_${step.dir}`, true);
+    } else {
+      // Cycle sprite through directions for spinning visual
+      const spinDirs: Direction[] = [Direction.DOWN, Direction.LEFT, Direction.UP, Direction.RIGHT];
+      this.playerDirection = spinDirs[(spinDirs.indexOf(this.playerDirection) + 1) % 4];
+      this.player.play(`player_walk_${this.playerDirection}`, true);
+    }
 
     const prevX = this.playerGridX;
     const prevY = this.playerGridY;
@@ -805,12 +842,12 @@ export class OverworldScene extends Phaser.Scene {
           this.movePikachu(prevX, prevY, step.dir);
         }
         if (!isLast) {
-          this.performSpinSlide(slide, index + 1);
+          this.performSlide(slide, kind, index + 1);
           return;
         }
         this.isMoving = false;
         this.playerDirection = step.dir;
-        this.player.play(`player_idle_${this.playerDirection}`, true);
+        idle(this.playerDirection);
         if (slide.end === 'warp') {
           const warp = this.currentMap.warps.find(w => w.x === step.x && w.y === step.y)!;
           if (this.currentMap.tiles[step.y]?.[step.x] === TileType.TELEPORT_PAD) {
@@ -822,7 +859,8 @@ export class OverworldScene extends Phaser.Scene {
           return;
         }
         this.stepCounter++;
-        this.checkTrainerSight();
+        if (this.checkTrainerSight()) return;
+        if (kind === 'current') this.checkWildEncounter(step.x, step.y);
       },
     });
   }
@@ -1069,8 +1107,9 @@ export class OverworldScene extends Phaser.Scene {
   private checkWildEncounter(x: number, y: number): void {
     if (this.isWarping) return;
     const tileType = this.currentMap.tiles[y]?.[x];
-    // Encounters happen on tall grass, cave floors, and indoor floors (for Pokemon Tower etc.)
-    const encounterTiles = [TileType.TALL_GRASS, TileType.CAVE_FLOOR];
+    // Encounters happen on tall grass and cave floors (Pokemon Tower uses cave floor);
+    // while surfing, on water, from the map's separate surf table.
+    const encounterTiles = this.isSurfing ? [TileType.WATER, TileType.CURRENT] : [TileType.TALL_GRASS, TileType.CAVE_FLOOR];
     if (!encounterTiles.includes(tileType)) return;
 
     // Oak intercept: if player has no Pokemon, Oak stops them
@@ -1079,7 +1118,7 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    const encounters = this.currentMap.wildEncounters;
+    const encounters = this.isSurfing ? this.currentMap.surfEncounters : this.currentMap.wildEncounters;
     if (!encounters) return;
 
     // Repel: decrement and block encounters while active
@@ -2361,7 +2400,7 @@ export class OverworldScene extends Phaser.Scene {
     const vec = DIR_VECTORS[this.playerDirection];
     const tx = this.playerGridX + vec.x;
     const ty = this.playerGridY + vec.y;
-    return this.currentMap.tiles[ty]?.[tx] === TileType.WATER || this.isSurfing;
+    return OverworldScene.isWaterTile(this.currentMap.tiles[ty]?.[tx]) || this.isSurfing;
   }
 
   private startFishing(rodId: string): void {
@@ -2830,7 +2869,7 @@ export class OverworldScene extends Phaser.Scene {
   private handleSurf(targetX: number, targetY: number): boolean {
     if (this.isSurfing) return false;
     const tileType = this.currentMap.tiles[targetY]?.[targetX];
-    if (tileType !== TileType.WATER) return false;
+    if (!OverworldScene.isWaterTile(tileType)) return false;
 
     // Need SURF (move 57) and SOUL badge
     if (!this.partyHasMove(57) || !this.playerState.badges.includes('SOUL')) {
