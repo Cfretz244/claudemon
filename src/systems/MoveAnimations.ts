@@ -291,29 +291,6 @@ export function lightning(
   }).then(() => { g.destroy(); });
 }
 
-// === Thunder Shock Animation (ID 84) ===
-
-registerAnimation(84, async (ctx: AnimationContext) => {
-  const { scene, attackerSprite, defenderSprite } = ctx;
-
-  // 1. Lightning bolt from attacker to defender
-  await lightning(
-    scene,
-    attackerSprite.x, attackerSprite.y - 4,
-    defenderSprite.x, defenderSprite.y,
-    0xFFCC00, 300,
-  );
-
-  // 2-4. Sparks, screen flash and the defender's tint-flash all land together.
-  // Run sequentially these four stages total >900 ms, which busts the cap the
-  // resolver enforces for every move; they read better overlapped anyway.
-  await Promise.all([
-    particles(scene, defenderSprite.x, defenderSprite.y, 0xFFCC00, 6, 12, 200),
-    screenFlash(scene, 0xFFCC00, 50),
-    spriteFlash(defenderSprite, scene, 0xFFCC00, 2),
-  ]);
-});
-
 // === Frame-driven helpers (one Graphics for the whole effect) ===
 
 /**
