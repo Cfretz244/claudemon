@@ -38,6 +38,8 @@ const TILE_COLORS: Record<number, string> = {
   [TileType.SHUTTLE_DISPLAY]: '#b0b8c0',
   [TileType.MUSEUM_PLAQUE]: '#e0d8c0',
   [TileType.TOMBSTONE]: '#909098',
+  [TileType.BOULDER_HOLE]: '#302820',
+  [TileType.CURRENT]: '#2070d0',
 };
 
 // ─── Map region grouping ───

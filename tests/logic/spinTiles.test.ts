@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeSlide, MAX_SLIDE_STEPS } from '../../src/logic/spinTiles';
+import { computeSlide, computeCurrentSlide, MAX_SLIDE_STEPS } from '../../src/logic/spinTiles';
 import { ALL_MAPS } from '../../src/data/maps';
 import { TileType as T, WarpPoint } from '../../src/types/map.types';
 import { Direction as D } from '../../src/utils/constants';
@@ -93,5 +93,68 @@ describe('Rocket Hideout arrows (real data)', () => {
     const blocked = (x: number, y: number) => map.collision[y][x];
     expect(xy(computeSlide(map, 12, 3, blocked))).toEqual(['11,3']);
     expect(xy(computeSlide(map, 8, 3, blocked))).toEqual(['8,4', '8,5']);
+  });
+});
+
+// # land (cave wall), ~ still water, < > ^ v currents
+function river(rows: string[], warps: WarpPoint[] = []) {
+  const H = rows.length, W = rows[0].length;
+  const { tiles, collision, setTile } = createMapShape(W, H, T.WATER);
+  const currents: Record<string, D> = {};
+  const arrows: Record<string, D> = { '<': D.LEFT, '>': D.RIGHT, '^': D.UP, v: D.DOWN };
+  rows.forEach((r, y) => [...r].forEach((c, x) => {
+    if (c === '#') setTile(x, y, T.CAVE_WALL);
+    else if (arrows[c]) { setTile(x, y, T.CURRENT); currents[`${x},${y}`] = arrows[c]; }
+  }));
+  // A surfing player is blocked by anything that is not water.
+  const blocked = (x: number, y: number) => tiles[y][x] !== T.WATER && tiles[y][x] !== T.CURRENT;
+  return { map: { width: W, height: H, tiles, collision, warps, currents }, blocked };
+}
+
+describe('computeCurrentSlide', () => {
+  it('carries the player along the current and stops on the first still water', () => {
+    const { map, blocked } = river(['#######', '#>>>~~#', '#######']);
+    const s = computeCurrentSlide(map, 1, 1, blocked);
+    expect(xy(s)).toEqual(['2,1', '3,1', '4,1']);
+    expect(s.end).toBe('stop');
+    expect(s.path.every(p => p.dir === D.RIGHT)).toBe(true);
+  });
+  it('a current pointing into land leaves the player where they are', () => {
+    const { map, blocked } = river(['#####', '#~~>#', '#####']);
+    const s = computeCurrentSlide(map, 3, 1, blocked);
+    expect(s.path).toEqual([]);
+    expect(s.end).toBe('blocked');
+  });
+  it('currents redirect each other; a warp on the water ends the slide', () => {
+    const { map, blocked } = river([
+      '######',
+      '#>>v~#',
+      '#~~v~#',
+      '#~~~~#',
+      '######',
+    ], [{ x: 3, y: 3, targetMap: 'x', targetX: 0, targetY: 0 }]);
+    const s = computeCurrentSlide(map, 1, 1, blocked);
+    expect(xy(s)).toEqual(['2,1', '3,1', '3,2', '3,3']);
+    expect(s.path.map(p => p.dir)).toEqual([D.RIGHT, D.RIGHT, D.DOWN, D.DOWN]);
+    expect(s.end).toBe('warp');
+  });
+  it('still water is not a current: no slide starts there', () => {
+    const { map, blocked } = river(['#####', '#~~>#', '#####']);
+    expect(computeCurrentSlide(map, 1, 1, blocked)).toEqual({ path: [], end: 'stop' });
+  });
+  it('the Seafoam puzzle: a boulder in the river (still water) breaks the sweep', () => {
+    // Before: the current sweeps a surfer from (1,1) all the way back east to (5,1).
+    const before = river(['#######', '#~>>>>#', '#######']);
+    expect(xy(computeCurrentSlide(before.map, 2, 1, before.blocked))).toEqual(['3,1', '4,1', '5,1']);
+    // After a boulder lands on (4,1) the tile is still water: the sweep stops there.
+    const after = river(['#######', '#~>>~>#', '#######']);
+    expect(xy(computeCurrentSlide(after.map, 2, 1, after.blocked))).toEqual(['3,1', '4,1']);
+    expect(computeCurrentSlide(after.map, 2, 1, after.blocked).end).toBe('stop');
+  });
+  it('a current loop gives up after MAX_SLIDE_STEPS', () => {
+    const { map, blocked } = river(['####', '#><#', '####']);
+    const s = computeCurrentSlide(map, 1, 1, blocked);
+    expect(s.end).toBe('loop');
+    expect(s.path.length).toBe(MAX_SLIDE_STEPS);
   });
 });
