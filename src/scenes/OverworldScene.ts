@@ -928,8 +928,8 @@ export class OverworldScene extends Phaser.Scene {
       }
     }
 
-    // Pokemon Tower 5F: the SILPH SCOPE (gate) reveals the ghost as Marowak
-    if (mapId === 'pokemon_tower_5f' && !this.playerState.storyFlags['marowak_ghost_defeated']) {
+    // Pokemon Tower 7F: the SILPH SCOPE (gate) reveals the ghost on the 6F stairs as Marowak
+    if (mapId === 'pokemon_tower_7f' && !this.playerState.storyFlags['marowak_ghost_defeated']) {
       this.playerState.storyFlags['marowak_ghost_defeated'] = true;
       this.textBox.show([
         "The SILPH SCOPE\nreveals the GHOST's\ntrue identity!",
@@ -1149,9 +1149,8 @@ export class OverworldScene extends Phaser.Scene {
 
     if (Math.random() > encounters.grassRate) return;
 
-    // Pokemon Tower ghost encounters (no Silph Scope)
-    const towerFloors = ['pokemon_tower_2f', 'pokemon_tower_3f', 'pokemon_tower_4f', 'pokemon_tower_5f'];
-    if (towerFloors.includes(this.currentMap.id) && !this.playerState.hasItem('silph_scope')) {
+    // Pokemon Tower ghost encounters (no Silph Scope): every graveyard floor, 2F-7F
+    if (this.currentMap.id.startsWith('pokemon_tower_') && this.currentMap.id !== 'pokemon_tower_1f' && !this.playerState.hasItem('silph_scope')) {
       this.lastEncounterStep = this.stepCounter;
       this.startWildBattle(createPokemon(92, 20), { isGhost: true });
       return;

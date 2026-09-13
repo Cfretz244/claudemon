@@ -2520,6 +2520,8 @@ const MAP_MUSIC: Record<string, string> = {
   pokemon_tower_3f: 'pokemon_tower',
   pokemon_tower_4f: 'pokemon_tower',
   pokemon_tower_5f: 'pokemon_tower',
+  pokemon_tower_6f: 'pokemon_tower',
+  pokemon_tower_7f: 'pokemon_tower',
 
   // Special locations
   ss_anne: 'ss_anne',

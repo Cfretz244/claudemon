@@ -41,11 +41,13 @@ const BASELINE: FloorSpec[] = [
   { map: 'mt_moon_b2f',         from: 'mt_moon_b1f',       to: 'npc:mt_moon_fossil_nerd',  walkablePct: 43, pathRatio: 4.1 },
   { map: 'digletts_cave',       from: 'route2',            to: 'route11',                  walkablePct: 49, pathRatio: 1.0 },
   { map: 'rock_tunnel',         from: 'route10',           to: 'rock_tunnel_b1f',          walkablePct: 35, pathRatio: 1.1 },
-  { map: 'pokemon_tower_1f',    from: 'lavender_town',     to: 'pokemon_tower_2f',         walkablePct: 68, pathRatio: 1.0 },
-  { map: 'pokemon_tower_2f',    from: 'pokemon_tower_1f',  to: 'pokemon_tower_3f',         walkablePct: 61, pathRatio: 1.0 },
-  { map: 'pokemon_tower_3f',    from: 'pokemon_tower_2f',  to: 'pokemon_tower_4f',         walkablePct: 56, pathRatio: 1.0 },
-  { map: 'pokemon_tower_4f',    from: 'pokemon_tower_3f',  to: 'pokemon_tower_5f',         walkablePct: 62, pathRatio: 1.0 },
-  { map: 'pokemon_tower_5f',    from: 'pokemon_tower_4f',  to: 'npc:mr_fuji',              walkablePct: 64, pathRatio: 1.0 },
+  { map: 'pokemon_tower_1f',    from: 'lavender_town',     to: 'pokemon_tower_2f',         walkablePct: 56, pathRatio: 1.0 },
+  { map: 'pokemon_tower_2f',    from: 'pokemon_tower_1f',  to: 'pokemon_tower_3f',         walkablePct: 39, pathRatio: 4.4 },
+  { map: 'pokemon_tower_3f',    from: 'pokemon_tower_2f',  to: 'pokemon_tower_4f',         walkablePct: 40, pathRatio: 6.0 },
+  { map: 'pokemon_tower_4f',    from: 'pokemon_tower_3f',  to: 'pokemon_tower_5f',         walkablePct: 39, pathRatio: 11.0 },
+  { map: 'pokemon_tower_5f',    from: 'pokemon_tower_4f',  to: 'pokemon_tower_6f',         walkablePct: 39, pathRatio: 6.5 },
+  { map: 'pokemon_tower_6f',    from: 'pokemon_tower_5f',  to: 'pokemon_tower_7f',         walkablePct: 39, pathRatio: 9.5 },
+  { map: 'pokemon_tower_7f',    from: 'pokemon_tower_6f',  to: 'npc:mr_fuji',              walkablePct: 40, pathRatio: 3.1 },
   { map: 'rocket_hideout_b1f',  from: 'game_corner',       to: 'rocket_hideout_b2f',       walkablePct: 40, pathRatio: 2.2 },
   { map: 'rocket_hideout_b2f',  from: 'rocket_hideout_b1f', to: 'rocket_hideout_b3f',      walkablePct: 39, pathRatio: 3.0 },
   { map: 'rocket_hideout_b3f',  from: 'rocket_hideout_b2f', to: 'rocket_hideout_b4f',      walkablePct: 28, pathRatio: 1.8 },
@@ -164,7 +166,8 @@ describe('dungeon layout ratchet', () => {
   const REBUILT = new Set(['victory_road', 'victory_road_2f', 'victory_road_3f', 'seafoam_1f', 'seafoam_b1f', 'seafoam_b2f', 'seafoam_b3f', 'seafoam_b4f',
     'pokemon_mansion', 'pokemon_mansion_2f', 'pokemon_mansion_3f', 'pokemon_mansion_b1f',
     ...Array.from({ length: 11 }, (_, i) => `silph_co_${i + 1}f`),
-    'rocket_hideout_b1f', 'rocket_hideout_b2f', 'rocket_hideout_b3f', 'rocket_hideout_b4f']);
+    'rocket_hideout_b1f', 'rocket_hideout_b2f', 'rocket_hideout_b3f', 'rocket_hideout_b4f',
+    ...Array.from({ length: 6 }, (_, i) => `pokemon_tower_${i + 2}f`)]);
 
   it('rebuilt floors meet the plan bar; the reference floor (Viridian Forest) is still better than every floor not yet rebuilt', () => {
     const forest = BASELINE.find(s => s.map === 'viridian_forest')!;
