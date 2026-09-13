@@ -431,6 +431,15 @@ export const POKEMON_TOWER_5F: MapData = (() => {
 
   return {
     id: 'pokemon_tower_5f',
+    entryGates: [
+      // The ghost blocks the stairs until the SILPH SCOPE reveals it
+      // (the Marowak battle itself is triggered in OverworldScene.warpTo)
+      { requires: { item: 'silph_scope' }, message: [
+        "A GHOST appeared!",
+        "Get out...\nGet out...",
+        "The GHOST won't let\nyou pass!",
+      ] },
+    ],
     name: 'POKEMON TOWER 5F',
     width: W,
     height: H,
@@ -1088,6 +1097,13 @@ export const SAFFRON_CITY: MapData = (() => {
 
   return {
     id: 'saffron_city',
+    entryGates: [
+      // Every gate guard is thirsty until you bring TEA (or the city is opened)
+      { requires: { anyOf: [{ item: 'tea' }, { flag: 'saffron_open' }] }, message: [
+        "The guard is thirsty...",
+        "He won't let you\nthrough!",
+      ] },
+    ],
     name: 'SAFFRON CITY',
     width: W,
     height: H,
@@ -1708,6 +1724,14 @@ const ROCKET_HIDEOUT_B1F: MapData = (() => {
 
   return {
     id: 'rocket_hideout_b1f',
+    entryGates: [
+      // From the Game Corner: stairs are hidden until the poster is found,
+      // and sealed once Giovanni has been driven out
+      { from: ['game_corner'], requires: { flag: 'game_corner_poster_found' }, message: [] },
+      { from: ['game_corner'], requires: { trainerNotDefeated: 'giovanni_game_corner' }, message: [
+        "The hideout has been\nabandoned...",
+      ] },
+    ],
     name: 'ROCKET HIDEOUT B1F',
     width: W, height: H,
     tiles, collision,

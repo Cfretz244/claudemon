@@ -46,6 +46,37 @@ export interface WarpPoint {
   targetY: number;
 }
 
+/**
+ * A condition the player must satisfy. Every listed field must hold; `anyOf`
+ * holds when at least one of its alternatives does.
+ */
+export interface WarpRequirement {
+  /** Player must carry this item. */
+  item?: string;
+  /** Story flag must be set. */
+  flag?: string;
+  /** Story flag must NOT be set. */
+  notFlag?: string;
+  /** Player must hold at least this many badges. */
+  badgeCount?: number;
+  /** This trainer must NOT have been defeated yet. */
+  trainerNotDefeated?: string;
+  /** At least one of these must hold. */
+  anyOf?: WarpRequirement[];
+}
+
+/**
+ * Blocks entry to a map until `requires` is met. Evaluated in order by
+ * `checkEntryGates`; the first failing gate wins. An empty `message` blocks
+ * silently.
+ */
+export interface EntryGate {
+  /** Only applies when arriving from one of these map ids (default: any). */
+  from?: string[];
+  requires: WarpRequirement;
+  message: string[];
+}
+
 export interface NPCData {
   id: string;
   x: number;
@@ -75,6 +106,8 @@ export interface MapData {
   musicId?: string;
   isDark?: boolean;
   spinTiles?: Record<string, Direction>;
+  /** Conditions for entering this map by warp; see `src/logic/warpGate.ts`. */
+  entryGates?: EntryGate[];
 }
 
 export interface WildEncounterTable {

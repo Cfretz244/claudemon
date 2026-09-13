@@ -1258,6 +1258,15 @@ export const SS_ANNE: MapData = (() => {
 
   return {
     id: 'ss_anne',
+    entryGates: [
+      { requires: { item: 'ss_ticket' }, message: [
+        "You need an S.S.\nTICKET to board!",
+      ] },
+      // Once departed, only block boarding from the dock (not moving between decks)
+      { from: ['vermilion_city'], requires: { notFlag: 'ss_anne_departed' }, message: [
+        "The S.S. ANNE has\nalready departed...",
+      ] },
+    ],
     name: 'S.S. ANNE 1F',
     width: W,
     height: H,
