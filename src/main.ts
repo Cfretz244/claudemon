@@ -29,7 +29,13 @@ const config: Phaser.Types.Core.GameConfig = {
   },
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+// Dev-only test hook: lets end-to-end scripts (Playwright) read live scene
+// state instead of inferring it from pixels. Stripped from production builds.
+if (import.meta.env.DEV) {
+  (window as unknown as { __claudemon: Phaser.Game }).__claudemon = game;
+}
 
 // Mobile touch controls (only appears on touch devices)
 import { setupMobileControls } from './utils/mobileControls';
