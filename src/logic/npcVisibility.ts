@@ -66,9 +66,8 @@ export function shouldSkipNPC(
   if (npc.id === 'giovanni_silph' && defeatedTrainers.includes('giovanni_silph')) {
     return true;
   }
-  // Game corner rockets disappear after Giovanni defeated
-  if ((npc.id === 'game_corner_rocket1' || npc.id === 'game_corner_rocket2' ||
-       npc.id === 'game_corner_poster_rocket') &&
+  // Game corner poster rocket disappears after Giovanni defeated
+  if (npc.id === 'game_corner_poster_rocket' &&
       defeatedTrainers.includes('giovanni_game_corner')) {
     return true;
   }

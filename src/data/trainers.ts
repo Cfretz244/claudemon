@@ -1363,21 +1363,6 @@ export const TRAINERS: Record<string, TrainerData> = {
       after: ['I should have\ntrained more...'],
     },
   },
-  route20_swimmer3: {
-    id: 'route20_swimmer3',
-    name: 'SWIMMER DEAN',
-    class: 'Swimmer',
-    team: [
-      { speciesId: 72, level: 28 },  // Tentacool
-      { speciesId: 72, level: 28 },  // Tentacool
-      { speciesId: 73, level: 32 },  // Tentacruel
-    ],
-    prizeMoney: 640,
-    dialogue: {
-      before: ['SWIMMER: I love\nswimming in the sea!'],
-      after: ['The sea is vast...'],
-    },
-  },
 
   // Route 21 (Water route)
   route21_swimmer1: {
@@ -1896,35 +1881,115 @@ export const TRAINERS: Record<string, TrainerData> = {
     },
   },
 
-  // Game Corner Rockets
-  game_corner_rocket1: {
-    id: 'game_corner_rocket1',
-    name: 'ROCKET GRUNT',
-    class: 'Team Rocket',
+  // Power Plant (Zapdos' lair; wild Lv30-38)
+  pp_trainer1: {
+    id: 'pp_trainer1',
+    name: 'ENGINEER BRADEN',
+    class: 'Scientist',
     team: [
-      { speciesId: 19, level: 20 },  // Rattata
-      { speciesId: 41, level: 20 },  // Zubat
+      { speciesId: 81, level: 33 },  // Magnemite
+      { speciesId: 81, level: 33 },  // Magnemite
+      { speciesId: 82, level: 35 },  // Magneton
     ],
-    prizeMoney: 800,
+    prizeMoney: 1750,
     dialogue: {
-      before: ['ROCKET: You found\nour secret hideout!', 'No one leaves alive!'],
-      after: ['How did you beat me?!'],
+      before: ['ENGINEER: This old\npower plant is full', 'of Electric-type\nPOKeMON!'],
+      after: ['My MAGNETON short-\ncircuited!'],
     },
   },
-  game_corner_rocket2: {
-    id: 'game_corner_rocket2',
-    name: 'ROCKET GRUNT',
-    class: 'Team Rocket',
+  pp_trainer2: {
+    id: 'pp_trainer2',
+    name: 'ENGINEER BERNIE',
+    class: 'Scientist',
     team: [
-      { speciesId: 23, level: 21 },  // Ekans
-      { speciesId: 27, level: 21 },  // Sandshrew
+      { speciesId: 100, level: 34 }, // Voltorb
+      { speciesId: 125, level: 36 }, // Electabuzz
     ],
-    prizeMoney: 840,
+    prizeMoney: 1800,
     dialogue: {
-      before: ['ROCKET: Stop right\nthere, kid!'],
-      after: ['I need backup!'],
+      before: ['ENGINEER: Something\npowerful lives deep', 'inside this plant!'],
+      after: ['You handled that\nlike a pro!'],
     },
   },
+  pp_trainer3: {
+    id: 'pp_trainer3',
+    name: 'ENGINEER BAXTER',
+    class: 'Scientist',
+    team: [
+      { speciesId: 101, level: 34 }, // Electrode
+      { speciesId: 26, level: 36 },  // Raichu
+    ],
+    prizeMoney: 1800,
+    dialogue: {
+      before: ['ENGINEER: The\nelectricity here is', 'dangerous! Be\ncareful!'],
+      after: ['Zapped out...'],
+    },
+  },
+
+  // Seafoam Islands B2F (wild Lv30-36)
+  seafoam_b2f_trainer1: {
+    id: 'seafoam_b2f_trainer1',
+    name: 'HIKER CLYDE',
+    class: 'Hiker',
+    team: [
+      { speciesId: 74, level: 32 },  // Geodude
+      { speciesId: 75, level: 34 },  // Graveler
+      { speciesId: 95, level: 34 },  // Onix
+    ],
+    prizeMoney: 1190,
+    dialogue: {
+      before: ['HIKER: These caves\ngo deep!', 'I wonder what lies\nat the bottom...'],
+      after: ['I should have\nturned back sooner!'],
+    },
+  },
+  seafoam_b2f_trainer2: {
+    id: 'seafoam_b2f_trainer2',
+    name: 'SWIMMER MARINA',
+    class: 'Swimmer',
+    team: [
+      { speciesId: 86, level: 33 },  // Seel
+      { speciesId: 117, level: 34 }, // Seadra
+      { speciesId: 87, level: 35 },  // Dewgong
+    ],
+    prizeMoney: 700,
+    dialogue: {
+      before: ['SWIMMER: The water\nhere is ice cold!', 'Something powerful\nlives below!'],
+      after: ['Brr... I got\nfrozen out!'],
+    },
+  },
+
+  // Cerulean Cave (post-game; wild Lv46-54)
+  cave_trainer1: {
+    id: 'cave_trainer1',
+    name: 'COOLTRAINER KIRA',
+    class: 'Cooltrainer',
+    team: [
+      { speciesId: 64, level: 48 },  // Kadabra
+      { speciesId: 38, level: 49 },  // Ninetales
+      { speciesId: 112, level: 50 }, // Rhydon
+    ],
+    prizeMoney: 1750,
+    dialogue: {
+      before: ["COOLTRAINER: You've\nmade it deep into", 'CERULEAN CAVE!', "But can you handle\nwhat's inside?"],
+      after: ["You're stronger than\nI expected!"],
+    },
+  },
+  cave_trainer2: {
+    id: 'cave_trainer2',
+    name: 'COOLTRAINER DREW',
+    class: 'Cooltrainer',
+    team: [
+      { speciesId: 130, level: 49 }, // Gyarados
+      { speciesId: 76, level: 49 },  // Golem
+      { speciesId: 59, level: 51 },  // Arcanine
+    ],
+    prizeMoney: 1785,
+    dialogue: {
+      before: ['COOLTRAINER: The\nPOKeMON in this cave', 'are incredibly\nstrong!', "You'd better be\nprepared!"],
+      after: ['Whoever is at the\nbottom is stronger\nstill...'],
+    },
+  },
+
   giovanni_game_corner: {
     id: 'giovanni_game_corner',
     name: 'GIOVANNI',
