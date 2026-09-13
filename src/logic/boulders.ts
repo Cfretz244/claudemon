@@ -256,31 +256,54 @@ export function pushBoulder(
 
 // ─── Solver (for tests): can the player get from A to B, pushing boulders? ───
 
+/** A statue switch the solver may press: standing on a tile next to it flips `flag`. */
+export interface Toggle extends Pos { flag: string }
+
 export interface SolveOptions {
   /** extra blocked tiles, e.g. trainers standing in corridors */
   blocked?: Pos[];
   /** state-space cap; the search reports `exhausted` when hit */
   maxStates?: number;
-  /** story flags in force during the search: flag gates open or close by them (none set by default) */
+  /** story flags in force at the start of the search: flag gates open or close by them (none set by default) */
   storyFlags?: Record<string, boolean>;
+  /**
+   * Statue switches the player may press on the way (see `statueToggles`).
+   * Their tiles are solid; the flags they name become part of the search
+   * state, so a flag gate can be opened, walked through and closed again.
+   */
+  toggles?: Toggle[];
 }
 export interface SolveResult { found: boolean; states: number; exhausted: boolean }
 
+/** Every statue switch NPC of a map, as solver toggles. */
+export function statueToggles(map: Pick<MapData, 'npcs'>): Toggle[] {
+  return map.npcs.flatMap(n => (n.toggleFlag ? [{ x: n.x, y: n.y, flag: n.toggleFlag }] : []));
+}
+
 const DIRS: Pos[] = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
 
+/** The toggle flags that are set, as a canonical string (the flag part of a search state). */
+function flagKey(flags: Record<string, boolean>, toggles: Toggle[]): string {
+  return [...new Set(toggles.map(t => t.flag))].filter(f => flags[f]).sort().join(',');
+}
+
 /**
- * Breadth-first search over (player, boulder positions) on the base map data.
+ * Breadth-first search over (player, boulder positions, toggle flags) on the
+ * base map data; `visit` sees every state once and returns true to stop.
  * Plate gates open exactly when a boulder sits on their plate and flag gates
- * follow `opts.storyFlags` (fixed for the whole search); ledges are hop-down
- * only; the boulder beyond a push must be a free, non-ledge tile; a boulder
- * pushed onto a BOULDER_HOLE leaves the map. Every boulder starts at its
- * base-data tile (a fresh visit; nothing has been dropped in from above).
+ * follow the flags of the state (`opts.storyFlags` flipped by any toggles
+ * pressed on the way); ledges are hop-down only; the boulder beyond a push
+ * must be a free, non-ledge tile; a boulder pushed onto a BOULDER_HOLE leaves
+ * the map. Every boulder starts at its base-data tile (a fresh visit; nothing
+ * has been dropped in from above).
  */
-export function solve(
-  base: MapData, start: Pos, isGoal: (player: Pos, boulders: Pos[]) => boolean, opts: SolveOptions = {},
-): SolveResult {
+function walk(
+  base: MapData, start: Pos, opts: SolveOptions,
+  visit: (player: Pos, boulders: Pos[], flags: Record<string, boolean>) => boolean,
+): { stopped: boolean; states: number; exhausted: boolean } {
   const maxStates = opts.maxStates ?? 200_000;
-  const blocked = new Set((opts.blocked ?? []).map(key));
+  const toggles = opts.toggles ?? [];
+  const blocked = new Set([...(opts.blocked ?? []), ...toggles].map(key));
   const gates = base.gates ?? [];
   const tile = (p: Pos) => base.tiles[p.y]?.[p.x];
   const inBounds = (p: Pos) => p.x >= 0 && p.y >= 0 && p.x < base.width && p.y < base.height;
@@ -288,29 +311,37 @@ export function solve(
     const t = tile(p);
     return base.collision[p.y][p.x] && t !== TileType.BOULDER && t !== TileType.GATE;
   };
-  const storyFlags = opts.storyFlags ?? {};
-  const gateClosed = (p: Pos, boulders: Pos[]) => {
+  const gateClosed = (p: Pos, boulders: Pos[], flags: Record<string, boolean>) => {
     if (tile(p) !== TileType.GATE) return false;
     return !gates.some(g => {
       if (!same(g, p)) return false;
       const plate = g.switch;
-      return plate ? boulders.some(b => same(b, plate)) : isFlagGateOpen(g, storyFlags);
+      return plate ? boulders.some(b => same(b, plate)) : isFlagGateOpen(g, flags);
     });
   };
-  const free = (p: Pos, boulders: Pos[]) =>
-    inBounds(p) && !staticSolid(p) && !blocked.has(key(p)) && !boulders.some(b => same(b, p)) && !gateClosed(p, boulders);
+  const free = (p: Pos, boulders: Pos[], flags: Record<string, boolean>) =>
+    inBounds(p) && !staticSolid(p) && !blocked.has(key(p)) && !boulders.some(b => same(b, p)) && !gateClosed(p, boulders, flags);
 
   const start0: Pos[] = [];
   for (let y = 0; y < base.height; y++) for (let x = 0; x < base.width; x++) if (base.tiles[y][x] === TileType.BOULDER) start0.push({ x, y });
-  const stateKey = (p: Pos, bs: Pos[]) => key(p) + '|' + bs.map(key).sort().join(';');
-  const seen = new Set<string>([stateKey(start, start0)]);
-  const queue: Array<[Pos, Pos[]]> = [[start, start0]];
+  const flags0 = { ...(opts.storyFlags ?? {}) };
+  const stateKey = (p: Pos, bs: Pos[], flags: Record<string, boolean>) => key(p) + '|' + bs.map(key).sort().join(';') + '|' + flagKey(flags, toggles);
+  const seen = new Set<string>([stateKey(start, start0, flags0)]);
+  const queue: Array<[Pos, Pos[], Record<string, boolean>]> = [[start, start0, flags0]];
+  const push = (p: Pos, bs: Pos[], flags: Record<string, boolean>) => {
+    const k = stateKey(p, bs, flags);
+    if (!seen.has(k)) { seen.add(k); queue.push([p, bs, flags]); }
+  };
   let states = 0;
   while (queue.length) {
-    const [p, bs] = queue.shift()!;
+    const [p, bs, flags] = queue.shift()!;
     states++;
-    if (isGoal(p, bs)) return { found: true, states, exhausted: false };
-    if (states >= maxStates) return { found: false, states, exhausted: true };
+    if (visit(p, bs, flags)) return { stopped: true, states, exhausted: false };
+    if (states >= maxStates) return { stopped: false, states, exhausted: true };
+    for (const t of toggles) {
+      if (Math.abs(t.x - p.x) + Math.abs(t.y - p.y) !== 1) continue;
+      push(p, bs, { ...flags, [t.flag]: !flags[t.flag] });
+    }
     for (const d of DIRS) {
       let n = { x: p.x + d.x, y: p.y + d.y };
       let nbs = bs;
@@ -318,22 +349,45 @@ export function solve(
       if (tile(n) === TileType.LEDGE) {
         if (d.y !== 1) continue;
         n = { x: n.x, y: n.y + 1 };
-        if (!inBounds(n) || tile(n) === TileType.LEDGE || !free(n, bs)) continue;
+        if (!inBounds(n) || tile(n) === TileType.LEDGE || !free(n, bs, flags)) continue;
       } else {
         const bi = bs.findIndex(b => same(b, n));
         if (bi >= 0) {
           const beyond = { x: n.x + d.x, y: n.y + d.y };
-          if (!free(beyond, bs) || tile(beyond) === TileType.LEDGE) continue;
+          if (!free(beyond, bs, flags) || tile(beyond) === TileType.LEDGE) continue;
           nbs = tile(beyond) === TileType.BOULDER_HOLE ? bs.filter((_b, i) => i !== bi) : bs.map((b, i) => (i === bi ? beyond : b));
-        } else if (!free(n, bs)) {
+        } else if (!free(n, bs, flags)) {
           continue;
         }
       }
-      const k = stateKey(n, nbs);
-      if (!seen.has(k)) { seen.add(k); queue.push([n, nbs]); }
+      push(n, nbs, flags);
     }
   }
-  return { found: false, states, exhausted: false };
+  return { stopped: false, states, exhausted: false };
+}
+
+/** Search until `isGoal` holds for a state (see `walk`). */
+export function solve(
+  base: MapData, start: Pos, isGoal: (player: Pos, boulders: Pos[], flags: Record<string, boolean>) => boolean, opts: SolveOptions = {},
+): SolveResult {
+  const r = walk(base, start, opts, isGoal);
+  return { found: r.stopped, states: r.states, exhausted: r.exhausted };
+}
+
+/**
+ * Every toggle-flag assignment the player can be standing on `goal` with,
+ * starting from `start` (one entry per distinct assignment; empty when the
+ * goal is unreachable). This is the state a floor is left in when the player
+ * takes that warp, which is what the next visit starts from.
+ */
+export function reachableFlags(base: MapData, start: Pos, goal: Pos, opts: SolveOptions = {}): { flags: Record<string, boolean>[]; states: number; exhausted: boolean } {
+  const toggles = opts.toggles ?? [];
+  const found = new Map<string, Record<string, boolean>>();
+  const r = walk(base, start, opts, (p, _bs, flags) => {
+    if (same(p, goal)) found.set(flagKey(flags, toggles), flags);
+    return false;
+  });
+  return { flags: [...found.values()], states: r.states, exhausted: r.exhausted };
 }
 
 export function canReach(base: MapData, start: Pos, goal: Pos, opts?: SolveOptions): SolveResult {

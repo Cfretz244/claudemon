@@ -514,7 +514,7 @@ export const CINNABAR_ISLAND: MapData = (() => {
       // Pokemon Center warp
       { x: 14, y: 8, targetMap: 'pokemon_center_cinnabar', targetX: 4, targetY: 7 },
       // Pokemon Mansion warp
-      { x: 5, y: 16, targetMap: 'pokemon_mansion', targetX: 7, targetY: 14 },
+      { x: 5, y: 16, targetMap: 'pokemon_mansion', targetX: 11, targetY: 18 },
       // Pokemart
       { x: 14, y: 15, targetMap: 'pokemart_cinnabar', targetX: 3, targetY: 7 },
     ],
@@ -575,6 +575,8 @@ export const CINNABAR_GYM: MapData = (() => {
   return {
     id: 'cinnabar_gym',
     name: 'CINNABAR GYM',
+    // Locked until the SECRET KEY from the Pokemon Mansion is in the bag (Gen I).
+    entryGates: [{ from: ['cinnabar_island'], requires: { item: 'secret_key' }, message: ['The door is locked.', 'It needs the\nSECRET KEY.'] }],
     width: W,
     height: H,
     tiles,
@@ -626,89 +628,186 @@ export const CINNABAR_GYM: MapData = (() => {
 })();
 
 // ─────────────────────────────────────────────────────────────
-// 6. POKEMON MANSION  (15x15 indoor)
+// 6. POKEMON MANSION  (1F, 2F, 3F, B1F; dungeon plan §4.3)
 // ─────────────────────────────────────────────────────────────
+// Indoor dungeon built from sketches. Doorways are flag gates driven by statue
+// switches (`toggleFlag`): G opens when the floor's flag is set, g closes.
+// Gen I route: 1F -> 2F -> 3F -> the balcony hole H drops into the sealed 1F
+// room L -> stairs 2 -> B1F -> SECRET KEY (opens the Cinnabar Gym). The statue
+// in the sealed room opens gate G back to the hall.
+const PM_LEGEND: Record<string, TileType> = {
+  '#': T.WALL, '.': T.INDOOR_FLOOR, '=': T.COUNTER, G: T.GATE, g: T.GATE, E: T.DOORMAT, H: T.CAVE_ENTRANCE,
+  '1': T.DOOR, '2': T.DOOR, '3': T.DOOR,
+  L: T.INDOOR_FLOOR, A: T.INDOOR_FLOOR, B: T.INDOOR_FLOOR, D: T.INDOOR_FLOOR, K: T.INDOOR_FLOOR, i: T.INDOOR_FLOOR,
+  a: T.INDOOR_FLOOR, b: T.INDOOR_FLOOR, c: T.INDOOR_FLOOR, d: T.INDOOR_FLOOR, e: T.INDOOR_FLOOR, f: T.INDOOR_FLOOR,
+};
+const pmStatue = (s: SketchShape, ch: string, id: string, flag: string): NPCData => ({
+  id, ...s.findOne(ch), spriteColor: 0x909090, direction: Direction.DOWN, toggleFlag: flag,
+  dialogue: ['A secret switch!', 'Click! Something\nmoved somewhere.'],
+});
+const pmGates = (s: SketchShape, flag: string) => [
+  ...s.find('G').map(p => ({ ...p, flag })),
+  ...s.find('g').map(p => ({ ...p, flag, closedWhenSet: true })),
+];
+const pmTrainer = (s: SketchShape, ch: string, id: string, direction: Direction, dialogue: string[], burglar = false): NPCData =>
+  ({ ...vrTrainer(s, ch, id, direction, dialogue), spriteColor: burglar ? 0x606060 : 0xf0f0f0 });
+const to = (p: { x: number; y: number }) => ({ targetX: p.x, targetY: p.y });
+const PM_ENCOUNTERS = {
+  grassRate: 0.1,
+  encounters: [
+    { speciesId: 109, minLevel: 30, maxLevel: 34, weight: 25 }, // Koffing
+    { speciesId: 88, minLevel: 30, maxLevel: 34, weight: 20 },  // Grimer
+    { speciesId: 77, minLevel: 30, maxLevel: 34, weight: 20 },  // Ponyta
+    { speciesId: 58, minLevel: 30, maxLevel: 34, weight: 20 },  // Growlithe
+    { speciesId: 132, minLevel: 32, maxLevel: 34, weight: 10 }, // Ditto
+    { speciesId: 126, minLevel: 36, maxLevel: 36, weight: 5 },  // Magmar
+  ],
+};
+const PM_DEEP_ENCOUNTERS = {
+  grassRate: 0.1,
+  encounters: [
+    { speciesId: 109, minLevel: 32, maxLevel: 36, weight: 15 }, // Koffing
+    { speciesId: 110, minLevel: 34, maxLevel: 38, weight: 10 }, // Weezing
+    { speciesId: 88, minLevel: 32, maxLevel: 36, weight: 15 },  // Grimer
+    { speciesId: 89, minLevel: 34, maxLevel: 38, weight: 10 },  // Muk
+    { speciesId: 77, minLevel: 32, maxLevel: 36, weight: 15 },  // Ponyta
+    { speciesId: 58, minLevel: 32, maxLevel: 36, weight: 15 },  // Growlithe
+    { speciesId: 132, minLevel: 34, maxLevel: 38, weight: 10 }, // Ditto
+    { speciesId: 126, minLevel: 38, maxLevel: 40, weight: 10 }, // Magmar
+  ],
+};
+
+// 1F: the hall E runs west, up the long corridor past a Scientist and along
+// the top to stairs 1 (up to 2F). The room behind gate G (landing L from the
+// 3F hole, stairs 2 down to B1F, statue A) is sealed until A is pressed from
+// inside.
+const PM_1F = createMapFromSketch([
+  '########################',
+  '###....................#',
+  '###.####.####.########.#',
+  '###.####i##.....######.#',
+  '###.#######.=.=.######.#',
+  '###.#######.....######.#',
+  '###.##################.#',
+  '###.##################.#',
+  '##a.##################.#',
+  '###.##########L..##2##.#',
+  '###.##########.#.#..##1#',
+  '###.#=..i#####.#...#####',
+  '###.....######.###A#####',
+  '###.#...######......####',
+  '###.############G#######',
+  '###..................###',
+  '##########...###########',
+  '##########...###########',
+  '###########E############',
+], PM_LEGEND);
+// 2F: statue A (room off the corridor) opens gate G into the Burglar's room;
+// statue B there closes G again and opens g, the only way on to stairs 3.
+const PM_2F = createMapFromSketch([
+  '########################',
+  '######...#....##########',
+  '#....g.B.#.=..##########',
+  '#.####........##########',
+  '#.#######b###.##########',
+  '#.###########G#c########',
+  '#.###########..........#',
+  '#.################.###.#',
+  '#......#########.....#.#',
+  '#.#.=D.###########.###.#',
+  '#.#i#..#########.A.###.#',
+  '#.################..i#.#',
+  '#.######3#############1#',
+  '#.######.###############',
+  '#.######.###############',
+  '#........###############',
+  '########################',
+], PM_LEGEND);
+// 3F: the long way round to statue A opens gate G onto the balcony and its
+// hole H (down to the sealed 1F room); pressing it also shuts g on the TM room.
+const PM_3F = createMapFromSketch([
+  '########################',
+  '###H.......#############',
+  '####.......G..........##',
+  '##############g##e###.##',
+  '#############....####.##',
+  '#############i##i####.##',
+  '#####################.##',
+  '##############d.....#.##',
+  '################A.#...##',
+  '###############...###.##',
+  '#####################.##',
+  '#####################.##',
+  '#####################.##',
+  '##....................##',
+  '##3#####################',
+  '########################',
+], PM_LEGEND);
+// B1F: an airlock. Statue A on the corridor opens gate G into the chamber;
+// statue B in the chamber closes G behind and opens g onto the key wing, where
+// the SECRET KEY (K) waits past a Burglar.
+const PM_B1F = createMapFromSketch([
+  '########################',
+  '######################2#',
+  '######################.#',
+  '######################.#',
+  '####################i..#',
+  '#.B.##################.#',
+  '#...########A#########.#',
+  '#...G..................#',
+  '#...####################',
+  '#...####################',
+  '##g#####################',
+  '##.....#################',
+  '######.###f##i###i######',
+  '######..............K###',
+  '########################',
+], PM_LEGEND);
+
 export const POKEMON_MANSION: MapData = (() => {
-  const W = 15, H = 15;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.INDOOR_FLOOR);
-
-  // Walls top 2 rows + sides
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.WALL);
-    setTile(x, 1, T.WALL);
-  }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.WALL);
-    setTile(W - 1, y, T.WALL);
-  }
-
-  // Ruined mansion look: scattered wall tiles (fallen pillars/debris)
-  setTile(3, 4, T.WALL);
-  setTile(4, 4, T.WALL);
-  setTile(8, 3, T.WALL);
-  setTile(11, 5, T.WALL);
-  setTile(12, 5, T.WALL);
-  setTile(5, 8, T.WALL);
-  setTile(10, 8, T.WALL);
-  setTile(3, 11, T.WALL);
-  setTile(11, 11, T.WALL);
-  setTile(12, 11, T.WALL);
-
-  // Counters as tables/furniture
-  fillRect(2, 6, 2, 1, T.COUNTER);
-  fillRect(11, 7, 2, 1, T.COUNTER);
-  setTile(6, 10, T.COUNTER);
-  setTile(9, 12, T.COUNTER);
-
-  // Open entrance
-  setTile(7, 14, T.INDOOR_FLOOR);
-
-  // Entrance mat on exit warp
-  setTile(7, 14, T.DOORMAT);
-
+  const s = PM_1F;
   return {
     id: 'pokemon_mansion',
-    // Indoor floors roll the table (Gen I: the Mansion has no grass).
-    encounterTiles: [T.INDOOR_FLOOR],
     name: 'POKeMON MANSION',
-    width: W,
-    height: H,
-    tiles,
-    collision,
+    width: s.width, height: s.height, tiles: s.tiles, collision: s.collision,
+    floorTile: T.INDOOR_FLOOR,
+    encounterTiles: [T.INDOOR_FLOOR],
     warps: [
-      // Entry → Cinnabar Island
-      { x: 7, y: 14, targetMap: 'cinnabar_island', targetX: 5, targetY: 17 },
+      { ...s.findOne('E'), targetMap: 'cinnabar_island', targetX: 5, targetY: 17 },
+      { ...s.findOne('1'), targetMap: 'pokemon_mansion_2f', ...to(PM_2F.findOne('1')) },
+      { ...s.findOne('2'), targetMap: 'pokemon_mansion_b1f', ...to(PM_B1F.findOne('2')) },
     ],
+    gates: pmGates(s, 'mansion_1f_switch'),
     npcs: [
+      ...vrItems(s, 'mansion_1f', ['escape_rope', 'max_potion']),
+      pmTrainer(s, 'a', 'mansion_trainer1', Direction.RIGHT, ['SCIENTIST: We were\nstudying POKeMON', 'genetics in this\nmansion...']),
+      pmStatue(s, 'A', 'mansion_1f_statue', 'mansion_1f_switch'),
+    ],
+    wildEncounters: PM_ENCOUNTERS,
+  };
+})();
+
+export const POKEMON_MANSION_2F: MapData = (() => {
+  const s = PM_2F;
+  return {
+    id: 'pokemon_mansion_2f',
+    name: 'POKeMON MANSION',
+    width: s.width, height: s.height, tiles: s.tiles, collision: s.collision,
+    floorTile: T.INDOOR_FLOOR,
+    encounterTiles: [T.INDOOR_FLOOR],
+    warps: [
+      { ...s.findOne('1'), targetMap: 'pokemon_mansion', ...to(PM_1F.findOne('1')) },
+      { ...s.findOne('3'), targetMap: 'pokemon_mansion_3f', ...to(PM_3F.findOne('3')) },
+    ],
+    gates: pmGates(s, 'mansion_2f_switch'),
+    npcs: [
+      ...vrItems(s, 'mansion_2f', ['hyper_potion', 'nugget']),
+      pmTrainer(s, 'b', 'mansion_trainer2', Direction.UP, ['BURGLAR: Looking for\nthe SECRET KEY?', "It's mine!"], true),
+      pmTrainer(s, 'c', 'mansion_trainer3', Direction.DOWN, ['SCIENTIST: The\nexperiments here', 'created something\nincredible...']),
+      pmStatue(s, 'A', 'mansion_2f_statue_a', 'mansion_2f_switch'),
+      pmStatue(s, 'B', 'mansion_2f_statue_b', 'mansion_2f_switch'),
       {
-        id: 'mansion_trainer1',
-        x: 4, y: 6,
-        spriteColor: 0xf0f0f0,
-        direction: Direction.RIGHT,
-        dialogue: [
-          'SCIENTIST: We were\nstudying POKeMON',
-          'genetics in this\nmansion...',
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'mansion_trainer2',
-        x: 10, y: 10,
-        spriteColor: 0xe0e0e0,
-        direction: Direction.LEFT,
-        dialogue: [
-          'SCIENTIST: The\nexperiments here',
-          'created something\nincredible...',
-        ],
-        isTrainer: true,
-        sightRange: 3,
-      },
-      {
-        id: 'mansion_npc',
-        x: 7, y: 4,
-        spriteColor: 0xb0b0b0,
-        direction: Direction.DOWN,
+        id: 'mansion_npc', ...s.findOne('D'), spriteColor: 0xb0b0b0, direction: Direction.DOWN,
         dialogue: [
           'Diary: Feb 6',
           'MEW gave birth.',
@@ -720,17 +819,55 @@ export const POKEMON_MANSION: MapData = (() => {
         ],
       },
     ],
-    wildEncounters: {
-      grassRate: 0.15,
-      encounters: [
-        { speciesId: 109, minLevel: 30, maxLevel: 36, weight: 25 }, // Koffing
-        { speciesId: 88, minLevel: 30, maxLevel: 36, weight: 20 },  // Grimer
-        { speciesId: 77, minLevel: 32, maxLevel: 36, weight: 20 },  // Ponyta
-        { speciesId: 58, minLevel: 32, maxLevel: 36, weight: 20 },  // Growlithe
-        { speciesId: 132, minLevel: 34, maxLevel: 36, weight: 10 }, // Ditto
-        { speciesId: 126, minLevel: 38, maxLevel: 38, weight: 5 },  // Magmar
-      ],
-    },
+    wildEncounters: PM_ENCOUNTERS,
+  };
+})();
+
+export const POKEMON_MANSION_3F: MapData = (() => {
+  const s = PM_3F;
+  return {
+    id: 'pokemon_mansion_3f',
+    name: 'POKeMON MANSION',
+    width: s.width, height: s.height, tiles: s.tiles, collision: s.collision,
+    floorTile: T.INDOOR_FLOOR,
+    encounterTiles: [T.INDOOR_FLOOR],
+    warps: [
+      { ...s.findOne('3'), targetMap: 'pokemon_mansion_2f', ...to(PM_2F.findOne('3')) },
+      // The balcony hole: a drop into the sealed 1F room.
+      { ...s.findOne('H'), targetMap: 'pokemon_mansion', ...to(PM_1F.findOne('L')) },
+    ],
+    gates: pmGates(s, 'mansion_3f_switch'),
+    npcs: [
+      ...vrItems(s, 'mansion_3f', ['tm22_solar_beam', 'max_potion']),
+      pmTrainer(s, 'd', 'mansion_trainer4', Direction.RIGHT, ['BURGLAR: This place\nis a gold mine!', "Beat it, kid! It's\nall mine!"], true),
+      pmTrainer(s, 'e', 'mansion_trainer5', Direction.UP, ['SCIENTIST: The\nstatues hide', 'switches. Did you\nfind them all?']),
+      pmStatue(s, 'A', 'mansion_3f_statue', 'mansion_3f_switch'),
+    ],
+    wildEncounters: PM_DEEP_ENCOUNTERS,
+  };
+})();
+
+export const POKEMON_MANSION_B1F: MapData = (() => {
+  const s = PM_B1F;
+  const key = s.findOne('K');
+  return {
+    id: 'pokemon_mansion_b1f',
+    name: 'POKeMON MANSION',
+    width: s.width, height: s.height, tiles: s.tiles, collision: s.collision,
+    floorTile: T.INDOOR_FLOOR,
+    encounterTiles: [T.INDOOR_FLOOR],
+    warps: [
+      { ...s.findOne('2'), targetMap: 'pokemon_mansion', ...to(PM_1F.findOne('2')) },
+    ],
+    gates: pmGates(s, 'mansion_b1f_switch'),
+    npcs: [
+      ...vrItems(s, 'mansion_b1f', ['full_restore', 'tm14_blizzard', 'rare_candy']),
+      { id: 'mansion_b1f_secret_key', ...key, spriteColor: 0x000000, direction: Direction.DOWN, dialogue: [], isItemBall: true, itemId: 'secret_key' },
+      pmTrainer(s, 'f', 'mansion_trainer6', Direction.DOWN, ["BURGLAR: You won't\nget the SECRET KEY!", "It's the key to\nBLAINE's GYM!"], true),
+      pmStatue(s, 'A', 'mansion_b1f_statue_a', 'mansion_b1f_switch'),
+      pmStatue(s, 'B', 'mansion_b1f_statue_b', 'mansion_b1f_switch'),
+    ],
+    wildEncounters: PM_DEEP_ENCOUNTERS,
   };
 })();
 
@@ -1947,6 +2084,9 @@ export const ENDGAME_MAPS: Record<string, MapData> = {
   cinnabar_island: CINNABAR_ISLAND,
   cinnabar_gym: CINNABAR_GYM,
   pokemon_mansion: POKEMON_MANSION,
+  pokemon_mansion_2f: POKEMON_MANSION_2F,
+  pokemon_mansion_3f: POKEMON_MANSION_3F,
+  pokemon_mansion_b1f: POKEMON_MANSION_B1F,
   pokemon_center_cinnabar: POKEMON_CENTER_CINNABAR,
   pokemart_cinnabar: POKEMART_CINNABAR,
   route21: ROUTE21,

@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { ALL_MAPS } from '../../src/data/maps';
 import { MapData, TileType } from '../../src/types/map.types';
-import { canDropBoulders, canPressPlate, canReach, dropFlag, instantiateMap, landedBoulders, tileUnder } from '../../src/logic/boulders';
+import { canDropBoulders, canPressPlate, canReach, dropFlag, instantiateMap, landedBoulders, reachableFlags, statueToggles, tileUnder } from '../../src/logic/boulders';
 
 /** Dungeon family root: victory_road_2f, seafoam_b1f, pokemon_tower_3f -> victory_road, seafoam, pokemon_tower. */
 const root = (id: string) => id.replace(/_b?\d+f$/, '');
@@ -69,18 +69,27 @@ describe('switch plates and gates', () => {
     // reached (Gen I locks boulders on switches), a hole's boulder stays
     // dropped once it could be dropped (a boulder landed from the floor above
     // counts, so drops chain down through the floors), and every ladder
-    // landing reached opens that floor. Starting from every outside entrance at once models a player
+    // landing reached opens that floor. Statue switches (flag gates) are part
+    // of the search: the player may press any statue they can walk up to, and
+    // a floor is left in whatever switch state it had when a warp was taken,
+    // which is what the next visit starts from (tracked per floor, since each
+    // floor's statues drive only its own gates). Starting from every outside
+    // entrance at once models a player
     // who has been through in whatever order; the per-dungeon walkthrough
     // tests pin the intended order. Every NPC is an obstacle (trainers keep
     // blocking after the battle, item balls until picked up), and so is every
     // warp tile other than the one being walked to (stepping on it leaves).
     const families = new Map<string, MapData[]>();
     for (const m of Object.values(ALL_MAPS)) families.set(root(m.id), [...(families.get(root(m.id)) ?? []), m]);
-    for (const gated of gatedMaps) {
-      const family = families.get(root(gated.id))!;
-      const inFamily = (id: string) => root(id) === root(gated.id);
+    for (const familyRoot of new Set(gatedMaps.map(m => root(m.id)))) {
+      const gated = { id: familyRoot };
+      const family = families.get(familyRoot)!;
+      const inFamily = (id: string) => root(id) === familyRoot;
       const reached = new Map<string, Set<string>>(family.map(m => [m.id, new Set()]));
       const pressed = new Map<string, Set<string>>(family.map(m => [m.id, new Set()]));
+      // switch states (story flags of this floor's statues) a floor has been left in, by canonical key
+      const switchStates = new Map<string, Map<string, Record<string, boolean>>>(family.map(m => [m.id, new Map([['', {}]])]));
+      const flagKey = (f: Record<string, boolean>) => Object.keys(f).filter(x => f[x]).sort().join(',');
       const dropFlags: Record<string, boolean> = {};
       const k = (p: { x: number; y: number }) => `${p.x},${p.y}`;
       let entrances = 0;
@@ -92,6 +101,12 @@ describe('switch plates and gates', () => {
       const liveMap = (m: MapData): MapData => {
         const live = instantiateMap(m, {}, landedBoulders(ALL_MAPS, m.id, dropFlags)).map;
         for (const g of m.gates ?? []) {
+          if (g.flag) {
+            // Flag gates stay GATE tiles here: the solver opens and closes them by the switch state of each search state.
+            live.tiles[g.y][g.x] = TileType.GATE;
+            live.collision[g.y][g.x] = true;
+            continue;
+          }
           if (!g.switch || !pressed.get(m.id)!.has(k(g.switch))) continue;
           live.tiles[g.y][g.x] = tileUnder(m, g.x, g.y);
           live.collision[g.y][g.x] = false;
@@ -104,18 +119,19 @@ describe('switch plates and gates', () => {
         changed = false;
         for (const m of family) {
           const npcs = m.npcs.map(n => ({ x: n.x, y: n.y }));
+          const toggles = statueToggles(m);
           const blockedExcept = (goal?: { x: number; y: number }) => [...npcs, ...m.warps.filter(w => !(goal && w.x === goal.x && w.y === goal.y)).map(w => ({ x: w.x, y: w.y }))];
-          for (const key of [...reached.get(m.id)!]) {
+          for (const key of [...reached.get(m.id)!]) for (const storyFlags of [...switchStates.get(m.id)!.values()]) {
             const live = liveMap(m);
             const [x, y] = key.split(',').map(Number);
             const from = { x, y };
             for (const g of m.gates ?? []) {
               if (!g.switch || pressed.get(m.id)!.has(k(g.switch))) continue;
-              if (solve(m, () => canPressPlate(live, from, g.switch!, { blocked: blockedExcept() })).found) { pressed.get(m.id)!.add(k(g.switch)); changed = true; }
+              if (solve(m, () => canPressPlate(live, from, g.switch!, { blocked: blockedExcept(), storyFlags, toggles })).found) { pressed.get(m.id)!.add(k(g.switch)); changed = true; }
             }
             const holes = m.holes ?? [];
             if (holes.length && !holes.every(h => Object.keys(dropFlags).some(f => f.startsWith(`boulder_dropped_${m.id}_`) && f.endsWith(`_in_${h.x}_${h.y}`)))) {
-              if (solve(m, () => canDropBoulders(live, from, holes.length, { blocked: blockedExcept() })).found) {
+              if (solve(m, () => canDropBoulders(live, from, holes.length, { blocked: blockedExcept(), storyFlags, toggles })).found) {
                 for (const h of holes) live.tiles.forEach((row, by) => row.forEach((t, bx) => { if (t === TileType.BOULDER) dropFlags[dropFlag(m.id, { x: bx, y: by }, h)] = true; }));
                 changed = true;
               }
@@ -123,20 +139,36 @@ describe('switch plates and gates', () => {
             for (const w of m.warps) {
               if (!inFamily(w.targetMap)) continue;
               const target = reached.get(w.targetMap)!;
-              if (target.has(k({ x: w.targetX, y: w.targetY }))) continue;
-              if (solve(m, () => canReach(live, from, w, { blocked: blockedExcept(w) })).found) { target.add(k({ x: w.targetX, y: w.targetY })); changed = true; }
+              const tk = k({ x: w.targetX, y: w.targetY });
+              if (toggles.length === 0) {
+                // No statues: an early-exit search is enough (a full walk over boulder states is costly).
+                if (target.has(tk)) continue;
+                if (solve(m, () => canReach(live, from, w, { blocked: blockedExcept(w), storyFlags })).found) { target.add(tk); changed = true; }
+                continue;
+              }
+              const r = solve(m, () => reachableFlags(live, from, w, { blocked: blockedExcept(w), storyFlags, toggles }));
+              if (r.flags.length === 0) continue;
+              if (!target.has(tk)) { target.add(tk); changed = true; }
+              for (const f of r.flags) {
+                const states = switchStates.get(m.id)!;
+                if (!states.has(flagKey(f))) { states.set(flagKey(f), f); changed = true; }
+              }
             }
           }
         }
       }
       for (const m of family) {
         const npcs = m.npcs.map(n => ({ x: n.x, y: n.y }));
+        const toggles = statueToggles(m);
         const live = liveMap(m);
         expect(reached.get(m.id)!.size, `${m.id}: no ladder or entrance ever lands here`).toBeGreaterThan(0);
         for (const w of m.warps) {
           const blocked = [...npcs, ...m.warps.filter(o => o !== w).map(o => ({ x: o.x, y: o.y }))];
-          const ok = [...reached.get(m.id)!].some(key => { const [x, y] = key.split(',').map(Number); return canReach(live, { x, y }, w, { blocked }).found; });
-          expect(ok, `${m.id}: warp at ${w.x},${w.y} (to ${w.targetMap}) is unreachable from every landing the player can arrive at`).toBe(true);
+          const ok = [...reached.get(m.id)!].some(key => {
+            const [x, y] = key.split(',').map(Number);
+            return [...switchStates.get(m.id)!.values()].some(storyFlags => canReach(live, { x, y }, w, { blocked, storyFlags, toggles }).found);
+          });
+          expect(ok, `${m.id}: warp at ${w.x},${w.y} (to ${w.targetMap}) is unreachable from every landing and switch state the player can arrive in`).toBe(true);
         }
       }
     }

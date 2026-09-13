@@ -54,7 +54,10 @@ const BASELINE: FloorSpec[] = [
   { map: 'seafoam_b2f',         from: 'seafoam_b1f',       to: 'seafoam_b3f',              walkablePct: 22, pathRatio: 3.0 },
   { map: 'seafoam_b3f',         from: 'seafoam_b2f',       to: 'seafoam_b4f',              walkablePct: 18, pathRatio: 2.4 },
   { map: 'seafoam_b4f',         from: 'seafoam_b3f',       to: 'npc:articuno_seafoam',     walkablePct: 6,  pathRatio: 1.8 },
-  { map: 'pokemon_mansion',     from: 'cinnabar_island',   to: 'npc:mansion_npc',          walkablePct: 68, pathRatio: 1.0 },
+  { map: 'pokemon_mansion',     from: 'cinnabar_island',   to: 'pokemon_mansion_2f',       walkablePct: 26, pathRatio: 2.5 },
+  { map: 'pokemon_mansion_2f',  from: 'pokemon_mansion',   to: 'pokemon_mansion_3f',       walkablePct: 23, pathRatio: 3.5 },
+  { map: 'pokemon_mansion_3f',  from: 'pokemon_mansion_2f', to: 'pokemon_mansion',         walkablePct: 21, pathRatio: 3.3 },
+  { map: 'pokemon_mansion_b1f', from: 'pokemon_mansion',   to: 'npc:mansion_b1f_secret_key', walkablePct: 19, pathRatio: 3.0 },
   { map: 'power_plant',         from: 'route10',           to: 'npc:zapdos_power_plant',   walkablePct: 50, pathRatio: 1.0 },
   { map: 'victory_road',        from: 'route23',           to: 'victory_road_2f',          walkablePct: 36, pathRatio: 1.5 },
   { map: 'victory_road_2f',     from: 'victory_road',      to: 'victory_road_3f',          walkablePct: 24, pathRatio: 1.5 },
@@ -137,7 +140,8 @@ describe('dungeon layout ratchet', () => {
   // Floors rebuilt under docs/dungeon-plan.md: they must meet the plan's bar
   // (at most 40% walkable, path at least 1.5x the straight line) and are
   // allowed to beat the reference. Every other floor is still worse than it.
-  const REBUILT = new Set(['victory_road', 'victory_road_2f', 'victory_road_3f', 'seafoam_1f', 'seafoam_b1f', 'seafoam_b2f', 'seafoam_b3f', 'seafoam_b4f']);
+  const REBUILT = new Set(['victory_road', 'victory_road_2f', 'victory_road_3f', 'seafoam_1f', 'seafoam_b1f', 'seafoam_b2f', 'seafoam_b3f', 'seafoam_b4f',
+    'pokemon_mansion', 'pokemon_mansion_2f', 'pokemon_mansion_3f', 'pokemon_mansion_b1f']);
 
   it('rebuilt floors meet the plan bar; the reference floor (Viridian Forest) is still better than every floor not yet rebuilt', () => {
     const forest = BASELINE.find(s => s.map === 'viridian_forest')!;

@@ -1485,6 +1485,63 @@ export const TRAINERS: Record<string, TrainerData> = {
       after: ['It\'s yours!'],
     },
   },
+  mansion_trainer3: {
+    id: 'mansion_trainer3',
+    name: 'SCIENTIST BRAYDON',
+    class: 'Scientist',
+    team: [
+      { speciesId: 101, level: 34 }, // Electrode
+      { speciesId: 100, level: 34 }, // Voltorb
+    ],
+    prizeMoney: 1700,
+    dialogue: {
+      before: ['SCIENTIST: The\nexperiments here', 'created something\nincredible...'],
+      after: ['It escaped us all...'],
+    },
+  },
+  mansion_trainer4: {
+    id: 'mansion_trainer4',
+    name: 'BURGLAR SIMON',
+    class: 'Burglar',
+    team: [
+      { speciesId: 58, level: 37 }, // Growlithe
+      { speciesId: 37, level: 37 }, // Vulpix
+    ],
+    prizeMoney: 3330,
+    dialogue: {
+      before: ['BURGLAR: This place\nis a gold mine!'],
+      after: ['Take it easy, kid!'],
+    },
+  },
+  mansion_trainer5: {
+    id: 'mansion_trainer5',
+    name: 'SCIENTIST IVAN',
+    class: 'Scientist',
+    team: [
+      { speciesId: 81, level: 33 }, // Magnemite
+      { speciesId: 82, level: 33 }, // Magneton
+      { speciesId: 100, level: 33 }, // Voltorb
+    ],
+    prizeMoney: 1650,
+    dialogue: {
+      before: ['SCIENTIST: The\nstatues hide switches!'],
+      after: ['My research is\nruined!'],
+    },
+  },
+  mansion_trainer6: {
+    id: 'mansion_trainer6',
+    name: 'BURGLAR LEWIS',
+    class: 'Burglar',
+    team: [
+      { speciesId: 58, level: 38 }, // Growlithe
+      { speciesId: 77, level: 38 }, // Ponyta
+    ],
+    prizeMoney: 3420,
+    dialogue: {
+      before: ["BURGLAR: You won't\nget the SECRET KEY!"],
+      after: ['The KEY... take it!'],
+    },
+  },
 
   // Victory Road
   vr_trainer1: {
