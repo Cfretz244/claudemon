@@ -277,6 +277,13 @@ export const ITEMS: Record<string, ItemData> = {
     price: 0,
     category: 'key',
   },
+  secret_key: {
+    id: 'secret_key',
+    name: 'SECRET KEY',
+    description: 'Opens the locked\nCINNABAR GYM.',
+    price: 0,
+    category: 'key',
+  },
   old_rod: {
     id: 'old_rod',
     name: 'OLD ROD',
