@@ -536,6 +536,13 @@ export const ROUTE4: MapData = (() => {
 
   return {
     id: 'route4',
+    entryGates: [
+      // Mt. Moon exit: boulders block the way out until a fossil is picked up
+      { from: ['mt_moon'], requires: { flag: 'got_fossil' }, message: [
+        "Boulders block the\npath ahead...",
+        "You'll have to find\nanother way through.",
+      ] },
+    ],
     name: 'ROUTE 4',
     width: W,
     height: H,

@@ -1,8 +1,16 @@
-import { MapData, TileType } from '../types/map.types';
+import { EntryGate, MapData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
 import { createMapShape } from './mapBuilder';
 
 const T = TileType;
+
+// Every floor is sealed once the building is cleared.
+const SILPH_CO_CLOSED: EntryGate[] = [
+  { requires: { notFlag: 'silph_co_complete' }, message: [
+    "SILPH CO. has resumed\nnormal operations.",
+    "Thank you for saving\nus!",
+  ] },
+];
 
 // ─── SILPH CO. 1F — Lobby ───────────────────────────────────────────────────
 
@@ -39,6 +47,7 @@ const SILPH_CO_1F: MapData = (() => {
 
   return {
     id: 'silph_co_1f',
+    entryGates: SILPH_CO_CLOSED,
     name: 'SILPH CO. 1F',
     width: W, height: H,
     tiles, collision,
@@ -105,6 +114,7 @@ const SILPH_CO_2F: MapData = (() => {
 
   return {
     id: 'silph_co_2f',
+    entryGates: SILPH_CO_CLOSED,
     name: 'SILPH CO. 2F',
     width: W, height: H,
     tiles, collision,
@@ -172,6 +182,7 @@ const SILPH_CO_3F: MapData = (() => {
 
   return {
     id: 'silph_co_3f',
+    entryGates: SILPH_CO_CLOSED,
     name: 'SILPH CO. 3F',
     width: W, height: H,
     tiles, collision,
@@ -246,6 +257,7 @@ const SILPH_CO_4F: MapData = (() => {
 
   return {
     id: 'silph_co_4f',
+    entryGates: SILPH_CO_CLOSED,
     name: 'SILPH CO. 4F',
     width: W, height: H,
     tiles, collision,
@@ -310,6 +322,7 @@ const SILPH_CO_5F: MapData = (() => {
 
   return {
     id: 'silph_co_5f',
+    entryGates: SILPH_CO_CLOSED,
     name: 'SILPH CO. 5F',
     width: W, height: H,
     tiles, collision,
@@ -387,6 +400,7 @@ const SILPH_CO_6F: MapData = (() => {
 
   return {
     id: 'silph_co_6f',
+    entryGates: SILPH_CO_CLOSED,
     name: 'SILPH CO. 6F',
     width: W, height: H,
     tiles, collision,
@@ -451,6 +465,7 @@ const SILPH_CO_7F: MapData = (() => {
 
   return {
     id: 'silph_co_7f',
+    entryGates: SILPH_CO_CLOSED,
     name: 'SILPH CO. 7F',
     width: W, height: H,
     tiles, collision,

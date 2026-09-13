@@ -414,6 +414,11 @@ export const ROUTE16: MapData = (() => {
 
   return {
     id: 'route16',
+    entryGates: [
+      { requires: { item: 'bicycle' }, message: [
+        "You can't go onto\nCYCLING ROAD without\na BICYCLE!",
+      ] },
+    ],
     name: 'ROUTE 16',
     width: W,
     height: H,
@@ -485,6 +490,11 @@ export const ROUTE17: MapData = (() => {
 
   return {
     id: 'route17',
+    entryGates: [
+      { requires: { item: 'bicycle' }, message: [
+        "You can't go onto\nCYCLING ROAD without\na BICYCLE!",
+      ] },
+    ],
     name: 'ROUTE 17',
     width: W,
     height: H,

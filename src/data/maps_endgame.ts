@@ -1429,6 +1429,13 @@ export const ELITE_FOUR_LORELEI: MapData = (() => {
 
   return {
     id: 'elite_four_lorelei',
+    entryGates: [
+      // (entering also resets the E4 gauntlet; see OverworldScene.warpTo)
+      { requires: { badgeCount: 8 }, message: [
+        'You need all 8 BADGES\nto enter the',
+        'POKeMON LEAGUE!',
+      ] },
+    ],
     name: 'LORELEI ROOM',
     width: W,
     height: H,

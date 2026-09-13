@@ -29,6 +29,7 @@ import { rollFishingEncounter } from '../systems/EncounterSystem';
 import { resyncMobileInput } from '../utils/mobileControls';
 import { shouldSkipNPC as shouldSkipNPCLogic } from '../logic/npcVisibility';
 import { shouldGiveOaksParcel } from '../logic/oaksParcel';
+import { checkEntryGates } from '../logic/warpGate';
 import { computeTrainerSight } from '../logic/trainerSight';
 import { pickWildEncounter, getEncounterTheme } from '../logic/encounters';
 import { SurgePuzzle } from '../logic/surgePuzzle';
@@ -843,28 +844,15 @@ export class OverworldScene extends Phaser.Scene {
     // Prevent double-warps
     if (this.isWarping) return;
 
+    const map = ALL_MAPS[mapId];
+    if (!map) {
+      console.warn(`Map not found: ${mapId}`);
+      return;
+    }
+
     // Oak intercept: can't leave to route1 without Pokemon
     if (mapId === 'route1' && this.playerState.party.length === 0) {
       this.triggerOakIntercept();
-      return;
-    }
-
-    // Viridian north gate: can't go to Route 2 without Pokedex
-    if (mapId === 'route2' && this.currentMap.id === 'viridian_city' && !this.playerState.storyFlags['has_pokedex']) {
-      this.textBox.show([
-        'An old man is lying\nin the road...',
-        "He won't let you\npass!",
-        "Go deliver OAK's\nPARCEL first!",
-      ]);
-      return;
-    }
-
-    // Mt. Moon exit: can't exit to Route 4 without getting a fossil
-    if (mapId === 'route4' && this.currentMap.id === 'mt_moon' && !this.playerState.storyFlags['got_fossil']) {
-      this.textBox.show([
-        "Boulders block the\npath ahead...",
-        "You'll have to find\nanother way through.",
-      ]);
       return;
     }
 
@@ -874,12 +862,10 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    // Saffron City gate: need Tea
-    if (mapId === 'saffron_city' && !this.playerState.hasItem('tea') && !this.playerState.storyFlags['saffron_open']) {
-      this.textBox.show([
-        "The guard is thirsty...",
-        "He won't let you\nthrough!",
-      ]);
+    // Data-driven gates (items, flags, badges): see the map's `entryGates`
+    const gate = checkEntryGates(map, this.currentMap?.id || '', this.playerState);
+    if (!gate.ok) {
+      if (gate.message.length > 0) this.textBox.show(gate.message);
       return;
     }
 
@@ -904,118 +890,27 @@ export class OverworldScene extends Phaser.Scene {
       }
     }
 
-    // SS Anne: need SS Ticket
-    if (mapId === 'ss_anne' && !this.playerState.hasItem('ss_ticket')) {
+    // Pokemon Tower 5F: the SILPH SCOPE (gate) reveals the ghost as Marowak
+    if (mapId === 'pokemon_tower_5f' && !this.playerState.storyFlags['marowak_ghost_defeated']) {
+      this.playerState.storyFlags['marowak_ghost_defeated'] = true;
       this.textBox.show([
-        "You need an S.S.\nTICKET to board!",
-      ]);
+        "The SILPH SCOPE\nreveals the GHOST's\ntrue identity!",
+        "It's the restless\nspirit of MAROWAK!",
+      ], () => {
+        this.startWildBattle(createPokemon(105, 30));
+      });
       return;
     }
 
-    // SS Anne: already departed (only block entry from outside the ship)
-    const currentMapId = this.currentMap?.id || '';
-    const isOnSSAnne = currentMapId.startsWith('ss_anne');
-    if (mapId === 'ss_anne' && this.playerState.storyFlags['ss_anne_departed'] && !isOnSSAnne) {
-      this.textBox.show([
-        "The S.S. ANNE has\nalready departed...",
-      ]);
-      return;
-    }
-
-    // Viridian Gym: locked until Giovanni defeated at Silph Co
-    if (mapId === 'viridian_gym' && !this.playerState.storyFlags['giovanni_silph']) {
-      this.textBox.show([
-        "The door is locked...",
-        "The GYM LEADER is\naway.",
-      ]);
-      return;
-    }
-
-    // Pewter Museum 2F: need ticket
-    if (mapId === 'pewter_museum_2f' && !this.playerState.storyFlags['museum_2f_ticket']) {
-      this.textBox.show([
-        "You need a ticket\nto go upstairs!",
-        "Please see the clerk\nat the front desk.",
-      ]);
-      return;
-    }
-
-    // Pokemon Tower 5F: ghost Marowak blocks the stairs
-    if (mapId === 'pokemon_tower_5f') {
-      if (!this.playerState.hasItem('silph_scope')) {
-        this.textBox.show([
-          "A GHOST appeared!",
-          "Get out...\nGet out...",
-          "The GHOST won't let\nyou pass!",
-        ]);
-        return;
-      }
-      if (!this.playerState.storyFlags['marowak_ghost_defeated']) {
-        this.playerState.storyFlags['marowak_ghost_defeated'] = true;
-        this.textBox.show([
-          "The SILPH SCOPE\nreveals the GHOST's\ntrue identity!",
-          "It's the restless\nspirit of MAROWAK!",
-        ], () => {
-          this.startWildBattle(createPokemon(105, 30));
-        });
-        return;
-      }
-    }
-
-    // Rocket Hideout B1F: need poster flag to enter from Game Corner
-    if (mapId === 'rocket_hideout_b1f' && this.currentMap.id === 'game_corner') {
-      if (!this.playerState.storyFlags['game_corner_poster_found']) {
-        // Silent block - player can't find the stairs yet
-        return;
-      }
-      if (this.playerState.defeatedTrainers.includes('giovanni_game_corner')) {
-        this.textBox.show([
-          "The hideout has been\nabandoned...",
-        ]);
-        return;
-      }
-    }
-
-    // Silph Co: locked after completion
-    if (mapId.startsWith('silph_co_') && this.playerState.storyFlags['silph_co_complete']) {
-      this.textBox.show([
-        "SILPH CO. has resumed\nnormal operations.",
-        "Thank you for saving\nus!",
-      ]);
-      return;
-    }
-
-    // Cycling Road: need bicycle to enter Route 16/17
-    if ((mapId === 'route16' || mapId === 'route17') && !this.playerState.hasItem('bicycle')) {
-      this.textBox.show([
-        "You can't go onto\nCYCLING ROAD without\na BICYCLE!",
-      ]);
-      return;
-    }
-
-    // Auto-mount bike when entering Cycling Road
-    if ((mapId === 'route16' || mapId === 'route17') && this.playerState.hasItem('bicycle') && !this.isRidingBike) {
+    // Auto-mount bike when entering Cycling Road (the gate guarantees a bicycle)
+    if ((mapId === 'route16' || mapId === 'route17') && !this.isRidingBike) {
       this.isRidingBike = true;
     }
 
-    // Champion Hall gate — needs 8 badges, and resets the E4 gauntlet on entry
+    // Champion Hall: strict-gauntlet reset, re-fight every Elite Four member from the top
     if (mapId === 'elite_four_lorelei') {
-      if (this.playerState.badges.length < 8) {
-        this.textBox.show([
-          'You need all 8 BADGES\nto enter the',
-          'POKeMON LEAGUE!',
-        ]);
-        return;
-      }
-      // Strict-gauntlet reset: re-fight every Elite Four member from the top.
       const e4Ids = new Set(['lorelei', 'bruno', 'agatha', 'lance', 'champion_rival']);
       this.playerState.defeatedTrainers = this.playerState.defeatedTrainers.filter(id => !e4Ids.has(id));
-    }
-
-    const map = ALL_MAPS[mapId];
-    if (!map) {
-      console.warn(`Map not found: ${mapId}`);
-      return;
     }
 
     // Auto-dismount bike when entering indoor maps

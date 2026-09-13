@@ -677,6 +677,14 @@ export const ROUTE2: MapData = (() => {
 
   return {
     id: 'route2',
+    entryGates: [
+      // Viridian north gate: old man blocks the road until the Pokedex is in hand
+      { from: ['viridian_city'], requires: { flag: 'has_pokedex' }, message: [
+        'An old man is lying\nin the road...',
+        "He won't let you\npass!",
+        "Go deliver OAK's\nPARCEL first!",
+      ] },
+    ],
     name: 'ROUTE 2',
     width: W,
     height: H,
@@ -1463,6 +1471,13 @@ export const VIRIDIAN_GYM: MapData = (() => {
 
   return {
     id: 'viridian_gym',
+    entryGates: [
+      // Locked until Giovanni is beaten at Silph Co.
+      { requires: { flag: 'giovanni_silph' }, message: [
+        "The door is locked...",
+        "The GYM LEADER is\naway.",
+      ] },
+    ],
     name: 'VIRIDIAN GYM',
     width: W,
     height: H,
@@ -1673,6 +1688,12 @@ export const PEWTER_MUSEUM_2F: MapData = (() => {
   setTile(16, 11, T.DOOR);
   return {
     id: 'pewter_museum_2f', name: 'PEWTER MUSEUM 2F', width: W, height: H, tiles, collision,
+    entryGates: [
+      { requires: { flag: 'museum_2f_ticket' }, message: [
+        "You need a ticket\nto go upstairs!",
+        "Please see the clerk\nat the front desk.",
+      ] },
+    ],
     warps: [
       // Stairs back to 1F
       { x: 16, y: 11, targetMap: 'pewter_museum_1f', targetX: 16, targetY: 8 },
