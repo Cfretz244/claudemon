@@ -16,6 +16,7 @@ const SOLID_TILES = new Set([
   TileType.FOSSIL_DISPLAY,
   TileType.SHUTTLE_DISPLAY,
   TileType.TOMBSTONE,
+  TileType.GATE,
 ]);
 
 describe('ALL_MAPS', () => {

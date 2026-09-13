@@ -10,7 +10,7 @@ export function fill2D<V>(width: number, height: number, value: V): V[][] {
 // Collision lookup: which tiles block movement
 export const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
-  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN,
+  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN, T.GATE,
 ]);
 
 export interface MapShape {

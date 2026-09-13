@@ -241,6 +241,28 @@ export function generateTileset(scene: Phaser.Scene): void {
       ctx.fillStyle = '#b0a888';
       ctx.fillRect(7, 7, 2, 2);
     },
+    [TileType.SWITCH_PLATE]: (ctx) => {
+      // Pressure plate set into cave floor: a raised square with a dark rim
+      ctx.fillStyle = '#a09080';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#585048';
+      ctx.fillRect(3, 3, 10, 10);
+      ctx.fillStyle = '#c0b0a0';
+      ctx.fillRect(4, 4, 8, 8);
+      ctx.fillStyle = '#887868';
+      ctx.fillRect(6, 6, 4, 4);
+    },
+    [TileType.GATE]: (ctx) => {
+      // Iron bars across a cave passage
+      ctx.fillStyle = '#a09080';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#403830';
+      ctx.fillRect(0, 1, 16, 2);
+      ctx.fillRect(0, 13, 16, 2);
+      for (let x = 1; x < 16; x += 4) ctx.fillRect(x, 1, 2, 14);
+      ctx.fillStyle = '#686058';
+      for (let x = 1; x < 16; x += 4) ctx.fillRect(x, 2, 1, 12);
+    },
     [TileType.SPIN_TILE]: (ctx) => {
       // Default spin tile (up arrow) - directional variants generated below
       ctx.fillStyle = '#f8f0d0';

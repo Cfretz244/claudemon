@@ -30,6 +30,7 @@ import { resyncMobileInput } from '../utils/mobileControls';
 import { shouldSkipNPC as shouldSkipNPCLogic } from '../logic/npcVisibility';
 import { shouldGiveOaksParcel } from '../logic/oaksParcel';
 import { checkEntryGates } from '../logic/warpGate';
+import { MapInstance, instantiateMap, pushBoulder } from '../logic/boulders';
 import { computeTrainerSight } from '../logic/trainerSight';
 import { pickWildEncounter, getEncounterTheme } from '../logic/encounters';
 import { SurgePuzzle } from '../logic/surgePuzzle';
@@ -53,11 +54,18 @@ interface SceneData {
   isSurfing?: boolean;
   isRidingBike?: boolean;
   flashUsed?: boolean;
+  /** Reuse the live map (boulder positions) — set when returning from a battle on the same map. */
+  keepMapState?: boolean;
 }
+
+// The live map of the most recent visit. Boulders reset whenever the player
+// arrives on a map fresh (Gen I); a battle on the same map hands it back.
+let lastMapInstance: MapInstance | null = null;
 
 export class OverworldScene extends Phaser.Scene {
   // Map
   private currentMap!: MapData;
+  private mapInstance!: MapInstance;
   private tileSprites: Phaser.GameObjects.Image[][] = [];
 
   // Player
@@ -151,11 +159,6 @@ export class OverworldScene extends Phaser.Scene {
     });
     if (spawn.x !== undefined) data.playerX = spawn.x;
     if (spawn.y !== undefined) data.playerY = spawn.y;
-    this.currentMap = ALL_MAPS[spawn.mapId];
-    // Reset flash when entering a non-dark map so re-entry into dark caves requires Flash again
-    if (!this.currentMap.isDark) {
-      this.flashUsed = false;
-    }
     this.playerGridX = data.playerX ?? 9;
     this.playerGridY = data.playerY ?? 8;
 
@@ -172,6 +175,29 @@ export class OverworldScene extends Phaser.Scene {
 
     // Sync story flags derived from defeated trainers / inventory
     syncDerivedStoryFlags(this.playerState);
+
+    // Live map: cloned tiles so pushes never touch the shared data. Reused only
+    // when coming back from a battle on this same map; a fresh arrival resets
+    // boulders (except those locked on a switch plate, restored from flags).
+    const base = ALL_MAPS[spawn.mapId];
+    if (!(data.keepMapState && lastMapInstance?.map.id === spawn.mapId)) {
+      lastMapInstance = instantiateMap(base, this.playerState.storyFlags);
+    }
+    this.mapInstance = lastMapInstance;
+    this.currentMap = this.mapInstance.map;
+    // Reset flash when entering a non-dark map so re-entry into dark caves requires Flash again
+    if (!this.currentMap.isDark) {
+      this.flashUsed = false;
+    }
+  }
+
+  /** Redraw one tile sprite after its type changed. */
+  private redrawTile(x: number, y: number): void {
+    const old = this.tileSprites[y]?.[x];
+    if (old) old.destroy();
+    const sprite = this.add.image(x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2, this.getTileKey(this.currentMap.tiles[y][x]));
+    sprite.setDepth(0);
+    if (this.tileSprites[y]) this.tileSprites[y][x] = sprite;
   }
 
   create(): void {
@@ -2892,33 +2918,9 @@ export class OverworldScene extends Phaser.Scene {
 
     // Push boulder
     this.textBox.show(['Used STRENGTH!'], () => {
-      // Move boulder tile
-      this.currentMap.tiles[targetY][targetX] = TileType.CAVE_FLOOR;
-      this.currentMap.collision[targetY][targetX] = false;
-      this.currentMap.tiles[behindY][behindX] = TileType.BOULDER;
-      this.currentMap.collision[behindY][behindX] = true;
-
-      // Update visuals
-      const oldSprite = this.tileSprites[targetY]?.[targetX];
-      if (oldSprite) oldSprite.destroy();
-      const newFloor = this.add.image(
-        targetX * TILE_SIZE + TILE_SIZE / 2,
-        targetY * TILE_SIZE + TILE_SIZE / 2,
-        `tile_${TileType.CAVE_FLOOR}`
-      );
-      newFloor.setDepth(0);
-      if (this.tileSprites[targetY]) this.tileSprites[targetY][targetX] = newFloor;
-
-      const behindOldSprite = this.tileSprites[behindY]?.[behindX];
-      if (behindOldSprite) behindOldSprite.destroy();
-      const newBoulder = this.add.image(
-        behindX * TILE_SIZE + TILE_SIZE / 2,
-        behindY * TILE_SIZE + TILE_SIZE / 2,
-        `tile_${TileType.BOULDER}`
-      );
-      newBoulder.setDepth(0);
-      if (this.tileSprites[behindY]) this.tileSprites[behindY][behindX] = newBoulder;
-
+      const base = ALL_MAPS[this.currentMap.id];
+      const result = pushBoulder(base, this.mapInstance, this.playerState.storyFlags, { x: targetX, y: targetY }, vec);
+      for (const { x, y } of result.changed) this.redrawTile(x, y);
       soundSystem.bump();
     });
     return true;
