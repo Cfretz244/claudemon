@@ -33,7 +33,7 @@ import { checkEntryGates } from '../logic/warpGate';
 import { MapInstance, instantiateMap, landedBoulders, pushBoulder } from '../logic/boulders';
 import { computeCurrentSlide, computeSlide, Slide } from '../logic/spinTiles';
 import { computeTrainerSight } from '../logic/trainerSight';
-import { pickWildEncounter, getEncounterTheme } from '../logic/encounters';
+import { pickWildEncounter, getEncounterTheme, rollsEncounterOn, encounterTableOf, itemBallAction } from '../logic/encounters';
 import { SurgePuzzle } from '../logic/surgePuzzle';
 import { syncDerivedStoryFlags } from '../logic/storyFlagSync';
 import { migrateLegacyLocation } from '../logic/saveMigration';
@@ -1107,10 +1107,10 @@ export class OverworldScene extends Phaser.Scene {
   private checkWildEncounter(x: number, y: number): void {
     if (this.isWarping) return;
     const tileType = this.currentMap.tiles[y]?.[x];
-    // Encounters happen on tall grass and cave floors (Pokemon Tower uses cave floor);
-    // while surfing, on water, from the map's separate surf table.
-    const encounterTiles = this.isSurfing ? [TileType.WATER, TileType.CURRENT] : [TileType.TALL_GRASS, TileType.CAVE_FLOOR];
-    if (!encounterTiles.includes(tileType)) return;
+    // Encounters happen on tall grass and cave floors unless the map says
+    // otherwise (`encounterTiles`); while surfing, on water, from the map's
+    // separate surf table.
+    if (!rollsEncounterOn(this.currentMap, tileType, this.isSurfing)) return;
 
     // Oak intercept: if player has no Pokemon, Oak stops them
     if (this.playerState.party.length === 0) {
@@ -1118,7 +1118,7 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    const encounters = this.isSurfing ? this.currentMap.surfEncounters : this.currentMap.wildEncounters;
+    const encounters = encounterTableOf(this.currentMap, this.isSurfing);
     if (!encounters) return;
 
     // Repel: decrement and block encounters while active
@@ -1590,9 +1590,11 @@ export class OverworldScene extends Phaser.Scene {
       sprite.setFrame(dirIndex);
     }
 
-    // Item ball pickup
-    if (npc.isItemBall && npc.itemId) {
-      this.pickUpItemBall(npc);
+    // Item ball pickup (or a fake ball that ambushes the player)
+    const ballAction = itemBallAction(npc);
+    if (ballAction) {
+      if (ballAction.kind === 'ambush') this.springAmbushBall(npc, ballAction.speciesId, ballAction.level);
+      else this.pickUpItemBall(npc);
       return;
     }
 
@@ -1692,6 +1694,21 @@ export class OverworldScene extends Phaser.Scene {
         }
       }
     );
+  }
+
+  /** A fake item ball: the ball is gone and a wild Pokemon attacks (Power Plant Voltorb). */
+  private springAmbushBall(npc: NPCData, speciesId: number, level: number): void {
+    const spring = () => {
+      this.playerState.storyFlags[`picked_up_${npc.id}`] = true;
+      const ballSprite = this.npcSprites.get(npc.id);
+      if (ballSprite) {
+        ballSprite.destroy();
+        this.npcSprites.delete(npc.id);
+      }
+      this.startWildBattle(createPokemon(speciesId, level));
+    };
+    if (npc.dialogue.length > 0) this.textBox.show(npc.dialogue.map(d => this.fmt(d)), spring);
+    else spring();
   }
 
   /** Shows a gift NPC's dialogue, then applies its rewards in order. */

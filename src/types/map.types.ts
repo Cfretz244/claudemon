@@ -119,6 +119,12 @@ export interface NPCData {
   shopStock?: string[];
   isItemBall?: boolean;
   itemId?: string;
+  /**
+   * A fake item ball: picking it up starts a wild battle with this Pokemon
+   * instead of giving an item (Power Plant Voltorb/Electrode). The ball is
+   * gone afterwards like a picked-up item. `dialogue` shows first if non-empty.
+   */
+  ambush?: { speciesId: number; level: number };
 }
 
 export interface MapData {
@@ -146,6 +152,12 @@ export interface MapData {
   currents?: Record<string, Direction>;
   /** Rolled instead of `wildEncounters` while the player is surfing. */
   surfEncounters?: WildEncounterTable;
+  /**
+   * Tile types that roll `wildEncounters` on foot (default TALL_GRASS and
+   * CAVE_FLOOR). Lets indoor dungeons such as the Mansion roll on INDOOR_FLOOR.
+   * Surfing always rolls `surfEncounters` on WATER and CURRENT.
+   */
+  encounterTiles?: TileType[];
 }
 
 export interface WildEncounterTable {
