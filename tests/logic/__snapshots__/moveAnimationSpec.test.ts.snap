@@ -1,0 +1,169 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-row moveId -> spec table 1`] = `
+"  1 POUND          NORMAL   contact        light dust    hit       240 #A8A878 -
+  2 KARATE CHOP    NORMAL   contact        mid   dust    hit       300 #A8A878 -
+  3 DOUBLE SLAP    NORMAL   barrage        light dust    hit       380 #A8A878 -
+  4 COMET PUNCH    NORMAL   barrage        light dust    hit       380 #A8A878 -
+  5 MEGA PUNCH     NORMAL   contact        mid   dust    hit       300 #A8A878 -
+  6 PAY DAY        NORMAL   contact        light dust    hit       240 #A8A878 -
+  7 FIRE PUNCH     FIRE     contact        mid   mote    crackle   300 #FF4422 -
+  8 ICE PUNCH      ICE      contact        mid   shard   ping      300 #66CCFF -
+  9 THUNDER PUNCH  ELECTRIC contact        mid   bolt    zap       300 #FFCC00 -
+ 10 SCRATCH        NORMAL   contact        light dust    hit       240 #A8A878 -
+ 11 VICE GRIP      NORMAL   contact        mid   dust    hit       300 #A8A878 -
+ 12 GUILLOTINE     NORMAL   special-strike light dust    hit       460 #A8A878 -
+ 13 RAZOR WIND     NORMAL   charge         mid   dust    hit       680 #A8A878 -
+ 14 SWORDS DANCE   NORMAL   self-aura      light dust    hit       320 #A8A878 swordsDance
+ 15 CUT            NORMAL   contact        mid   dust    hit       300 #A8A878 -
+ 16 GUST           NORMAL   projectile     light dust    hit       320 #A8A878 -
+ 17 WING ATTACK    FLYING   contact        light dash    whoosh    240 #8899FF -
+ 18 WHIRLWIND      NORMAL   status-cloud   light dust    hit       340 #A8A878 -
+ 19 FLY            FLYING   charge         mid   dash    whoosh    680 #8899FF fly
+ 20 BIND           NORMAL   bind           light dust    hit       460 #A8A878 bind
+ 21 SLAM           NORMAL   contact        mid   dust    hit       300 #A8A878 -
+ 22 VINE WHIP      GRASS    contact        light leaf    sweep     240 #44BB44 -
+ 23 STOMP          NORMAL   contact        mid   dust    hit       300 #A8A878 -
+ 24 DOUBLE KICK    FIGHTING barrage        light streak  tripleHit 380 #BB5544 -
+ 25 MEGA KICK      NORMAL   contact        heavy dust    hit       360 #A8A878 -
+ 26 JUMP KICK      FIGHTING contact        mid   streak  tripleHit 300 #BB5544 -
+ 27 ROLLING KICK   FIGHTING contact        mid   streak  tripleHit 300 #BB5544 -
+ 28 SAND ATTACK    NORMAL   status-cloud   light dust    hit       340 #A8A878 -
+ 29 HEADBUTT       NORMAL   contact        mid   dust    hit       300 #A8A878 -
+ 30 HORN ATTACK    NORMAL   contact        mid   dust    hit       300 #A8A878 -
+ 31 FURY ATTACK    NORMAL   barrage        light dust    hit       380 #A8A878 -
+ 32 HORN DRILL     NORMAL   special-strike light dust    hit       460 #A8A878 -
+ 33 TACKLE         NORMAL   contact        light dust    hit       240 #A8A878 -
+ 34 BODY SLAM      NORMAL   contact        mid   dust    hit       300 #A8A878 -
+ 35 WRAP           NORMAL   bind           light dust    hit       460 #A8A878 wrap
+ 36 TAKE DOWN      NORMAL   contact        heavy dust    hit       360 #A8A878 -
+ 37 THRASH         NORMAL   contact        heavy dust    hit       360 #A8A878 -
+ 38 DOUBLE-EDGE    NORMAL   contact        heavy dust    hit       360 #A8A878 -
+ 39 TAIL WHIP      NORMAL   status-cloud   light dust    hit       340 #A8A878 tailWhip
+ 40 POISON STING   POISON   contact        light bubble  bubblePop 240 #AA5599 -
+ 41 TWINEEDLE      BUG      barrage        light dart    chitter   380 #AABB22 -
+ 42 PIN MISSILE    BUG      barrage        light dart    chitter   380 #AABB22 -
+ 43 LEER           NORMAL   status-cloud   light dust    hit       340 #A8A878 -
+ 44 BITE           NORMAL   contact        mid   dust    hit       300 #A8A878 -
+ 45 GROWL          NORMAL   status-cloud   light dust    hit       340 #A8A878 growl
+ 46 ROAR           NORMAL   status-cloud   light dust    hit       340 #A8A878 -
+ 47 SING           NORMAL   status-cloud   light dust    hit       340 #A8A878 sing
+ 48 DISABLE        NORMAL   status-cloud   light dust    hit       340 #A8A878 -
+ 49 SONIC BOOM     NORMAL   special-strike light dust    hit       460 #A8A878 -
+ 50 SUPERSONIC     NORMAL   status-cloud   light dust    hit       340 #A8A878 -
+ 51 ACID           POISON   projectile     light bubble  bubblePop 320 #AA5599 -
+ 52 EMBER          FIRE     projectile     light mote    crackle   320 #FF4422 -
+ 53 FLAMETHROWER   FIRE     beam           heavy mote    crackle   520 #FF4422 -
+ 54 MIST           ICE      self-aura      light shard   ping      320 #66CCFF -
+ 55 WATER GUN      WATER    projectile     light droplet splash    320 #3399FF -
+ 56 HYDRO PUMP     WATER    projectile     heavy droplet splash    440 #3399FF hydroPump
+ 57 SURF           WATER    beam           heavy droplet splash    520 #3399FF surf
+ 58 ICE BEAM       ICE      beam           heavy shard   ping      520 #66CCFF -
+ 59 BLIZZARD       ICE      beam           heavy shard   ping      520 #66CCFF blizzard
+ 60 PSYBEAM        PSYCHIC  beam           mid   ring    warble    460 #FF5599 -
+ 61 BUBBLE BEAM    WATER    beam           mid   droplet splash    460 #3399FF -
+ 62 AURORA BEAM    ICE      beam           mid   shard   ping      460 #66CCFF -
+ 63 HYPER BEAM     NORMAL   beam           heavy dust    hit       520 #A8A878 hyperBeam
+ 64 PECK           FLYING   contact        light dash    whoosh    240 #8899FF -
+ 65 DRILL PECK     FLYING   contact        mid   dash    whoosh    300 #8899FF -
+ 66 SUBMISSION     FIGHTING contact        mid   streak  tripleHit 300 #BB5544 -
+ 67 LOW KICK       FIGHTING contact        mid   streak  tripleHit 300 #BB5544 -
+ 68 COUNTER        FIGHTING contact        light streak  tripleHit 240 #BB5544 -
+ 69 SEISMIC TOSS   FIGHTING special-strike light streak  tripleHit 460 #BB5544 -
+ 70 STRENGTH       NORMAL   contact        mid   dust    hit       300 #A8A878 -
+ 71 ABSORB         GRASS    drain          light leaf    sweep     480 #44BB44 -
+ 72 MEGA DRAIN     GRASS    drain          light leaf    sweep     480 #44BB44 -
+ 73 LEECH SEED     GRASS    status-cloud   light leaf    sweep     340 #44BB44 leechSeed
+ 74 GROWTH         NORMAL   self-aura      light dust    hit       320 #A8A878 -
+ 75 RAZOR LEAF     GRASS    projectile     mid   leaf    sweep     380 #44BB44 -
+ 76 SOLAR BEAM     GRASS    charge         heavy leaf    sweep     740 #44BB44 solarBeam
+ 77 POISON POWDER  POISON   status-cloud   light bubble  bubblePop 340 #AA5599 -
+ 78 STUN SPORE     GRASS    status-cloud   light leaf    sweep     340 #44BB44 -
+ 79 SLEEP POWDER   GRASS    status-cloud   light leaf    sweep     340 #44BB44 sleepPowder
+ 80 PETAL DANCE    GRASS    projectile     mid   leaf    sweep     380 #44BB44 -
+ 81 STRING SHOT    BUG      status-cloud   light dart    chitter   340 #AABB22 -
+ 82 DRAGON RAGE    DRAGON   special-strike light trail   roar      460 #7766EE -
+ 83 FIRE SPIN      FIRE     bind           light mote    crackle   460 #FF4422 -
+ 84 THUNDER SHOCK  ELECTRIC beam           light bolt    zap       400 #FFCC00 -
+ 85 THUNDERBOLT    ELECTRIC beam           heavy bolt    zap       520 #FFCC00 thunderbolt
+ 86 THUNDER WAVE   ELECTRIC status-cloud   light bolt    zap       340 #FFCC00 thunderWave
+ 87 THUNDER        ELECTRIC beam           heavy bolt    zap       520 #FFCC00 thunder
+ 88 ROCK THROW     ROCK     projectile     mid   block   thud      380 #BBAA66 -
+ 89 EARTHQUAKE     GROUND   contact        heavy grit    rumble    360 #DDBB55 earthquake
+ 90 FISSURE        GROUND   special-strike light grit    rumble    460 #DDBB55 -
+ 91 DIG            GROUND   charge         heavy grit    rumble    740 #DDBB55 dig
+ 92 TOXIC          POISON   status-cloud   light bubble  bubblePop 340 #AA5599 toxic
+ 93 CONFUSION      PSYCHIC  beam           mid   ring    warble    460 #FF5599 -
+ 94 PSYCHIC        PSYCHIC  beam           heavy ring    warble    520 #FF5599 psychic
+ 95 HYPNOSIS       PSYCHIC  status-cloud   light ring    warble    340 #FF5599 -
+ 96 MEDITATE       PSYCHIC  self-aura      light ring    warble    320 #FF5599 -
+ 97 AGILITY        PSYCHIC  self-aura      light ring    warble    320 #FF5599 -
+ 98 QUICK ATTACK   NORMAL   contact        light dust    hit       240 #A8A878 quickAttack
+ 99 RAGE           NORMAL   contact        light dust    hit       240 #A8A878 -
+100 TELEPORT       PSYCHIC  self-aura      light ring    warble    320 #FF5599 -
+101 NIGHT SHADE    GHOST    special-strike light wisp    wail      460 #6666BB nightShade
+102 MIMIC          NORMAL   self-aura      light dust    hit       320 #A8A878 -
+103 SCREECH        NORMAL   status-cloud   light dust    hit       340 #A8A878 -
+104 DOUBLE TEAM    NORMAL   self-aura      light dust    hit       320 #A8A878 doubleTeam
+105 RECOVER        NORMAL   self-aura      light dust    hit       320 #A8A878 -
+106 HARDEN         NORMAL   self-aura      light dust    hit       320 #A8A878 -
+107 MINIMIZE       NORMAL   self-aura      light dust    hit       320 #A8A878 minimize
+108 SMOKESCREEN    NORMAL   status-cloud   light dust    hit       340 #A8A878 -
+109 CONFUSE RAY    GHOST    status-cloud   light wisp    wail      340 #6666BB -
+110 WITHDRAW       WATER    self-aura      light droplet splash    320 #3399FF -
+111 DEFENSE CURL   NORMAL   self-aura      light dust    hit       320 #A8A878 -
+112 BARRIER        PSYCHIC  self-aura      light ring    warble    320 #FF5599 -
+113 LIGHT SCREEN   PSYCHIC  self-aura      light ring    warble    320 #FF5599 lightScreen
+114 HAZE           ICE      self-aura      light shard   ping      320 #66CCFF -
+115 REFLECT        PSYCHIC  self-aura      light ring    warble    320 #FF5599 -
+116 FOCUS ENERGY   NORMAL   self-aura      light dust    hit       320 #A8A878 -
+117 BIDE           NORMAL   contact        light dust    hit       240 #A8A878 -
+118 METRONOME      NORMAL   self-aura      light dust    hit       320 #A8A878 -
+119 MIRROR MOVE    FLYING   self-aura      light dash    whoosh    320 #8899FF -
+120 SELF-DESTRUCT  NORMAL   burst          heavy dust    hit       780 #A8A878 selfDestruct
+121 EGG BOMB       NORMAL   projectile     heavy dust    hit       440 #A8A878 -
+122 LICK           GHOST    contact        light wisp    wail      240 #6666BB -
+123 SMOG           POISON   projectile     light bubble  bubblePop 320 #AA5599 -
+124 SLUDGE         POISON   projectile     mid   bubble  bubblePop 380 #AA5599 -
+125 BONE CLUB      GROUND   contact        mid   grit    rumble    300 #DDBB55 -
+126 FIRE BLAST     FIRE     projectile     heavy mote    crackle   440 #FF4422 fireBlast
+127 WATERFALL      WATER    contact        mid   droplet splash    300 #3399FF -
+128 CLAMP          WATER    bind           light droplet splash    460 #3399FF -
+129 SWIFT          NORMAL   contact        mid   dust    hit       300 #A8A878 swift
+130 SKULL BASH     NORMAL   charge         heavy dust    hit       740 #A8A878 -
+131 SPIKE CANNON   NORMAL   barrage        light dust    hit       380 #A8A878 -
+132 CONSTRICT      NORMAL   contact        light dust    hit       240 #A8A878 -
+133 AMNESIA        PSYCHIC  self-aura      light ring    warble    320 #FF5599 -
+134 KINESIS        PSYCHIC  status-cloud   light ring    warble    340 #FF5599 -
+135 SOFTBOILED     NORMAL   self-aura      light dust    hit       320 #A8A878 -
+136 HIGH JUMP KICK FIGHTING contact        mid   streak  tripleHit 300 #BB5544 -
+137 GLARE          NORMAL   status-cloud   light dust    hit       340 #A8A878 -
+138 DREAM EATER    PSYCHIC  drain          heavy ring    warble    600 #FF5599 -
+139 POISON GAS     POISON   status-cloud   light bubble  bubblePop 340 #AA5599 -
+140 BARRAGE        NORMAL   barrage        light dust    hit       380 #A8A878 -
+141 LEECH LIFE     BUG      drain          light dart    chitter   480 #AABB22 -
+142 LOVELY KISS    NORMAL   status-cloud   light dust    hit       340 #A8A878 -
+143 SKY ATTACK     FLYING   charge         heavy dash    whoosh    740 #8899FF -
+144 TRANSFORM      NORMAL   self-aura      light dust    hit       320 #A8A878 transform
+145 BUBBLE         WATER    projectile     light droplet splash    320 #3399FF -
+146 DIZZY PUNCH    NORMAL   contact        mid   dust    hit       300 #A8A878 -
+147 SPORE          GRASS    status-cloud   light leaf    sweep     340 #44BB44 -
+148 FLASH          NORMAL   status-cloud   light dust    hit       340 #A8A878 -
+149 PSYWAVE        PSYCHIC  special-strike light ring    warble    460 #FF5599 -
+150 SPLASH         NORMAL   self-aura      light dust    hit       320 #A8A878 splash
+151 ACID ARMOR     POISON   self-aura      light bubble  bubblePop 320 #AA5599 -
+152 CRABHAMMER     WATER    contact        heavy droplet splash    360 #3399FF -
+153 EXPLOSION      NORMAL   burst          heavy dust    hit       780 #A8A878 explosion
+154 FURY SWIPES    NORMAL   barrage        light dust    hit       380 #A8A878 -
+155 BONEMERANG     GROUND   barrage        mid   grit    rumble    440 #DDBB55 -
+156 REST           PSYCHIC  self-aura      light ring    warble    320 #FF5599 rest
+157 ROCK SLIDE     ROCK     contact        mid   block   thud      300 #BBAA66 -
+158 HYPER FANG     NORMAL   contact        mid   dust    hit       300 #A8A878 -
+159 SHARPEN        NORMAL   self-aura      light dust    hit       320 #A8A878 -
+160 CONVERSION     NORMAL   self-aura      light dust    hit       320 #A8A878 -
+161 TRI ATTACK     NORMAL   projectile     mid   dust    hit       380 #A8A878 -
+162 SUPER FANG     NORMAL   contact        light dust    hit       240 #A8A878 -
+163 SLASH          NORMAL   contact        mid   dust    hit       300 #A8A878 -
+164 SUBSTITUTE     NORMAL   self-aura      light dust    hit       320 #A8A878 substitute
+165 STRUGGLE       NORMAL   contact        mid   dust    hit       300 #A8A878 -"
+`;

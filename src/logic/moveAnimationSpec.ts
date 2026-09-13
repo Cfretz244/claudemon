@@ -1,0 +1,330 @@
+/**
+ * Pure, Phaser-free resolver that turns a move id into an animation spec.
+ *
+ * The battle renderer (`systems/MoveAnimations.ts`) consumes the spec; nothing
+ * here touches Phaser, the scene or randomness, so the whole mapping is unit
+ * testable and a data edit that silently changes how a move looks shows up in
+ * the snapshot diff.
+ *
+ * Four layers (see docs/battle-animations-design.md in the helper repo):
+ *   1. base motion   - from category + effect + power
+ *   2. type vocabulary - colour / particle shape / accent / sfx, one per type
+ *   3. per-move overrides - iconic moves that get a hand-written function
+ *   4. outcome feedback - applied by the renderer after the body
+ */
+
+import { PokemonType, MoveCategory, MoveEffect, MoveData } from '../types/pokemon.types';
+import { MOVES_DATA } from '../data/moves';
+
+// === Tier 1: base motions ===
+
+export type BaseMotion =
+  | 'contact'
+  | 'barrage'
+  | 'projectile'
+  | 'beam'
+  | 'status-cloud'
+  | 'self-aura'
+  | 'special-strike'
+  | 'charge'
+  | 'bind'
+  | 'drain'
+  | 'burst';
+
+export type Intensity = 'light' | 'mid' | 'heavy';
+
+// === Tier 2: type vocabulary ===
+
+export type ParticleShape =
+  | 'dust'    // Normal:   1 px specks
+  | 'mote'    // Fire:     2 px embers drifting up
+  | 'droplet' // Water:    droplets on a shallow arc
+  | 'bolt'    // Electric: jagged polylines
+  | 'leaf'    // Grass:    3 px leaves on a sine sweep
+  | 'shard'   // Ice:      3 px diamonds flung outward
+  | 'streak'  // Fighting: short radial streaks
+  | 'bubble'  // Poison:   bubbles that rise then fall
+  | 'grit'    // Ground:   dust kicked up from below
+  | 'block'   // Rock:     5-6 px falling blocks
+  | 'dash'    // Flying:   1x4 px horizontal streaks
+  | 'dart'    // Bug:      small dots on a zig path
+  | 'wisp'    // Ghost:    fading afterimages
+  | 'ring'    // Psychic:  concentric ring pulse
+  | 'trail';  // Dragon:   thick beam + trailing motes
+
+export type Accent =
+  | 'plain'
+  | 'flicker'
+  | 'splash-ring'
+  | 'white-flash'
+  | 'vine'
+  | 'sparkle'
+  | 'triple-impact'
+  | 'drip'
+  | 'shake'
+  | 'landing-thud'
+  | 'rise'
+  | 'double-hit'
+  | 'alpha-flicker'
+  | 'invert'
+  | 'heavy-shake';
+
+export type SfxId =
+  | 'hit'
+  | 'crackle'
+  | 'splash'
+  | 'zap'
+  | 'sweep'
+  | 'ping'
+  | 'tripleHit'
+  | 'bubblePop'
+  | 'rumble'
+  | 'thud'
+  | 'whoosh'
+  | 'chitter'
+  | 'wail'
+  | 'warble'
+  | 'roar';
+
+export interface TypeVocab {
+  /** The single source of colour truth for this type. */
+  color: number;
+  /** Secondary colour, used for alternating/underlit particles. */
+  accentColor: number;
+  particle: ParticleShape;
+  accent: Accent;
+  sfx: SfxId;
+}
+
+export const TYPE_VOCAB: Record<PokemonType, TypeVocab> = {
+  [PokemonType.NORMAL]:   { color: 0xA8A878, accentColor: 0xE8E8D0, particle: 'dust',    accent: 'plain',         sfx: 'hit' },
+  [PokemonType.FIRE]:     { color: 0xFF4422, accentColor: 0xFF8800, particle: 'mote',    accent: 'flicker',       sfx: 'crackle' },
+  [PokemonType.WATER]:    { color: 0x3399FF, accentColor: 0xAADDFF, particle: 'droplet', accent: 'splash-ring',   sfx: 'splash' },
+  [PokemonType.ELECTRIC]: { color: 0xFFCC00, accentColor: 0xFFFFFF, particle: 'bolt',    accent: 'white-flash',   sfx: 'zap' },
+  [PokemonType.GRASS]:    { color: 0x44BB44, accentColor: 0x99EE66, particle: 'leaf',    accent: 'vine',          sfx: 'sweep' },
+  [PokemonType.ICE]:      { color: 0x66CCFF, accentColor: 0xFFFFFF, particle: 'shard',   accent: 'sparkle',       sfx: 'ping' },
+  [PokemonType.FIGHTING]: { color: 0xBB5544, accentColor: 0xFFCC99, particle: 'streak',  accent: 'triple-impact', sfx: 'tripleHit' },
+  [PokemonType.POISON]:   { color: 0xAA5599, accentColor: 0xDD88CC, particle: 'bubble',  accent: 'drip',          sfx: 'bubblePop' },
+  [PokemonType.GROUND]:   { color: 0xDDBB55, accentColor: 0x997733, particle: 'grit',    accent: 'shake',         sfx: 'rumble' },
+  [PokemonType.FLYING]:   { color: 0x8899FF, accentColor: 0xDDE4FF, particle: 'dash',    accent: 'rise',          sfx: 'whoosh' },
+  [PokemonType.PSYCHIC]:  { color: 0xFF5599, accentColor: 0xFFAADD, particle: 'ring',    accent: 'invert',        sfx: 'warble' },
+  [PokemonType.BUG]:      { color: 0xAABB22, accentColor: 0xDDEE88, particle: 'dart',    accent: 'double-hit',    sfx: 'chitter' },
+  [PokemonType.ROCK]:     { color: 0xBBAA66, accentColor: 0x887744, particle: 'block',   accent: 'landing-thud',  sfx: 'thud' },
+  [PokemonType.GHOST]:    { color: 0x6666BB, accentColor: 0x332255, particle: 'wisp',    accent: 'alpha-flicker', sfx: 'wail' },
+  [PokemonType.DRAGON]:   { color: 0x7766EE, accentColor: 0xBBAAFF, particle: 'trail',   accent: 'heavy-shake',   sfx: 'roar' },
+};
+
+// === Tier 3: per-move override keys ===
+
+/**
+ * Iconic moves that get a hand-written function instead of the generic
+ * renderer. The resolver only names the key; the renderer owns the functions
+ * (and until they exist it simply renders the tier-1/2 body).
+ */
+export const MOVE_OVERRIDES: Record<number, string> = {
+  // Signature attacks
+  85: 'thunderbolt', 87: 'thunder', 63: 'hyperBeam', 57: 'surf', 89: 'earthquake',
+  56: 'hydroPump', 126: 'fireBlast', 59: 'blizzard', 94: 'psychic', 101: 'nightShade',
+  // Two-turn
+  19: 'fly', 91: 'dig', 76: 'solarBeam',
+  // Self-KO
+  120: 'selfDestruct', 153: 'explosion',
+  // Status set-pieces
+  47: 'sing', 79: 'sleepPowder', 92: 'toxic', 73: 'leechSeed', 86: 'thunderWave',
+  // Self / evasion
+  144: 'transform', 164: 'substitute', 156: 'rest', 104: 'doubleTeam', 107: 'minimize',
+  113: 'lightScreen', 14: 'swordsDance', 150: 'splash',
+  // Grapple / speed
+  35: 'wrap', 20: 'bind', 98: 'quickAttack', 129: 'swift',
+  // Stat drops
+  45: 'growl', 39: 'tailWhip',
+};
+
+// === Motion classification data ===
+
+/** Status moves aimed at the attacker itself (everything else targets the foe). */
+const SELF_TARGET_STATUS = new Set<number>([
+  14,  // SWORDS DANCE
+  54,  // MIST
+  74,  // GROWTH
+  96,  // MEDITATE
+  97,  // AGILITY
+  100, // TELEPORT
+  102, // MIMIC
+  104, // DOUBLE TEAM
+  105, // RECOVER
+  106, // HARDEN
+  107, // MINIMIZE
+  110, // WITHDRAW
+  111, // DEFENSE CURL
+  112, // BARRIER
+  113, // LIGHT SCREEN
+  114, // HAZE
+  115, // REFLECT
+  116, // FOCUS ENERGY
+  118, // METRONOME
+  119, // MIRROR MOVE
+  133, // AMNESIA
+  135, // SOFTBOILED
+  144, // TRANSFORM
+  150, // SPLASH
+  151, // ACID ARMOR
+  156, // REST
+  159, // SHARPEN
+  160, // CONVERSION
+  164, // SUBSTITUTE
+]);
+
+/** Damaging moves that read as one or more discrete shots crossing the gap. */
+const PROJECTILE_MOVES = new Set<number>([
+  16,  // GUST
+  51,  // ACID
+  52,  // EMBER
+  55,  // WATER GUN
+  56,  // HYDRO PUMP
+  75,  // RAZOR LEAF
+  80,  // PETAL DANCE
+  88,  // ROCK THROW
+  121, // EGG BOMB
+  123, // SMOG
+  124, // SLUDGE
+  126, // FIRE BLAST
+  145, // BUBBLE
+  161, // TRI ATTACK
+]);
+
+/** Damaging moves that read as a sustained line from attacker to defender. */
+const BEAM_MOVES = new Set<number>([
+  53,  // FLAMETHROWER
+  57,  // SURF
+  58,  // ICE BEAM
+  59,  // BLIZZARD
+  60,  // PSYBEAM
+  61,  // BUBBLE BEAM
+  62,  // AURORA BEAM
+  63,  // HYPER BEAM
+  84,  // THUNDER SHOCK
+  85,  // THUNDERBOLT
+  87,  // THUNDER
+  93,  // CONFUSION
+  94,  // PSYCHIC
+]);
+
+const BARRAGE_EFFECTS = new Set<MoveEffect>([MoveEffect.MULTI_HIT, MoveEffect.TWO_HIT]);
+const DRAIN_EFFECTS = new Set<MoveEffect>([MoveEffect.DRAIN, MoveEffect.DREAM_EATER]);
+const SPECIAL_STRIKE_EFFECTS = new Set<MoveEffect>([
+  MoveEffect.OHKO,
+  MoveEffect.FIXED_DAMAGE,
+  MoveEffect.LEVEL_DAMAGE,
+]);
+
+// === Timing ===
+
+/** Hard ceiling; the animation is serial with the battle text, so it matters. */
+export const MAX_DURATION_MS = 900;
+
+const MOTION_BASE_MS: Record<BaseMotion, number> = {
+  contact: 240,
+  barrage: 380,
+  projectile: 320,
+  beam: 400,
+  'status-cloud': 340,
+  'self-aura': 320,
+  'special-strike': 460,
+  charge: 620,
+  bind: 460,
+  drain: 480,
+  burst: 660,
+};
+
+const INTENSITY_BONUS_MS: Record<Intensity, number> = { light: 0, mid: 60, heavy: 120 };
+
+// === Spec ===
+
+export interface AnimationSpec {
+  moveId: number;
+  motion: BaseMotion;
+  type: PokemonType;
+  color: number;
+  accentColor: number;
+  intensity: Intensity;
+  particle: ParticleShape;
+  accent: Accent;
+  sfx: SfxId;
+  /** Total budget for the whole animation, always <= MAX_DURATION_MS. */
+  duration: number;
+  /** Key into the renderer's OVERRIDES table (tier 3), when this move has one. */
+  override?: string;
+  /** Set on CHARGE moves; the renderer plays gather + release in one promise. */
+  twoTurn?: 'charge' | 'release';
+}
+
+export function resolveIntensity(power: number): Intensity {
+  if (power >= 90) return 'heavy';
+  if (power >= 45) return 'mid';
+  return 'light';
+}
+
+export function resolveMotion(move: MoveData): BaseMotion {
+  const effect = move.effect;
+
+  if (effect === MoveEffect.SELF_DESTRUCT) return 'burst';
+  if (effect === MoveEffect.CHARGE) return 'charge';
+  if (effect !== undefined && BARRAGE_EFFECTS.has(effect)) return 'barrage';
+  if (effect === MoveEffect.WRAP) return 'bind';
+  if (effect !== undefined && DRAIN_EFFECTS.has(effect)) return 'drain';
+  if (effect !== undefined && SPECIAL_STRIKE_EFFECTS.has(effect)) return 'special-strike';
+
+  if (move.category === MoveCategory.STATUS) {
+    return SELF_TARGET_STATUS.has(move.id) ? 'self-aura' : 'status-cloud';
+  }
+
+  if (PROJECTILE_MOVES.has(move.id)) return 'projectile';
+  if (BEAM_MOVES.has(move.id)) return 'beam';
+  return 'contact';
+}
+
+/** Fallback used when a move id is not in MOVES_DATA at all. */
+const UNKNOWN_MOVE: MoveData = {
+  id: -1,
+  name: '???',
+  type: PokemonType.NORMAL,
+  category: MoveCategory.PHYSICAL,
+  power: 40,
+  accuracy: 100,
+  pp: 1,
+};
+
+/**
+ * Pure: same id in, same spec out. Tolerates unknown ids (METRONOME recurses
+ * into arbitrary move ids at runtime).
+ */
+export function resolveAnimation(moveId: number): AnimationSpec {
+  const move = MOVES_DATA[moveId] ?? UNKNOWN_MOVE;
+  const vocab = TYPE_VOCAB[move.type] ?? TYPE_VOCAB[PokemonType.NORMAL];
+  const motion = resolveMotion(move);
+  const intensity = resolveIntensity(move.power);
+  const duration = Math.min(
+    MAX_DURATION_MS,
+    MOTION_BASE_MS[motion] + INTENSITY_BONUS_MS[intensity],
+  );
+
+  const spec: AnimationSpec = {
+    moveId,
+    motion,
+    type: move.type,
+    color: vocab.color,
+    accentColor: vocab.accentColor,
+    intensity,
+    particle: vocab.particle,
+    accent: vocab.accent,
+    sfx: vocab.sfx,
+    duration,
+  };
+
+  const override = MOVE_OVERRIDES[moveId];
+  if (override) spec.override = override;
+  if (motion === 'charge') spec.twoTurn = 'charge';
+
+  return spec;
+}
