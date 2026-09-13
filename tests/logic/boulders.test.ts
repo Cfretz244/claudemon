@@ -3,17 +3,17 @@ import { MapData, TileType as T } from '../../src/types/map.types';
 import { createMapShape } from '../../src/data/mapBuilder';
 import {
   lockFlag, getBoulderLocks, tileUnder, isPlatePressed, instantiateMap, pushBoulder,
-  solve, canReach, canPressPlate,
+  solve, canReach, canPressPlate, dropFlag, getBoulderDrops, holeAt, landedBoulders, canDropBoulders,
 } from '../../src/logic/boulders';
 
 // Build a map from an ASCII sketch: # wall, . floor, O boulder, S plate, G gate,
-// ^ ledge (hop down only). Gates listed explicitly.
-function sketch(rows: string[], gates: MapData['gates'] = [], id = 'test_cave'): MapData {
+// ^ ledge (hop down only), o boulder hole, ~ water, = current. Gates and holes listed explicitly.
+function sketch(rows: string[], gates: MapData['gates'] = [], id = 'test_cave', holes: MapData['holes'] = []): MapData {
   const H = rows.length, W = rows[0].length;
   const { tiles, collision, setTile } = createMapShape(W, H, T.CAVE_FLOOR);
-  const ch: Record<string, T> = { '#': T.CAVE_WALL, '.': T.CAVE_FLOOR, O: T.BOULDER, S: T.SWITCH_PLATE, G: T.GATE, '^': T.LEDGE };
+  const ch: Record<string, T> = { '#': T.CAVE_WALL, '.': T.CAVE_FLOOR, O: T.BOULDER, S: T.SWITCH_PLATE, G: T.GATE, '^': T.LEDGE, o: T.BOULDER_HOLE, '~': T.WATER, '=': T.CURRENT };
   rows.forEach((r, y) => [...r].forEach((c, x) => setTile(x, y, ch[c])));
-  return { id, name: id, width: W, height: H, tiles, collision, warps: [], npcs: [], gates };
+  return { id, name: id, width: W, height: H, tiles, collision, warps: [], npcs: [], gates, holes };
 }
 const at = (m: MapData, x: number, y: number) => m.tiles[y][x];
 
@@ -192,5 +192,121 @@ describe('solver', () => {
     expect(canReach(m, { x: 1, y: 1 }, { x: 3, y: 1 }, { blocked: [{ x: 2, y: 1 }] }).found).toBe(false);
     const r = solve(m, { x: 1, y: 1 }, () => false, { maxStates: 2 });
     expect(r.exhausted).toBe(true);
+  });
+});
+
+describe('boulder holes', () => {
+  // Upper floor: a boulder beside a hole; the hole drops onto the lower floor's current.
+  const upper = sketch([
+    '######',
+    '#.Oo.#',
+    '#.O..#',
+    '######',
+  ], [], 'upper', [{ x: 3, y: 1, targetMap: 'lower', targetX: 2, targetY: 1 }]);
+  // Lower floor: a river of currents, and a plate the second hole lands on.
+  const lower = sketch([
+    '######',
+    '#~==~#',
+    '#.S..#',
+    '######',
+  ], [], 'lower');
+  const maps = { upper, lower };
+
+  it('drop flags round-trip and ignore other maps', () => {
+    const flags = { [dropFlag('upper', { x: 2, y: 1 }, { x: 3, y: 1 })]: true, [dropFlag('upper2', { x: 1, y: 1 }, { x: 2, y: 2 })]: true };
+    expect(getBoulderDrops(flags, 'upper')).toEqual([{ origin: { x: 2, y: 1 }, hole: { x: 3, y: 1 } }]);
+    expect(holeAt(upper, { x: 3, y: 1 })).toEqual({ x: 3, y: 1, targetMap: 'lower', targetX: 2, targetY: 1 });
+    expect(holeAt(upper, { x: 2, y: 1 })).toBeUndefined();
+  });
+
+  it('pushing a boulder onto the hole removes it, sets the flag and reports the hole', () => {
+    const flags: Record<string, boolean> = {};
+    const inst = instantiateMap(upper, flags);
+    const r = pushBoulder(upper, inst, flags, { x: 2, y: 1 }, { x: 1, y: 0 });
+    expect(r.ok).toBe(true);
+    expect(r.dropped).toEqual(upper.holes![0]);
+    expect(r.changed).toEqual([{ x: 2, y: 1 }]);
+    expect(at(inst.map, 2, 1)).toBe(T.CAVE_FLOOR);
+    expect(at(inst.map, 3, 1)).toBe(T.BOULDER_HOLE);
+    expect(inst.map.collision[1][3]).toBe(false);
+    expect([...inst.origins.keys()]).toEqual(['2,2']);
+    expect(flags).toEqual({ [dropFlag('upper', { x: 2, y: 1 }, { x: 3, y: 1 })]: true });
+  });
+
+  it('a dropped boulder is gone on the next visit; the others still reset', () => {
+    const flags = { [dropFlag('upper', { x: 2, y: 1 }, { x: 3, y: 1 })]: true };
+    const { map, origins } = instantiateMap(upper, flags);
+    expect(at(map, 2, 1)).toBe(T.CAVE_FLOOR);
+    expect(at(map, 2, 2)).toBe(T.BOULDER);
+    expect([...origins.keys()]).toEqual(['2,2']);
+  });
+
+  it('a boulder moved first still drops under its origin name', () => {
+    const flags: Record<string, boolean> = {};
+    const inst = instantiateMap(upper, flags);
+    expect(pushBoulder(upper, inst, flags, { x: 2, y: 2 }, { x: 1, y: 0 }).ok).toBe(true);   // (2,2) -> (3,2)
+    expect(pushBoulder(upper, inst, flags, { x: 3, y: 2 }, { x: 0, y: -1 }).dropped).toBeDefined(); // (3,2) -> hole (3,1)
+    expect(flags).toEqual({ [dropFlag('upper', { x: 2, y: 2 }, { x: 3, y: 1 })]: true });
+    expect(instantiateMap(upper, flags).origins.has('2,1')).toBe(true);
+  });
+
+  it('stale drop flags (no such boulder or hole in the data) are ignored', () => {
+    const flags = { [dropFlag('upper', { x: 1, y: 1 }, { x: 3, y: 1 })]: true, [dropFlag('upper', { x: 2, y: 1 }, { x: 4, y: 1 })]: true };
+    expect([...instantiateMap(upper, flags).origins.keys()].sort()).toEqual(['2,1', '2,2']);
+    expect(landedBoulders(maps, 'lower', flags)).toEqual([]);
+  });
+
+  it('landing on a current turns it into still water on the floor below', () => {
+    const flags = { [dropFlag('upper', { x: 2, y: 1 }, { x: 3, y: 1 })]: true };
+    expect(landedBoulders(maps, 'lower', flags)).toEqual([{ x: 2, y: 1 }]);
+    expect(landedBoulders(maps, 'upper', flags)).toEqual([]);
+    const { map } = instantiateMap(lower, flags, landedBoulders(maps, 'lower', flags));
+    expect(at(map, 2, 1)).toBe(T.WATER);
+    expect(map.collision[1][2]).toBe(true);
+    expect(at(map, 3, 1)).toBe(T.CURRENT);
+    expect(at(lower, 2, 1)).toBe(T.CURRENT);
+  });
+
+  it('landing on a floor tile leaves a boulder there; on a plate it presses it', () => {
+    const plateFloor = sketch(['#####', '#.SG#', '#####'], [{ x: 3, y: 1, switch: { x: 2, y: 1 } }], 'pf');
+    const { map, origins } = instantiateMap(plateFloor, {}, [{ x: 2, y: 1 }, { x: 1, y: 1 }]);
+    expect(at(map, 2, 1)).toBe(T.BOULDER);
+    expect(at(map, 1, 1)).toBe(T.BOULDER);
+    expect(at(map, 3, 1)).toBe(T.CAVE_FLOOR);
+    expect(map.collision[1][2]).toBe(true);
+    expect(origins.get('2,1')).toEqual({ x: 2, y: 1 });
+    // Landing on a wall or still water changes nothing.
+    const { map: m2 } = instantiateMap(plateFloor, {}, [{ x: 0, y: 0 }, { x: 9, y: 9 }]);
+    expect(at(m2, 0, 0)).toBe(T.CAVE_WALL);
+  });
+
+  it('a hole without a holes[] entry still swallows the boulder, with no landing', () => {
+    const bare = sketch(['#####', '#Oo.#', '#####'], [], 'bare');
+    const flags: Record<string, boolean> = {};
+    const inst = instantiateMap(bare, flags);
+    const r = pushBoulder(bare, inst, flags, { x: 1, y: 1 }, { x: 1, y: 0 });
+    expect(r.ok).toBe(true);
+    expect(r.dropped).toBeUndefined();
+    expect(at(inst.map, 2, 1)).toBe(T.BOULDER_HOLE);
+    expect(Object.keys(flags)).toEqual([dropFlag('bare', { x: 1, y: 1 }, { x: 2, y: 1 })]);
+  });
+
+  it('solver: a boulder pushed into a hole leaves the state; canDropBoulders counts drops', () => {
+    // Two boulders, one hole: the first goes straight in, the second right then up.
+    const m = sketch([
+      '#######',
+      '#.O.o.#',
+      '#.O...#',
+      '#.....#',
+      '#######',
+    ], [], 'm');
+    expect(canDropBoulders(m, { x: 1, y: 1 }, 1).found).toBe(true);
+    expect(canDropBoulders(m, { x: 1, y: 1 }, 2).found).toBe(true);
+    expect(canDropBoulders(m, { x: 1, y: 1 }, 3).found).toBe(false);
+    // Walking onto the hole is allowed: it is floor.
+    expect(canReach(m, { x: 1, y: 1 }, { x: 4, y: 1 }).found).toBe(true);
+    // The state after a drop has one boulder fewer.
+    const r = solve(m, { x: 1, y: 1 }, (_p, bs) => bs.length === 1);
+    expect(r.found).toBe(true);
   });
 });

@@ -40,6 +40,10 @@ export enum TileType {
   SWITCH_PLATE = 35,
   /** Solid until its switch plate is pressed; see `MapData.gates`. */
   GATE = 36,
+  /** Walkable floor with a hole: a boulder pushed onto it drops to the floor below; see `MapData.holes`. */
+  BOULDER_HOLE = 37,
+  /** Water that carries a surfing player in the direction given by `MapData.currents`. */
+  CURRENT = 38,
 }
 
 export interface WarpPoint {
@@ -55,6 +59,19 @@ export interface GateData {
   x: number;
   y: number;
   switch: { x: number; y: number };
+}
+
+/**
+ * A BOULDER_HOLE tile and where a boulder pushed into it lands. A landed
+ * boulder turns a CURRENT tile into still WATER, or sits as a BOULDER on a
+ * floor tile (pressing a switch plate if one is there). See `src/logic/boulders.ts`.
+ */
+export interface HoleData {
+  x: number;
+  y: number;
+  targetMap: string;
+  targetX: number;
+  targetY: number;
 }
 
 /**
@@ -123,6 +140,12 @@ export interface MapData {
   gates?: GateData[];
   /** Tile revealed under a moved boulder or an opened gate (default CAVE_FLOOR). */
   floorTile?: TileType;
+  /** Where boulders pushed into each BOULDER_HOLE land; see `src/logic/boulders.ts`. */
+  holes?: HoleData[];
+  /** Flow direction of each CURRENT tile ("x,y"); see `src/logic/spinTiles.ts`. */
+  currents?: Record<string, Direction>;
+  /** Rolled instead of `wildEncounters` while the player is surfing. */
+  surfEncounters?: WildEncounterTable;
 }
 
 export interface WildEncounterTable {
