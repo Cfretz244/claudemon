@@ -489,6 +489,120 @@ export class SoundSystem {
   balloonPop(): void {
     this.playTone(420, 0.04, 'square', 0.07);
   }
+
+  // === Per-type move SFX (see src/logic/moveAnimationSpec.ts TYPE_VOCAB) ===
+  // Electric reuses thunderZap(), Water reuses splash(), Flying reuses
+  // whoosh(), Normal reuses hit(); the twelve below fill in the rest.
+
+  /** Fire: a dry crackle of short rising sawtooth ticks. */
+  crackle(): void {
+    this.playNotes([
+      { freq: 900, dur: 0.02, delay: 0 },
+      { freq: 1400, dur: 0.02, delay: 0.03 },
+      { freq: 700, dur: 0.02, delay: 0.06 },
+      { freq: 1600, dur: 0.02, delay: 0.1 },
+      { freq: 1000, dur: 0.03, delay: 0.14 },
+    ], 'sawtooth', 0.05);
+  }
+
+  /** Grass: a soft upward sweep, like leaves brushing past. */
+  leafSweep(): void {
+    this.playNotes([
+      { freq: 300, dur: 0.05, delay: 0 },
+      { freq: 420, dur: 0.05, delay: 0.04 },
+      { freq: 560, dur: 0.05, delay: 0.08 },
+      { freq: 700, dur: 0.08, delay: 0.12 },
+    ], 'triangle', 0.045);
+  }
+
+  /** Ice: a thin glassy ping with a shimmering tail. */
+  glassPing(): void {
+    this.playNotes([
+      { freq: 2100, dur: 0.05, delay: 0 },
+      { freq: 2800, dur: 0.06, delay: 0.04 },
+      { freq: 3200, dur: 0.1, delay: 0.09 },
+    ], 'sine', 0.05);
+  }
+
+  /** Fighting: three hard blows in quick succession. */
+  tripleHit(): void {
+    this.playNotes([
+      { freq: 260, dur: 0.04, delay: 0 },
+      { freq: 220, dur: 0.04, delay: 0.07 },
+      { freq: 160, dur: 0.08, delay: 0.14 },
+    ], 'square', 0.09);
+  }
+
+  /** Poison: a wet bubble pop. */
+  bubblePop(): void {
+    this.playNotes([
+      { freq: 180, dur: 0.04, delay: 0 },
+      { freq: 520, dur: 0.03, delay: 0.05 },
+      { freq: 300, dur: 0.04, delay: 0.09 },
+    ], 'sine', 0.07);
+  }
+
+  /** Ground: a low sustained rumble. */
+  rumble(): void {
+    this.playNotes([
+      { freq: 70, dur: 0.25, delay: 0 },
+      { freq: 55, dur: 0.25, delay: 0.08 },
+      { freq: 90, dur: 0.15, delay: 0.16 },
+    ], 'sawtooth', 0.09);
+  }
+
+  /** Rock: a single heavy thud. */
+  thud(): void {
+    this.playNotes([
+      { freq: 140, dur: 0.06, delay: 0 },
+      { freq: 80, dur: 0.12, delay: 0.05 },
+    ], 'square', 0.1);
+  }
+
+  /** Bug: a fast high chitter. */
+  chitter(): void {
+    this.playNotes([
+      { freq: 1800, dur: 0.02, delay: 0 },
+      { freq: 1500, dur: 0.02, delay: 0.03 },
+      { freq: 1900, dur: 0.02, delay: 0.06 },
+      { freq: 1600, dur: 0.02, delay: 0.09 },
+      { freq: 2000, dur: 0.03, delay: 0.12 },
+    ], 'square', 0.04);
+  }
+
+  /** Ghost: a detuned falling wail. */
+  wail(): void {
+    this.playNotes([
+      { freq: 420, dur: 0.12, delay: 0 },
+      { freq: 396, dur: 0.12, delay: 0.02 },
+      { freq: 300, dur: 0.14, delay: 0.12 },
+      { freq: 284, dur: 0.14, delay: 0.14 },
+      { freq: 210, dur: 0.2, delay: 0.26 },
+    ], 'triangle', 0.05);
+  }
+
+  /** Psychic: a warbling two-tone beat. */
+  warble(): void {
+    this.playNotes([
+      { freq: 880, dur: 0.05, delay: 0 },
+      { freq: 660, dur: 0.05, delay: 0.05 },
+      { freq: 880, dur: 0.05, delay: 0.1 },
+      { freq: 660, dur: 0.05, delay: 0.15 },
+      { freq: 1100, dur: 0.08, delay: 0.2 },
+    ], 'sine', 0.06);
+  }
+
+  /** Dragon: a low guttural roar. */
+  roar(): void {
+    this.playNotes([
+      { freq: 110, dur: 0.15, delay: 0 },
+      { freq: 90, dur: 0.15, delay: 0.1 },
+      { freq: 130, dur: 0.2, delay: 0.2 },
+    ], 'sawtooth', 0.1);
+    this.playNotes([
+      { freq: 55, dur: 0.4, delay: 0 },
+    ], 'square', 0.06);
+  }
 }
 
 // Global sound instance
