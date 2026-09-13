@@ -1,6 +1,4 @@
 // Barrel file - imports all batch animation registrations
-import './batch01_normal_contact';
-import './batch02_multihit';
 import './batch03_fire';
 import './batch04_water';
 import './batch05_electric';
