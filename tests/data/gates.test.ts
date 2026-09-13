@@ -10,7 +10,7 @@ const gatedMaps = Object.values(ALL_MAPS).filter(m => (m.gates?.length ?? 0) > 0
   m.tiles.some(row => row.some(t => t === TileType.SWITCH_PLATE || t === TileType.GATE)));
 
 describe('switch plates and gates', () => {
-  it('every gate entry sits on a GATE tile wired to a SWITCH_PLATE, and every such tile is wired', () => {
+  it('every gate entry sits on a GATE tile and is opened by exactly one of a SWITCH_PLATE or a flag; every such tile is wired', () => {
     for (const map of Object.values(ALL_MAPS)) {
       const gateTiles = new Set<string>();
       const plateTiles = new Set<string>();
@@ -20,18 +20,38 @@ describe('switch plates and gates', () => {
       }));
       const wiredGates = new Set<string>();
       const wiredPlates = new Set<string>();
+      let plateGates = 0;
       for (const g of map.gates ?? []) {
         expect(map.tiles[g.y]?.[g.x], `${map.id}: gate ${g.x},${g.y} is not a GATE tile`).toBe(TileType.GATE);
         expect(map.collision[g.y][g.x], `${map.id}: gate ${g.x},${g.y} must be solid in the base data`).toBe(true);
-        expect(map.tiles[g.switch.y]?.[g.switch.x], `${map.id}: switch ${g.switch.x},${g.switch.y} is not a SWITCH_PLATE`).toBe(TileType.SWITCH_PLATE);
-        expect(map.collision[g.switch.y][g.switch.x], `${map.id}: plate ${g.switch.x},${g.switch.y} must be walkable`).toBe(false);
+        expect(!!g.switch !== !!g.flag, `${map.id}: gate ${g.x},${g.y} needs exactly one of switch / flag`).toBe(true);
         wiredGates.add(`${g.x},${g.y}`);
-        wiredPlates.add(`${g.switch.x},${g.switch.y}`);
+        if (g.switch) {
+          plateGates++;
+          expect(map.tiles[g.switch.y]?.[g.switch.x], `${map.id}: switch ${g.switch.x},${g.switch.y} is not a SWITCH_PLATE`).toBe(TileType.SWITCH_PLATE);
+          expect(map.collision[g.switch.y][g.switch.x], `${map.id}: plate ${g.switch.x},${g.switch.y} must be walkable`).toBe(false);
+          wiredPlates.add(`${g.switch.x},${g.switch.y}`);
+        } else {
+          expect(g.closedWhenSet === undefined || typeof g.closedWhenSet === 'boolean', `${map.id}: gate ${g.x},${g.y} closedWhenSet`).toBe(true);
+        }
       }
       expect([...gateTiles].sort(), `${map.id}: GATE tiles without a gates[] entry`).toEqual([...wiredGates].sort());
       expect([...plateTiles].sort(), `${map.id}: SWITCH_PLATE tiles no gate is wired to`).toEqual([...wiredPlates].sort());
-      if (map.gates?.length) {
-        expect(map.tiles.flat().filter(t => t === TileType.BOULDER).length, `${map.id}: gates but no boulder to press a plate`).toBeGreaterThan(0);
+      if (plateGates > 0) {
+        expect(map.tiles.flat().filter(t => t === TileType.BOULDER).length, `${map.id}: plate gates but no boulder to press a plate`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('every flag gate has a statue switch on the same map, and every statue switch drives a gate there', () => {
+    for (const map of Object.values(ALL_MAPS)) {
+      const gateFlags = new Set((map.gates ?? []).flatMap(g => (g.flag ? [g.flag] : [])));
+      const statueFlags = new Set(map.npcs.flatMap(n => (n.toggleFlag ? [n.toggleFlag] : [])));
+      expect([...gateFlags].sort(), `${map.id}: flag gates and statue switches (toggleFlag) do not match`).toEqual([...statueFlags].sort());
+      for (const n of map.npcs) {
+        if (!n.toggleFlag) continue;
+        expect(n.isTrainer, `${map.id}/${n.id}: a statue switch cannot be a trainer`).toBeFalsy();
+        expect(n.isItemBall, `${map.id}/${n.id}: a statue switch cannot be an item ball`).toBeFalsy();
       }
     }
   });

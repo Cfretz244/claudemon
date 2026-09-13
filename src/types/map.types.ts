@@ -44,6 +44,8 @@ export enum TileType {
   BOULDER_HOLE = 37,
   /** Water that carries a surfing player in the direction given by `MapData.currents`. */
   CURRENT = 38,
+  /** Walkable floor that fully heals the party when stepped on (Pokemon Tower 5F). */
+  HEAL_TILE = 39,
 }
 
 export interface WarpPoint {
@@ -54,11 +56,19 @@ export interface WarpPoint {
   targetY: number;
 }
 
-/** A gate tile and the switch plate that opens it. Several gates may share a plate. */
+/**
+ * A gate tile and what opens it: either a switch plate (a boulder resting on
+ * it opens the gate; several gates may share a plate) or a story flag (a
+ * statue switch NPC with `toggleFlag` flips it; `closedWhenSet` inverts the
+ * sense so one switch opens one set of gates and closes another). Exactly one
+ * of `switch` / `flag` must be given.
+ */
 export interface GateData {
   x: number;
   y: number;
-  switch: { x: number; y: number };
+  switch?: { x: number; y: number };
+  flag?: string;
+  closedWhenSet?: boolean;
 }
 
 /**
@@ -117,6 +127,11 @@ export interface NPCData {
   movementPattern?: 'stationary' | 'wander' | 'patrol';
   sightRange?: number;
   shopStock?: string[];
+  /**
+   * A statue switch: interacting flips this story flag and re-applies every
+   * gate on the map wired to it (see `GateData.flag`), then shows `dialogue`.
+   */
+  toggleFlag?: string;
   isItemBall?: boolean;
   itemId?: string;
   /**
