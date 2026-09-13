@@ -2501,6 +2501,7 @@ const MAP_MUSIC: Record<string, string> = {
   rock_tunnel: 'cave',
   rock_tunnel_b1f: 'cave',
   digletts_cave: 'cave',
+  digletts_cave_b1f: 'cave',
   seafoam_1f: 'cave',
   seafoam_b1f: 'cave',
   seafoam_b2f: 'cave',
