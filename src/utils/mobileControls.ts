@@ -172,7 +172,9 @@ const MOBILE_CSS = `
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
+
 
 /* D-pad container */
 .dpad-container {
@@ -188,6 +190,7 @@ const MOBILE_CSS = `
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 /* Action buttons */
@@ -292,6 +295,41 @@ body.mobile-active #game-container {
 
 body.mobile-active #game-container canvas {
   max-height: 100%;
+}
+
+/* Narrow phones (iPhone SE/mini and small Androids, 400px and below): the
+   d-pad + START/music + A/B row is wider than the viewport at the 16px
+   padding, which is enough for iOS Safari to widen the layout viewport and
+   zoom the whole page out. Every group has flex-shrink: 0, so the row has to
+   be made to genuinely FIT - shrinking a group's box without shrinking the
+   buttons inside it just makes them spill over the next group (B covered the
+   music button that way). The d-pad and A/B keep their full touch targets;
+   the slack comes out of START/music, the smallest targets and the least
+   used. NB: this block must stay at the END of MOBILE_CSS - it has the same
+   specificity as the base .btn-start/.btn-music rules, so source order is
+   what makes it win. */
+@media (max-width: 400px) {
+  #mobile-controls {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  #mobile-controls.visible {
+    gap: 6px;
+  }
+
+  .center-buttons {
+    gap: 6px;
+  }
+
+  .btn-start, .btn-music {
+    padding: 8px 8px;
+    letter-spacing: 0;
+  }
+
+  .action-buttons {
+    gap: 8px;
+  }
 }
 `;
 
