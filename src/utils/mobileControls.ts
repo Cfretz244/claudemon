@@ -172,6 +172,17 @@ const MOBILE_CSS = `
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+/* Narrow phones (iPhone SE/mini, 375px and below): the d-pad + START/music +
+   A/B row is 2px wider than the viewport at the 16px padding, which is enough
+   for iOS Safari to widen the layout viewport and zoom the whole page out. */
+@media (max-width: 380px) {
+  #mobile-controls {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
 }
 
 /* D-pad container */
@@ -183,11 +194,13 @@ const MOBILE_CSS = `
   flex-shrink: 0;
 }
 
-/* Center buttons */
+/* Center buttons - the only group allowed to give up space when the row is
+   tight, so the d-pad and A/B keep their touch targets. */
 .center-buttons {
   display: flex;
   gap: 12px;
   align-items: center;
+  min-width: 0;
 }
 
 /* Action buttons */
