@@ -1378,6 +1378,7 @@ export class BattleScene extends Phaser.Scene {
         saveData: this.playerState.toSave(),
         isSurfing: this.isSurfing,
         isRidingBike: this.isRidingBike,
+        keepMapState: true,
         flashUsed: this.flashUsed,
       });
     });

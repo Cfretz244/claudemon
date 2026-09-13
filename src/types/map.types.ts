@@ -36,6 +36,10 @@ export enum TileType {
   SHUTTLE_DISPLAY = 32,
   MUSEUM_PLAQUE = 33,
   TOMBSTONE = 34,
+  /** Pressure plate: a boulder resting on it opens the gates wired to it. */
+  SWITCH_PLATE = 35,
+  /** Solid until its switch plate is pressed; see `MapData.gates`. */
+  GATE = 36,
 }
 
 export interface WarpPoint {
@@ -44,6 +48,13 @@ export interface WarpPoint {
   targetMap: string;
   targetX: number;
   targetY: number;
+}
+
+/** A gate tile and the switch plate that opens it. Several gates may share a plate. */
+export interface GateData {
+  x: number;
+  y: number;
+  switch: { x: number; y: number };
 }
 
 /**
@@ -108,6 +119,10 @@ export interface MapData {
   spinTiles?: Record<string, Direction>;
   /** Conditions for entering this map by warp; see `src/logic/warpGate.ts`. */
   entryGates?: EntryGate[];
+  /** Gate tiles and the switch plates that open them; see `src/logic/boulders.ts`. */
+  gates?: GateData[];
+  /** Tile revealed under a moved boulder or an opened gate (default CAVE_FLOOR). */
+  floorTile?: TileType;
 }
 
 export interface WildEncounterTable {
