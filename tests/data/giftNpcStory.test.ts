@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { GIFT_NPCS, GiftNpcResult } from '../../src/data/giftNpcs';
 import { PlayerState } from '../../src/entities/Player';
+import { ALL_MAPS } from '../../src/data/maps';
+import { mockPokemon } from '../helpers/pokemon.factory';
 
 /**
  * Pins the story behavior of every declarative gift NPC: which condition
@@ -145,5 +147,96 @@ describe('gift NPC story pins', () => {
     gift.onComplete!(state);
     expect(state.storyFlags['got_squirtle']).toBe(true);
     expect(isGift(GIFT_NPCS['vermilion_officer_jenny'].resolve(state))).toBe(false);
+  });
+  it('museum clerk charges exactly $50, and only with the money in hand', () => {
+    const broke = new PlayerState();
+    broke.money = 49;
+    const refused = claim('museum_ticket_clerk', broke);
+    expect(isGift(refused)).toBe(false);
+    expect(refused.dialogue.join(' ')).toContain("don't have enough");
+    expect(broke.money).toBe(49);
+
+    const state = new PlayerState();
+    state.money = 50;
+    const gift = claim('museum_ticket_clerk', state);
+    gift.onComplete!(state);
+    expect(state.money).toBe(0);
+    expect(state.storyFlags['museum_2f_ticket']).toBe(true);
+
+    // Paying twice is impossible, and the clerk stops charging.
+    const after = claim('museum_ticket_clerk', state);
+    expect(isGift(after)).toBe(false);
+    expect(after.dialogue.join(' ')).toContain('enjoy');
+    expect(state.money).toBe(0);
+  });
+
+  it('the flag the clerk sets is the one the museum 2F entry gate reads', () => {
+    const gate = ALL_MAPS['pewter_museum_2f'].entryGates![0];
+    const state = new PlayerState();
+    state.money = 50;
+    claim('museum_ticket_clerk', state).onComplete!(state);
+    expect(gate.requires.flag).toBeDefined();
+    expect(state.storyFlags[gate.requires.flag!]).toBe(true);
+  });
+
+  it('Cerulean girl gives Bulbasaur only to a Pikachu at happiness 150+', () => {
+    // No Pikachu at all.
+    const none = new PlayerState();
+    expect(isGift(GIFT_NPCS['cerulean_bulbasaur_girl'].resolve(none))).toBe(false);
+
+    // A default-happiness Pikachu (70) is not enough, nor is one point short.
+    const fresh = new PlayerState();
+    fresh.addToParty(mockPokemon({ speciesId: 25 }));
+    expect(isGift(GIFT_NPCS['cerulean_bulbasaur_girl'].resolve(fresh))).toBe(false);
+    const almost = new PlayerState();
+    almost.addToParty(mockPokemon({ speciesId: 25, happiness: 149 }));
+    const refused = claim('cerulean_bulbasaur_girl', almost);
+    expect(isGift(refused)).toBe(false);
+    expect(refused.dialogue.join(' ')).toContain('PIKACHU');
+
+    // Happiness on a non-Pikachu does not count.
+    const wrongSpecies = new PlayerState();
+    wrongSpecies.addToParty(mockPokemon({ speciesId: 133, happiness: 255 }));
+    expect(isGift(GIFT_NPCS['cerulean_bulbasaur_girl'].resolve(wrongSpecies))).toBe(false);
+
+    const state = new PlayerState();
+    state.addToParty(mockPokemon({ speciesId: 25, happiness: 150 }));
+    const gift = claim('cerulean_bulbasaur_girl', state);
+    expect(gift.grantsPokemon).toEqual({ speciesId: 1, level: 10, cryPitch: 600 });
+    gift.onComplete!(state);
+    expect(state.storyFlags['got_bulbasaur']).toBe(true);
+    // Still a happy Pikachu, but the gift is spent.
+    expect(isGift(GIFT_NPCS['cerulean_bulbasaur_girl'].resolve(state))).toBe(false);
+  });
+
+  it('Silph employee stays silent until the rival on 7F is beaten, then gives Lapras once', () => {
+    const state = new PlayerState();
+    // Falls through to the NPC's own map dialogue before the rival fight.
+    expect(GIFT_NPCS['silph_lapras_employee'].resolve(state)).toBeNull();
+    // Beating a different rival elsewhere is not enough.
+    state.defeatedTrainers.push('rival_ss_anne');
+    expect(GIFT_NPCS['silph_lapras_employee'].resolve(state)).toBeNull();
+
+    state.defeatedTrainers.push('rival_silph');
+    const gift = claim('silph_lapras_employee', state);
+    expect(gift.grantsPokemon).toEqual({ speciesId: 131, level: 15, cryPitch: 400 });
+    gift.onComplete!(state);
+    expect(state.storyFlags['got_lapras']).toBe(true);
+    const after = claim('silph_lapras_employee', state);
+    expect(isGift(after)).toBe(false);
+    expect(after.dialogue.join(' ')).toContain('LAPRAS');
+  });
+
+  it('every gift NPC has an individual pin in this file', () => {
+    // Mirrors the cases above; a new GIFT_NPCS entry must be pinned here too.
+    const PINNED = [
+      'bike_shop_owner', 'bill', 'celadon_tea_lady', 'cerulean_bulbasaur_girl',
+      'fan_club_chairman', 'fishing_guru_fuchsia', 'fishing_guru_route12',
+      'fishing_guru_vermilion', 'mr_fuji', 'museum_ticket_clerk', 'oaks_aide_route2',
+      'route16_fly_girl', 'route24_charmander_guy', 'safari_secret_house',
+      'safari_warden', 'silph_lapras_employee', 'silph_president', 'ss_anne_captain',
+      'vermilion_officer_jenny',
+    ];
+    expect(Object.keys(GIFT_NPCS).sort()).toEqual(PINNED);
   });
 });
