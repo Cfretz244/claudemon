@@ -44,6 +44,8 @@ import {
 } from '../logic/roadBlocks';
 import { elevatorAccess, elevatorTarget, visitedFlag } from '../logic/elevator';
 import { computeCurrentSlide, computeSlide, Slide } from '../logic/spinTiles';
+import { snorlaxEncounter, marowakAmbush } from '../logic/forcedEncounters';
+import { isPosterSign, posterOutcome } from '../logic/gameCornerPoster';
 import { computeTrainerSight } from '../logic/trainerSight';
 import { pickWildEncounter, getEncounterTheme, rollsEncounterOn, encounterTableOf, itemBallAction } from '../logic/encounters';
 import { SurgePuzzle } from '../logic/surgePuzzle';
@@ -938,14 +940,14 @@ export class OverworldScene extends Phaser.Scene {
       }
     }
 
-    // Pokemon Tower 7F: the SILPH SCOPE (gate) reveals the ghost on the 6F stairs as Marowak
-    if (mapId === 'pokemon_tower_7f' && !this.playerState.storyFlags['marowak_ghost_defeated']) {
-      this.playerState.storyFlags['marowak_ghost_defeated'] = true;
-      this.textBox.show([
-        "The SILPH SCOPE\nreveals the GHOST's\ntrue identity!",
-        "It's the restless\nspirit of MAROWAK!",
-      ], () => {
-        this.startWildBattle(createPokemon(105, 30));
+    // Pokemon Tower 7F: the SILPH SCOPE (gate) reveals the ghost on the 6F stairs
+    // as Marowak, once. See src/logic/forcedEncounters.ts; the flag is written
+    // here, before the messages ('on_trigger'), and swallows the warp.
+    const ghost = marowakAmbush(mapId, this.playerState);
+    if (ghost.outcome === 'battle') {
+      this.playerState.storyFlags[ghost.flag!] = true;
+      this.textBox.show(ghost.messages, () => {
+        this.startWildBattle(createPokemon(ghost.battle!.speciesId, ghost.battle!.level));
       });
       return;
     }
@@ -1875,29 +1877,22 @@ export class OverworldScene extends Phaser.Scene {
     return true;
   }
 
-  /** Sleeping Snorlax: wake with the Poke Flute for a wild battle. */
+  /**
+   * Sleeping Snorlax: wake with the POKe FLUTE for a Lv30 wild battle. Which
+   * script runs, and the `<id>_cleared` flag, come from
+   * src/logic/forcedEncounters.ts; the flag is written as the battle launches
+   * ('on_battle_start'), like the static legendaries.
+   */
   private handleSnorlax(npc: NPCData): boolean {
-    if (this.playerState.hasItem('poke_flute')) {
-      this.textBox.show(
-        [
-          `${this.playerState.name} used the\nPOKe FLUTE!`,
-          "SNORLAX woke up!\nIt looks angry!",
-        ],
-        () => {
-          // Start wild Snorlax battle (level 30)
-          this.startWildBattle(createPokemon(143, 30));
-          // Set flag to remove Snorlax after battle
-          this.playerState.storyFlags[`${npc.id}_cleared`] = true;
-        }
-      );
-      return true;
+    const decision = snorlaxEncounter(npc.id, this.playerState);
+    if (decision.outcome === 'battle') {
+      this.textBox.show(decision.messages, () => {
+        this.startWildBattle(createPokemon(decision.battle!.speciesId, decision.battle!.level));
+        this.playerState.storyFlags[decision.flag!] = true;
+      });
+    } else {
+      this.textBox.show(decision.messages);
     }
-    this.textBox.show([
-      "A huge POKeMON is\nblocking the path!",
-      "It's sleeping soundly...",
-      "Zzz... Zzz...",
-      "Maybe a melody could\nwake it up?",
-    ]);
     return true;
   }
 
@@ -2026,19 +2021,16 @@ export class OverworldScene extends Phaser.Scene {
     // Look up sign text from the registry based on map + position
     const signKey = `${this.currentMap.id}:${x},${y}`;
 
-    // Game Corner poster puzzle
-    if (signKey === 'game_corner:11,2') {
-      if (this.playerState.storyFlags['game_corner_poster_found']) {
-        this.textBox.show(['The hidden stairs\nlead underground...']);
-      } else if (this.playerState.defeatedTrainers.includes('game_corner_poster_rocket')) {
-        this.textBox.show(
-          ['There\'s a switch\nbehind the poster!', 'A hidden staircase\nappeared!'],
-          () => {
-            this.playerState.storyFlags['game_corner_poster_found'] = true;
-          }
-        );
+    // Game Corner poster puzzle: the hidden switch that opens the Rocket
+    // Hideout stairs. See src/logic/gameCornerPoster.ts.
+    if (isPosterSign(signKey)) {
+      const poster = posterOutcome(this.playerState);
+      if (poster.setsFlag) {
+        this.textBox.show(poster.messages, () => {
+          this.playerState.storyFlags[poster.setsFlag!] = true;
+        });
       } else {
-        this.textBox.show(['A poster for a GAME\nCORNER tournament...']);
+        this.textBox.show(poster.messages);
       }
       return;
     }

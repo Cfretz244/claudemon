@@ -101,6 +101,8 @@ src/
     encounters.ts                   # Weighted wild-encounter pick + encounter music theme
     surgePuzzle.ts                  # Lt. Surge trash-can switch puzzle state machine
     storyFlagSync.ts                # Derived story flags/catch-up grants from defeated trainers
+    forcedEncounters.ts             # Snorlax (POKe FLUTE) + Marowak ghost one-off wild battles
+    gameCornerPoster.ts             # Game Corner poster switch -> game_corner_poster_found
     saveMigration.ts                # Legacy map-id remaps for old saves
     cutTrees.ts                     # cut_<map>_<x>_<y> flag parsing
     fieldMoves.ts                   # canUseFieldMove(): HM badge/party-move gates + messages
