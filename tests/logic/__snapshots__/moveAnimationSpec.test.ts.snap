@@ -20,7 +20,7 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
  17 WING ATTACK    FLYING   contact        light dash    whoosh    240 #8899FF -
  18 WHIRLWIND      NORMAL   status-cloud   light dust    hit       340 #A8A878 -
  19 FLY            FLYING   charge         mid   dash    whoosh    1000 #8899FF fly
- 20 BIND           NORMAL   bind           light dust    hit       460 #A8A878 bind
+ 20 BIND           NORMAL   bind           light dust    hit       900 #A8A878 bind
  21 SLAM           NORMAL   contact        mid   dust    hit       300 #A8A878 -
  22 VINE WHIP      GRASS    contact        light leaf    sweep     240 #44BB44 -
  23 STOMP          NORMAL   contact        mid   dust    hit       300 #A8A878 -
@@ -35,19 +35,19 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
  32 HORN DRILL     NORMAL   special-strike light dust    hit       460 #A8A878 -
  33 TACKLE         NORMAL   contact        light dust    hit       240 #A8A878 -
  34 BODY SLAM      NORMAL   contact        mid   dust    hit       300 #A8A878 -
- 35 WRAP           NORMAL   bind           light dust    hit       460 #A8A878 wrap
+ 35 WRAP           NORMAL   bind           light dust    hit       1000 #A8A878 wrap
  36 TAKE DOWN      NORMAL   contact        heavy dust    hit       360 #A8A878 -
  37 THRASH         NORMAL   contact        heavy dust    hit       360 #A8A878 -
  38 DOUBLE-EDGE    NORMAL   contact        heavy dust    hit       360 #A8A878 -
- 39 TAIL WHIP      NORMAL   status-cloud   light dust    hit       340 #A8A878 tailWhip
+ 39 TAIL WHIP      NORMAL   status-cloud   light dust    hit       800 #A8A878 tailWhip
  40 POISON STING   POISON   contact        light bubble  bubblePop 240 #AA5599 -
  41 TWINEEDLE      BUG      barrage        light dart    chitter   380 #AABB22 -
  42 PIN MISSILE    BUG      barrage        light dart    chitter   380 #AABB22 -
  43 LEER           NORMAL   status-cloud   light dust    hit       340 #A8A878 -
  44 BITE           NORMAL   contact        mid   dust    hit       300 #A8A878 -
- 45 GROWL          NORMAL   status-cloud   light dust    hit       340 #A8A878 growl
+ 45 GROWL          NORMAL   status-cloud   light dust    hit       800 #A8A878 growl
  46 ROAR           NORMAL   status-cloud   light dust    hit       340 #A8A878 -
- 47 SING           NORMAL   status-cloud   light dust    hit       340 #A8A878 sing
+ 47 SING           NORMAL   status-cloud   light dust    hit       900 #A8A878 sing
  48 DISABLE        NORMAL   status-cloud   light dust    hit       340 #A8A878 -
  49 SONIC BOOM     NORMAL   special-strike light dust    hit       460 #A8A878 -
  50 SUPERSONIC     NORMAL   status-cloud   light dust    hit       340 #A8A878 -
@@ -73,32 +73,32 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
  70 STRENGTH       NORMAL   contact        mid   dust    hit       300 #A8A878 -
  71 ABSORB         GRASS    drain          light leaf    sweep     480 #44BB44 -
  72 MEGA DRAIN     GRASS    drain          light leaf    sweep     480 #44BB44 -
- 73 LEECH SEED     GRASS    status-cloud   light leaf    sweep     340 #44BB44 leechSeed
+ 73 LEECH SEED     GRASS    status-cloud   light leaf    sweep     1050 #44BB44 leechSeed
  74 GROWTH         NORMAL   self-aura      light dust    hit       320 #A8A878 -
  75 RAZOR LEAF     GRASS    projectile     mid   leaf    sweep     380 #44BB44 -
  76 SOLAR BEAM     GRASS    charge         heavy leaf    sweep     1100 #44BB44 solarBeam
  77 POISON POWDER  POISON   status-cloud   light bubble  bubblePop 340 #AA5599 -
  78 STUN SPORE     GRASS    status-cloud   light leaf    sweep     340 #44BB44 -
- 79 SLEEP POWDER   GRASS    status-cloud   light leaf    sweep     340 #44BB44 sleepPowder
+ 79 SLEEP POWDER   GRASS    status-cloud   light leaf    sweep     950 #44BB44 sleepPowder
  80 PETAL DANCE    GRASS    projectile     mid   leaf    sweep     380 #44BB44 -
  81 STRING SHOT    BUG      status-cloud   light dart    chitter   340 #AABB22 -
  82 DRAGON RAGE    DRAGON   special-strike light trail   roar      460 #7766EE -
  83 FIRE SPIN      FIRE     bind           light mote    crackle   460 #FF4422 -
  84 THUNDER SHOCK  ELECTRIC beam           light bolt    zap       400 #FFCC00 -
  85 THUNDERBOLT    ELECTRIC beam           heavy bolt    zap       1100 #FFCC00 thunderbolt
- 86 THUNDER WAVE   ELECTRIC status-cloud   light bolt    zap       340 #FFCC00 thunderWave
+ 86 THUNDER WAVE   ELECTRIC status-cloud   light bolt    zap       900 #FFCC00 thunderWave
  87 THUNDER        ELECTRIC beam           heavy bolt    zap       1000 #FFCC00 thunder
  88 ROCK THROW     ROCK     projectile     mid   block   thud      380 #BBAA66 -
  89 EARTHQUAKE     GROUND   contact        heavy grit    rumble    1100 #DDBB55 earthquake
  90 FISSURE        GROUND   special-strike light grit    rumble    460 #DDBB55 -
  91 DIG            GROUND   charge         heavy grit    rumble    1000 #DDBB55 dig
- 92 TOXIC          POISON   status-cloud   light bubble  bubblePop 340 #AA5599 toxic
+ 92 TOXIC          POISON   status-cloud   light bubble  bubblePop 1000 #AA5599 toxic
  93 CONFUSION      PSYCHIC  beam           mid   ring    warble    460 #FF5599 -
  94 PSYCHIC        PSYCHIC  beam           heavy ring    warble    1000 #FF5599 psychic
  95 HYPNOSIS       PSYCHIC  status-cloud   light ring    warble    340 #FF5599 -
  96 MEDITATE       PSYCHIC  self-aura      light ring    warble    320 #FF5599 -
  97 AGILITY        PSYCHIC  self-aura      light ring    warble    320 #FF5599 -
- 98 QUICK ATTACK   NORMAL   contact        light dust    hit       240 #A8A878 quickAttack
+ 98 QUICK ATTACK   NORMAL   contact        light dust    hit       300 #A8A878 quickAttack
  99 RAGE           NORMAL   contact        light dust    hit       240 #A8A878 -
 100 TELEPORT       PSYCHIC  self-aura      light ring    warble    320 #FF5599 -
 101 NIGHT SHADE    GHOST    special-strike light wisp    wail      1100 #6666BB nightShade
@@ -129,7 +129,7 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
 126 FIRE BLAST     FIRE     projectile     heavy mote    crackle   1100 #FF4422 fireBlast
 127 WATERFALL      WATER    contact        mid   droplet splash    300 #3399FF -
 128 CLAMP          WATER    bind           light droplet splash    460 #3399FF -
-129 SWIFT          NORMAL   contact        mid   dust    hit       300 #A8A878 swift
+129 SWIFT          NORMAL   contact        mid   dust    hit       900 #A8A878 swift
 130 SKULL BASH     NORMAL   charge         heavy dust    hit       740 #A8A878 -
 131 SPIKE CANNON   NORMAL   barrage        light dust    hit       380 #A8A878 -
 132 CONSTRICT      NORMAL   contact        light dust    hit       240 #A8A878 -
