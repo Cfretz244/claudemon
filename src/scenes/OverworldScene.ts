@@ -52,7 +52,7 @@ import { SurgePuzzle } from '../logic/surgePuzzle';
 import { syncDerivedStoryFlags } from '../logic/storyFlagSync';
 import { migrateLegacyLocation } from '../logic/saveMigration';
 import { getCutTiles } from '../logic/cutTrees';
-import { canUseFieldMove, partyKnowsMove, FIELD_MOVE_MESSAGES } from '../logic/fieldMoves';
+import { canUseFieldMove, partyKnowsMove, FIELD_MOVE_MESSAGES, isMapOutdoor, isMapCave } from '../logic/fieldMoves';
 import { getAvailableFlyDestinations } from '../data/flyDestinations';
 import { GIFT_NPCS, GiftNpcResult } from '../data/giftNpcs';
 import { SIGNS } from '../data/signs';
@@ -342,36 +342,17 @@ export class OverworldScene extends Phaser.Scene {
     });
   }
 
-  private static readonly OUTDOOR_TILES = new Set([
-    TileType.TREE, TileType.GRASS, TileType.TALL_GRASS,
-    TileType.WATER, TileType.SAND, TileType.FLOWER,
-    TileType.BUILDING, TileType.FENCE, TileType.ROOF,
-  ]);
-
+  // The outdoor/cave tests are pure and unit-pinned in logic/fieldMoves.ts.
   private isMapOutdoor(map: { width: number; height: number; tiles: number[][] }): boolean {
-    // Check top and bottom edges for outdoor tile types
-    for (const y of [0, map.height - 1]) {
-      for (let x = 0; x < map.width; x++) {
-        if (OverworldScene.OUTDOOR_TILES.has(map.tiles[y][x])) return true;
-      }
-    }
-    return false;
+    return isMapOutdoor(map);
   }
 
   private isOutdoorMap(): boolean {
-    return this.isMapOutdoor(this.currentMap);
+    return isMapOutdoor(this.currentMap);
   }
 
   private isCaveMap(): boolean {
-    const map = this.currentMap;
-    for (let y = 0; y < map.height; y++) {
-      for (let x = 0; x < map.width; x++) {
-        if (map.tiles[y][x] === TileType.CAVE_FLOOR || map.tiles[y][x] === TileType.CAVE_WALL) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return isMapCave(this.currentMap);
   }
 
   private getTileKey(tileType: number): string {
@@ -2330,7 +2311,10 @@ export class OverworldScene extends Phaser.Scene {
         break;
       }
       case 19: { // FLY
-        const decision = canUseFieldMove('fly', this.playerState);
+        const decision = canUseFieldMove('fly', this.playerState, {
+          isOutdoor: this.isOutdoorMap(),
+          isCave: this.isCaveMap(),
+        });
         if (decision.outcome !== 'ok') {
           this.textBox.show(decision.message);
         } else {
