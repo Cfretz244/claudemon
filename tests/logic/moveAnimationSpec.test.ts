@@ -302,6 +302,31 @@ describe('moveAnimationSpec — overrides (tier 3)', () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
+  it('every self-target set-piece has its own budget, under the cap, and SPLASH stays a joke', () => {
+    // The eight of PR 4d. All eight used to resolve to the SAME 320 ms
+    // `self-aura` body, so the budget is the first thing that tells them
+    // apart - and RECOVER (105) is the one that still renders it.
+    const SELF: [number, string][] = [
+      [144, 'transform'], [164, 'substitute'], [156, 'rest'], [104, 'doubleTeam'],
+      [107, 'minimize'], [113, 'lightScreen'], [14, 'swordsDance'], [150, 'splash'],
+    ];
+    const generic = resolveAnimation(105);
+    expect(generic.override).toBeUndefined();
+    expect(generic.motion).toBe('self-aura');
+    for (const [id, key] of SELF) {
+      const spec = resolveAnimation(id);
+      expect(spec.override, `move ${id}`).toBe(key);
+      expect(OVERRIDE_DURATION[key], `OVERRIDE_DURATION.${key}`).toBeGreaterThan(0);
+      expect(spec.duration, `move ${id}`)
+        .toBe(Math.min(MAX_OVERRIDE_DURATION_MS, OVERRIDE_DURATION[key]));
+      expect(spec.duration, `move ${id} vs the cap`).toBeLessThanOrEqual(MAX_OVERRIDE_DURATION_MS);
+      expect(spec.duration, `move ${id} vs RECOVER`).toBeGreaterThan(generic.duration);
+    }
+    // SPLASH is the deliberate exception: it has to stay short enough to
+    // still read as a joke, so its ceiling is tighter than everyone else's.
+    expect(resolveAnimation(150).duration).toBeLessThanOrEqual(700);
+  });
+
   it('moves without an override leave the field undefined', () => {
     for (const id of ALL_IDS) {
       if (!MOVE_OVERRIDES[id]) expect(resolveAnimation(id).override).toBeUndefined();

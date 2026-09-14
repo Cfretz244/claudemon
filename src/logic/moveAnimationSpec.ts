@@ -311,6 +311,32 @@ export const MAX_OVERRIDE_DURATION_MS = 1200;
  *
  * tailWhip: the attacker rocks twice, which is a full left-right-left, and the
  * defender's flinch has to land after the second swipe.
+ *
+ * transform: four beats that only work in order - the white/blue wrap, the
+ * collapse to a blob, the stretch into the defender's silhouette, and the fade
+ * from the flat white silhouette to the defender's real colours.
+ *
+ * substitute: the attacker has to flash, slide back and only THEN can the
+ * smoke clear onto a doll, which has to stand there long enough to be seen.
+ *
+ * rest: deliberately the calmest thing in the battle - the sprite sinks, three
+ * sizes of "Z" rise at three speeds, and the heal shimmer breathes rather than
+ * blinks. Rushed, it is a flinch.
+ *
+ * doubleTeam: the copies fan out, hold apart long enough to be counted, and
+ * snap back; anything faster reads as one blurred sprite.
+ *
+ * minimize: four discrete shrink steps, a puff on each, then the pop back to
+ * full size - and a step needs frames of its own or it is not a step.
+ *
+ * lightScreen: the pane rises, the glint sweeps the whole way across it, and
+ * then the pane HOLDS. The hold is what makes it a screen rather than a flash.
+ *
+ * swordsDance: the swords have to complete two accelerating orbits before the
+ * acceleration is visible at all.
+ *
+ * splash: the joke only lands if it is over quickly - three hops and nothing
+ * else, the shortest budget here except QUICK ATTACK's.
  */
 export const OVERRIDE_DURATION: Record<string, number> = {
   thunder: 1000,
@@ -339,6 +365,14 @@ export const OVERRIDE_DURATION: Record<string, number> = {
   swift: 900,
   growl: 800,
   tailWhip: 800,
+  transform: 1100,
+  substitute: 1000,
+  rest: 1000,
+  doubleTeam: 900,
+  minimize: 900,
+  lightScreen: 900,
+  swordsDance: 950,
+  splash: 600,
 };
 
 const MOTION_BASE_MS: Record<BaseMotion, number> = {

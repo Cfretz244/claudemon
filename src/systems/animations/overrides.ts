@@ -18,6 +18,7 @@ import { AnimationSpec } from '../../logic/moveAnimationSpec';
 import { soundSystem } from '../SoundSystem';
 import {
   AnimationContext,
+  afterimage,
   delay,
   directionalParticles,
   emitterAlong,
@@ -2626,3 +2627,930 @@ registerSpecOverride('quickAttack', renderQuickAttack);
 registerSpecOverride('swift', renderSwift);
 registerSpecOverride('growl', renderGrowl);
 registerSpecOverride('tailWhip', renderTailWhip);
+
+// ===========================================================================
+// Self-target set-pieces
+// (TRANSFORM / SUBSTITUTE / REST / DOUBLE TEAM / MINIMIZE / LIGHT SCREEN /
+//  SWORDS DANCE / SPLASH)
+// ===========================================================================
+//
+// All eight of these used to render as ONE generic body: `self-aura`, a ring
+// and a sparkle at the attacker. So "does MINIMIZE look like DOUBLE TEAM?" was
+// not a rhetorical question either - they were the same 320 ms of animation
+// with a different palette. tools/anim-e2e.mjs measures each of them against
+// that stripped body AND against the sibling the brief names, exactly as the
+// two earlier batches are measured.
+//
+// Three constraints shape this batch specifically:
+//   - Nothing here touches the defender. No screenFlash, no screenShake, no
+//     effect drawn past the middle of the field: the runner's SELF-DEF check
+//     asserts the defender's 41x41 bbox is UNCHANGED at 50 %, which is the
+//     cheapest possible proof that a self-target move targets the self.
+//   - The attacker has to end exactly where it started - position, scale,
+//     alpha and tint. `renderSpec` restores position/alpha/scale/tint in a
+//     `finally`, but MINIMIZE and TRANSFORM both leave scale and texture in a
+//     deliberate state, so every function here puts the sprite back by hand
+//     and the runner re-reads x/y/alpha/scaleX/scaleY afterwards.
+//   - Dark edges, again. Four of the eight want a pale palette (white, pale
+//     yellow, pale green, white-blue) and every one of those is invisible on
+//     the #f8f8f8 sky, both to the eye and to the changed-pixel count.
+
+/** TRANSFORM's morph light. The brief asks for white/blue, and white is not
+ *  merely a bad vote here - it is not VISIBLE on a #f8f8f8 sky. So the wrap is
+ *  the pale blue next to it, over a navy edge, which votes ICE: the first of
+ *  this batch's four declared off-type palettes (EXPECTED_TYPE 144 in
+ *  tools/anim-e2e.mjs). A khaki Normal glow would be the generic self-aura. */
+const MORPH = 0x66CCFF;
+const MORPH_PALE = 0xAADDFF;
+const MORPH_EDGE = 0x123A5A;
+/** The dark edge for the four Normal-typed moves here. 0x40402C (NORMAL_EDGE)
+ *  is darker and prettier but votes GRASS; 0x707060 is the darkest outline
+ *  that still votes NORMAL, which matters when the outline is a third of the
+ *  ink a move puts on the screen. */
+const NORMAL_DARK = 0x707060;
+/** SUBSTITUTE's doll: the Gen-1 figure is green over brown, so the body is the
+ *  batch tan (0xB8A878, the warmest tan that still votes NORMAL) and the base
+ *  is a deep green. The smoke is tan too, and it is the bulk of the move. */
+const DOLL_GREEN = 0x3A7A3A;
+/** REST's heal shimmer. Green is the Gen-1 heal colour and the brief's own
+ *  choice; on a Psychic move that is an off-type vote (EXPECTED_TYPE 156), but
+ *  a pink haze hanging over the attacker is precisely the generic self-aura
+ *  this override exists to replace. */
+const HEAL = 0x44BB44;
+const HEAL_DEEP = 0x2E8B2E;
+/** Multiply tint: the sleeping sprite dims without going black. */
+const REST_DARK = 0x707060;
+/** LIGHT SCREEN's pane is the brief's pale yellow. Held at alpha 0.85 over the
+ *  sky it votes ELECTRIC; at 0.75 the blend slides to GROUND, which is why the
+ *  alpha is a named constant and not a taste decision (EXPECTED_TYPE 113). */
+const PANE = 0xFFCC00;
+const PANE_ALPHA = 0.85;
+const PANE_GLINT = 0xFFEE99;
+/** SWORDS DANCE: steel bright enough to read on a pale sky (a white blade is
+ *  not there), a brown hilt, and a red aura kept to thin rings - a solid red
+ *  wash would swing the vote to FIRE on a Normal move. */
+const STEEL = 0xD8D8C0;
+const HILT = 0x8A5A2A;
+const AURA_RED = 0xCC3322;
+/** SPLASH's droplets. The joke is a Water-flavoured move that accomplishes
+ *  nothing, so the droplets are water blue and 150 is declared WATER in
+ *  EXPECTED_TYPE; khaki droplets would be dust. */
+const DROP = 0x3399FF;
+const DROP_PALE = 0x99CCFF;
+const DROP_EDGE = 0x11447A;
+
+/** A filled, dark-edged blob: edge, body, pale core. Used for smoke, puffs and
+ *  the TRANSFORM collapse - anything that has to be a shape, not a haze. */
+function blob(
+  g: Phaser.GameObjects.Graphics,
+  x: number, y: number, rx: number, ry: number,
+  edge: number, body: number, core: number,
+  alpha = 1,
+): void {
+  g.fillStyle(edge, alpha);
+  g.fillEllipse(x, y, rx * 2 + 4, ry * 2 + 4);
+  g.fillStyle(body, alpha);
+  g.fillEllipse(x, y, rx * 2, ry * 2);
+  g.fillStyle(core, alpha);
+  g.fillEllipse(x, y - ry * 0.25, rx, ry);
+}
+
+/**
+ * ID 144 TRANSFORM - the attacker stops being itself.
+ *
+ * Four beats in a fixed order: a blue wrap closing in, a collapse to a bright
+ * blob, the blob stretching into the DEFENDER's silhouette, and the silhouette
+ * fading off a sprite that is now wearing the defender's texture.
+ *
+ * On the end state, which the brief asks about: nothing in the engine swaps
+ * the texture. `BattleEngine.MoveEffect.TRANSFORM` is a message and a comment
+ * ("Simplified: message only (not full stat copy)"), and the only
+ * `setTexture` calls in `BattleScene` are send-out and switch-in. So there is
+ * no swap to fight and none to wait for - the animation performs it, on its
+ * last beat, and it persists exactly as long as the Pokemon stays out. The
+ * attacker's own frame index is kept so a back sprite stays a back sprite.
+ * `renderSpec`'s restore touches position/alpha/scale/tint and not texture, so
+ * it leaves the swap alone.
+ */
+async function renderTransform(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite, defenderSprite } = ctx;
+  const d = spec.duration; // 1100 ms via OVERRIDE_DURATION
+  const ax = attackerSprite.x;
+  const ay = attackerSprite.y;
+  const sx0 = attackerSprite.scaleX;
+  const sy0 = attackerSprite.scaleY;
+  const a0 = attackerSprite.alpha;
+  const defKey = defenderSprite.texture.key;
+  const atkFrame = attackerSprite.frame.name;
+
+  soundSystem.morph();
+
+  const g = newG(scene, 870);
+  const cage = newG(scene, 866);
+
+  // The morph cage: two heavy dark-edged rings that are on screen for the
+  // WHOLE move. Without them the middle of the animation is a small bright
+  // blob on a white sky - bold to the eye for a frame, and almost nothing to
+  // a changed-pixel count. `k` breathes them in and out with the beats.
+  const drawCage = (k: number, alpha: number): void => {
+    cage.clear();
+    if (alpha <= 0.02) return;
+    for (const [rx, ry] of [[44, 34], [30, 23]] as const) {
+      cage.lineStyle(6, MORPH_EDGE, 0.85 * alpha);
+      cage.strokeEllipse(ax, ay, rx * 2 * k, ry * 2 * k);
+      cage.lineStyle(3, MORPH, alpha);
+      cage.strokeEllipse(ax, ay, rx * 2 * k, ry * 2 * k);
+    }
+  };
+
+  // 1. The wrap: four rings closing in, and the sprite drowning in blue.
+  const wrap = Math.round(d * 0.26);
+  attackerSprite.setTint(MORPH_PALE);
+  await frames(scene, wrap, t => {
+    g.clear();
+    for (let i = 0; i < 4; i++) {
+      const phase = (t + i / 4) % 1;
+      const r = 40 * (1 - phase) + 5;
+      g.lineStyle(6, MORPH_EDGE, 0.9);
+      g.strokeEllipse(ax, ay, r * 2, r * 1.6);
+      g.lineStyle(3, MORPH, 1);
+      g.strokeEllipse(ax, ay, r * 2, r * 1.6);
+    }
+    drawCage(0.7 + 0.3 * t, t);
+  });
+
+  // 2. The collapse: the sprite folds into a blob of light.
+  const fold = Math.round(d * 0.2);
+  await Promise.all([
+    tweenPromise(scene, {
+      targets: attackerSprite,
+      scaleX: sx0 * 0.25, scaleY: sy0 * 0.25, alpha: 0,
+      duration: fold, ease: 'Quad.easeIn',
+    }),
+    frames(scene, fold, t => {
+      g.clear();
+      const r = 6 + 11 * t;
+      blob(g, ax, ay, r, r * 0.8, MORPH_EDGE, MORPH, MORPH_PALE);
+      drawCage(1 - 0.35 * t, 1);
+    }),
+  ]);
+  attackerSprite.setAlpha(0);
+
+  // 3. The stretch: the blob becomes the defender's outline, flat white-blue.
+  const silhouette = scene.add.image(ax, ay, defKey, atkFrame);
+  silhouette.setDepth(872);
+  silhouette.setScrollFactor(0);
+  silhouette.setTintFill(MORPH_PALE);
+  silhouette.setScale(sx0 * 1.7, sy0 * 0.16);
+  const stretch = Math.round(d * 0.26);
+  await Promise.all([
+    tweenPromise(scene, {
+      targets: silhouette,
+      scaleX: sx0, scaleY: sy0,
+      duration: stretch, ease: 'Back.easeOut',
+    }),
+    frames(scene, stretch, t => {
+      g.clear();
+      const r = 17 * (1 - t);
+      if (r > 1) blob(g, ax, ay, r, r * 0.8, MORPH_EDGE, MORPH, MORPH_PALE, 1 - t * 0.6);
+      // A dark outline under the silhouette so it exists against the sky.
+      g.lineStyle(4, MORPH_EDGE, 0.85 * (1 - t * 0.4));
+      g.strokeEllipse(ax, ay, 34 * sx0, 38 * sy0);
+      drawCage(0.65 + 0.45 * t, 1);
+    }),
+  ]);
+  g.clear();
+
+  // 4. The settle: the real texture is underneath; the flat silhouette lifts.
+  attackerSprite.setTexture(defKey, atkFrame);
+  attackerSprite.clearTint();
+  attackerSprite.setScale(sx0, sy0);
+  attackerSprite.setPosition(ax, ay);
+  attackerSprite.setAlpha(a0);
+  const settle = Math.round(d * 0.28);
+  await Promise.all([
+    tweenPromise(scene, {
+      targets: silhouette, alpha: 0,
+      duration: settle, ease: 'Sine.easeOut',
+    }),
+    // The cage blows outward and goes with it, so the last third of the move
+    // is still a picture and not just a cross-fade.
+    frames(scene, settle, t => drawCage(1.1 + t * 0.5, 1 - t)),
+  ]);
+  silhouette.destroy();
+  cage.destroy();
+  g.destroy();
+}
+
+/** SUBSTITUTE's doll, drawn at the Graphics' own origin so it can be scaled in
+ *  as a unit: a 12x12 dark-edged figure with a green base and two dot eyes. */
+function drawDoll(g: Phaser.GameObjects.Graphics): void {
+  g.fillStyle(NORMAL_DARK, 1);
+  g.fillRect(-7, -9, 14, 18);      // silhouette, edge included
+  g.fillRect(-9, -3, 18, 6);       // arms
+  g.fillStyle(TAN, 1);
+  g.fillRect(-5, -7, 10, 14);
+  g.fillRect(-8, -2, 16, 4);
+  g.fillStyle(DOLL_GREEN, 1);
+  g.fillRect(-5, 1, 10, 6);        // the green lower half
+  g.fillStyle(NORMAL_DARK, 1);
+  g.fillRect(-3, -5, 2, 2);        // eyes
+  g.fillRect(1, -5, 2, 2);
+  g.fillRect(-5, 7, 3, 3);         // feet
+  g.fillRect(2, 7, 3, 3);
+}
+
+/**
+ * ID 164 SUBSTITUTE - you give up some health and get a decoy.
+ *
+ * REST, its sibling in the brief, is the attacker going quiet in place; this
+ * is the attacker getting OUT OF THE WAY. It flashes, slides back, and a bank
+ * of smoke rolls forward and clears onto a doll that is still standing there
+ * when the animation ends.
+ *
+ * The engine has no substitute sprite and this does not add one: the doll is
+ * Graphics, destroyed with the rest of the animation, and no scene state
+ * changes.
+ */
+async function renderSubstitute(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite } = ctx;
+  const d = spec.duration; // 1000 ms via OVERRIDE_DURATION
+  const ax = attackerSprite.x;
+  const ay = attackerSprite.y;
+  const a0 = attackerSprite.alpha;
+  // "In front of" the attacker is toward the middle of the field either way.
+  const dir = ctx.isPlayer ? 1 : -1;
+
+  soundSystem.poof();
+
+  // 1. The flash. setTintFill, not setTint: a multiply tint toward white is
+  // almost a no-op, and the point is that the sprite blanks out.
+  const flash = Math.round(d * 0.16);
+  await frames(scene, flash, t => {
+    if (Math.floor(t * 6) % 2 === 0) attackerSprite.setTintFill(NORMAL_PALE);
+    else attackerSprite.clearTint();
+  });
+  attackerSprite.clearTint();
+
+  // 2. The slide back, away from where the doll will stand.
+  await tweenPromise(scene, {
+    targets: attackerSprite,
+    x: ax - dir * 13, y: ay + 2,
+    duration: Math.round(d * 0.18), ease: 'Quad.easeOut',
+  });
+
+  // 3. The smoke: a bank of dark-edged puffs that swells and then clears.
+  const g = newG(scene, 866);
+  const dollX = ax + dir * 12;
+  const dollY = ay + 4;
+  const puffs = Array.from({ length: 14 }, (_, i) => ({
+    x: dollX + (Math.random() - 0.5) * 34,
+    y: dollY + (Math.random() - 0.5) * 28,
+    r: 7 + Math.random() * 6,
+    p: i / 14,
+  }));
+  // A smoke ring on the ground that keeps expanding long after the bank has
+  // lifted: the doll is small on purpose (the brief asks for 12x12), so the
+  // ring is what keeps the back half of the animation on screen.
+  const ring = newG(scene, 865);
+  const drawRing = (k: number, alpha: number): void => {
+    ring.clear();
+    if (alpha <= 0.02) return;
+    ring.lineStyle(6, NORMAL_DARK, 0.85 * alpha);
+    ring.strokeEllipse(dollX, dollY + 10, 30 + k * 34, 11 + k * 14);
+    ring.lineStyle(3, TAN, alpha);
+    ring.strokeEllipse(dollX, dollY + 10, 30 + k * 34, 11 + k * 14);
+  };
+  const smoke = Math.round(d * 0.3);
+  await frames(scene, smoke, t => {
+    g.clear();
+    for (const p of puffs) {
+      const s = Math.min(1, Math.max(0, t * 1.7 - p.p * 0.5));
+      const fade = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
+      if (s <= 0 || fade <= 0) continue;
+      blob(g, p.x, p.y - 8 * s, p.r * (0.4 + s), p.r * (0.35 + s * 0.8),
+        NORMAL_DARK, TAN, NORMAL_PALE, fade);
+    }
+    drawRing(t * 0.5, Math.min(1, t * 3));
+  });
+
+  // 4. The doll, revealed by the clearing smoke, and it stays.
+  const doll = newG(scene, 869);
+  drawDoll(doll);
+  doll.setPosition(dollX, dollY);
+  doll.setScale(0.2, 0.2);
+  doll.setAlpha(0);
+  await Promise.all([
+    tweenPromise(scene, {
+      targets: doll, scaleX: 1, scaleY: 1, alpha: 1,
+      duration: Math.round(d * 0.14), ease: 'Back.easeOut',
+    }),
+    frames(scene, Math.round(d * 0.14), t => {
+      g.clear();
+      for (const p of puffs) {
+        blob(g, p.x, p.y - 10 - 6 * t, p.r * 1.35, p.r * 1.15,
+          NORMAL_DARK, TAN, NORMAL_PALE, 1 - t * 0.8);
+      }
+      drawRing(0.5 + t * 0.3, 1);
+    }),
+  ]);
+  g.destroy();
+
+  // 5. The attacker settles back behind its decoy; the doll is still there.
+  const back = Math.round(d * 0.22);
+  await Promise.all([
+    tweenPromise(scene, {
+      targets: attackerSprite, x: ax, y: ay,
+      duration: back, ease: 'Sine.easeInOut',
+    }),
+    frames(scene, back, t => drawRing(0.8 + t * 0.5, 1 - t * 0.7)),
+  ]);
+  ring.destroy();
+  doll.destroy();
+  attackerSprite.setPosition(ax, ay);
+  attackerSprite.setAlpha(a0);
+  attackerSprite.clearTint();
+}
+
+/** One big "Z", `s` px on a side, dark-edged over a green core so it reads on
+ *  the sky and carries the same hue as the shimmer under it. */
+function drawBigZ(g: Phaser.GameObjects.Graphics, x: number, y: number, s: number, alpha: number): void {
+  const pts: Pt[] = [
+    { x, y }, { x: x + s, y }, { x, y: y + s }, { x: x + s, y: y + s },
+  ];
+  strokePath(g, pts, Math.max(5, s * 0.4), HEAL_DEEP, alpha);
+  strokePath(g, pts, Math.max(2, s * 0.2), HEAL, alpha);
+}
+
+/**
+ * ID 156 REST - the attacker goes to sleep on purpose.
+ *
+ * SLEEP POWDER, the move the brief says this must not resemble, is a cloud
+ * that travels to the OTHER sprite and rains on it. REST never leaves home:
+ * the sprite dims and sinks two pixels, a green heal shimmer breathes over it,
+ * and three sizes of "Z" drift up and away. It is also the slowest thing in
+ * the batch, which is the point - 1000 ms of calm next to SUBSTITUTE's bang.
+ */
+async function renderRest(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite } = ctx;
+  const d = spec.duration; // 1000 ms via OVERRIDE_DURATION
+  const ax = attackerSprite.x;
+  const ay = attackerSprite.y;
+  const a0 = attackerSprite.alpha;
+
+  soundSystem.snore();
+
+  // Dim and sink. A multiply tint darkens without blacking the sprite out.
+  attackerSprite.setTint(REST_DARK);
+  await tweenPromise(scene, {
+    targets: attackerSprite, y: ay + 2,
+    duration: Math.round(d * 0.14), ease: 'Sine.easeOut',
+  });
+
+  const g = newG(scene, 868);
+  const zg = newG(scene, 869);
+  // Three Z's, three sizes, three speeds: they leave in the order they are
+  // drawn and never line up, which is what makes it read as breathing.
+  const zs = [
+    { s: 8, delay: 0.0, dx: 7 },
+    { s: 12, delay: 0.3, dx: 12 },
+    { s: 16, delay: 0.6, dx: 18 },
+  ];
+  const motes = Array.from({ length: 10 }, () => ({
+    a: Math.random() * Math.PI * 2,
+    r: 10 + Math.random() * 12,
+    p: Math.random(),
+  }));
+
+  const body = Math.round(d * 0.72);
+  await frames(scene, body, t => {
+    g.clear();
+    zg.clear();
+    // The heal shimmer: a breathing green halo plus motes rising through it.
+    const pulse = 0.5 + 0.5 * Math.sin(t * Math.PI * 4);
+    g.lineStyle(5, HEAL_DEEP, 0.75);
+    g.strokeEllipse(ax, ay + 2, 40 + pulse * 8, 46 + pulse * 6);
+    g.lineStyle(3, HEAL, 0.95);
+    g.strokeEllipse(ax, ay + 2, 40 + pulse * 8, 46 + pulse * 6);
+    g.lineStyle(3, HEAL, 0.6 + 0.4 * pulse);
+    g.strokeEllipse(ax, ay + 2, 24 + pulse * 6, 30 + pulse * 4);
+    for (const m of motes) {
+      const s = (t * 1.2 + m.p) % 1;
+      const mx = ax + Math.cos(m.a) * m.r;
+      const my = ay + 16 - 34 * s;
+      g.fillStyle(HEAL_DEEP, 1 - s * 0.5);
+      g.fillCircle(mx, my, 3.5);
+      g.fillStyle(HEAL, 1 - s * 0.5);
+      g.fillCircle(mx, my, 2);
+    }
+    // And the Z's, rising up and to the side of the sprite's head.
+    for (const z of zs) {
+      const s = (t * 1.15 - z.delay + 1) % 1;
+      if (s < 0.02) continue;
+      drawBigZ(zg, ax + 8 + z.dx * s, ay - 12 - 26 * s, z.s, 1 - s * 0.55);
+    }
+  });
+
+  // Wake up: the tint lifts, the sprite comes back up to where it started.
+  await Promise.all([
+    tweenPromise(scene, {
+      targets: attackerSprite, y: ay,
+      duration: Math.round(d * 0.14), ease: 'Sine.easeInOut',
+    }),
+    frames(scene, Math.round(d * 0.14), t => {
+      g.clear();
+      zg.clear();
+      g.lineStyle(4, HEAL_DEEP, 1 - t);
+      g.strokeEllipse(ax, ay + 2, 40 + t * 20, 46 + t * 18);
+      g.lineStyle(2, HEAL, 1 - t);
+      g.strokeEllipse(ax, ay + 2, 40 + t * 20, 46 + t * 18);
+    }),
+  ]);
+  g.destroy();
+  zg.destroy();
+  attackerSprite.clearTint();
+  attackerSprite.setPosition(ax, ay);
+  attackerSprite.setAlpha(a0);
+}
+
+/**
+ * ID 104 DOUBLE TEAM - one of you becomes several.
+ *
+ * MINIMIZE, its sibling, makes the attacker SMALLER in one place; DOUBLE TEAM
+ * keeps it the same size and puts it in four places at once. `afterimage`
+ * supplies the opening smear, but its ghosts trail the live sprite rather than
+ * holding a position, so the fan itself is hand-rolled: four copies at
+ * +-13 and +-26 px, alpha 0.6, shimmering, each one flashing a dark outline -
+ * without which a pale copy on a #f8f8f8 sky is not on the screen at all.
+ */
+async function renderDoubleTeam(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite } = ctx;
+  const d = spec.duration; // 900 ms via OVERRIDE_DURATION
+  const ax = attackerSprite.x;
+  const ay = attackerSprite.y;
+  const a0 = attackerSprite.alpha;
+
+  soundSystem.blur();
+
+  const smear = afterimage(scene, attackerSprite, TAN, 3, Math.round(d * 0.3));
+
+  const OFFS = [-26, -13, 13, 26];
+  const copies = OFFS.map(() => {
+    const img = scene.add.image(ax, ay, attackerSprite.texture.key, attackerSprite.frame.name);
+    img.setDepth(attackerSprite.depth - 1);
+    img.setScrollFactor(0);
+    img.setScale(attackerSprite.scaleX, attackerSprite.scaleY);
+    img.setTint(TAN);
+    img.setAlpha(0);
+    return img;
+  });
+  const g = newG(scene, 869);
+  const half = Math.round(16 * attackerSprite.scaleY);
+  const wide = Math.round(13 * attackerSprite.scaleX);
+
+  const drawCopies = (spread: number, t: number): void => {
+    g.clear();
+    copies.forEach((img, i) => {
+      const x = ax + OFFS[i] * spread;
+      img.setPosition(x, ay + Math.sin(t * Math.PI * 3 + i) * 2);
+      img.setAlpha(0.6 * spread * (0.8 + 0.2 * Math.sin(t * Math.PI * 6 + i * 1.7)));
+      // The outline flash. A TAN copy at alpha 0.6 on a #f8f8f8 sky is barely
+      // a copy at all; the dark rectangle is what makes each one a body.
+      // An ELLIPSE, not a rectangle: four upright rectangles in a row read as a
+      // fence, while four ovals read as four bodies.
+      g.lineStyle(3, NORMAL_DARK, (0.45 + 0.55 * Math.sin(t * Math.PI * 6 + i)) * spread);
+      g.strokeEllipse(Math.round(x), ay, wide * 2, half * 2);
+      g.lineStyle(2, TAN, 0.7 * spread);
+      g.strokeEllipse(Math.round(x), ay, wide * 2 - 5, half * 2 - 5);
+      // ...and a shadow pooled under each copy, which grounds the fan.
+      g.fillStyle(NORMAL_DARK, 0.5 * spread);
+      g.fillEllipse(Math.round(x), ay + half + 2, wide * 2 - 2, 7);
+    });
+    attackerSprite.setAlpha(a0 * (0.75 + 0.25 * Math.sin(t * Math.PI * 8)));
+  };
+
+  // Fan fast, HOLD long, snap back late: the hold is what makes the 75 %
+  // frame a fan of four bodies rather than a sprite on its way home.
+  await frames(scene, Math.round(d * 0.26), t => drawCopies(Math.min(1, t * 1.5), t));
+  await smear;
+  await frames(scene, Math.round(d * 0.52), t => drawCopies(1, 1 + t));
+  await frames(scene, Math.round(d * 0.2), t => drawCopies(1 - t, 2 + t));
+
+  copies.forEach(c => c.destroy());
+  g.destroy();
+  attackerSprite.setPosition(ax, ay);
+  attackerSprite.setAlpha(a0);
+}
+
+/**
+ * ID 107 MINIMIZE - the attacker gets small, in steps.
+ *
+ * The inverse of DOUBLE TEAM in every measurable way: one sprite, no copies,
+ * and less of the screen covered at the end than at the start. Four discrete
+ * shrink steps, each one squashing on the way down and letting off a puff at
+ * the feet, then a pop back to full size - the brief's hard requirement, and
+ * the runner re-reads the sprite's scale afterwards to check it.
+ *
+ * The sprite's origin is its centre, so a plain scale would leave it hovering;
+ * `y` is corrected on every step to keep its feet on the same line.
+ */
+async function renderMinimize(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite } = ctx;
+  const d = spec.duration; // 900 ms via OVERRIDE_DURATION
+  const ax = attackerSprite.x;
+  const ay = attackerSprite.y;
+  const sx0 = attackerSprite.scaleX;
+  const sy0 = attackerSprite.scaleY;
+  const a0 = attackerSprite.alpha;
+  const footY = ay + 16 * sy0;
+
+  soundSystem.shrink();
+
+  const g = newG(scene, 866);
+  const puffs: Array<{ x: number; y: number; r: number; born: number }> = [];
+  let clock = 0;
+  let press = 0;   // how far the compression marks have closed in, 0..1
+  // Four chevrons pressing inward from OUTSIDE the sprite's own bbox. They are
+  // the reason MINIMIZE is visible at all: the move's whole content is a
+  // sprite getting smaller, which SUBTRACTS ink from the screen rather than
+  // adding it. They also sit deliberately outside the +-20 px box the runner
+  // measures for MINI-BAND, so the thing that proves MINIMIZE is small is not
+  // the thing that makes it visible.
+  const chevrons = (): void => {
+    const k = 1 - press * 0.45;                  // 44 px out, closing to ~24
+    for (let i = 0; i < 4; i++) {
+      const a = (i * Math.PI) / 2 + Math.PI / 4;
+      const ux = Math.cos(a), uy = Math.sin(a);
+      const px = -uy, py = ux;
+      const cxp = ax + ux * 44 * k, cyp = ay + uy * 32 * k;
+      const pts: Pt[] = [
+        { x: cxp + px * 13 + ux * 8, y: cyp + py * 13 + uy * 7 },
+        { x: cxp, y: cyp },
+        { x: cxp - px * 13 + ux * 8, y: cyp - py * 13 + uy * 7 },
+      ];
+      strokePath(g, pts, 8, NORMAL_DARK, 0.9);
+      strokePath(g, pts, 4, TAN, 1);
+    }
+  };
+  const drawPuffs = (): void => {
+    g.clear();
+    for (const p of puffs) {
+      const age = (clock - p.born) / 340;
+      if (age < 0 || age > 1) continue;
+      const r = p.r * (0.6 + age * 1.9);
+      g.lineStyle(5, NORMAL_DARK, (1 - age) * 0.95);
+      g.strokeEllipse(p.x, p.y - age * 5, r * 2.6, r * 1.5);
+      g.lineStyle(3, TAN, (1 - age) * 0.95);
+      g.strokeEllipse(p.x, p.y - age * 5, r * 2.6, r * 1.5);
+    }
+    chevrons();
+  };
+
+  const STEPS = [0.8, 0.65, 0.5, 0.4];
+  // 0.13 rather than 0.15: four steps are eight sequential awaits, and every
+  // await costs a frame of slack on top of its tween. At 0.15 the measured
+  // wall clock ran past the runner's budget + 200 ms ceiling.
+  const stepMs = Math.round(d * 0.13);
+  let stepN = 0;
+  for (const s of STEPS) {
+    press = ++stepN / STEPS.length;
+    const y = footY - 16 * sy0 * s;
+    // Squash on the way down, then settle to the step's true scale.
+    await tweenPromise(scene, {
+      targets: attackerSprite,
+      scaleX: sx0 * s * 1.2, scaleY: sy0 * s * 0.8, y: y + 2,
+      duration: Math.round(stepMs * 0.4), ease: 'Quad.easeIn',
+    });
+    // Alternating sides, so the puffs spread along the ground instead of
+    // stacking into one blob under the sprite.
+    puffs.push({ x: ax + (stepN % 2 ? -11 : 11), y: footY - 2, r: 8 + 4 * (1 - s), born: clock });
+    await Promise.all([
+      tweenPromise(scene, {
+        targets: attackerSprite,
+        scaleX: sx0 * s, scaleY: sy0 * s, y,
+        duration: Math.round(stepMs * 0.6), ease: 'Back.easeOut',
+      }),
+      frames(scene, Math.round(stepMs * 0.6), () => {
+        clock += 16;
+        drawPuffs();
+      }),
+    ]);
+  }
+
+  // A beat of being tiny, so the smallness is a state and not a transition.
+  await frames(scene, Math.round(d * 0.1), () => { clock += 16; drawPuffs(); });
+
+  // The pop back, with an overshoot so it lands rather than inflates.
+  await Promise.all([
+    tweenPromise(scene, {
+      targets: attackerSprite,
+      scaleX: sx0 * 1.14, scaleY: sy0 * 1.14, y: footY - 16 * sy0 * 1.14,
+      duration: Math.round(d * 0.12), ease: 'Quad.easeOut',
+    }),
+    frames(scene, Math.round(d * 0.12), t => { clock += 16; press = 1 - t; drawPuffs(); }),
+  ]);
+  puffs.push({ x: ax, y: footY - 2, r: 15, born: clock });
+  await Promise.all([
+    tweenPromise(scene, {
+      targets: attackerSprite,
+      scaleX: sx0, scaleY: sy0, y: ay,
+      duration: Math.round(d * 0.1), ease: 'Back.easeOut',
+    }),
+    frames(scene, Math.round(d * 0.1), t => { clock += 16; press = Math.max(0, 1 - t * 3); drawPuffs(); }),
+  ]);
+
+  g.destroy();
+  attackerSprite.setScale(sx0, sy0);
+  attackerSprite.setPosition(ax, ay);
+  attackerSprite.setAlpha(a0);
+}
+
+/**
+ * ID 113 LIGHT SCREEN - a pane of light, between you and the rest of the turn.
+ *
+ * REFLECT (115) and BARRIER (112) both still render the generic self-aura, a
+ * ring and a sparkle; this is a piece of architecture. A dark-edged pale-yellow
+ * rectangle rises in front of the attacker, a glint sweeps diagonally across
+ * it, and - the part that matters - it HOLDS. A screen that flashes and goes
+ * is a flash.
+ */
+async function renderLightScreen(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite } = ctx;
+  const d = spec.duration; // 900 ms via OVERRIDE_DURATION
+  const ax = attackerSprite.x;
+  const ay = attackerSprite.y;
+  const a0 = attackerSprite.alpha;
+  const dir = ctx.isPlayer ? 1 : -1;
+
+  soundSystem.paneRise();
+
+  // The pane stands just in front of the attacker, on the side it is facing.
+  const cx = ax + dir * 10;
+  const w = 40;
+  const h = 50;
+  const g = newG(scene, 880);
+
+  const drawPane = (rise: number, glint: number, alpha: number): void => {
+    g.clear();
+    const top = ay - h / 2 + (1 - rise) * h;
+    const vis = h * rise;
+    if (vis < 2) return;
+    g.fillStyle(PANE, PANE_ALPHA * alpha);
+    g.fillRect(cx - w / 2, top, w, vis);
+    g.lineStyle(3, EDGE, alpha);
+    g.strokeRect(cx - w / 2, top, w, vis);
+    // Two inner mullions: without them a flat rectangle reads as a colour
+    // wash rather than as a pane of something.
+    g.lineStyle(1, EDGE, 0.55 * alpha);
+    g.beginPath();
+    g.moveTo(cx - w / 2 + 13, top); g.lineTo(cx - w / 2 + 13, top + vis);
+    g.moveTo(cx - w / 2 + 27, top); g.lineTo(cx - w / 2 + 27, top + vis);
+    g.strokePath();
+    if (glint >= 0) {
+      // A diagonal bright band crossing the pane left to right.
+      const gx = cx - w / 2 - 14 + glint * (w + 28);
+      g.fillStyle(PANE_GLINT, 0.95 * alpha);
+      g.fillPoints([
+        { x: gx, y: top + vis }, { x: gx + 7, y: top + vis },
+        { x: gx + 21, y: top }, { x: gx + 14, y: top },
+      ], true);
+      g.lineStyle(2, WHITE, 0.9 * alpha);
+      g.beginPath();
+      g.moveTo(gx + 3, top + vis); g.lineTo(gx + 17, top);
+      g.strokePath();
+      // Redraw the frame so the glint never spills past the pane's edge.
+      g.lineStyle(3, EDGE, alpha);
+      g.strokeRect(cx - w / 2, top, w, vis);
+    }
+  };
+
+  await frames(scene, Math.round(d * 0.24), t => drawPane(t, -1, 1));
+  await frames(scene, Math.round(d * 0.46), t => drawPane(1, t, 1));
+  await frames(scene, Math.round(d * 0.3), t => drawPane(1, -1, 1 - t));
+
+  g.destroy();
+  attackerSprite.setPosition(ax, ay);
+  attackerSprite.setAlpha(a0);
+}
+
+/** One sword, ~18 px, drawn pointing along `ang`: dark edge, steel blade,
+ *  brown cross-guard, pommel dot. */
+function drawSword(g: Phaser.GameObjects.Graphics, x: number, y: number, ang: number): void {
+  const ux = Math.cos(ang), uy = Math.sin(ang);
+  const px = -uy, py = ux;                     // perpendicular, for the guard
+  const tip: Pt = { x: x + ux * 15, y: y + uy * 15 };
+  const hilt: Pt = { x: x - ux * 6, y: y - uy * 6 };
+  const guard: Pt = { x: x - ux * 3, y: y - uy * 3 };
+  strokePath(g, [hilt, tip], 9, NORMAL_DARK, 1);
+  strokePath(g, [hilt, tip], 5, STEEL, 1);
+  strokePath(g, [
+    { x: guard.x - px * 8, y: guard.y - py * 8 },
+    { x: guard.x + px * 8, y: guard.y + py * 8 },
+  ], 7, NORMAL_DARK, 1);
+  strokePath(g, [
+    { x: guard.x - px * 7, y: guard.y - py * 7 },
+    { x: guard.x + px * 7, y: guard.y + py * 7 },
+  ], 4, HILT, 1);
+  g.fillStyle(NORMAL_DARK, 1);
+  g.fillCircle(hilt.x, hilt.y, 4);
+  g.fillStyle(HILT, 1);
+  g.fillCircle(hilt.x, hilt.y, 2.5);
+}
+
+/**
+ * ID 14 SWORDS DANCE - a stat boost that is actually a dance.
+ *
+ * GROWTH (74) is the generic self-aura and so is the stripped body of this
+ * move: a ring and a sparkle. SWORDS DANCE is three swords on an elliptical
+ * orbit that ACCELERATES - two and a half turns, each one faster than the last
+ * - over a tan orbit trail, with the red aura pulsing in thin rings and the
+ * attacker rocking with the beat. The aura stays thin on purpose: a solid red
+ * wash would make a Normal move vote FIRE.
+ *
+ * `renderSpec` restores position, alpha, scale and tint but NOT rotation, so
+ * the rock is undone here by hand (the same footnote as SING's).
+ */
+async function renderSwordsDance(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite } = ctx;
+  const d = spec.duration; // 950 ms via OVERRIDE_DURATION
+  const ax = attackerSprite.x;
+  const ay = attackerSprite.y;
+  const a0 = attackerSprite.alpha;
+  const rot0 = attackerSprite.rotation;
+
+  soundSystem.bladeRing();
+
+  const g = newG(scene, 869);
+  const trail = newG(scene, 866);
+  const RX = 32, RY = 18;
+
+  const spin = Math.round(d * 0.82);
+  const rock = tweenPromise(scene, {
+    targets: attackerSprite, rotation: rot0 + 0.11,
+    duration: Math.round(d * 0.12), yoyo: true, repeat: 2, ease: 'Sine.easeInOut',
+  });
+  await frames(scene, spin, t => {
+    g.clear();
+    trail.clear();
+    // t + 1.6t^2: two and a half orbits, and visibly quicker at the end.
+    const a = Math.PI * 2 * (t + 1.6 * t * t);
+    // The orbit trail: tan, so the NORMAL vote has some mass behind it.
+    trail.lineStyle(6, NORMAL_DARK, 0.55);
+    trail.strokeEllipse(ax, ay, RX * 2, RY * 2);
+    trail.lineStyle(3, TAN, 0.9);
+    trail.strokeEllipse(ax, ay, RX * 2, RY * 2);
+    // Three thin red aura rings, breathing with the beat. Thin on purpose: a
+    // solid red wash would swing a Normal move's colour vote to FIRE.
+    const pulse = 0.5 + 0.5 * Math.sin(t * Math.PI * 8);
+    trail.lineStyle(3, AURA_RED, 0.5 + 0.5 * pulse);
+    trail.strokeEllipse(ax, ay, RX * 2 + 14 + pulse * 10, RY * 2 + 16 + pulse * 8);
+    trail.strokeEllipse(ax, ay, RX * 2 + 2 + pulse * 6, RY * 2 + 4 + pulse * 5);
+    trail.strokeEllipse(ax, ay, RX + 6 + pulse * 4, RY + 10 + pulse * 3);
+    for (let i = 0; i < 3; i++) {
+      const th = a + (i * Math.PI * 2) / 3;
+      drawSword(g, ax + Math.cos(th) * RX, ay + Math.sin(th) * RY, th + Math.PI / 2);
+    }
+  });
+  await rock;
+
+  // The swords fly outward and go.
+  await frames(scene, Math.round(d * 0.18), t => {
+    g.clear();
+    trail.clear();
+    const a = Math.PI * 2 * (1 + 1.6) + t * 1.2;
+    trail.lineStyle(3, TAN, 0.85 * (1 - t));
+    trail.strokeEllipse(ax, ay, RX * 2 + t * 24, RY * 2 + t * 20);
+    trail.lineStyle(2, AURA_RED, 1 - t);
+    trail.strokeEllipse(ax, ay, RX * 2 + 14 + t * 30, RY * 2 + 16 + t * 26);
+    for (let i = 0; i < 3; i++) {
+      const th = a + (i * Math.PI * 2) / 3;
+      const r = 1 + t * 0.9;
+      drawSword(g, ax + Math.cos(th) * RX * r, ay + Math.sin(th) * RY * r, th + Math.PI / 2);
+    }
+  });
+
+  g.destroy();
+  trail.destroy();
+  attackerSprite.setRotation(rot0);
+  attackerSprite.setPosition(ax, ay);
+  attackerSprite.setAlpha(a0);
+}
+
+/**
+ * ID 150 SPLASH - three hops, and absolutely nothing happens.
+ *
+ * The shortest override in the game except QUICK ATTACK's, and the only one
+ * whose entire content is the joke: the attacker hops, squashes on landing,
+ * kicks up a few droplets, and that is the move. No aura, no target, no flash.
+ * The droplets are water blue on a Normal-typed move - the batch's fourth
+ * declared off-type palette (EXPECTED_TYPE 150) - because SPLASH is Gen 1's
+ * MAGIKARP joke and khaki droplets would just be dust.
+ */
+async function renderSplash(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite } = ctx;
+  const d = spec.duration; // 600 ms via OVERRIDE_DURATION - deliberately short
+  const ax = attackerSprite.x;
+  const ay = attackerSprite.y;
+  const sx0 = attackerSprite.scaleX;
+  const sy0 = attackerSprite.scaleY;
+  const a0 = attackerSprite.alpha;
+
+  // Two layers: the droplets fly over the sprite, the ground rings stay UNDER
+  // it (depth 4, below the sprite's 5) so the hop is never hidden behind its
+  // own splash.
+  const g = newG(scene, 866);
+  const ground = newG(scene, 4);
+  const drops: Array<{ x: number; y: number; vx: number; vy: number; born: number; r: number }> = [];
+  const landings: number[] = [];
+  const LIFE = 340;
+  let clock = 0;
+  const draw = (): void => {
+    g.clear();
+    for (const p of drops) {
+      const age = (clock - p.born) / LIFE;
+      if (age < 0 || age > 1) continue;
+      const x = p.x + p.vx * age * 48;
+      const y = p.y + p.vy * age * 42 + age * age * 44;
+      g.fillStyle(DROP_EDGE, 1 - age * 0.4);
+      g.fillCircle(x, y, p.r + 2);
+      g.fillStyle(DROP, 1 - age * 0.4);
+      g.fillCircle(x, y, p.r);
+      g.fillStyle(DROP_PALE, 1 - age * 0.4);
+      g.fillCircle(x - p.r * 0.3, y - p.r * 0.3, p.r * 0.45);
+    }
+    // The crown left on the ground by the most recent landing.
+    // The crown each landing throws up and the ripple rolling out behind it.
+    // Both landings that are still young get drawn, so the middle of the move
+    // is two sets of rings and not one - 600 ms is not long enough to let the
+    // screen go empty between hops.
+    ground.clear();
+    for (const born of landings) {
+      const age = (clock - born) / LIFE;
+      if (age < 0 || age > 1) continue;
+      for (const [w0, h0, dw, dh, th] of [
+        [30, 10, 34, 12, 7], [14, 5, 54, 20, 5], [46, 16, 30, 10, 5],
+      ] as const) {
+        ground.lineStyle(th, DROP_EDGE, (1 - age) * 0.85);
+        ground.strokeEllipse(ax, ay + 15 * sy0, w0 + age * dw, h0 + age * dh);
+        ground.lineStyle(Math.max(2, th - 3), DROP, (1 - age) * 0.95);
+        ground.strokeEllipse(ax, ay + 15 * sy0, w0 + age * dw, h0 + age * dh);
+      }
+    }
+  };
+  const land = (): void => {
+    landings.push(clock);
+    for (let i = 0; i < 16; i++) {
+      const a = -Math.PI + (i / 15) * Math.PI;
+      drops.push({
+        x: ax + Math.cos(a) * 10, y: ay + 14 * sy0,
+        vx: Math.cos(a) * 1.25, vy: Math.sin(a) * 0.9 - 0.75,
+        born: clock, r: 3.6 + Math.random() * 2.4,
+      });
+    }
+  };
+
+  const hop = Math.round(d * 0.29);
+  for (let i = 0; i < 3; i++) {
+    soundSystem.plop();
+    await Promise.all([
+      tweenPromise(scene, {
+        targets: attackerSprite, y: ay - 11,
+        duration: Math.round(hop * 0.5), ease: 'Quad.easeOut',
+      }),
+      frames(scene, Math.round(hop * 0.5), () => { clock += 16; draw(); }),
+    ]);
+    await Promise.all([
+      tweenPromise(scene, {
+        targets: attackerSprite, y: ay,
+        duration: Math.round(hop * 0.34), ease: 'Quad.easeIn',
+      }),
+      frames(scene, Math.round(hop * 0.34), () => { clock += 16; draw(); }),
+    ]);
+    land();
+    // The squash: it lands with weight, which is the only weight in the move.
+    await Promise.all([
+      tweenPromise(scene, {
+        targets: attackerSprite,
+        scaleX: sx0 * 1.2, scaleY: sy0 * 0.8, y: ay + 3,
+        duration: Math.round(hop * 0.08), yoyo: true, ease: 'Quad.easeOut',
+      }),
+      frames(scene, Math.round(hop * 0.16), () => { clock += 16; draw(); }),
+    ]);
+  }
+  await frames(scene, Math.round(d * 0.12), () => { clock += 16; draw(); });
+
+  g.destroy();
+  ground.destroy();
+  attackerSprite.setScale(sx0, sy0);
+  attackerSprite.setPosition(ax, ay);
+  attackerSprite.setAlpha(a0);
+}
+
+registerSpecOverride('transform', renderTransform);
+registerSpecOverride('substitute', renderSubstitute);
+registerSpecOverride('rest', renderRest);
+registerSpecOverride('doubleTeam', renderDoubleTeam);
+registerSpecOverride('minimize', renderMinimize);
+registerSpecOverride('lightScreen', renderLightScreen);
+registerSpecOverride('swordsDance', renderSwordsDance);
+registerSpecOverride('splash', renderSplash);

@@ -738,6 +738,118 @@ export class SoundSystem {
       { freq: 700, dur: 0.06, delay: 0.09 },
     ], 'square', 0.07);
   }
+
+  // === Self-target voices (PR 4d) ===
+  // One per override, all of them pitched around the attacker rather than at
+  // the defender: nothing here is an impact, so nothing here has a transient.
+
+  /** TRANSFORM: a rising sine glide that collapses to a point and re-forms -
+   *  the shape of the animation, in one voice. */
+  morph(): void {
+    this.playNotes([
+      { freq: 330, dur: 0.1, delay: 0 },
+      { freq: 440, dur: 0.1, delay: 0.1 },
+      { freq: 660, dur: 0.1, delay: 0.2 },
+      { freq: 990, dur: 0.12, delay: 0.3 },
+      { freq: 1320, dur: 0.1, delay: 0.44 },
+      { freq: 660, dur: 0.14, delay: 0.58 },
+      { freq: 494, dur: 0.2, delay: 0.74 },
+    ], 'sine', 0.055);
+    this.playNotes([
+      { freq: 120, dur: 0.5, delay: 0.28 },
+    ], 'triangle', 0.03);
+  }
+
+  /** SUBSTITUTE: a pop of smoke and the doll thumping down in front of you. */
+  poof(): void {
+    this.playNotes([
+      { freq: 520, dur: 0.04, delay: 0 },
+      { freq: 300, dur: 0.08, delay: 0.05 },
+      { freq: 190, dur: 0.14, delay: 0.14 },
+    ], 'square', 0.07);
+    this.playNotes([
+      { freq: 140, dur: 0.12, delay: 0.46 },
+      { freq: 110, dur: 0.16, delay: 0.56 },
+    ], 'triangle', 0.06);
+  }
+
+  /** REST: two slow snores - a fall and a rise, an octave apart. */
+  snore(): void {
+    this.playNotes([
+      { freq: 200, dur: 0.26, delay: 0.05 },
+      { freq: 150, dur: 0.3, delay: 0.32 },
+      { freq: 200, dur: 0.26, delay: 0.62 },
+    ], 'triangle', 0.05);
+    this.playNotes([
+      { freq: 100, dur: 0.34, delay: 0.1 },
+      { freq: 75, dur: 0.4, delay: 0.5 },
+    ], 'sine', 0.04);
+  }
+
+  /** DOUBLE TEAM: a fluttering two-tone wobble - one of you became several. */
+  blur(): void {
+    this.playNotes([
+      { freq: 700, dur: 0.04, delay: 0 },
+      { freq: 940, dur: 0.04, delay: 0.06 },
+      { freq: 700, dur: 0.04, delay: 0.12 },
+      { freq: 940, dur: 0.04, delay: 0.18 },
+      { freq: 780, dur: 0.05, delay: 0.26 },
+      { freq: 1040, dur: 0.05, delay: 0.34 },
+      { freq: 880, dur: 0.1, delay: 0.46 },
+    ], 'square', 0.045);
+  }
+
+  /** MINIMIZE: four descending blips, one per shrink step, then the pop back. */
+  shrink(): void {
+    this.playNotes([
+      { freq: 880, dur: 0.05, delay: 0 },
+      { freq: 700, dur: 0.05, delay: 0.14 },
+      { freq: 560, dur: 0.05, delay: 0.28 },
+      { freq: 440, dur: 0.06, delay: 0.42 },
+    ], 'square', 0.06);
+    this.playNotes([
+      { freq: 300, dur: 0.05, delay: 0.68 },
+      { freq: 900, dur: 0.1, delay: 0.73 },
+    ], 'triangle', 0.06);
+  }
+
+  /** LIGHT SCREEN: a glassy pane sliding up, then the glint crossing it. */
+  paneRise(): void {
+    this.playNotes([
+      { freq: 420, dur: 0.08, delay: 0 },
+      { freq: 560, dur: 0.08, delay: 0.07 },
+      { freq: 700, dur: 0.1, delay: 0.14 },
+      { freq: 840, dur: 0.22, delay: 0.22 },
+    ], 'triangle', 0.05);
+    this.playNotes([
+      { freq: 2000, dur: 0.04, delay: 0.42 },
+      { freq: 2400, dur: 0.05, delay: 0.5 },
+    ], 'sine', 0.035);
+  }
+
+  /** SWORDS DANCE: steel ringing, faster and higher with every orbit. */
+  bladeRing(): void {
+    this.playNotes([
+      { freq: 1100, dur: 0.05, delay: 0 },
+      { freq: 1300, dur: 0.05, delay: 0.18 },
+      { freq: 1500, dur: 0.05, delay: 0.33 },
+      { freq: 1700, dur: 0.05, delay: 0.45 },
+      { freq: 1900, dur: 0.05, delay: 0.55 },
+      { freq: 2100, dur: 0.08, delay: 0.63 },
+    ], 'sawtooth', 0.035);
+    this.playNotes([
+      { freq: 160, dur: 0.2, delay: 0.5 },
+      { freq: 130, dur: 0.26, delay: 0.68 },
+    ], 'square', 0.05);
+  }
+
+  /** SPLASH: three little plops, and then nothing at all. */
+  plop(): void {
+    this.playNotes([
+      { freq: 420, dur: 0.05, delay: 0 },
+      { freq: 300, dur: 0.06, delay: 0.05 },
+    ], 'triangle', 0.06);
+  }
 }
 
 // Global sound instance

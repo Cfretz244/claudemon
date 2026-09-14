@@ -55,6 +55,23 @@ const IMPLEMENTED = [
   'swift',
   'growl',
   'tailWhip',
+  // The self-target set-pieces. All eight used to share ONE generic body
+  // (`self-aura`), and none of them may touch the defender - which the e2e
+  // proves with a pixel count and the SELF_TARGET block below pins in source.
+  'transform',
+  'substitute',
+  'rest',
+  'doubleTeam',
+  'minimize',
+  'lightScreen',
+  'swordsDance',
+  'splash',
+];
+
+/** The eight of PR 4d: `render<Key>` acts on the ATTACKER only. */
+const SELF_TARGET = [
+  'transform', 'substitute', 'rest', 'doubleTeam',
+  'minimize', 'lightScreen', 'swordsDance', 'splash',
 ];
 
 /** QUICK ATTACK's budget is a promise about how the move FEELS, so it is a
@@ -89,6 +106,27 @@ const BY_ID: Record<number, string> = {
   129: 'swift',
   45: 'growl',
   39: 'tailWhip',
+  144: 'transform',
+  164: 'substitute',
+  156: 'rest',
+  104: 'doubleTeam',
+  107: 'minimize',
+  113: 'lightScreen',
+  14: 'swordsDance',
+  150: 'splash',
+};
+
+/** SPLASH's budget is the joke's punchline, so it is a number, not a taste. */
+const SPLASH_MAX_MS = 700;
+
+/** The body of `render<Key>`, from its `function` line to the next doc block. */
+const bodyOf = (key: string): string => {
+  const fn = `render${key[0].toUpperCase()}${key.slice(1)}`;
+  const from = OVERRIDES_SRC.indexOf(`function ${fn}(`);
+  expect(from, `${fn} is not in overrides.ts`).toBeGreaterThan(-1);
+  const rest = OVERRIDES_SRC.slice(from);
+  const end = rest.indexOf('\n/**');
+  return end > 0 ? rest.slice(0, end) : rest;
 };
 
 describe('tier-3 move overrides', () => {
@@ -138,7 +176,8 @@ describe('tier-3 move overrides', () => {
     for (const key of ['thunderbolt', 'surf', 'earthquake', 'hydroPump',
       'fireBlast', 'blizzard', 'psychic', 'nightShade',
       'sing', 'sleepPowder', 'toxic', 'leechSeed', 'thunderWave',
-      'wrap', 'bind', 'quickAttack', 'swift', 'growl', 'tailWhip']) {
+      'wrap', 'bind', 'quickAttack', 'swift', 'growl', 'tailWhip',
+      ...SELF_TARGET]) {
       const fn = `render${key[0].toUpperCase()}${key.slice(1)}`;
       const body = OVERRIDES_SRC.slice(OVERRIDES_SRC.indexOf(`function ${fn}(`));
       expect(body.slice(0, body.indexOf('\nasync function') + 1 || undefined))
@@ -162,12 +201,69 @@ describe('tier-3 move overrides', () => {
     // renderSpec's finally restores position/alpha/scale/tint - but NOT
     // rotation, so any override that rocks or sways a sprite has to put it
     // back itself or the sprite stays crooked for the rest of the battle.
-    for (const fn of ['renderSing', 'renderTailWhip']) {
+    for (const fn of ['renderSing', 'renderTailWhip', 'renderSwordsDance']) {
       const body = OVERRIDES_SRC.slice(OVERRIDES_SRC.indexOf(`function ${fn}(`));
       const own = body.slice(0, body.indexOf('\n/**') + 1 || undefined);
       expect(own, fn).toMatch(/rotation/);
       expect(own, fn).toMatch(/setRotation\(rot0\)/);
     }
+  });
+
+  it('SPLASH stays a joke and the self-target budgets clear the generic body', () => {
+    // RECOVER (105) still renders the generic `self-aura` all eight of these
+    // used to share, so it is the floor every one of them has to clear.
+    const generic = resolveAnimation(105);
+    expect(generic.override).toBeUndefined();
+    for (const key of SELF_TARGET) {
+      expect(OVERRIDE_DURATION[key], `OVERRIDE_DURATION.${key}`).toBeGreaterThan(generic.duration);
+      expect(OVERRIDE_DURATION[key], `OVERRIDE_DURATION.${key}`)
+        .toBeLessThanOrEqual(MAX_OVERRIDE_DURATION_MS);
+    }
+    expect(resolveAnimation(150).duration).toBeLessThanOrEqual(SPLASH_MAX_MS);
+  });
+
+  it('no self-target override touches the whole screen or the defender', () => {
+    // The e2e's SELF-DEF check asserts the defender's bbox is UNCHANGED at
+    // 50 %; a screenFlash or a screenShake would change every pixel on the
+    // field, including the defender's, and would be a lie about what a
+    // self-target move does. Pinned here so it cannot come back quietly.
+    for (const key of SELF_TARGET) {
+      const body = bodyOf(key);
+      expect(body, `${key} must not flash the screen`).not.toMatch(/screenFlash\(/);
+      expect(body, `${key} must not shake the screen`).not.toMatch(/screenShake\(/);
+      // TRANSFORM is the one that reads the defender at all, and only to
+      // borrow its texture for the silhouette it leaves on the attacker.
+      if (key !== 'transform') {
+        expect(body, `${key} must not move the defender`).not.toMatch(/defenderSprite/);
+      }
+    }
+  });
+
+  it('every self-target override puts the attacker back where it found it', () => {
+    // renderSpec's finally restores position/alpha/scale/tint, but MINIMIZE
+    // and TRANSFORM deliberately leave scale and texture in a changed state
+    // mid-render, so each body restores by hand and the e2e re-reads
+    // x/y/alpha/scaleX/scaleY afterwards.
+    for (const key of SELF_TARGET) {
+      const body = bodyOf(key);
+      expect(body, `${key} snapshots its home position`).toMatch(/const ax = attackerSprite\.x/);
+      expect(body, `${key} restores its home position`).toMatch(/setPosition\(ax, ay\)/);
+      expect(body, `${key} restores its alpha`).toMatch(/setAlpha\(a0\)/);
+    }
+    for (const key of ['transform', 'minimize', 'splash']) {
+      expect(bodyOf(key), `${key} restores its scale`).toMatch(/setScale\(sx0, sy0\)/);
+    }
+  });
+
+  it('TRANSFORM ends on the defender texture - nothing in the engine swaps it', () => {
+    // BattleEngine's MoveEffect.TRANSFORM is a message and a comment
+    // ("Simplified: message only"), and BattleScene only ever calls
+    // setTexture on send-out and switch-in. So the animation owns the swap,
+    // and renderSpec's restore (position/alpha/scale/tint) leaves it alone.
+    const body = bodyOf('transform');
+    expect(body).toMatch(/const defKey = defenderSprite\.texture\.key/);
+    expect(body).toMatch(/attackerSprite\.setTexture\(defKey, atkFrame\)/);
+    expect(MOVE_ANIMATIONS_SRC).not.toMatch(/setTexture/);
   });
 
   it('the two-turn overrides play in one promise (the engine never defers them)', () => {
