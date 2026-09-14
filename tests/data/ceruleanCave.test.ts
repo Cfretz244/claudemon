@@ -12,6 +12,7 @@ import { MapData, TileType } from '../../src/types/map.types';
 import { Pos } from '../../src/logic/boulders';
 import { checkEntryGates } from '../../src/logic/warpGate';
 import { DIR_VECTORS } from '../../src/utils/constants';
+import { STATIC_LEGENDARIES } from '../../src/data/staticLegendaries';
 
 const CITY = ALL_MAPS.cerulean_city;
 const F1 = ALL_MAPS.cerulean_cave_1f;
@@ -226,23 +227,31 @@ describe('Cerulean Cave', () => {
       for (const s of sidesOf(B1, m)) expect(B1.tiles[s.y][s.x]).toBe(TileType.CAVE_FLOOR);
       expect(reach(B1, sidesOf(B1, m)[0], b1e)).toBe(true);
     });
-    it('Mewtwo sits in a dead-end stub: it blocks nothing the floor is for', () => {
+    it('Mewtwo sits in a dead-end stub: its tall footprint blocks nothing the floor is for', () => {
       const m = npc(B1, 'mewtwo');
-      const withMewtwo = reachSet(B1, b1FromE);
+      // Mewtwo is `footprint: 'tall'`, so the engine blocks the tile above and
+      // below its own as well (OverworldScene.npcBlocksTile) — the player talks
+      // to it from two tiles up.
+      expect(STATIC_LEGENDARIES.mewtwo.footprint).toBe('tall');
+      const foot = [{ x: m.x, y: m.y - 1 }, { x: m.x, y: m.y + 1 }];
+      const withMewtwo = reachSet(B1, b1FromE, undefined, { alsoBlocked: foot });
       const without = reachSet(B1, b1FromE, undefined, { pickedUp: ['mewtwo'] });
-      expect(withMewtwo.has(k(m))).toBe(false);
+      for (const t of [m, ...foot]) expect(withMewtwo.has(k(t)), `${k(t)} walkable`).toBe(false);
+      // The player still gets within talking distance of the footprint.
+      expect(withMewtwo.has(k({ x: m.x, y: m.y - 2 }))).toBe(true);
       // Standing there only seals its own little stub, and that stub is empty:
       // no ladder, no item, nothing routes through it.
       const opened = [...without].filter(t => !withMewtwo.has(t));
       expect(opened).toContain(k(m));
-      expect(opened.length).toBeLessThanOrEqual(4);
+      expect(opened).toContain(k(foot[0]));
+      expect(opened.length).toBeLessThanOrEqual(5);
       for (const t of opened) {
         expect(B1.warps.some(w => k(w) === t), `warp at ${t}`).toBe(false);
         expect(B1.npcs.some(n => n.isItemBall && k(n) === t), `item ball at ${t}`).toBe(false);
       }
       // Everything the floor is for stays reachable with Mewtwo in place.
-      for (const w of B1.warps) expect(reach(B1, b1FromE, w), `warp ${k(w)}`).toBe(true);
-      for (const b of B1.npcs.filter(n => n.isItemBall)) expect(reachNpc(B1, b1FromE, b.id), b.id).toBe(true);
+      for (const w of B1.warps) expect(reach(B1, b1FromE, w, { alsoBlocked: foot }), `warp ${k(w)}`).toBe(true);
+      for (const b of B1.npcs.filter(n => n.isItemBall)) expect(reachNpc(B1, b1FromE, b.id, { alsoBlocked: foot }), b.id).toBe(true);
     });
     it('holds an ESCAPE ROPE on the way in and a REVIVE on an islet', () => {
       const balls = B1.npcs.filter(n => n.isItemBall);

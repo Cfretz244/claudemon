@@ -15,13 +15,23 @@ export interface StaticLegendary {
   speciesId: number;
   /** Level of the encounter. */
   level: number;
+  /**
+   * `'tall'` gives the NPC Snorlax's extended collision: it blocks the tile
+   * above and below its own as well. These sprites are 32px on a 16px grid, so
+   * without it the player can stand on the tile the sprite's head occupies and
+   * is drawn inside it. Collision and the interaction target both go through
+   * `OverworldScene.npcBlocksTile`, so a tall NPC is also talked to from two
+   * tiles away. Only set it where those two extra tiles are free map (a tall
+   * NPC in a corridor would wall it off) — `staticLegendaries.test.ts` pins that.
+   */
+  footprint?: 'tall';
 }
 
 export const STATIC_LEGENDARIES: Record<string, StaticLegendary> = {
   articuno_seafoam: { speciesId: 144, level: 50 },
   zapdos_power_plant: { speciesId: 145, level: 50 },
   moltres_victory_road: { speciesId: 146, level: 50 },
-  mewtwo: { speciesId: 150, level: 70 },
+  mewtwo: { speciesId: 150, level: 70, footprint: 'tall' },
 };
 
 /**

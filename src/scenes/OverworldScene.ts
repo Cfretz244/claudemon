@@ -777,8 +777,12 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private npcBlocksTile(npc: NPCData, x: number, y: number): boolean {
-    if (npc.id.startsWith('snorlax_')) {
-      // Snorlax has extended collision (1 tile above and below)
+    // Snorlax and the `footprint: 'tall'` legendaries (Mewtwo) are drawn with a
+    // 32px sprite on a 16px grid, so they stand a tile taller than they sit.
+    // They get extended collision (1 tile above and below) to keep the player
+    // out of the sprite; the interaction target check runs through here too, so
+    // they are talked to from two tiles away.
+    if (npc.id.startsWith('snorlax_') || getStaticLegendary(npc.id)?.footprint === 'tall') {
       return npc.x === x && Math.abs(npc.y - y) <= 1;
     }
     return npc.x === x && npc.y === y;

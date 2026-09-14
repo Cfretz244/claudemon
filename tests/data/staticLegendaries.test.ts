@@ -25,17 +25,17 @@ for (const [mapId, map] of Object.entries(ALL_MAPS)) {
 }
 
 describe('STATIC_LEGENDARIES', () => {
-  it('holds the three birds at Lv50 and Mewtwo at Lv70', () => {
+  it('holds the three birds at Lv50 and Mewtwo at Lv70, tall', () => {
     expect(STATIC_LEGENDARIES).toEqual({
       articuno_seafoam: { speciesId: 144, level: 50 },
       zapdos_power_plant: { speciesId: 145, level: 50 },
       moltres_victory_road: { speciesId: 146, level: 50 },
-      mewtwo: { speciesId: 150, level: 70 },
+      mewtwo: { speciesId: 150, level: 70, footprint: 'tall' },
     });
   });
 
   it('Mewtwo is the Lv70 encounter on Cerulean Cave B1F', () => {
-    expect(getStaticLegendary('mewtwo')).toEqual({ speciesId: 150, level: 70 });
+    expect(getStaticLegendary('mewtwo')).toEqual({ speciesId: 150, level: 70, footprint: 'tall' });
     expect(POKEMON_DATA[150].name).toBe('MEWTWO');
     const spots = placements.get('mewtwo')!;
     expect(spots.map(s => s.mapId)).toEqual(['cerulean_cave_b1f']);
@@ -57,6 +57,31 @@ describe('STATIC_LEGENDARIES', () => {
     expect(level).toBeGreaterThan(0);
     expect(level).toBeLessThanOrEqual(100);
     expect(effectiveMovesAt(speciesId, level).length, `${id} knows no moves`).toBeGreaterThan(0);
+  });
+
+  // `footprint: 'tall'` extends the NPC's collision to (x, y-1) and (x, y+1)
+  // (OverworldScene.npcBlocksTile), which is two tiles of map the player can no
+  // longer walk on. If either of them carried a ladder or an item ball, or was
+  // the only way through, the legendary would wall off part of its floor.
+  it('a tall legendary only eats free map, and can still be talked to', () => {
+    const tall = entries.filter(([, l]) => l.footprint === 'tall');
+    expect(tall.map(([id]) => id)).toEqual(['mewtwo']);
+    for (const [id] of tall) {
+      const { mapId, npc } = placements.get(id)![0];
+      const map = ALL_MAPS[mapId];
+      const foot = [{ x: npc.x, y: npc.y - 1 }, { x: npc.x, y: npc.y }, { x: npc.x, y: npc.y + 1 }];
+      for (const t of foot) {
+        expect(map.warps.some(w => w.x === t.x && w.y === t.y), `${id}: warp under ${t.x},${t.y}`).toBe(false);
+        expect(map.npcs.some(n => n.id !== id && n.x === t.x && n.y === t.y), `${id}: NPC under ${t.x},${t.y}`).toBe(false);
+      }
+      // Something walkable has to be left beside the footprint, or the
+      // encounter is unreachable: nowhere to stand and press Z.
+      const sides = foot.flatMap(t => [{ x: t.x, y: t.y - 1 }, { x: t.x, y: t.y + 1 }, { x: t.x - 1, y: t.y }, { x: t.x + 1, y: t.y }])
+        .filter(p => p.x >= 0 && p.y >= 0 && p.x < map.width && p.y < map.height)
+        .filter(p => !foot.some(t => t.x === p.x && t.y === p.y))
+        .filter(p => !map.collision[p.y][p.x]);
+      expect(sides.length, `${id}: no tile to talk to it from`).toBeGreaterThan(0);
+    }
   });
 
   it('legendaryClearedFlag matches the flags the save editor and visibility use', () => {
