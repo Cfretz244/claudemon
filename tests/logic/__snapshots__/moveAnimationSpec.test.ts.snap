@@ -19,7 +19,7 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
  16 GUST           NORMAL   projectile     light dust    hit       320 #A8A878 -
  17 WING ATTACK    FLYING   contact        light dash    whoosh    240 #8899FF -
  18 WHIRLWIND      NORMAL   status-cloud   light dust    hit       340 #A8A878 -
- 19 FLY            FLYING   charge         mid   dash    whoosh    680 #8899FF fly
+ 19 FLY            FLYING   charge         mid   dash    whoosh    1000 #8899FF fly
  20 BIND           NORMAL   bind           light dust    hit       460 #A8A878 bind
  21 SLAM           NORMAL   contact        mid   dust    hit       300 #A8A878 -
  22 VINE WHIP      GRASS    contact        light leaf    sweep     240 #44BB44 -
@@ -63,7 +63,7 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
  60 PSYBEAM        PSYCHIC  beam           mid   ring    warble    460 #FF5599 -
  61 BUBBLE BEAM    WATER    beam           mid   droplet splash    460 #3399FF -
  62 AURORA BEAM    ICE      beam           mid   shard   ping      460 #66CCFF -
- 63 HYPER BEAM     NORMAL   beam           heavy dust    hit       520 #A8A878 hyperBeam
+ 63 HYPER BEAM     NORMAL   beam           heavy dust    hit       1000 #A8A878 hyperBeam
  64 PECK           FLYING   contact        light dash    whoosh    240 #8899FF -
  65 DRILL PECK     FLYING   contact        mid   dash    whoosh    300 #8899FF -
  66 SUBMISSION     FIGHTING contact        mid   streak  tripleHit 300 #BB5544 -
@@ -76,7 +76,7 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
  73 LEECH SEED     GRASS    status-cloud   light leaf    sweep     340 #44BB44 leechSeed
  74 GROWTH         NORMAL   self-aura      light dust    hit       320 #A8A878 -
  75 RAZOR LEAF     GRASS    projectile     mid   leaf    sweep     380 #44BB44 -
- 76 SOLAR BEAM     GRASS    charge         heavy leaf    sweep     740 #44BB44 solarBeam
+ 76 SOLAR BEAM     GRASS    charge         heavy leaf    sweep     1100 #44BB44 solarBeam
  77 POISON POWDER  POISON   status-cloud   light bubble  bubblePop 340 #AA5599 -
  78 STUN SPORE     GRASS    status-cloud   light leaf    sweep     340 #44BB44 -
  79 SLEEP POWDER   GRASS    status-cloud   light leaf    sweep     340 #44BB44 sleepPowder
@@ -91,7 +91,7 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
  88 ROCK THROW     ROCK     projectile     mid   block   thud      380 #BBAA66 -
  89 EARTHQUAKE     GROUND   contact        heavy grit    rumble    360 #DDBB55 earthquake
  90 FISSURE        GROUND   special-strike light grit    rumble    460 #DDBB55 -
- 91 DIG            GROUND   charge         heavy grit    rumble    740 #DDBB55 dig
+ 91 DIG            GROUND   charge         heavy grit    rumble    1000 #DDBB55 dig
  92 TOXIC          POISON   status-cloud   light bubble  bubblePop 340 #AA5599 toxic
  93 CONFUSION      PSYCHIC  beam           mid   ring    warble    460 #FF5599 -
  94 PSYCHIC        PSYCHIC  beam           heavy ring    warble    520 #FF5599 psychic
@@ -120,7 +120,7 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
 117 BIDE           NORMAL   contact        light dust    hit       240 #A8A878 -
 118 METRONOME      NORMAL   self-aura      light dust    hit       320 #A8A878 -
 119 MIRROR MOVE    FLYING   self-aura      light dash    whoosh    320 #8899FF -
-120 SELF-DESTRUCT  NORMAL   burst          heavy dust    hit       780 #A8A878 selfDestruct
+120 SELF-DESTRUCT  NORMAL   burst          heavy dust    hit       1000 #A8A878 selfDestruct
 121 EGG BOMB       NORMAL   projectile     heavy dust    hit       440 #A8A878 -
 122 LICK           GHOST    contact        light wisp    wail      240 #6666BB -
 123 SMOG           POISON   projectile     light bubble  bubblePop 320 #AA5599 -
@@ -153,7 +153,7 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
 150 SPLASH         NORMAL   self-aura      light dust    hit       320 #A8A878 splash
 151 ACID ARMOR     POISON   self-aura      light bubble  bubblePop 320 #AA5599 -
 152 CRABHAMMER     WATER    contact        heavy droplet splash    360 #3399FF -
-153 EXPLOSION      NORMAL   burst          heavy dust    hit       780 #A8A878 explosion
+153 EXPLOSION      NORMAL   burst          heavy dust    hit       1100 #A8A878 explosion
 154 FURY SWIPES    NORMAL   barrage        light dust    hit       380 #A8A878 -
 155 BONEMERANG     GROUND   barrage        mid   grit    rumble    440 #DDBB55 -
 156 REST           PSYCHIC  self-aura      light ring    warble    320 #FF5599 rest

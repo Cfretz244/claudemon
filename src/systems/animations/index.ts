@@ -1,6 +1,4 @@
-// Barrel file - imports all batch animation registrations
-// plus the tier-3 per-move overrides (registered with registerSpecOverride).
+// Barrel file - the tier-3 per-move overrides (registered with
+// registerSpecOverride). Every other move is drawn by the generic spec
+// renderer in systems/MoveAnimations.ts; there is no per-move registry any more.
 import './overrides';
-import './batch11_self_buff';
-import './batch12_debuff_status';
-import './batch13_remaining';

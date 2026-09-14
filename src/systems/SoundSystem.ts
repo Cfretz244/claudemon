@@ -592,6 +592,34 @@ export class SoundSystem {
     ], 'sine', 0.06);
   }
 
+  // === Tier-3 override voices (src/systems/animations/overrides.ts) ===
+
+  /** SELF-DESTRUCT / EXPLOSION: a deep detonation with a debris tail. */
+  boom(): void {
+    this.playNotes([
+      { freq: 160, dur: 0.08, delay: 0 },
+      { freq: 90, dur: 0.14, delay: 0.05 },
+      { freq: 55, dur: 0.3, delay: 0.12 },
+    ], 'square', 0.12);
+    this.playNotes([
+      { freq: 240, dur: 0.05, delay: 0 },
+      { freq: 180, dur: 0.06, delay: 0.08 },
+      { freq: 120, dur: 0.1, delay: 0.18 },
+      { freq: 70, dur: 0.2, delay: 0.3 },
+    ], 'sawtooth', 0.09);
+  }
+
+  /** SOLAR BEAM / HYPER BEAM: a rising whine while the shot charges. */
+  beamCharge(): void {
+    this.playNotes([
+      { freq: 220, dur: 0.08, delay: 0 },
+      { freq: 330, dur: 0.08, delay: 0.07 },
+      { freq: 440, dur: 0.08, delay: 0.14 },
+      { freq: 620, dur: 0.1, delay: 0.21 },
+      { freq: 880, dur: 0.16, delay: 0.29 },
+    ], 'triangle', 0.06);
+  }
+
   /** Dragon: a low guttural roar. */
   roar(): void {
     this.playNotes([

@@ -5,7 +5,6 @@ import {
   AnimationSpec,
   ParticleShape,
   SfxId,
-  TYPE_VOCAB,
   resolveAnimation,
 } from '../logic/moveAnimationSpec';
 
@@ -16,16 +15,6 @@ export interface AnimationContext {
   attackerSprite: Phaser.GameObjects.Sprite;
   defenderSprite: Phaser.GameObjects.Sprite;
   isPlayer: boolean; // true = player attacking (bottom-left → top-right)
-}
-
-export type MoveAnimationFn = (ctx: AnimationContext) => Promise<void>;
-
-// === Registry ===
-
-const MOVE_ANIMATIONS: Record<number, MoveAnimationFn> = {};
-
-export function registerAnimation(moveId: number, fn: MoveAnimationFn): void {
-  MOVE_ANIMATIONS[moveId] = fn;
 }
 
 // === Tier-3 override registry ===
@@ -44,17 +33,6 @@ const SPEC_OVERRIDES: Record<string, SpecOverrideFn> = {};
 export function registerSpecOverride(key: string, fn: SpecOverrideFn): void {
   SPEC_OVERRIDES[key] = fn;
 }
-
-// === Type Color Map ===
-
-/**
- * Derived from TYPE_VOCAB (src/logic/moveAnimationSpec.ts), which is the single
- * source of colour truth. Kept as a named export because the batch animation
- * files still import it.
- */
-export const TYPE_COLORS: Record<string, number> = Object.fromEntries(
-  Object.entries(TYPE_VOCAB).map(([type, vocab]) => [type, vocab.color]),
-) as Record<string, number>;
 
 // === Helper Utilities ===
 
@@ -113,32 +91,6 @@ export function spriteFlash(sprite: Phaser.GameObjects.Sprite, scene: Phaser.Sce
   });
 }
 
-export function projectile(
-  scene: Phaser.Scene,
-  fromSprite: Phaser.GameObjects.Sprite,
-  toSprite: Phaser.GameObjects.Sprite,
-  color: number,
-  size: number,
-  speed: number,
-): Promise<void> {
-  const g = scene.add.graphics();
-  g.setDepth(800);
-  g.setScrollFactor(0);
-  g.fillStyle(color, 1);
-  g.fillCircle(0, 0, size);
-  g.setPosition(fromSprite.x, fromSprite.y);
-
-  const dist = Phaser.Math.Distance.Between(fromSprite.x, fromSprite.y, toSprite.x, toSprite.y);
-  const duration = (dist / speed) * 1000;
-
-  return tweenPromise(scene, {
-    targets: g,
-    x: toSprite.x,
-    y: toSprite.y,
-    duration,
-  }).then(() => { g.destroy(); });
-}
-
 export function lunge(
   scene: Phaser.Scene,
   sprite: Phaser.GameObjects.Sprite,
@@ -167,67 +119,6 @@ export function lunge(
       ease: 'Power2',
     })
   );
-}
-
-export function beam(
-  scene: Phaser.Scene,
-  fromSprite: Phaser.GameObjects.Sprite,
-  toSprite: Phaser.GameObjects.Sprite,
-  color: number,
-  width: number,
-  duration: number,
-): Promise<void> {
-  const g = scene.add.graphics();
-  g.setDepth(800);
-  g.setScrollFactor(0);
-  g.lineStyle(width, color, 1);
-  g.beginPath();
-  g.moveTo(fromSprite.x, fromSprite.y);
-  g.lineTo(toSprite.x, toSprite.y);
-  g.strokePath();
-  g.setAlpha(1);
-
-  return tweenPromise(scene, {
-    targets: g,
-    alpha: 0,
-    duration,
-  }).then(() => { g.destroy(); });
-}
-
-export function particles(
-  scene: Phaser.Scene,
-  x: number,
-  y: number,
-  color: number,
-  count: number,
-  spread: number,
-  duration: number,
-): Promise<void> {
-  const graphics: Phaser.GameObjects.Graphics[] = [];
-  for (let i = 0; i < count; i++) {
-    const g = scene.add.graphics();
-    g.setDepth(800);
-    g.setScrollFactor(0);
-    g.fillStyle(color, 1);
-    const s = 1 + Math.random() * 2;
-    g.fillRect(-s / 2, -s / 2, s, s);
-    g.setPosition(x, y);
-    graphics.push(g);
-  }
-
-  const promises = graphics.map(g => {
-    const tx = x + (Math.random() - 0.5) * spread * 2;
-    const ty = y + (Math.random() - 0.5) * spread * 2;
-    return tweenPromise(scene, {
-      targets: g,
-      x: tx,
-      y: ty,
-      alpha: 0,
-      duration: duration + Math.random() * 100,
-    }).then(() => { g.destroy(); });
-  });
-
-  return Promise.all(promises).then(() => {});
 }
 
 export function sparkle(
@@ -269,43 +160,6 @@ export function sparkle(
   );
 
   return Promise.all(promises).then(() => {});
-}
-
-export function lightning(
-  scene: Phaser.Scene,
-  startX: number,
-  startY: number,
-  endX: number,
-  endY: number,
-  color: number,
-  duration: number,
-): Promise<void> {
-  const g = scene.add.graphics();
-  g.setDepth(800);
-  g.setScrollFactor(0);
-
-  // Build zigzag path
-  const segments = 6;
-  const dx = (endX - startX) / segments;
-  const dy = (endY - startY) / segments;
-
-  g.lineStyle(2, color, 1);
-  g.beginPath();
-  g.moveTo(startX, startY);
-
-  for (let i = 1; i < segments; i++) {
-    const jitter = (Math.random() - 0.5) * 12;
-    g.lineTo(startX + dx * i + jitter, startY + dy * i + jitter * 0.5);
-  }
-  g.lineTo(endX, endY);
-  g.strokePath();
-
-  return tweenPromise(scene, {
-    targets: g,
-    alpha: 0,
-    duration,
-    delay: duration * 0.3,
-  }).then(() => { g.destroy(); });
 }
 
 // === Frame-driven helpers (one Graphics for the whole effect) ===
@@ -758,9 +612,8 @@ export function emitterAlong(
  * A type-coloured beam: a wide coloured halo, a solid body and a thin bright
  * core, held at FULL alpha for most of its life and cut at the end.
  *
- * The plain `beam()` above starts fading on frame one and is 1-4 px wide, which
- * is why the generic renderer's first pass looked like a pale scratch instead
- * of a beam. Nothing in the legacy batches uses this one.
+ * The first pass drew a 1-4 px line that started fading on frame one, which
+ * looked like a pale scratch instead of a beam; this one holds.
  */
 export function typeBeam(
   scene: Phaser.Scene,
@@ -1226,11 +1079,11 @@ export async function renderSpec(spec: AnimationSpec, ctx: AnimationContext): Pr
 
 // === Main Entry Point ===
 
+/**
+ * Every move in the game, drawn from its resolved spec: tier 1/2 generic body,
+ * or the tier-3 override when the resolver named one. There is no per-move
+ * registry behind this any more - `resolveAnimation` covers all 165 moves.
+ */
 export async function playMoveAnimation(moveId: number, ctx: AnimationContext): Promise<void> {
-  const animFn = MOVE_ANIMATIONS[moveId];
-  if (animFn) {
-    await animFn(ctx);
-    return;
-  }
   await renderSpec(resolveAnimation(moveId), ctx);
 }
