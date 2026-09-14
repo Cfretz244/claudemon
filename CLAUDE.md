@@ -233,9 +233,13 @@ export const ALL_MAPS: Record<string, MapData> = {
 
 ### Tile Types
 
-Solid (block movement): `WALL, WATER, TREE, BUILDING, FENCE, COUNTER, MART_SHELF, CAVE_WALL, PC`
+Solid (block movement): `WALL, WATER, TREE, BUILDING, FENCE, COUNTER, MART_SHELF, CAVE_WALL, PC, SIGN, MUSEUM_PLAQUE`
 
-Walkable: `GRASS, PATH, TALL_GRASS, DOOR, SIGN, LEDGE, FLOWER, INDOOR_FLOOR, CARPET, SAND, CAVE_FLOOR`
+Walkable: `GRASS, PATH, TALL_GRASS, DOOR, LEDGE, FLOWER, INDOOR_FLOOR, CARPET, SAND, CAVE_FLOOR`
+
+Signs are solid: you face a sign to read it (`readSign` fires from `interact()`
+on the faced tile), so a walkable sign swallowed the keypress as a step.
+`tests/data/signsSolid.test.ts` proves no map loses reachable ground to it.
 
 Special: `CUT_TREE` (removed by Cut), `BOULDER` (moved by Strength)
 
