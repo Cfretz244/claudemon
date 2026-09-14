@@ -1,13 +1,18 @@
-// Pins the two forced one-off wild encounters to the exact behaviour that lived
-// in OverworldScene.handleSnorlax() and warpTo()'s Pokemon Tower branch
-// (messages verbatim, same species/level, same flag names and flag timing).
+// Pins the two forced one-off wild encounters (messages verbatim, same
+// species/level, same flag names and flag timing).
+//
+// The Marowak pins were written to document the OLD behaviour — the flag went up
+// `on_trigger`, the moment the 7F warp was intercepted, so running away still
+// consumed the ghost. That is the bug the ghost fix removes: the warp now lands,
+// the ambush fires on arrival, and the flag is `on_victory` — written by the
+// BattleScene through `clearsForcedEncounter`. The pins below follow.
 import { describe, it, expect } from 'vitest';
 import {
   snorlaxEncounter, snorlaxWakeMessages, snorlaxClearedFlag,
-  marowakAmbush,
+  marowakAmbush, clearsForcedEncounter,
   SNORLAX_NPC_IDS, SNORLAX_ASLEEP_MESSAGES, SNORLAX_SPECIES_ID, SNORLAX_LEVEL, POKE_FLUTE_ITEM,
   MAROWAK_MAP_ID, MAROWAK_MESSAGES, MAROWAK_SPECIES_ID, MAROWAK_LEVEL, MAROWAK_GHOST_FLAG,
-  ForcedEncounter,
+  ForcedEncounter, WildBattleEnd,
 } from '../../src/logic/forcedEncounters';
 import { shouldSkipNPC } from '../../src/logic/npcVisibility';
 import { checkEntryGates } from '../../src/logic/warpGate';
@@ -169,9 +174,9 @@ describe('marowakAmbush', () => {
       ],
       battle: { speciesId: 105, level: 30 },
       flag: 'marowak_ghost_defeated',
-      flagTiming: 'on_trigger',
+      flagTiming: 'on_victory',
     });
-    // The scene writes the flag it just returned; the next entry is silent.
+    // Once the battle has written the flag, every later arrival is silent.
     const storyFlags: Record<string, boolean> = {};
     storyFlags[first.flag!] = true;
     expect(marowakAmbush(MAROWAK_MAP_ID, { storyFlags })).toEqual(NOTHING);
@@ -198,7 +203,7 @@ describe('marowakAmbush', () => {
     expect(MAROWAK_MESSAGES).toHaveLength(2);
   });
 
-  it('nothing hides an NPC on the flag — the ghost is a warp trigger, not an NPC', () => {
+  it('nothing hides an NPC on the flag — the ghost is an arrival trigger, not an NPC', () => {
     expect(ALL_MAPS[MAROWAK_MAP_ID].npcs.some(n => n.id.includes('marowak'))).toBe(false);
     expect(shouldSkipNPC(makeNPC('mr_fuji'), { [MAROWAK_GHOST_FLAG]: true, tower_rockets_cleared: true }, [], [], () => false))
       .toBe(false);
@@ -227,16 +232,62 @@ describe('marowakAmbush vs. the 7F entry gate', () => {
 });
 
 describe('flag timing differs between the two encounters', () => {
-  it('Snorlax writes with the battle, Marowak writes on the trigger', () => {
-    expect(snorlaxEncounter('snorlax_route12', bag(POKE_FLUTE_ITEM)).flagTiming).toBe('on_battle_start');
-    expect(marowakAmbush(MAROWAK_MAP_ID, flags()).flagTiming).toBe('on_trigger');
+  it('Snorlax writes with the battle, Marowak only on victory', () => {
+    // Snorlax keeps its at-launch semantics (Gen I: it vanishes even if you run).
+    for (const id of SNORLAX_NPC_IDS) {
+      expect(snorlaxEncounter(id, bag(POKE_FLUTE_ITEM)).flagTiming).toBe('on_battle_start');
+    }
+    expect(marowakAmbush(MAROWAK_MAP_ID, flags()).flagTiming).toBe('on_victory');
   });
 
-  it('both consume the encounter without requiring a win', () => {
+  it('both are real battles that write a flag', () => {
     for (const d of [snorlaxEncounter('snorlax_route16', bag(POKE_FLUTE_ITEM)), marowakAmbush(MAROWAK_MAP_ID, flags())]) {
       expect(d.outcome).toBe('battle');
       expect(d.flag).toBeTruthy();
       expect(d.battle).not.toBeNull();
     }
+  });
+
+  it('only Marowak needs the win: no other encounter is on_victory', () => {
+    const timings = [
+      ...SNORLAX_NPC_IDS.map(id => snorlaxEncounter(id, bag(POKE_FLUTE_ITEM)).flagTiming),
+      marowakAmbush(MAROWAK_MAP_ID, flags()).flagTiming,
+    ];
+    expect(timings.filter(t => t === 'on_victory')).toHaveLength(1);
+  });
+});
+
+describe('clearsForcedEncounter (what the BattleScene asks before writing clearedFlag)', () => {
+  it('is exhaustive over the four wild endings', () => {
+    const ends: WildBattleEnd[] = ['opponent_fainted', 'caught', 'ran', 'player_fainted'];
+    expect(ends.map(e => [e, clearsForcedEncounter(e)])).toEqual([
+      ['opponent_fainted', true],
+      ['caught', true],
+      ['ran', false],
+      ['player_fainted', false],
+    ]);
+  });
+
+  it('running from the ghost leaves its flag down, so the next arrival fires again', () => {
+    const ghost = marowakAmbush(MAROWAK_MAP_ID, flags());
+    const storyFlags: Record<string, boolean> = {};
+    // What BattleScene.finishForcedEncounter() does, for each ending in turn.
+    const apply = (end: WildBattleEnd) => {
+      if (clearsForcedEncounter(end)) storyFlags[ghost.flag!] = true;
+    };
+    apply('ran');
+    expect(storyFlags[MAROWAK_GHOST_FLAG]).toBeUndefined();
+    expect(marowakAmbush(MAROWAK_MAP_ID, { storyFlags }).outcome).toBe('battle');
+    apply('player_fainted');
+    expect(marowakAmbush(MAROWAK_MAP_ID, { storyFlags }).outcome).toBe('battle');
+    apply('opponent_fainted');
+    expect(storyFlags[MAROWAK_GHOST_FLAG]).toBe(true);
+    expect(marowakAmbush(MAROWAK_MAP_ID, { storyFlags })).toEqual(NOTHING);
+  });
+
+  it('a catch clears it too — the ghost joins the party instead of resting', () => {
+    const storyFlags: Record<string, boolean> = {};
+    if (clearsForcedEncounter('caught')) storyFlags[MAROWAK_GHOST_FLAG] = true;
+    expect(marowakAmbush(MAROWAK_MAP_ID, { storyFlags })).toEqual(NOTHING);
   });
 });
