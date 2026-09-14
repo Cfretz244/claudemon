@@ -25,6 +25,7 @@ import {
   emitterAlong,
   impactBurst,
   impactTint,
+  newAmbientGraphics,
   newBodyGraphics,
   registerSpecOverride,
   ring,
@@ -52,6 +53,16 @@ function newG(scene: Phaser.Scene, depth: number): Phaser.GameObjects.Graphics {
   // set-pieces that draw their detonation by hand (FIRE BLAST, THUNDER) from
   // marking a target they did not connect with.
   return newBodyGraphics(scene, depth);
+}
+
+/**
+ * The same, for a drawing that covers the WHOLE FIELD rather than the target -
+ * a storm veil, a wall of water, streaks across the sky. Weather is not an
+ * impact mark, so tier 4's miss / immune cutout must never punch a hole in it:
+ * the defender dodging an attack does not make the sky brighten around it.
+ */
+function ambientG(scene: Phaser.Scene, depth: number): Phaser.GameObjects.Graphics {
+  return newAmbientGraphics(scene, depth);
 }
 
 function strokePath(
@@ -95,6 +106,12 @@ function fork(from: Pt, dir: number, len: number): Pt[] {
  * One sky-to-ground bolt: a forked polyline drawn three times into a single
  * Graphics - dark edge, yellow body, white-hot core - held at full alpha for
  * `hold` ms so it is actually seen, then faded over `fade` ms.
+ *
+ * `newG`, NOT `ambientG`: the bolt spans the field but it is AIMED - its foot
+ * is the defender's own x/y. It is the attack arriving, so on a miss tier 4
+ * cuts the defender's silhouette out of it and the bolt reads as falling past
+ * the Pokemon instead of into it. Only the sky DARKENING (`stormVeil`) is
+ * weather.
  */
 function skyBolt(
   scene: Phaser.Scene,
@@ -128,7 +145,7 @@ function skyBolt(
 
 /** The sky going dark before the strike, then lifting. */
 function stormVeil(scene: Phaser.Scene, peak: number, inMs: number, holdMs: number, outMs: number): Promise<void> {
-  const g = newG(scene, 870);
+  const g = ambientG(scene, 870);
   g.fillStyle(STORM, 1);
   g.fillRect(0, 0, GAME_W, 144);
   g.setAlpha(0);
@@ -322,7 +339,7 @@ async function renderFly(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
   // 2. Absent (15 -> 30 %). Streaks cross the empty sky so the field still
   //    moves while the attacker is nowhere on it. They are the only thing on
   //    screen, so they are drawn fat and dark-edged rather than as hairlines.
-  const sky = newG(scene, 830);
+  const sky = ambientG(scene, 830);
   await frames(scene, Math.round(d * 0.15), t => {
     sky.clear();
     sky.setAlpha(t < 0.85 ? 1 : Math.max(0, 1 - (t - 0.85) / 0.15));
@@ -1023,7 +1040,7 @@ async function renderSurf(spec: AnimationSpec, ctx: AnimationContext): Promise<v
 
   soundSystem.waveCrash();
 
-  const sea = newG(scene, 865);
+  const sea = ambientG(scene, 865);
   /** Paints the water mass between `back` and `front` with a crest height of
    *  `h` at the front, tapering only slightly behind it - the body has to stay
    *  tall enough all the way back to pass OVER the defender's sprite (its top
@@ -1408,7 +1425,7 @@ async function renderBlizzard(spec: AnimationSpec, ctx: AnimationContext): Promi
 
   soundSystem.iceWind();
 
-  const veil = newG(scene, 866);
+  const veil = ambientG(scene, 866);
   veil.fillStyle(ICE_VEIL, 1);
   veil.fillRect(0, 0, GAME_W, 144);
   veil.setAlpha(0);
@@ -1420,7 +1437,7 @@ async function renderBlizzard(spec: AnimationSpec, ctx: AnimationContext): Promi
     len: 14 + (i % 4) * 6,
     pale: i % 3 === 0,
   }));
-  const storm = newG(scene, 872);
+  const storm = ambientG(scene, 872);
 
   const stormMs = Math.round(d * 0.74);
   const stormJob = frames(scene, stormMs, t => {
@@ -1583,7 +1600,7 @@ async function renderNightShade(spec: AnimationSpec, ctx: AnimationContext): Pro
 
   soundSystem.wail();
 
-  const veil = newG(scene, 860);
+  const veil = ambientG(scene, 860);
   veil.fillStyle(NIGHT, 1);
   veil.fillRect(0, 0, GAME_W, 144);
   veil.setAlpha(0);
