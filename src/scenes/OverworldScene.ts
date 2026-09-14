@@ -32,8 +32,8 @@ import { STATIC_LEGENDARIES, getStaticLegendary, legendaryClearedFlag } from '..
 import { shouldGiveOaksParcel } from '../logic/oaksParcel';
 import {
   oakStage, applyOakStage, OAK_DIALOGUE, shouldTriggerLabRivalBattle,
-  labRivalTriggerOutcome, LAB_MAP_ID, LAB_RIVAL_NPC_ID, LAB_RIVAL_TRAINER_ID,
-  RIVAL_BATTLE_LAB_FLAG,
+  labRivalTriggerOutcome, consumeLabRivalEncounter, labRivalTalkOutcome,
+  LAB_RIVAL_TALK_DIALOGUE, LAB_MAP_ID, LAB_RIVAL_NPC_ID, LAB_RIVAL_TRAINER_ID,
 } from '../logic/oakLab';
 import { checkEntryGates } from '../logic/warpGate';
 import { MapInstance, instantiateMap, landedBoulders, pushBoulder, isFlagGateOpen, tileUnder } from '../logic/boulders';
@@ -1184,7 +1184,7 @@ export class OverworldScene extends Phaser.Scene {
       defeatedTrainers: this.playerState.defeatedTrainers,
     });
     if (outcome === 'flag_only') {
-      this.playerState.storyFlags[RIVAL_BATTLE_LAB_FLAG] = true;
+      consumeLabRivalEncounter(this.playerState);
       return;
     }
 
@@ -1196,6 +1196,11 @@ export class OverworldScene extends Phaser.Scene {
         `${this.playerState.rivalName} wants\nto battle!`,
       ],
       () => {
+        // Consume the ambush BEFORE the battle launches: startRivalBattle
+        // snapshots playerState.toSave() into the battle payload and the
+        // whiteout restarts the overworld from that snapshot, so setting the
+        // flag here is what makes a LOSS end the encounter too.
+        consumeLabRivalEncounter(this.playerState);
         this.startRivalBattle(LAB_RIVAL_TRAINER_ID);
       }
     );
@@ -1853,26 +1858,19 @@ export class OverworldScene extends Phaser.Scene {
 
   /** Rival NPC in the lab - context-dependent. */
   private handleRivalInLab(): boolean {
-    if (!this.playerState.storyFlags['has_pikachu']) {
-      this.textBox.show([
-        `${this.playerState.rivalName}: What?\nGramps isn't here?`,
-        "I want my POKeMON!",
-      ]);
+    const talk = labRivalTalkOutcome(this.playerState);
+    const messages = LAB_RIVAL_TALK_DIALOGUE[talk].map(d => this.fmt(d));
+    if (talk !== 'battle') {
+      // 'post_battle' is also what he says after a LOSS: the flag goes up when
+      // the battle starts, so the encounter is over either way.
+      this.textBox.show(messages);
       return true;
     }
-    if (this.playerState.storyFlags['rival_battle_lab']) {
-      this.textBox.show([
-        `${this.playerState.rivalName}: I'll get\nstronger and beat\nyou next time!`,
-      ]);
-      return true;
-    }
-    // Rival wants to battle (triggered automatically after getting Pikachu)
+    // Rival wants to battle (also triggered automatically on the exit warp)
     soundSystem.startMusic('rival_theme');
-    this.textBox.show([
-      this.fmt(`${this.playerState.rivalName}: Wait,\n{PLAYER}!`),
-      "Let's check out our\nnew POKeMON!",
-    ], () => {
-      this.startRivalBattle('rival_lab');
+    this.textBox.show(messages, () => {
+      consumeLabRivalEncounter(this.playerState);
+      this.startRivalBattle(LAB_RIVAL_TRAINER_ID);
     });
     return true;
   }
