@@ -109,6 +109,25 @@ export const BADGE_CHECK_REQUIREMENTS: Record<string, { badge: string; name: str
 /** How many badges an unnamed `badge_check*` guard wants. */
 export const ALL_BADGES_REQUIRED = 8;
 
+/** Suffix on the id of the "stepped aside" twin standing beside each gap. */
+export const BADGE_CHECK_PASSED_SUFFIX = '_passed';
+
+/** `badge_check1_passed` -> `badge_check1`; any other id is returned as-is. */
+export function badgeCheckBaseId(npcId: string): string {
+  return npcId.endsWith(BADGE_CHECK_PASSED_SUFFIX)
+    ? npcId.slice(0, -BADGE_CHECK_PASSED_SUFFIX.length)
+    : npcId;
+}
+
+/**
+ * The story flag a guard sets once he has seen the badge and stepped out of
+ * the gap. `npcVisibility` swaps the guard for his `_passed` twin on it, and
+ * the guard stops blocking his tile.
+ */
+export function badgeCheckClearedFlag(npcId: string): string {
+  return `${badgeCheckBaseId(npcId)}_cleared`;
+}
+
 export interface BadgeCheckOutcome {
   pass: boolean;
   /** The single badge this guard asks for; null for the "all eight" guard. */
@@ -118,12 +137,18 @@ export interface BadgeCheckOutcome {
   /** True when this id is not in the table and the guard wants all eight. */
   requiresAllBadges: boolean;
   message: string[];
+  /**
+   * Story flag the scene must set when the text closes, on a pass only: the
+   * guard steps aside for good. Null while he is still refusing.
+   */
+  clearFlag: string | null;
 }
 
 /**
- * What a Route 23 guard says. A known id checks its one badge; anything else
- * counts badges and needs all eight. Note the guard only ever talks: passing
- * does not move him off his tile, and the message is the whole effect.
+ * What a Route 23 guard says, and whether he steps aside. A known id checks
+ * its one badge; anything else counts badges and needs all eight. On a pass
+ * the outcome also names the flag that clears him off the gap tile for good
+ * (`clearFlag`); refusing has no effect beyond the message.
  */
 export function badgeCheckOutcome(npcId: string, state: RoadBlockState): BadgeCheckOutcome {
   const req = BADGE_CHECK_REQUIREMENTS[npcId];
@@ -137,6 +162,7 @@ export function badgeCheckOutcome(npcId: string, state: RoadBlockState): BadgeCh
       message: pass
         ? [`GUARD: ${req.name}?\nVery good!`, 'You may pass!']
         : [`GUARD: You need the\n${req.name} to pass!`, 'Come back when you\nhave it!'],
+      clearFlag: pass ? badgeCheckClearedFlag(npcId) : null,
     };
   }
   const pass = state.badges.length >= ALL_BADGES_REQUIRED;
@@ -148,5 +174,6 @@ export function badgeCheckOutcome(npcId: string, state: RoadBlockState): BadgeCh
     message: pass
       ? ['GUARD: All BADGES\nverified! Go ahead!']
       : ['GUARD: You need more\nBADGES to pass!'],
+    clearFlag: pass ? badgeCheckClearedFlag(npcId) : null,
   };
 }

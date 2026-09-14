@@ -40,7 +40,7 @@ import { MapInstance, instantiateMap, landedBoulders, pushBoulder, isFlagGateOpe
 import { restoreParty } from '../logic/healing';
 import {
   interceptWarp, needsOakEscort, badgeCheckOutcome, OAK_INTERCEPT_MESSAGES,
-  OAK_ESCORT_DESTINATION, PEWTER_GUIDE_NPC_ID,
+  OAK_ESCORT_DESTINATION, PEWTER_GUIDE_NPC_ID, BADGE_CHECK_PASSED_SUFFIX,
 } from '../logic/roadBlocks';
 import { elevatorAccess, elevatorTarget, visitedFlag } from '../logic/elevator';
 import { computeCurrentSlide, computeSlide, Slide } from '../logic/spinTiles';
@@ -1813,7 +1813,11 @@ export class OverworldScene extends Phaser.Scene {
     if (exact) return exact;
     if (id.startsWith('slot_machine_')) return () => { this.playSlotMachine(); return true; };
     if (id.startsWith('elevator_')) return () => this.handleElevatorNpc();
-    if (id.startsWith('badge_check')) return (npc) => this.handleBadgeCheck(npc);
+    // The `_passed` twins are plain dialogue NPCs, not checkpoints: they only
+    // exist once their guard has stepped aside, so they must fall through.
+    if (id.startsWith('badge_check') && !id.endsWith(BADGE_CHECK_PASSED_SUFFIX)) {
+      return (npc) => this.handleBadgeCheck(npc);
+    }
     return undefined;
   }
 
@@ -1948,8 +1952,17 @@ export class OverworldScene extends Phaser.Scene {
 
   /** Route 23 badge check NPCs. */
   private handleBadgeCheck(npc: NPCData): boolean {
-    // Which badge this guard asks for, and what he says: src/logic/roadBlocks.ts.
-    this.textBox.show(badgeCheckOutcome(npc.id, this.playerState).message);
+    // Which badge this guard asks for, what he says, and whether he steps
+    // aside: src/logic/roadBlocks.ts.
+    const outcome = badgeCheckOutcome(npc.id, this.playerState);
+    this.textBox.show(outcome.message, () => {
+      if (!outcome.clearFlag) return;
+      this.playerState.storyFlags[outcome.clearFlag] = true;
+      // Collision and interaction both consult shouldSkipNPC() live, so the
+      // gap is already open; only the sprites are stale. Respawning the map's
+      // six NPCs is cheaper and less error-prone than hand-swapping the pair.
+      this.createNPCs();
+    });
     return true;
   }
 

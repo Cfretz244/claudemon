@@ -27,6 +27,10 @@ const HANDLER_IDS = [
   'giovanni_game_corner', 'giovanni_silph',
 ];
 const HANDLER_PREFIXES = ['slot_machine_', 'elevator_', 'badge_check'];
+// Ids that match a handler prefix but are deliberately NOT routed to it: the
+// stepped-aside Route 23 guards are plain-dialogue NPCs, so getNpcHandler()
+// excludes the `_passed` suffix from the badge_check prefix match.
+const HANDLER_PREFIX_EXCEPTIONS = ['badge_check1_passed', 'badge_check2_passed', 'badge_check3_passed'];
 
 // Ids that shouldSkipNPC() keys visibility on (src/logic/npcVisibility.ts).
 const VISIBILITY_IDS = [
@@ -43,6 +47,9 @@ const VISIBILITY_IDS = [
   'jessie_tower', 'james_tower', 'jessie_silph', 'james_silph',
   ...Object.keys(STATIC_LEGENDARIES),
   'league_guard_lorelei', 'league_guard_bruno', 'league_guard_agatha', 'league_guard_lance',
+  // Route 23 badge guards: each pair is swapped on one `badge_checkN_cleared` flag.
+  'badge_check1', 'badge_check2', 'badge_check3',
+  'badge_check1_passed', 'badge_check2_passed', 'badge_check3_passed',
 ];
 
 // Only these story NPCs are trainers: the handler returns false while they are
@@ -79,6 +86,13 @@ describe('story NPC dispatch contract', () => {
         allIds.some(id => id.startsWith(prefix)),
         `no NPC id starts with '${prefix}'`,
       ).toBe(true);
+    }
+  });
+
+  it('every prefix-exception id is placed on a map and really matches the prefix it is excepted from', () => {
+    for (const id of HANDLER_PREFIX_EXCEPTIONS) {
+      expect(npcsById.has(id), `'${id}' has no NPC on any map`).toBe(true);
+      expect(HANDLER_PREFIXES.some(p => id.startsWith(p)), `'${id}' matches no handler prefix`).toBe(true);
     }
   });
 

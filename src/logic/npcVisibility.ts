@@ -1,5 +1,6 @@
 import { NPCData } from '../types/map.types';
 import { getStaticLegendary, legendaryClearedFlag } from '../data/staticLegendaries';
+import { BADGE_CHECK_PASSED_SUFFIX, badgeCheckClearedFlag } from './roadBlocks';
 
 export function shouldSkipNPC(
   npc: NPCData,
@@ -143,6 +144,13 @@ export function shouldSkipNPC(
       (defeatedTrainers.includes('jessie_silph') ||
        defeatedTrainers.includes('giovanni_silph'))) {
     return true;
+  }
+  // Route 23 badge guards come in pairs sharing one `badge_checkN_cleared`
+  // flag: the blocking guard stands in the fence row's gap until he has seen
+  // the badge, and the `_passed` twin beside the gap only exists afterwards.
+  if (npc.id.startsWith('badge_check')) {
+    const cleared = !!storyFlags[badgeCheckClearedFlag(npc.id)];
+    return npc.id.endsWith(BADGE_CHECK_PASSED_SUFFIX) ? !cleared : cleared;
   }
   // Static legendaries (the birds, Mewtwo) disappear once their encounter is used
   if (getStaticLegendary(npc.id) && storyFlags[legendaryClearedFlag(npc.id)]) return true;
