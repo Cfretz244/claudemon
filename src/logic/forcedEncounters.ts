@@ -1,21 +1,23 @@
 // Forced one-off wild encounters that the story fires at the player: the two
-// sleeping Snorlax (woken with the POKe FLUTE) and the Marowak ghost on the
-// stairs into Pokemon Tower 7F.
+// sleeping Snorlax (woken with the POKe FLUTE) and the Marowak ghost that
+// guards Pokemon Tower 7F.
 //
-// Extracted verbatim from OverworldScene (`handleSnorlax` and the Pokemon Tower
-// branch of `warpTo`). Behaviour-preserving: the same conditions, in the same
-// order, with the same message strings, the same species/level and the same
-// flag names. The scene still owns the Phaser parts — the text box and
-// `startWildBattle()`'s transition — and it still writes the flag itself, at
-// the moment this module's `flagTiming` records.
+// Extracted from OverworldScene (`handleSnorlax` and the Pokemon Tower branch
+// of `warpTo`): the same conditions, in the same order, with the same message
+// strings, species/level and flag names. The scene still owns the Phaser parts
+// — the text box and `startWildBattle()`'s transition — and it still writes the
+// flag itself, at the moment this module's `flagTiming` records.
 //
-// Both encounters are "used up" by a flag rather than by winning: catching the
-// Pokemon, knocking it out and running all consume it, exactly like the static
-// legendaries in `src/data/staticLegendaries.ts`. They are NOT in that registry
-// because neither is a plain "talk to it, battle it" NPC: Snorlax needs an item
-// in the bag and speaks two different scripts depending on whether it is there
-// (neither of them `npc.dialogue`), and Marowak has no NPC at all — it fires on
-// a warp. Their shared shape is `ForcedEncounter` below.
+// Snorlax is "used up" by a flag rather than by winning: catching it, knocking
+// it out and running all consume it, exactly like the static legendaries in
+// `src/data/staticLegendaries.ts`. Marowak is not — Gen I leaves the ghost on
+// the stairs until the player actually beats or catches it, so its flag is
+// written `on_victory` (see `clearsForcedEncounter` below, which is what the
+// BattleScene asks). Neither is in the legendary registry, because neither is a
+// plain "talk to it, battle it" NPC: Snorlax needs an item in the bag and
+// speaks two different scripts depending on whether it is there (neither of
+// them `npc.dialogue`), and Marowak has no NPC at all — it fires on arrival.
+// Their shared shape is `ForcedEncounter` below.
 
 /** Species/level of the wild Pokemon a forced encounter spawns. */
 export interface ForcedEncounterBattle {
@@ -24,16 +26,33 @@ export interface ForcedEncounterBattle {
 }
 
 /**
- * When the scene writes the encounter's flag, relative to the text box:
- *  - `on_trigger`: before the messages are shown (Marowak — the flag is set the
- *    moment the warp is intercepted, so leaving the text box up and quitting
- *    still consumes the encounter on the next save).
+ * When the scene writes the encounter's flag:
+ *  - `on_trigger`: before the messages are shown. Nothing uses this any more —
+ *    it is what Marowak did before the ghost was fixed to survive a run, and is
+ *    kept so the union still describes the option.
  *  - `on_battle_start`: in the text box's onComplete, immediately after
  *    `startWildBattle()` (Snorlax, like the legendaries). That still lands in
  *    the save: `startWildBattle` snapshots `playerState` inside the battle
  *    transition's callback, which runs a frame later, after this write.
+ *  - `on_victory`: not by the overworld at all. The scene hands the flag to the
+ *    BattleScene as `clearedFlag` and the battle writes it only when the player
+ *    wins or catches (`clearsForcedEncounter`); running or blacking out leaves
+ *    the encounter standing (Marowak).
  */
-export type ForcedEncounterFlagTiming = 'on_trigger' | 'on_battle_start';
+export type ForcedEncounterFlagTiming = 'on_trigger' | 'on_battle_start' | 'on_victory';
+
+/** How a wild battle ended, from a forced encounter's point of view. */
+export type WildBattleEnd = 'opponent_fainted' | 'caught' | 'ran' | 'player_fainted';
+
+/**
+ * Does this ending consume an `on_victory` encounter? Gen I: only beating the
+ * Pokemon or catching it. Running away or blacking out leaves it where it was,
+ * so the player meets it again on the next visit. BattleScene calls this for
+ * every wild ending, with the `clearedFlag` the overworld attached (if any).
+ */
+export function clearsForcedEncounter(end: WildBattleEnd): boolean {
+  return end === 'opponent_fainted' || end === 'caught';
+}
 
 export interface ForcedEncounter {
   /** `battle`: show `messages`, then fight. `message`: text only. `none`: nothing happens. */
@@ -136,7 +155,7 @@ export const MAROWAK_MAP_ID = 'pokemon_tower_7f';
 export const MAROWAK_SPECIES_ID = 105;
 export const MAROWAK_LEVEL = 30;
 
-/** One-shot flag: set on the first entry, checked on every later one. */
+/** One-shot flag: set when the ghost is beaten or caught, checked on every entry. */
 export const MAROWAK_GHOST_FLAG = 'marowak_ghost_defeated';
 
 export const MAROWAK_MESSAGES: readonly string[] = [
@@ -150,11 +169,15 @@ export interface MarowakState {
 }
 
 /**
- * Warping into Pokemon Tower 7F. The first entry is ambushed: the flag is set
- * straight away (`on_trigger`), the two reveal lines run, and the Lv30 Marowak
- * battle starts from the text box's onComplete — the warp itself never happens,
- * the player is returned to 7F by the battle's return data. Every later entry,
- * and every other map, passes through untouched.
+ * Arriving on Pokemon Tower 7F. The warp itself always happens: the scene asks
+ * this on arrival (`create()`), and while the ghost is still standing it shows
+ * the two reveal lines from the 7F landing tile and starts the Lv30 Marowak
+ * battle from the text box's onComplete. The flag is NOT written here — it
+ * travels to the BattleScene as `clearedFlag` and is written only on a win or a
+ * catch (`on_victory`), so running away leaves the ghost on the stairs, as in
+ * Gen I. Coming back from that battle is not a fresh arrival (the scene skips
+ * this when the map state is kept), so the ambush does not loop; going back
+ * down and up the stairs re-fires it, which is the point.
  *
  * Reached only after `checkEntryGates()` has let the player through, and 7F's
  * gate requires the SILPH SCOPE — so the ghost is always revealed, never fought
@@ -167,6 +190,6 @@ export function marowakAmbush(mapId: string, state: MarowakState): ForcedEncount
     messages: MAROWAK_MESSAGES.slice(),
     battle: { speciesId: MAROWAK_SPECIES_ID, level: MAROWAK_LEVEL },
     flag: MAROWAK_GHOST_FLAG,
-    flagTiming: 'on_trigger',
+    flagTiming: 'on_victory',
   };
 }

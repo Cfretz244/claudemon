@@ -13,6 +13,9 @@ import {
   PEWTER_GUIDE_NPC_ID,
   BADGE_CHECK_REQUIREMENTS,
   ALL_BADGES_REQUIRED,
+  BADGE_CHECK_PASSED_SUFFIX,
+  badgeCheckBaseId,
+  badgeCheckClearedFlag,
   RoadBlockState,
 } from '../../src/logic/roadBlocks';
 import { ALL_MAPS } from '../../src/data/maps';
@@ -207,6 +210,8 @@ describe('badgeCheckOutcome — the three named Route 23 guards', () => {
     expect(out.badgeName).toBe(name);
     expect(out.requiresAllBadges).toBe(false);
     expect(out.message).toEqual([`GUARD: ${name}?\nVery good!`, 'You may pass!']);
+    // A pass now also steps the guard out of the fence row's gap for good.
+    expect(out.clearFlag).toBe(`${id}_cleared`);
   });
 
   it.each(CASES)('%s refuses without %s', (id, badge, name) => {
@@ -219,6 +224,8 @@ describe('badgeCheckOutcome — the three named Route 23 guards', () => {
       `GUARD: You need the\n${name} to pass!`,
       'Come back when you\nhave it!',
     ]);
+    // Refusing changes nothing: he stays in the gap.
+    expect(out.clearFlag).toBeNull();
   });
 
   it.each(CASES)('%s is not satisfied by the other seven badges', (id, badge) => {
@@ -250,6 +257,7 @@ describe('badgeCheckOutcome — any other badge_check id wants all eight', () =>
     expect(out.badgeName).toBeNull();
     expect(out.requiresAllBadges).toBe(true);
     expect(out.message).toEqual(['GUARD: You need more\nBADGES to pass!']);
+    expect(out.clearFlag).toBeNull();
   });
 
   it.each(OTHER_IDS)('%s passes with all eight', id => {
@@ -259,6 +267,7 @@ describe('badgeCheckOutcome — any other badge_check id wants all eight', () =>
     expect(out.badgeName).toBeNull();
     expect(out.requiresAllBadges).toBe(true);
     expect(out.message).toEqual(['GUARD: All BADGES\nverified! Go ahead!']);
+    expect(out.clearFlag).toBe(`${id}_cleared`);
   });
 
   it('flips at exactly eight, one badge at a time', () => {
@@ -293,7 +302,10 @@ describe('badge-check data', () => {
     }
   });
 
-  it('the shipped badge_check NPCs are exactly the three named ones, all on Route 23', () => {
+  // Changed by the "guards must actually block" fix: each named guard now
+  // ships with a `_passed` twin, the plain-dialogue NPC that stands beside the
+  // gap once he has stepped aside. The old pin listed only the three guards.
+  it('the shipped badge_check NPCs are the three named guards plus one _passed twin each, all on Route 23', () => {
     const found: string[] = [];
     for (const [mapId, map] of Object.entries(ALL_MAPS)) {
       for (const npc of map.npcs) {
@@ -302,12 +314,33 @@ describe('badge-check data', () => {
         expect(mapId, npc.id).toBe('route23');
       }
     }
-    expect(found.sort()).toEqual(Object.keys(BADGE_CHECK_REQUIREMENTS).sort());
+    const guards = Object.keys(BADGE_CHECK_REQUIREMENTS);
+    expect(found.sort()).toEqual([...guards, ...guards.map(g => `${g}${BADGE_CHECK_PASSED_SUFFIX}`)].sort());
   });
 
   it('the three guards ask for the first three badges, in gym order', () => {
     const gymOrder = Object.values(GYM_LEADERS).map(l => l.badge);
     expect([1, 2, 3].map(n => BADGE_CHECK_REQUIREMENTS[`badge_check${n}`].badge))
       .toEqual(gymOrder.slice(0, 3));
+  });
+});
+
+describe('badge-check clear flags', () => {
+  it('a guard and his twin share one flag', () => {
+    for (const id of Object.keys(BADGE_CHECK_REQUIREMENTS)) {
+      expect(badgeCheckClearedFlag(id)).toBe(`${id}_cleared`);
+      expect(badgeCheckClearedFlag(`${id}${BADGE_CHECK_PASSED_SUFFIX}`)).toBe(`${id}_cleared`);
+    }
+  });
+
+  it('badgeCheckBaseId strips the suffix and leaves everything else alone', () => {
+    expect(badgeCheckBaseId('badge_check2_passed')).toBe('badge_check2');
+    expect(badgeCheckBaseId('badge_check2')).toBe('badge_check2');
+    expect(badgeCheckBaseId('oak')).toBe('oak');
+  });
+
+  it('the flags are distinct per guard, so clearing one does not clear another', () => {
+    const flags = Object.keys(BADGE_CHECK_REQUIREMENTS).map(badgeCheckClearedFlag);
+    expect(new Set(flags).size).toBe(flags.length);
   });
 });

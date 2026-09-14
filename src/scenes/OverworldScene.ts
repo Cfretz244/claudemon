@@ -32,15 +32,15 @@ import { STATIC_LEGENDARIES, getStaticLegendary, legendaryClearedFlag } from '..
 import { shouldGiveOaksParcel } from '../logic/oaksParcel';
 import {
   oakStage, applyOakStage, OAK_DIALOGUE, shouldTriggerLabRivalBattle,
-  labRivalTriggerOutcome, LAB_MAP_ID, LAB_RIVAL_NPC_ID, LAB_RIVAL_TRAINER_ID,
-  RIVAL_BATTLE_LAB_FLAG,
+  labRivalTriggerOutcome, consumeLabRivalEncounter, labRivalTalkOutcome,
+  LAB_RIVAL_TALK_DIALOGUE, LAB_MAP_ID, LAB_RIVAL_NPC_ID, LAB_RIVAL_TRAINER_ID,
 } from '../logic/oakLab';
 import { checkEntryGates } from '../logic/warpGate';
 import { MapInstance, instantiateMap, landedBoulders, pushBoulder, isFlagGateOpen, tileUnder } from '../logic/boulders';
 import { restoreParty } from '../logic/healing';
 import {
   interceptWarp, needsOakEscort, badgeCheckOutcome, OAK_INTERCEPT_MESSAGES,
-  OAK_ESCORT_DESTINATION, PEWTER_GUIDE_NPC_ID,
+  OAK_ESCORT_DESTINATION, PEWTER_GUIDE_NPC_ID, BADGE_CHECK_PASSED_SUFFIX,
 } from '../logic/roadBlocks';
 import { elevatorAccess, elevatorTarget, visitedFlag } from '../logic/elevator';
 import { computeCurrentSlide, computeSlide, Slide } from '../logic/spinTiles';
@@ -52,7 +52,7 @@ import { SurgePuzzle } from '../logic/surgePuzzle';
 import { syncDerivedStoryFlags } from '../logic/storyFlagSync';
 import { migrateLegacyLocation } from '../logic/saveMigration';
 import { getCutTiles } from '../logic/cutTrees';
-import { canUseFieldMove, partyKnowsMove, FIELD_MOVE_MESSAGES } from '../logic/fieldMoves';
+import { canUseFieldMove, partyKnowsMove, FIELD_MOVE_MESSAGES, isMapOutdoor, isMapCave } from '../logic/fieldMoves';
 import { getAvailableFlyDestinations } from '../data/flyDestinations';
 import { GIFT_NPCS, GiftNpcResult } from '../data/giftNpcs';
 import { SIGNS } from '../data/signs';
@@ -141,6 +141,8 @@ export class OverworldScene extends Phaser.Scene {
   private stepCounter = 0;
   private lastEncounterStep = 0;
   private isWarping = false;
+  /** True when this scene start reused the live map: a return from a battle, not a fresh arrival. */
+  private keepMapState = false;
 
   // Intro transition
   private introTransition = false;
@@ -164,6 +166,7 @@ export class OverworldScene extends Phaser.Scene {
     this.isMoving = false;
     this.introTransition = data.introTransition || false;
     this.teleportLanding = data.teleportLanding || false;
+    this.keepMapState = data.keepMapState || false;
     this.isSurfing = data.isSurfing || false;
     this.isRidingBike = data.isRidingBike || false;
     this.flashUsed = data.flashUsed || false;
@@ -340,38 +343,53 @@ export class OverworldScene extends Phaser.Scene {
       this.menuCursor.setY(4 + this.menuSelectedIndex * 14);
       soundSystem.menuMove();
     });
+
+    // Arrival scripts run last, once everything they need exists
+    this.checkMarowakAmbush();
   }
 
-  private static readonly OUTDOOR_TILES = new Set([
-    TileType.TREE, TileType.GRASS, TileType.TALL_GRASS,
-    TileType.WATER, TileType.SAND, TileType.FLOWER,
-    TileType.BUILDING, TileType.FENCE, TileType.ROOF,
-  ]);
+  /**
+   * Pokemon Tower 7F: the ghost that guards the stairs. The SILPH SCOPE entry
+   * gate has already let the player through, so the warp happened and the
+   * player is standing on the 7F landing tile; the reveal lines run there and
+   * the Lv30 Marowak battle starts when the last one is advanced. The flag rides
+   * along as `clearedFlag` and is written by the BattleScene on a win or a catch
+   * only (`src/logic/forcedEncounters.ts`), so running away leaves the ghost.
+   *
+   * Fresh arrivals only: `keepMapState` marks the scene start that comes back
+   * from a battle, which is how the fight does not restart itself forever. The
+   * player has to leave the floor and take the stairs again to meet it once more
+   * (loading a save made on the landing tile also counts as a fresh arrival —
+   * the ghost is still standing there, so it challenges again).
+   *
+   * The reveal box is the input lock — `update()` and `handleAction()` both
+   * stand down while a text box is visible, and `startWildBattle()` raises
+   * `isWarping` itself. (Raising `isWarping` here instead would block the very
+   * Z press that advances the box.)
+   */
+  private checkMarowakAmbush(): void {
+    if (this.keepMapState) return;
+    const ghost = marowakAmbush(this.currentMap.id, this.playerState);
+    if (ghost.outcome !== 'battle') return;
+    this.textBox.show(ghost.messages, () => {
+      this.startWildBattle(
+        createPokemon(ghost.battle!.speciesId, ghost.battle!.level),
+        { clearedFlag: ghost.flag ?? undefined },
+      );
+    });
+  }
 
+  // The outdoor/cave tests are pure and unit-pinned in logic/fieldMoves.ts.
   private isMapOutdoor(map: { width: number; height: number; tiles: number[][] }): boolean {
-    // Check top and bottom edges for outdoor tile types
-    for (const y of [0, map.height - 1]) {
-      for (let x = 0; x < map.width; x++) {
-        if (OverworldScene.OUTDOOR_TILES.has(map.tiles[y][x])) return true;
-      }
-    }
-    return false;
+    return isMapOutdoor(map);
   }
 
   private isOutdoorMap(): boolean {
-    return this.isMapOutdoor(this.currentMap);
+    return isMapOutdoor(this.currentMap);
   }
 
   private isCaveMap(): boolean {
-    const map = this.currentMap;
-    for (let y = 0; y < map.height; y++) {
-      for (let x = 0; x < map.width; x++) {
-        if (map.tiles[y][x] === TileType.CAVE_FLOOR || map.tiles[y][x] === TileType.CAVE_WALL) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return isMapCave(this.currentMap);
   }
 
   private getTileKey(tileType: number): string {
@@ -940,18 +958,6 @@ export class OverworldScene extends Phaser.Scene {
       }
     }
 
-    // Pokemon Tower 7F: the SILPH SCOPE (gate) reveals the ghost on the 6F stairs
-    // as Marowak, once. See src/logic/forcedEncounters.ts; the flag is written
-    // here, before the messages ('on_trigger'), and swallows the warp.
-    const ghost = marowakAmbush(mapId, this.playerState);
-    if (ghost.outcome === 'battle') {
-      this.playerState.storyFlags[ghost.flag!] = true;
-      this.textBox.show(ghost.messages, () => {
-        this.startWildBattle(createPokemon(ghost.battle!.speciesId, ghost.battle!.level));
-      });
-      return;
-    }
-
     // Auto-mount bike when entering Cycling Road (the gate guarantees a bicycle)
     if ((mapId === 'route16' || mapId === 'route17') && !this.isRidingBike) {
       this.isRidingBike = true;
@@ -1113,8 +1119,16 @@ export class OverworldScene extends Phaser.Scene {
     };
   }
 
-  /** Blocks input and transitions into a wild battle with the standard payload. */
-  private startWildBattle(wildPokemon: PokemonInstance, extra: { isGhost?: boolean } = {}): void {
+  /**
+   * Blocks input and transitions into a wild battle with the standard payload.
+   * `clearedFlag` is a story flag the BattleScene sets if — and only if — the
+   * player wins or catches (forced encounters that survive a run; see
+   * `src/logic/forcedEncounters.ts`).
+   */
+  private startWildBattle(
+    wildPokemon: PokemonInstance,
+    extra: { isGhost?: boolean; clearedFlag?: string } = {},
+  ): void {
     this.isWarping = true;
     soundSystem.battleStart();
     playBattleTransition(this, () => {
@@ -1184,7 +1198,7 @@ export class OverworldScene extends Phaser.Scene {
       defeatedTrainers: this.playerState.defeatedTrainers,
     });
     if (outcome === 'flag_only') {
-      this.playerState.storyFlags[RIVAL_BATTLE_LAB_FLAG] = true;
+      consumeLabRivalEncounter(this.playerState);
       return;
     }
 
@@ -1196,6 +1210,11 @@ export class OverworldScene extends Phaser.Scene {
         `${this.playerState.rivalName} wants\nto battle!`,
       ],
       () => {
+        // Consume the ambush BEFORE the battle launches: startRivalBattle
+        // snapshots playerState.toSave() into the battle payload and the
+        // whiteout restarts the overworld from that snapshot, so setting the
+        // flag here is what makes a LOSS end the encounter too.
+        consumeLabRivalEncounter(this.playerState);
         this.startRivalBattle(LAB_RIVAL_TRAINER_ID);
       }
     );
@@ -1813,7 +1832,11 @@ export class OverworldScene extends Phaser.Scene {
     if (exact) return exact;
     if (id.startsWith('slot_machine_')) return () => { this.playSlotMachine(); return true; };
     if (id.startsWith('elevator_')) return () => this.handleElevatorNpc();
-    if (id.startsWith('badge_check')) return (npc) => this.handleBadgeCheck(npc);
+    // The `_passed` twins are plain dialogue NPCs, not checkpoints: they only
+    // exist once their guard has stepped aside, so they must fall through.
+    if (id.startsWith('badge_check') && !id.endsWith(BADGE_CHECK_PASSED_SUFFIX)) {
+      return (npc) => this.handleBadgeCheck(npc);
+    }
     return undefined;
   }
 
@@ -1853,26 +1876,19 @@ export class OverworldScene extends Phaser.Scene {
 
   /** Rival NPC in the lab - context-dependent. */
   private handleRivalInLab(): boolean {
-    if (!this.playerState.storyFlags['has_pikachu']) {
-      this.textBox.show([
-        `${this.playerState.rivalName}: What?\nGramps isn't here?`,
-        "I want my POKeMON!",
-      ]);
+    const talk = labRivalTalkOutcome(this.playerState);
+    const messages = LAB_RIVAL_TALK_DIALOGUE[talk].map(d => this.fmt(d));
+    if (talk !== 'battle') {
+      // 'post_battle' is also what he says after a LOSS: the flag goes up when
+      // the battle starts, so the encounter is over either way.
+      this.textBox.show(messages);
       return true;
     }
-    if (this.playerState.storyFlags['rival_battle_lab']) {
-      this.textBox.show([
-        `${this.playerState.rivalName}: I'll get\nstronger and beat\nyou next time!`,
-      ]);
-      return true;
-    }
-    // Rival wants to battle (triggered automatically after getting Pikachu)
+    // Rival wants to battle (also triggered automatically on the exit warp)
     soundSystem.startMusic('rival_theme');
-    this.textBox.show([
-      this.fmt(`${this.playerState.rivalName}: Wait,\n{PLAYER}!`),
-      "Let's check out our\nnew POKeMON!",
-    ], () => {
-      this.startRivalBattle('rival_lab');
+    this.textBox.show(messages, () => {
+      consumeLabRivalEncounter(this.playerState);
+      this.startRivalBattle(LAB_RIVAL_TRAINER_ID);
     });
     return true;
   }
@@ -1948,8 +1964,17 @@ export class OverworldScene extends Phaser.Scene {
 
   /** Route 23 badge check NPCs. */
   private handleBadgeCheck(npc: NPCData): boolean {
-    // Which badge this guard asks for, and what he says: src/logic/roadBlocks.ts.
-    this.textBox.show(badgeCheckOutcome(npc.id, this.playerState).message);
+    // Which badge this guard asks for, what he says, and whether he steps
+    // aside: src/logic/roadBlocks.ts.
+    const outcome = badgeCheckOutcome(npc.id, this.playerState);
+    this.textBox.show(outcome.message, () => {
+      if (!outcome.clearFlag) return;
+      this.playerState.storyFlags[outcome.clearFlag] = true;
+      // Collision and interaction both consult shouldSkipNPC() live, so the
+      // gap is already open; only the sprites are stale. Respawning the map's
+      // six NPCs is cheaper and less error-prone than hand-swapping the pair.
+      this.createNPCs();
+    });
     return true;
   }
 
@@ -2330,7 +2355,10 @@ export class OverworldScene extends Phaser.Scene {
         break;
       }
       case 19: { // FLY
-        const decision = canUseFieldMove('fly', this.playerState);
+        const decision = canUseFieldMove('fly', this.playerState, {
+          isOutdoor: this.isOutdoorMap(),
+          isCave: this.isCaveMap(),
+        });
         if (decision.outcome !== 'ok') {
           this.textBox.show(decision.message);
         } else {

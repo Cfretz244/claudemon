@@ -30,6 +30,7 @@ import { GYM_LEADERS } from '../data/gymLeaders';
 import { ELITE_FOUR, CHAMPION, HALL_OF_FAME_TEXT } from '../data/eliteFour';
 import { playMoveAnimation, AnimationContext } from '../systems/MoveAnimations';
 import { outcomeFor } from '../logic/animationOutcome';
+import { clearsForcedEncounter, WildBattleEnd } from '../logic/forcedEncounters';
 import '../systems/animations';
 import { getTrainerSpriteKey } from '../utils/trainerSpriteGenerator';
 import { resyncMobileInput } from '../utils/mobileControls';
@@ -49,6 +50,12 @@ interface BattleSceneData {
   isRidingBike?: boolean;
   flashUsed?: boolean;
   isGhost?: boolean;
+  /**
+   * A forced encounter's story flag, written only when the player wins or
+   * catches (`logic/forcedEncounters.clearsForcedEncounter`). Marowak's ghost
+   * uses it: run away and the flag stays down, so it is still there next time.
+   */
+  clearedFlag?: string;
 }
 
 export class BattleScene extends Phaser.Scene {
@@ -67,6 +74,7 @@ export class BattleScene extends Phaser.Scene {
   private isRidingBike = false;
   private flashUsed = false;
   private isGhost = false;
+  private clearedFlag?: string;
 
   // Sprites
   private playerSprite!: Phaser.GameObjects.Sprite;
@@ -119,6 +127,7 @@ export class BattleScene extends Phaser.Scene {
     this.isRidingBike = data.isRidingBike || false;
     this.flashUsed = data.flashUsed || false;
     this.isGhost = data.isGhost || false;
+    this.clearedFlag = data.clearedFlag;
 
     if (data.type === 'wild') {
       this.battleType = BattleType.WILD;
@@ -1067,6 +1076,7 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
+    if (this.battleType === BattleType.WILD) this.finishForcedEncounter('opponent_fainted');
     this.endBattle();
   }
 
@@ -1126,6 +1136,7 @@ export class BattleScene extends Phaser.Scene {
       }
 
       this.playerState.money = Math.floor(this.playerState.money / 2);
+      this.finishForcedEncounter('player_fainted');   // leaves a forced encounter standing
 
       this.scene.start('OverworldScene', {
         mapId: this.playerState.lastHealMap,
@@ -1146,6 +1157,7 @@ export class BattleScene extends Phaser.Scene {
 
     if (calculateRunChance(this.playerPokemon.stats.speed, this.opponentPokemon.stats.speed)) {
       this.textBox.show(['Got away safely!'], () => {
+        this.finishForcedEncounter('ran');   // leaves a forced encounter standing
         this.endBattle();
       });
     } else {
@@ -1219,6 +1231,7 @@ export class BattleScene extends Phaser.Scene {
         await this.showText([`${oppName} was sent\nto the PC!`]);
       }
 
+      this.finishForcedEncounter('caught');
       this.endBattle();
     } else {
       await this.showText(["Oh no! The POKeMON\nbroke free!"]);
@@ -1375,6 +1388,16 @@ export class BattleScene extends Phaser.Scene {
         this.showBattleMenu();
       }
     });
+  }
+
+  /**
+   * Record how this wild battle ended for the forced encounter that started it.
+   * Only a win or a catch consumes one, so this is a no-op after a run or a
+   * blackout — those are called too, so every ending says what it is out loud.
+   */
+  private finishForcedEncounter(end: WildBattleEnd): void {
+    if (!this.clearedFlag) return;
+    if (clearsForcedEncounter(end)) this.playerState.storyFlags[this.clearedFlag] = true;
   }
 
   private endBattle(): void {
