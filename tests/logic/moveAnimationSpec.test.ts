@@ -230,6 +230,9 @@ describe('moveAnimationSpec — intensity and duration', () => {
     const byMotion = new Map<BaseMotion, AnimationSpec[]>();
     for (const id of ALL_IDS) {
       const spec = resolveAnimation(id);
+      // Tier-3 set-pieces declare their own budget and deliberately ignore the
+      // generic intensity ladder (FLY is a 'mid' charge but a 1000 ms film).
+      if (spec.override && OVERRIDE_DURATION[spec.override] !== undefined) continue;
       const list = byMotion.get(spec.motion) ?? [];
       list.push(spec);
       byMotion.set(spec.motion, list);

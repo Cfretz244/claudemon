@@ -239,9 +239,28 @@ export const MAX_OVERRIDE_DURATION_MS = 1200;
  * thunder: the strike is a sequence - sky darkens, three staggered bolts fall,
  * impact, afterglow - and at the generic beam budget (520 ms) each bolt would
  * be on screen for barely three frames.
+ *
+ * fly / dig / solarBeam: the engine resolves a CHARGE move in ONE turn (see
+ * BattleScene.doExecuteMove - nothing defers it), so the override has to fit
+ * gather AND release into a single promise. The generic charge budget (680-740
+ * ms) leaves no room for "the attacker is off the field" to read as absence
+ * rather than as a dropped frame.
+ *
+ * selfDestruct / explosion: a strobe, a detonation and settling debris; and
+ * EXPLOSION needs to stay visibly bigger and longer than SELF-DESTRUCT.
+ *
+ * hyperBeam: a charge, a beam that widens as it is held, and the recoil - the
+ * generic beam budget (520 ms) cannot hold a beam long enough to read as
+ * "sustained".
  */
 export const OVERRIDE_DURATION: Record<string, number> = {
   thunder: 1000,
+  fly: 1000,
+  dig: 1000,
+  solarBeam: 1100,
+  selfDestruct: 1000,
+  explosion: 1100,
+  hyperBeam: 1000,
 };
 
 const MOTION_BASE_MS: Record<BaseMotion, number> = {

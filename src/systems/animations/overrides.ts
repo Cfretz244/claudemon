@@ -20,6 +20,7 @@ import {
   AnimationContext,
   delay,
   directionalParticles,
+  emitterAlong,
   impactBurst,
   registerSpecOverride,
   screenFlash,
@@ -223,3 +224,605 @@ async function renderThunder(spec: AnimationSpec, ctx: AnimationContext): Promis
 }
 
 registerSpecOverride('thunder', renderThunder);
+
+// ===========================================================================
+// Two-turn moves (FLY / DIG / SOLAR BEAM)
+// ===========================================================================
+//
+// The engine does NOT run these over two turns. `BattleScene.doExecuteMove`
+// calls `playMoveAnimation` exactly once per move use, inside the "X used
+// MOVE!" text callback, and then applies damage immediately;
+// `MoveEffect.CHARGE` appears nowhere else in the scene except in the
+// SKIP_SECONDARY list. So there is no "release turn" to render on, and
+// `spec.twoTurn` is always 'charge' - the resolver never emits 'release'.
+// Each override therefore plays gather AND release inside the one promise,
+// which is exactly what docs/battle-animations-design.md section 3 asks for.
+
+/** Runs `onFrame(t)`, t going 0 -> 1 over `duration`, on one 16 ms timer. */
+function frames(scene: Phaser.Scene, duration: number, onFrame: (t: number) => void): Promise<void> {
+  return new Promise(resolve => {
+    const start = scene.time.now;
+    const ev = scene.time.addEvent({
+      delay: 16,
+      loop: true,
+      callback: () => {
+        const t = Math.min(1, (scene.time.now - start) / Math.max(1, duration));
+        onFrame(t);
+        if (t >= 1) { ev.remove(); resolve(); }
+      },
+    });
+  });
+}
+
+const FLYING = 0x8899FF;
+const FLYING_PALE = 0xDDE4FF;
+const FLYING_EDGE = 0x2B3166;
+const GROUND = 0xDDBB55;
+const GROUND_DARK = 0x997733;
+const GROUND_EDGE = 0x4A3612;
+const GRASS = 0x44BB44;
+const GRASS_PALE = 0xCCFF66;
+const GRASS_EDGE = 0x143D14;
+const NORMAL = 0xA8A878;
+const NORMAL_PALE = 0xE8E8D0;
+const NORMAL_EDGE = 0x40402C;
+// A blast is fire, whatever the move's type says (operator, 2026-09-14): a
+// white-hot heart, then yellow -> orange -> red out to a dark red rim that
+// keeps every ring crisp against the #f8f8f8 sky.
+const FIRE_YELLOW = 0xFFCC00;
+// 0xFF7722, not 0xFF8800: in a nearest-colour vote against the 15 type colours
+// 0xFF8800 is marginally CLOSER to ELECTRIC's 0xFFCC00 than to FIRE's 0xFF4422,
+// so the mid band of the fireball read as electric yellow to the e2e (and, at
+// that size, to the eye). A notch deeper is unambiguously fire.
+const FIRE_ORANGE = 0xFF7722;
+const FIRE_RED = 0xFF4422;
+const FIRE_EDGE = 0x5A1A00;
+
+/** Sprites are 32 px tall, so the feet of a sprite drawn at y sit at y + 14. */
+const FOOT_OFFSET = 14;
+
+/**
+ * ID 19 FLY - the attacker leaves the field entirely, then dives back in.
+ *
+ * The point of the move is the ABSENCE: between the launch and the dive there
+ * is no attacker on screen at all, which no generic body can do (the generic
+ * charge motion never moves the attacker further than a lunge).
+ */
+async function renderFly(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite, defenderSprite } = ctx;
+  const d = spec.duration; // 1000 ms via OVERRIDE_DURATION
+  const homeX = attackerSprite.x;
+  const homeY = attackerSprite.y;
+  const away = ctx.isPlayer ? -1 : 1; // the side the dive comes in from
+
+  soundSystem.whoosh();
+
+  // 1. Crouch, then straight up and out through the top edge (0 -> 20 %).
+  await tweenPromise(scene, {
+    targets: attackerSprite, y: homeY + 3, scaleY: 0.84,
+    duration: Math.round(d * 0.04), ease: 'Sine.easeOut',
+  });
+  await Promise.all([
+    tweenPromise(scene, {
+      targets: attackerSprite, y: -26, scaleY: 1,
+      duration: Math.round(d * 0.11), ease: 'Quad.easeIn',
+    }),
+    directionalParticles(scene, homeX, homeY + 8, FLYING, 10, {
+      dirY: 1, spread: 20, duration: Math.round(d * 0.1),
+      shape: 'dash', accentColor: FLYING_PALE,
+    }),
+  ]);
+
+  // 2. Absent (15 -> 30 %). Streaks cross the empty sky so the field still
+  //    moves while the attacker is nowhere on it. They are the only thing on
+  //    screen, so they are drawn fat and dark-edged rather than as hairlines.
+  const sky = newG(scene, 830);
+  await frames(scene, Math.round(d * 0.15), t => {
+    sky.clear();
+    sky.setAlpha(t < 0.85 ? 1 : Math.max(0, 1 - (t - 0.85) / 0.15));
+    for (let i = 0; i < 4; i++) {
+      const y = 8 + i * 11;
+      const x = ((t * 1.3 + i * 0.27) % 1) * (GAME_W + 56) - 28;
+      sky.fillStyle(FLYING_EDGE, 1);
+      sky.fillRect(Math.round(x) - 1, y - 2, 30, 7);
+      sky.fillStyle(FLYING, 1);
+      sky.fillRect(Math.round(x), y - 1, 28, 5);
+      sky.fillStyle(FLYING_PALE, 1);
+      sky.fillRect(Math.round(x) + 20, y - 1, 8, 5);
+    }
+  });
+  sky.destroy();
+
+  // 3. The dive (40 -> 54 %): back in from off the top, onto the defender.
+  soundSystem.whoosh();
+  attackerSprite.setPosition(defenderSprite.x + away * 16, -26);
+  const trail = newG(scene, 806);
+  await Promise.all([
+    tweenPromise(scene, {
+      targets: attackerSprite, x: defenderSprite.x, y: defenderSprite.y - 4,
+      duration: Math.round(d * 0.12), ease: 'Quad.easeIn',
+    }),
+    frames(scene, Math.round(d * 0.12), () => {
+      trail.clear();
+      for (let i = 1; i <= 4; i++) {
+        const x = Math.round(attackerSprite.x - away * i * 3);
+        const y = Math.round(attackerSprite.y - i * 9);
+        trail.fillStyle(FLYING_EDGE, 0.9 - i * 0.15);
+        trail.fillRect(x - 6, y - 2, 13, 5);
+        trail.fillStyle(FLYING, 1 - i * 0.18);
+        trail.fillRect(x - 5, y - 1, 11, 3);
+      }
+    }),
+  ]);
+  trail.destroy();
+
+  // 4. The hit, then feathers drifting down over the defender for the rest of
+  //    the budget - the move has to still read at the tail of the animation.
+  soundSystem.hit();
+  await Promise.all([
+    impactBurst(scene, defenderSprite.x, defenderSprite.y, FLYING, FLYING_PALE, 17, Math.round(d * 0.26)),
+    directionalParticles(scene, defenderSprite.x, defenderSprite.y, FLYING, 14, {
+      spread: 30, duration: Math.round(d * 0.26), shape: 'dash', accentColor: FLYING_PALE,
+    }),
+    spriteFlash(defenderSprite, scene, FLYING, 3),
+    screenShake(scene, 5, Math.round(d * 0.16)),
+    // Feathers keep drifting over the defender for the rest of the budget, so
+    // the hit is still legible at the tail of the animation instead of the
+    // field snapping back to idle the moment the burst ends.
+    (async () => {
+      const feathers = newG(scene, 812);
+      const n = 7;
+      try {
+        await frames(scene, Math.round(d * 0.38), t => {
+          feathers.clear();
+          for (let i = 0; i < n; i++) {
+            const ph = (t + i / n) % 1;
+            const x = Math.round(defenderSprite.x + Math.sin((i * 2.1) + t * 4) * 13);
+            const y = Math.round(defenderSprite.y - 14 + ph * 26);
+            const tilt = (i % 2) ? 1 : -1;
+            feathers.fillStyle(FLYING_EDGE, 1);
+            feathers.fillRect(x - 4, y - 1, 9, 4);
+            feathers.fillStyle(FLYING, 1);
+            feathers.fillRect(x - 3, y, 7, 2);
+            feathers.fillStyle(FLYING_PALE, 1);
+            feathers.fillRect(x + tilt, y, 2, 2);
+          }
+        });
+      } finally {
+        feathers.destroy();
+      }
+    })(),
+    // The attacker bounces off and flies home while the feathers fall.
+    (async () => {
+      await delay(scene, Math.round(d * 0.08));
+      await tweenPromise(scene, {
+        targets: attackerSprite, x: homeX, y: homeY,
+        duration: Math.round(d * 0.14), ease: 'Sine.easeOut',
+      });
+    })(),
+  ]);
+}
+
+/**
+ * ID 91 DIG - the attacker sinks out of sight and comes up under the defender.
+ *
+ * The sprite is masked to the ground line while it is below it, so it really
+ * is gone rather than merely faded; a mound crawls across the field in the
+ * gap, which is the only thing on screen while the attacker is underground.
+ */
+async function renderDig(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite, defenderSprite } = ctx;
+  const d = spec.duration; // 1000 ms via OVERRIDE_DURATION
+  const homeX = attackerSprite.x;
+  const homeY = attackerSprite.y;
+  const fromGround = Math.round(homeY) + FOOT_OFFSET;
+  const toGround = Math.round(defenderSprite.y) + FOOT_OFFSET;
+
+  // Geometry mask: everything above the ground line is drawn, the rest is not.
+  const shape = scene.make.graphics({ x: 0, y: 0 }, false);
+  const maskTo = (groundY: number): void => {
+    shape.clear();
+    shape.fillStyle(0xFFFFFF, 1);
+    shape.fillRect(0, 0, GAME_W, groundY);
+  };
+  maskTo(fromGround);
+  const mask = shape.createGeometryMask();
+  attackerSprite.setMask(mask);
+
+  soundSystem.rumble();
+  try {
+    // 1. Sink (0 -> 20 %), throwing grit up out of the hole.
+    const hole = newG(scene, 795);
+    await Promise.all([
+      tweenPromise(scene, {
+        targets: attackerSprite, y: homeY + 38,
+        duration: Math.round(d * 0.16), ease: 'Quad.easeIn',
+      }),
+      directionalParticles(scene, homeX, fromGround, GROUND, 12, {
+        dirY: -1, spread: 20, duration: Math.round(d * 0.18),
+        shape: 'grit', accentColor: GROUND_DARK, gravity: 1.4,
+      }),
+      frames(scene, Math.round(d * 0.16), t => {
+        hole.clear();
+        const w = Math.round(6 + t * 9);
+        hole.fillStyle(GROUND_EDGE, 1);
+        hole.fillEllipse(homeX, fromGround + 1, w * 2, 7);
+        hole.fillStyle(GROUND_DARK, 1);
+        hole.fillEllipse(homeX, fromGround, w * 2 - 4, 5);
+      }),
+    ]);
+
+    // 2. Underground (20 -> 52 %): a mound travels along the ground line.
+    await frames(scene, Math.round(d * 0.26), t => {
+      hole.clear();
+      const x = Math.round(homeX + (defenderSprite.x - homeX) * t);
+      const y = Math.round(fromGround + (toGround - fromGround) * t);
+      const lift = 4 + Math.sin(t * Math.PI * 5) * 2;
+      hole.fillStyle(GROUND_EDGE, 1);
+      hole.fillEllipse(x, y, 22, 10 + lift);
+      hole.fillStyle(GROUND, 1);
+      hole.fillEllipse(x, y - 1, 17, 7 + lift);
+      hole.fillStyle(GROUND_DARK, 1);
+      hole.fillEllipse(x - 5, y - 1, 6, 4);
+    });
+    hole.destroy();
+
+    // 3. Erupt under the defender (52 -> 70 %).
+    soundSystem.thud();
+    maskTo(toGround);
+    attackerSprite.setPosition(defenderSprite.x, toGround + 30);
+    await Promise.all([
+      tweenPromise(scene, {
+        targets: attackerSprite, y: defenderSprite.y - 2,
+        duration: Math.round(d * 0.15), ease: 'Back.easeOut',
+      }),
+      directionalParticles(scene, defenderSprite.x, toGround, GROUND, 16, {
+        dirY: -1, spread: 30, duration: Math.round(d * 0.2),
+        shape: 'grit', accentColor: GROUND_DARK, gravity: 1.1,
+      }),
+    ]);
+    attackerSprite.clearMask(false);
+
+    // 4. The hit (70 -> 100 %), with the ground still settling.
+    await Promise.all([
+      impactBurst(scene, defenderSprite.x, defenderSprite.y, GROUND, GROUND_DARK, 18, Math.round(d * 0.2)),
+      spriteFlash(defenderSprite, scene, GROUND, 3),
+      screenShake(scene, 6, Math.round(d * 0.14)),
+      directionalParticles(scene, defenderSprite.x, defenderSprite.y, GROUND, 12, {
+        spread: 26, duration: Math.round(d * 0.22), shape: 'grit', accentColor: GROUND_DARK, gravity: 1.2,
+      }),
+      (async () => {
+        await delay(scene, Math.round(d * 0.08));
+        await tweenPromise(scene, {
+          targets: attackerSprite, x: homeX, y: homeY,
+          duration: Math.round(d * 0.12), ease: 'Sine.easeOut',
+        });
+      })(),
+    ]);
+  } finally {
+    attackerSprite.clearMask(false);
+    mask.destroy();
+    shape.destroy();
+  }
+}
+
+/**
+ * ID 76 SOLAR BEAM - light gathers into a white-hot core, then fires as a
+ * thick Grass beam with a wide white core.
+ *
+ * Distinct from every generic body: no other move builds a core on the
+ * attacker for nearly half its budget, and the beam is twice the width of the
+ * generic one with a core wide enough to read as "solar" rather than "green".
+ */
+async function renderSolarBeam(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite, defenderSprite } = ctx;
+  const d = spec.duration; // 1100 ms via OVERRIDE_DURATION
+  const ax = Math.round(attackerSprite.x);
+  const ay = Math.round(attackerSprite.y) - 2;
+  const dx = Math.round(defenderSprite.x);
+  const dy = Math.round(defenderSprite.y);
+
+  soundSystem.beamCharge();
+
+  // 1. Gather (0 -> 42 %): motes spiral in and a core builds on the attacker.
+  const g = newG(scene, 820);
+  const motes = Array.from({ length: 12 }, (_, i) => ({
+    ang: (i / 12) * Math.PI * 2,
+    r: 26 + (i % 4) * 7,
+    seed: i,
+  }));
+  await frames(scene, Math.round(d * 0.42), t => {
+    g.clear();
+    for (const m of motes) {
+      const r = m.r * (1 - t * 0.95);
+      const x = Math.round(ax + Math.cos(m.ang + t * 3) * r);
+      const y = Math.round(ay + Math.sin(m.ang + t * 3) * r * 0.7);
+      g.fillStyle(GRASS_EDGE, 1);
+      g.fillRect(x - 3, y - 3, 7, 7);
+      g.fillStyle(GRASS_PALE, 1);
+      g.fillRect(x - 2, y - 2, 5, 5);
+      g.fillStyle(WHITE, 1);
+      g.fillRect(x - 1, y - 1, 2, 2);
+    }
+    const core = Math.round(3 + t * t * 11);
+    g.fillStyle(GRASS_EDGE, 1);
+    g.fillCircle(ax, ay, core + 3);
+    g.fillStyle(GRASS, 1);
+    g.fillCircle(ax, ay, core + 1);
+    g.fillStyle(GRASS_PALE, 1);
+    g.fillCircle(ax, ay, Math.max(2, core - 2));
+    g.fillStyle(WHITE, 1);
+    g.fillCircle(ax, ay, Math.max(1, Math.round(core * 0.45)));
+  });
+  g.destroy();
+
+  // 2. Fire (42 -> 78 %): a thick beam, wide white core, dark rim so it reads
+  //    against the #f8f8f8 sky.
+  soundSystem.leafSweep();
+  const bm = newG(scene, 815);
+  const fire = Math.round(d * 0.36);
+  await Promise.all([
+    frames(scene, fire, t => {
+      bm.clear();
+      const grow = Math.min(1, t / 0.18);
+      const fade = t > 0.86 ? Math.max(0, 1 - (t - 0.86) / 0.14) : 1;
+      const ex = ax + (dx - ax) * grow;
+      const ey = ay + (dy - ay) * grow;
+      const pulse = 1 + Math.sin(t * 30) * 0.1;
+      bm.setAlpha(fade);
+      const stroke = (lw: number, c: number, a: number): void => {
+        bm.lineStyle(Math.max(1, Math.round(lw)), c, a);
+        bm.beginPath();
+        bm.moveTo(ax, ay);
+        bm.lineTo(ex, ey);
+        bm.strokePath();
+      };
+      stroke(20 * pulse, GRASS_EDGE, 1);   // dark rim
+      stroke(16 * pulse, GRASS, 1);        // body
+      stroke(9 * pulse, GRASS_PALE, 1);    // hot inner sheath
+      stroke(5 * pulse, WHITE, 1);         // wide white core
+      bm.fillStyle(GRASS_PALE, 1);
+      bm.fillCircle(ax, ay, 9);
+      bm.fillStyle(WHITE, 1);
+      bm.fillCircle(ax, ay, 5);
+    }),
+    emitterAlong(scene, ax, ay, dx, dy, GRASS, GRASS_PALE, 9, fire, 'leaf'),
+    (async () => {
+      await delay(scene, Math.round(fire * 0.45));
+      await Promise.all([
+        impactBurst(scene, dx, dy, GRASS, GRASS_PALE, 20, Math.round(d * 0.3)),
+        spriteFlash(defenderSprite, scene, GRASS, 3),
+        screenShake(scene, 5, Math.round(d * 0.16)),
+        directionalParticles(scene, dx, dy, GRASS, 16, {
+          spread: 32, duration: Math.round(d * 0.32), shape: 'leaf',
+          accentColor: GRASS_PALE, wobble: 3,
+        }),
+      ]);
+    })(),
+  ]);
+  bm.destroy();
+}
+
+// ===========================================================================
+// Self-KO set-pieces (SELF-DESTRUCT / EXPLOSION)
+// ===========================================================================
+
+/**
+ * The shared detonation. EXPLOSION is the same set-piece at `scale` 1.4 with
+ * one extra strobe flash, so the two are the same idea at two sizes rather
+ * than two unrelated animations - and at the 50 % frame EXPLOSION is visibly
+ * the bigger of the two.
+ *
+ * The fireball is fiery rather than Normal-coloured - white heart, yellow,
+ * orange, red, dark red rim - because the battle sky is #f8f8f8 and a white
+ * blast on its own would be invisible, and because a blast that is not red
+ * and orange does not read as an explosion.
+ */
+async function detonate(
+  spec: AnimationSpec,
+  ctx: AnimationContext,
+  scale: number,
+  strobes: number,
+): Promise<void> {
+  const { scene, attackerSprite, defenderSprite } = ctx;
+  const d = spec.duration;
+  const ax = Math.round(attackerSprite.x);
+  const ay = Math.round(attackerSprite.y);
+
+  // 1. Strobe (0 -> 38 %): white flashes on the attacker, accelerating.
+  const halo = newG(scene, 805);
+  const strobe = Math.round(d * 0.32);
+  await Promise.all([
+    frames(scene, strobe, t => {
+      halo.clear();
+      // Period shrinks as t grows, so the flashes visibly speed up.
+      const beats = Math.sin(t * t * strobes * 7);
+      // The dim beat is 0.55, not 0.25: at 0.25 the off-beat washes out to a
+      // pale smudge on the #f8f8f8 sky, and half the sampled frames land on it.
+      const on = beats > 0.2 ? 1 : 0.55;
+      const r = Math.round(9 + t * 12);
+      halo.setAlpha(on);
+      halo.fillStyle(FIRE_EDGE, 1);
+      halo.fillCircle(ax, ay, r + 2);
+      halo.fillStyle(FIRE_ORANGE, 1);
+      halo.fillCircle(ax, ay, r);
+      halo.fillStyle(FIRE_YELLOW, 1);
+      halo.fillCircle(ax, ay, Math.max(2, r - 5));
+      halo.fillStyle(WHITE, 1);
+      halo.fillCircle(ax, ay, Math.max(1, Math.round(r * 0.4)));
+    }),
+    spriteFlash(attackerSprite, scene, FIRE_YELLOW, strobes),
+  ]);
+  halo.destroy();
+
+  // 2. Detonation (38 -> 78 %): a near-full-field fireball, debris rings.
+  soundSystem.boom();
+  const maxR = Math.round(70 * scale);
+  const blast = newG(scene, 860);
+  const blastMs = Math.round(d * 0.38);
+  await Promise.all([
+    frames(scene, blastMs, t => {
+      blast.clear();
+      // sqrt growth: the front is fastest at the start, like a real shock.
+      // The fireball COLLAPSES at the end instead of fading: fading it over a
+      // #f8f8f8 sky turns red and orange into pale tan (and the e2e's nearest
+      // colour vote flips from FIRE to GROUND/FIGHTING), so every pixel it
+      // draws stays fully saturated right up to the frame it vanishes on.
+      const collapse = t < 0.82 ? 1 : Math.max(0, 1 - (t - 0.82) / 0.18);
+      const r = Math.round(maxR * Math.sqrt(Math.min(1, t / 0.75)) * collapse);
+      blast.fillStyle(FIRE_EDGE, 1);
+      blast.fillCircle(ax, ay, r + 3);
+      blast.fillStyle(FIRE_RED, 1);
+      blast.fillCircle(ax, ay, r);
+      blast.fillStyle(FIRE_ORANGE, 1);
+      blast.fillCircle(ax, ay, Math.round(r * 0.74));
+      blast.fillStyle(FIRE_YELLOW, 1);
+      blast.fillCircle(ax, ay, Math.round(r * 0.48));
+      blast.fillStyle(WHITE, 1);
+      blast.fillCircle(ax, ay, Math.round(r * 0.24));
+      // Debris rings riding the front, alternating rim and red so they stay
+      // legible both over the fireball and over the bare sky outside it.
+      for (let i = 0; i < 3; i++) {
+        const phase = (t * 1.4 + i / 3) % 1;
+        blast.lineStyle(3, i % 2 ? FIRE_RED : FIRE_EDGE, 1 - phase * 0.4);
+        blast.strokeCircle(ax, ay, Math.round(phase * maxR * 1.25));
+      }
+    }),
+    screenFlash(scene, WHITE, Math.round(d * 0.12)),
+    screenShake(scene, 8, Math.round(d * 0.26)),
+    directionalParticles(scene, ax, ay, FIRE_RED, Math.round(18 * scale), {
+      spread: Math.round(56 * scale), duration: Math.round(d * 0.38),
+      shape: 'dust', accentColor: FIRE_ORANGE,
+    }),
+    spriteFlash(defenderSprite, scene, FIRE_ORANGE, 3),
+    tweenPromise(scene, {
+      targets: attackerSprite, alpha: 0.15,
+      duration: Math.round(d * 0.26), ease: 'Quad.easeIn',
+    }),
+  ]);
+  blast.destroy();
+
+  // 3. Debris settling (78 -> 100 %).
+  await Promise.all([
+    directionalParticles(scene, ax, ay - 6, FIRE_ORANGE, Math.round(10 * scale), {
+      dirY: 1, spread: Math.round(34 * scale), duration: Math.round(d * 0.18),
+      shape: 'dust', accentColor: FIRE_EDGE, gravity: 1.6,
+    }),
+    impactBurst(scene, defenderSprite.x, defenderSprite.y, FIRE_RED, FIRE_YELLOW,
+      Math.round(14 * scale), Math.round(d * 0.18)),
+  ]);
+}
+
+/** ID 120 SELF-DESTRUCT. */
+async function renderSelfDestruct(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  await detonate(spec, ctx, 1, 3);
+}
+
+/** ID 153 EXPLOSION - the same set-piece, 1.4x and one flash longer. */
+async function renderExplosion(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  await detonate(spec, ctx, 1.4, 4);
+}
+
+// ===========================================================================
+// HYPER BEAM
+// ===========================================================================
+
+/**
+ * ID 63 HYPER BEAM - a charge, a held beam that WIDENS as it is fired, and a
+ * recoil that knocks the attacker back.
+ *
+ * HYPER BEAM is the only Normal move that resolves to the generic `beam`
+ * motion, so the generic Normal beam body is otherwise unused - this override
+ * replaces it outright. It is deliberately unlike SOLAR BEAM: no gathering
+ * halo of motes, a beam that grows instead of one that holds a constant width,
+ * and the attacker is thrown backwards at the end.
+ */
+async function renderHyperBeam(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite, defenderSprite } = ctx;
+  const d = spec.duration; // 1000 ms via OVERRIDE_DURATION
+  const ax = Math.round(attackerSprite.x);
+  const ay = Math.round(attackerSprite.y) - 2;
+  const dx = Math.round(defenderSprite.x);
+  const dy = Math.round(defenderSprite.y);
+  const homeX = attackerSprite.x;
+  const homeY = attackerSprite.y;
+
+  soundSystem.beamCharge();
+
+  // 1. Charge (0 -> 28 %): a glow swells on the attacker's mouth.
+  const glow = newG(scene, 820);
+  await frames(scene, Math.round(d * 0.24), t => {
+    glow.clear();
+    const r = Math.round(2 + t * t * 12);
+    glow.fillStyle(NORMAL_EDGE, 1);
+    glow.fillCircle(ax, ay, r + 3);
+    glow.fillStyle(NORMAL, 1);
+    glow.fillCircle(ax, ay, r + 1);
+    glow.fillStyle(NORMAL_PALE, 1);
+    glow.fillCircle(ax, ay, Math.max(2, r - 1));
+    glow.fillStyle(WHITE, 1);
+    glow.fillCircle(ax, ay, Math.max(1, Math.round(r * 0.5)));
+  });
+  glow.destroy();
+
+  // 2. The beam (28 -> 82 %): width 7 -> 22, core 2 -> 9, held the whole time.
+  soundSystem.roar();
+  const bm = newG(scene, 815);
+  const fireMs = Math.round(d * 0.46);
+  await Promise.all([
+    frames(scene, fireMs, t => {
+      bm.clear();
+      const grow = Math.min(1, t / 0.12);
+      const fade = t > 0.9 ? Math.max(0, 1 - (t - 0.9) / 0.1) : 1;
+      const w = 7 + t * 15;                       // the widening
+      const jitter = Math.round(Math.sin(t * 40) * 1.5);
+      const ex = ax + (dx - ax) * grow;
+      const ey = ay + (dy - ay) * grow;
+      bm.setAlpha(fade);
+      const stroke = (lw: number, c: number): void => {
+        bm.lineStyle(Math.max(1, Math.round(lw)), c, 1);
+        bm.beginPath();
+        bm.moveTo(ax, ay + jitter);
+        bm.lineTo(ex, ey);
+        bm.strokePath();
+      };
+      stroke(w + 5, NORMAL_EDGE);
+      stroke(w, NORMAL);
+      stroke(Math.max(2, w * 0.4), WHITE);
+    }),
+    emitterAlong(scene, ax, ay, dx, dy, NORMAL, NORMAL_EDGE, 10, fireMs, 'dust'),
+    (async () => {
+      // The target is pinned under the beam while it is held.
+      await delay(scene, Math.round(fireMs * 0.25));
+      await Promise.all([
+        impactBurst(scene, dx, dy, NORMAL, NORMAL_PALE, 20, Math.round(d * 0.3)),
+        spriteFlash(defenderSprite, scene, NORMAL, 4),
+        screenShake(scene, 6, Math.round(d * 0.24)),
+        directionalParticles(scene, dx, dy, NORMAL, 16, {
+          spread: 32, duration: Math.round(d * 0.3), shape: 'dust', accentColor: NORMAL_EDGE,
+        }),
+      ]);
+    })(),
+  ]);
+  bm.destroy();
+
+  // 3. Recoil (82 -> 100 %): the attacker is knocked back and has to settle -
+  //    the animation half of "must recharge!".
+  soundSystem.thud();
+  const back = ctx.isPlayer ? -7 : 7;
+  await tweenPromise(scene, {
+    targets: attackerSprite, x: homeX + back, y: homeY + 3,
+    duration: Math.round(d * 0.06), ease: 'Quad.easeOut',
+  });
+  await tweenPromise(scene, {
+    targets: attackerSprite, x: homeX, y: homeY,
+    duration: Math.round(d * 0.08), ease: 'Sine.easeInOut',
+  });
+}
+
+registerSpecOverride('fly', renderFly);
+registerSpecOverride('dig', renderDig);
+registerSpecOverride('solarBeam', renderSolarBeam);
+registerSpecOverride('selfDestruct', renderSelfDestruct);
+registerSpecOverride('explosion', renderExplosion);
+registerSpecOverride('hyperBeam', renderHyperBeam);
