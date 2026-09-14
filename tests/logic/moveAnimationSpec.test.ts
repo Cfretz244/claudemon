@@ -213,10 +213,19 @@ describe('moveAnimationSpec — intensity and duration', () => {
 
   it('override budgets name a real override key and stay under the set-piece cap', () => {
     const keys = new Set(Object.values(MOVE_OVERRIDES));
+    // A custom budget used to mean "longer than the generic cap", because
+    // every set-piece so far was a film. The status/grapple/speed batch broke
+    // that: QUICK ATTACK, GROWL and TAIL WHIP declare budgets at or BELOW
+    // MAX_DURATION_MS on purpose - being faster than the generic body is the
+    // move. So the invariant that survives is the ceiling, not a floor.
     for (const [key, ms] of Object.entries(OVERRIDE_DURATION)) {
       expect(keys.has(key), `OVERRIDE_DURATION key ${key}`).toBe(true);
-      expect(ms).toBeGreaterThan(MAX_DURATION_MS);
+      expect(ms, `OVERRIDE_DURATION.${key}`).toBeGreaterThan(0);
       expect(ms).toBeLessThanOrEqual(MAX_OVERRIDE_DURATION_MS);
+    }
+    // ...and the set-pieces that ARE films still have to outrun the cap.
+    for (const key of ['thunder', 'fly', 'dig', 'solarBeam', 'surf', 'blizzard']) {
+      expect(OVERRIDE_DURATION[key], key).toBeGreaterThan(MAX_DURATION_MS);
     }
   });
 

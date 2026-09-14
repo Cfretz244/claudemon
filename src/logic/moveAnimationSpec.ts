@@ -278,6 +278,39 @@ export const MAX_OVERRIDE_DURATION_MS = 1200;
  *
  * nightShade: the field darkens, the shade rises, crosses and settles, the
  * defender flickers, and only then does the dark lift.
+ *
+ * sing: the notes have to travel the whole attacker -> defender path and then
+ * the defender has to visibly nod off, which is two beats, not one.
+ *
+ * sleepPowder: the cloud drifts across, arrives ABOVE the target and only then
+ * rains down - a single puff would be the generic status-cloud again.
+ *
+ * toxic: lob, splat, drips, and a tint that has to still be there at the end;
+ * the splat is worthless if it is not held long enough to read as a stain.
+ *
+ * leechSeed: three beats in sequence - seeds land, vines grow and coil, motes
+ * flow back - so it is the longest of this batch.
+ *
+ * thunderWave: the rings have to cross the whole field at a speed that reads
+ * as a wave rather than a flash, and the static crackle follows them.
+ *
+ * wrap: three loops of coil have to be laid down one after another and THEN
+ * tighten; at the generic bind budget (460 ms) they arrive all at once.
+ *
+ * bind: the clamp has to close, hold and pulse - the pulse is the move.
+ *
+ * quickAttack: the ONLY override that is shorter than its generic body. The
+ * point of the move is that the hit lands before you see it, so the budget is
+ * a hard ceiling, not a request: 300 ms, the fastest thing in the battle.
+ *
+ * swift: two bursts of stars, each one arcing the width of the field, plus the
+ * scatter on impact.
+ *
+ * growl: two roars, each a fan of arcs that has to expand far enough to reach
+ * the defender, with a beat of silence between them.
+ *
+ * tailWhip: the attacker rocks twice, which is a full left-right-left, and the
+ * defender's flinch has to land after the second swipe.
  */
 export const OVERRIDE_DURATION: Record<string, number> = {
   thunder: 1000,
@@ -295,6 +328,17 @@ export const OVERRIDE_DURATION: Record<string, number> = {
   blizzard: 1150,
   psychic: 1000,
   nightShade: 1100,
+  sing: 900,
+  sleepPowder: 950,
+  toxic: 1000,
+  leechSeed: 1050,
+  thunderWave: 900,
+  wrap: 1000,
+  bind: 900,
+  quickAttack: 300,
+  swift: 900,
+  growl: 800,
+  tailWhip: 800,
 };
 
 const MOTION_BASE_MS: Record<BaseMotion, number> = {

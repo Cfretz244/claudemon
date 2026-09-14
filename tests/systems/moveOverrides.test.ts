@@ -40,7 +40,26 @@ const IMPLEMENTED = [
   'blizzard',
   'psychic',
   'nightShade',
+  // The foe-targeted status / grapple / speed / stat-drop set-pieces. Seven of
+  // these eleven used to share ONE generic body (`status-cloud`), which is why
+  // the e2e diffs each of them against the sibling named in the brief as well
+  // as against its own stripped spec.
+  'sing',
+  'sleepPowder',
+  'toxic',
+  'leechSeed',
+  'thunderWave',
+  'wrap',
+  'bind',
+  'quickAttack',
+  'swift',
+  'growl',
+  'tailWhip',
 ];
+
+/** QUICK ATTACK's budget is a promise about how the move FEELS, so it is a
+ *  test and not just a comment: the hit has to land before you see it. */
+const QUICK_ATTACK_MAX_MS = 400;
 
 /** move id -> the override key it must resolve to, for every registered key. */
 const BY_ID: Record<number, string> = {
@@ -59,6 +78,17 @@ const BY_ID: Record<number, string> = {
   59: 'blizzard',
   94: 'psychic',
   101: 'nightShade',
+  47: 'sing',
+  79: 'sleepPowder',
+  92: 'toxic',
+  73: 'leechSeed',
+  86: 'thunderWave',
+  35: 'wrap',
+  20: 'bind',
+  98: 'quickAttack',
+  129: 'swift',
+  45: 'growl',
+  39: 'tailWhip',
 };
 
 describe('tier-3 move overrides', () => {
@@ -106,11 +136,37 @@ describe('tier-3 move overrides', () => {
     const destroyed = (OVERRIDES_SRC.match(/\.destroy\(\)/g) ?? []).length;
     expect(destroyed).toBeGreaterThanOrEqual(newG);
     for (const key of ['thunderbolt', 'surf', 'earthquake', 'hydroPump',
-      'fireBlast', 'blizzard', 'psychic', 'nightShade']) {
+      'fireBlast', 'blizzard', 'psychic', 'nightShade',
+      'sing', 'sleepPowder', 'toxic', 'leechSeed', 'thunderWave',
+      'wrap', 'bind', 'quickAttack', 'swift', 'growl', 'tailWhip']) {
       const fn = `render${key[0].toUpperCase()}${key.slice(1)}`;
       const body = OVERRIDES_SRC.slice(OVERRIDES_SRC.indexOf(`function ${fn}(`));
       expect(body.slice(0, body.indexOf('\nasync function') + 1 || undefined))
         .toMatch(/soundSystem\.[a-zA-Z]+\(/);
+    }
+  });
+
+  it('QUICK ATTACK is the fastest thing in the battle', () => {
+    // The brief's one hard number: <= 400 ms, which is also FASTER than the
+    // generic contact body it replaces would be with any intensity bonus.
+    const spec = resolveAnimation(98);
+    expect(spec.override).toBe('quickAttack');
+    expect(spec.duration).toBeLessThanOrEqual(QUICK_ATTACK_MAX_MS);
+    for (const [key, ms] of Object.entries(OVERRIDE_DURATION)) {
+      if (key === 'quickAttack') continue;
+      expect(ms, `${key} must not be faster than quickAttack`).toBeGreaterThan(spec.duration);
+    }
+  });
+
+  it('restores the sprite rotation it borrows', () => {
+    // renderSpec's finally restores position/alpha/scale/tint - but NOT
+    // rotation, so any override that rocks or sways a sprite has to put it
+    // back itself or the sprite stays crooked for the rest of the battle.
+    for (const fn of ['renderSing', 'renderTailWhip']) {
+      const body = OVERRIDES_SRC.slice(OVERRIDES_SRC.indexOf(`function ${fn}(`));
+      const own = body.slice(0, body.indexOf('\n/**') + 1 || undefined);
+      expect(own, fn).toMatch(/rotation/);
+      expect(own, fn).toMatch(/setRotation\(rot0\)/);
     }
   });
 

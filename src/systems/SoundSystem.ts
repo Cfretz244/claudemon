@@ -663,6 +663,81 @@ export class SoundSystem {
       { freq: 55, dur: 0.4, delay: 0 },
     ], 'square', 0.06);
   }
+
+  // === Foe-targeted status / grapple / speed voices (PR 4c) ===
+
+  /** SING: a lilting five-note phrase, the only sung line in the battle. */
+  melody(): void {
+    this.playNotes([
+      { freq: 523, dur: 0.12, delay: 0 },
+      { freq: 659, dur: 0.12, delay: 0.11 },
+      { freq: 784, dur: 0.14, delay: 0.22 },
+      { freq: 659, dur: 0.12, delay: 0.36 },
+      { freq: 587, dur: 0.22, delay: 0.47 },
+    ], 'sine', 0.07);
+    this.playNotes([
+      { freq: 262, dur: 0.3, delay: 0.05 },
+      { freq: 294, dur: 0.3, delay: 0.4 },
+    ], 'triangle', 0.035);
+  }
+
+  /** SLEEP POWDER: a soft airy puff settling downward. */
+  powder(): void {
+    this.playNotes([
+      { freq: 900, dur: 0.06, delay: 0 },
+      { freq: 760, dur: 0.07, delay: 0.07 },
+      { freq: 620, dur: 0.08, delay: 0.15 },
+      { freq: 500, dur: 0.1, delay: 0.24 },
+      { freq: 400, dur: 0.16, delay: 0.35 },
+    ], 'sine', 0.045);
+  }
+
+  /** TOXIC: a wet lob, a splat, and the drips coming off after it. */
+  spatter(): void {
+    this.playNotes([
+      { freq: 180, dur: 0.1, delay: 0 },
+      { freq: 110, dur: 0.16, delay: 0.1 },
+    ], 'square', 0.09);
+    this.playNotes([
+      { freq: 420, dur: 0.05, delay: 0.26 },
+      { freq: 340, dur: 0.05, delay: 0.36 },
+      { freq: 280, dur: 0.06, delay: 0.48 },
+    ], 'triangle', 0.05);
+  }
+
+  /** THUNDER WAVE: a buzzing pulse train, not a zap - no bolt, just current. */
+  staticBuzz(): void {
+    this.playNotes([
+      { freq: 70, dur: 0.09, delay: 0 },
+      { freq: 70, dur: 0.09, delay: 0.13 },
+      { freq: 80, dur: 0.09, delay: 0.26 },
+      { freq: 90, dur: 0.14, delay: 0.39 },
+    ], 'square', 0.055);
+    this.playNotes([
+      { freq: 1400, dur: 0.03, delay: 0.42 },
+      { freq: 1700, dur: 0.03, delay: 0.5 },
+      { freq: 1500, dur: 0.04, delay: 0.58 },
+    ], 'sawtooth', 0.03);
+  }
+
+  /** WRAP / BIND: rope creaking as it tightens. */
+  constrict(): void {
+    this.playNotes([
+      { freq: 150, dur: 0.1, delay: 0 },
+      { freq: 190, dur: 0.1, delay: 0.12 },
+      { freq: 240, dur: 0.1, delay: 0.24 },
+      { freq: 300, dur: 0.16, delay: 0.36 },
+    ], 'sawtooth', 0.05);
+  }
+
+  /** QUICK ATTACK: one short whip-crack - the whole move is 300 ms. */
+  dash(): void {
+    this.playNotes([
+      { freq: 1200, dur: 0.03, delay: 0 },
+      { freq: 1800, dur: 0.03, delay: 0.03 },
+      { freq: 700, dur: 0.06, delay: 0.09 },
+    ], 'square', 0.07);
+  }
 }
 
 // Global sound instance
