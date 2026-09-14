@@ -141,6 +141,8 @@ export class OverworldScene extends Phaser.Scene {
   private stepCounter = 0;
   private lastEncounterStep = 0;
   private isWarping = false;
+  /** True when this scene start reused the live map: a return from a battle, not a fresh arrival. */
+  private keepMapState = false;
 
   // Intro transition
   private introTransition = false;
@@ -164,6 +166,7 @@ export class OverworldScene extends Phaser.Scene {
     this.isMoving = false;
     this.introTransition = data.introTransition || false;
     this.teleportLanding = data.teleportLanding || false;
+    this.keepMapState = data.keepMapState || false;
     this.isSurfing = data.isSurfing || false;
     this.isRidingBike = data.isRidingBike || false;
     this.flashUsed = data.flashUsed || false;
@@ -339,6 +342,40 @@ export class OverworldScene extends Phaser.Scene {
       this.menuSelectedIndex = Math.min(this.menuItems.length - 1, this.menuSelectedIndex + 1);
       this.menuCursor.setY(4 + this.menuSelectedIndex * 14);
       soundSystem.menuMove();
+    });
+
+    // Arrival scripts run last, once everything they need exists
+    this.checkMarowakAmbush();
+  }
+
+  /**
+   * Pokemon Tower 7F: the ghost that guards the stairs. The SILPH SCOPE entry
+   * gate has already let the player through, so the warp happened and the
+   * player is standing on the 7F landing tile; the reveal lines run there and
+   * the Lv30 Marowak battle starts when the last one is advanced. The flag rides
+   * along as `clearedFlag` and is written by the BattleScene on a win or a catch
+   * only (`src/logic/forcedEncounters.ts`), so running away leaves the ghost.
+   *
+   * Fresh arrivals only: `keepMapState` marks the scene start that comes back
+   * from a battle, which is how the fight does not restart itself forever. The
+   * player has to leave the floor and take the stairs again to meet it once more
+   * (loading a save made on the landing tile also counts as a fresh arrival —
+   * the ghost is still standing there, so it challenges again).
+   *
+   * The reveal box is the input lock — `update()` and `handleAction()` both
+   * stand down while a text box is visible, and `startWildBattle()` raises
+   * `isWarping` itself. (Raising `isWarping` here instead would block the very
+   * Z press that advances the box.)
+   */
+  private checkMarowakAmbush(): void {
+    if (this.keepMapState) return;
+    const ghost = marowakAmbush(this.currentMap.id, this.playerState);
+    if (ghost.outcome !== 'battle') return;
+    this.textBox.show(ghost.messages, () => {
+      this.startWildBattle(
+        createPokemon(ghost.battle!.speciesId, ghost.battle!.level),
+        { clearedFlag: ghost.flag ?? undefined },
+      );
     });
   }
 
@@ -940,18 +977,6 @@ export class OverworldScene extends Phaser.Scene {
       }
     }
 
-    // Pokemon Tower 7F: the SILPH SCOPE (gate) reveals the ghost on the 6F stairs
-    // as Marowak, once. See src/logic/forcedEncounters.ts; the flag is written
-    // here, before the messages ('on_trigger'), and swallows the warp.
-    const ghost = marowakAmbush(mapId, this.playerState);
-    if (ghost.outcome === 'battle') {
-      this.playerState.storyFlags[ghost.flag!] = true;
-      this.textBox.show(ghost.messages, () => {
-        this.startWildBattle(createPokemon(ghost.battle!.speciesId, ghost.battle!.level));
-      });
-      return;
-    }
-
     // Auto-mount bike when entering Cycling Road (the gate guarantees a bicycle)
     if ((mapId === 'route16' || mapId === 'route17') && !this.isRidingBike) {
       this.isRidingBike = true;
@@ -1113,8 +1138,16 @@ export class OverworldScene extends Phaser.Scene {
     };
   }
 
-  /** Blocks input and transitions into a wild battle with the standard payload. */
-  private startWildBattle(wildPokemon: PokemonInstance, extra: { isGhost?: boolean } = {}): void {
+  /**
+   * Blocks input and transitions into a wild battle with the standard payload.
+   * `clearedFlag` is a story flag the BattleScene sets if — and only if — the
+   * player wins or catches (forced encounters that survive a run; see
+   * `src/logic/forcedEncounters.ts`).
+   */
+  private startWildBattle(
+    wildPokemon: PokemonInstance,
+    extra: { isGhost?: boolean; clearedFlag?: string } = {},
+  ): void {
     this.isWarping = true;
     soundSystem.battleStart();
     playBattleTransition(this, () => {
