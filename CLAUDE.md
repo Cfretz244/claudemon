@@ -106,6 +106,7 @@ src/
     fieldMoves.ts                   # canUseFieldMove(): HM badge/party-move gates + messages
     learnset.ts                     # effectiveMovesAt(): stone evolutions inherit the pre-evo's moves
     slotMachine.ts                  # Game Corner slot machine reel/payout logic
+    roadBlocks.ts                   # Oak/Pewter-guide warp interceptions + Route 23 badge checks
   components/
     TextBox.ts                      # Typewriter text display
     MenuInput.ts                    # Shared menu key bindings + cursor clamp (bindMenuKeys/clampIndex)
