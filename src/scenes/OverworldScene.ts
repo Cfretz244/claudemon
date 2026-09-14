@@ -30,6 +30,11 @@ import { resyncMobileInput } from '../utils/mobileControls';
 import { shouldSkipNPC as shouldSkipNPCLogic } from '../logic/npcVisibility';
 import { STATIC_LEGENDARIES, getStaticLegendary, legendaryClearedFlag } from '../data/staticLegendaries';
 import { shouldGiveOaksParcel } from '../logic/oaksParcel';
+import {
+  oakStage, applyOakStage, OAK_DIALOGUE, shouldTriggerLabRivalBattle,
+  labRivalTriggerOutcome, LAB_MAP_ID, LAB_RIVAL_NPC_ID, LAB_RIVAL_TRAINER_ID,
+  RIVAL_BATTLE_LAB_FLAG,
+} from '../logic/oakLab';
 import { checkEntryGates } from '../logic/warpGate';
 import { MapInstance, instantiateMap, landedBoulders, pushBoulder, isFlagGateOpen, tileUnder } from '../logic/boulders';
 import { restoreParty } from '../logic/healing';
@@ -45,6 +50,7 @@ import { SurgePuzzle } from '../logic/surgePuzzle';
 import { syncDerivedStoryFlags } from '../logic/storyFlagSync';
 import { migrateLegacyLocation } from '../logic/saveMigration';
 import { getCutTiles } from '../logic/cutTrees';
+import { canUseFieldMove, partyKnowsMove, FIELD_MOVE_MESSAGES } from '../logic/fieldMoves';
 import { getAvailableFlyDestinations } from '../data/flyDestinations';
 import { GIFT_NPCS, GiftNpcResult } from '../data/giftNpcs';
 import { SIGNS } from '../data/signs';
@@ -652,8 +658,7 @@ export class OverworldScene extends Phaser.Scene {
         const warp = this.currentMap.warps.find(w => w.x === newX && w.y === newY);
         if (warp) {
           // Rival intercepts when trying to leave Oak's lab after getting Pikachu
-          if (this.currentMap.id === 'oaks_lab' && this.playerState.storyFlags['has_pikachu']
-              && !this.playerState.storyFlags['rival_battle_lab']) {
+          if (shouldTriggerLabRivalBattle(this.currentMap.id, this.playerState)) {
             this.triggerRivalLabBattle();
             return;
           }
@@ -1171,9 +1176,13 @@ export class OverworldScene extends Phaser.Scene {
 
   private triggerRivalLabBattle(): void {
     // Rival walks up and initiates battle after player receives Pikachu
-    const rivalNpc = this.currentMap.npcs.find(n => n.id === 'rival');
-    if (!rivalNpc || this.playerState.defeatedTrainers.includes('rival_lab')) {
-      this.playerState.storyFlags['rival_battle_lab'] = true;
+    const rivalNpc = this.currentMap.npcs.find(n => n.id === LAB_RIVAL_NPC_ID);
+    const outcome = labRivalTriggerOutcome({
+      rivalNpcPresent: !!rivalNpc,
+      defeatedTrainers: this.playerState.defeatedTrainers,
+    });
+    if (outcome === 'flag_only') {
+      this.playerState.storyFlags[RIVAL_BATTLE_LAB_FLAG] = true;
       return;
     }
 
@@ -1185,7 +1194,7 @@ export class OverworldScene extends Phaser.Scene {
         `${this.playerState.rivalName} wants\nto battle!`,
       ],
       () => {
-        this.startRivalBattle('rival_lab');
+        this.startRivalBattle(LAB_RIVAL_TRAINER_ID);
       }
     );
   }
@@ -1808,73 +1817,35 @@ export class OverworldScene extends Phaser.Scene {
 
   /** Oak's story progression chain. */
   private handleOak(_npc: NPCData): boolean {
-    if (this.currentMap.id !== 'oaks_lab') {
+    if (this.currentMap.id !== LAB_MAP_ID) {
       soundSystem.startMusic('oaks_theme');
     }
-    if (!this.playerState.storyFlags['has_pikachu']) {
-      // Give Pikachu
-      this.textBox.show(
-        [
-          this.fmt('OAK: Ah, {PLAYER}!\nI\'ve been waiting\nfor you!'),
-          'I have a POKeMON\nhere for you!',
-          'This PIKACHU is quite\nenergetic!',
-          'Go on! Take it with\nyou on your journey!',
-          this.fmt('{PLAYER} received\nPIKACHU!'),
-        ],
-        () => {
-          const pikachu = createPokemon(25, 5);
-          this.playerState.addToParty(pikachu);
-          this.playerState.storyFlags['has_pikachu'] = true;
-          soundSystem.pokemonCry(800);
+    // Which speech (and which grant) is decided in src/logic/oakLab.ts.
+    const stage = oakStage(this.playerState);
+    const messages = OAK_DIALOGUE[stage].map(m => this.fmt(m));
 
-          // Update Pikachu follower visibility
-          this.pikachuVisible = true;
-          this.pikachuGridX = this.playerGridX;
-          this.pikachuGridY = this.playerGridY;
-          this.pikachu.setPosition(
-            this.pikachuGridX * TILE_SIZE + TILE_SIZE / 2,
-            this.pikachuGridY * TILE_SIZE + TILE_SIZE / 2
-          );
-        }
-      );
+    if (stage === 'give_pikachu') {
+      this.textBox.show(messages, () => {
+        applyOakStage(stage, this.playerState);
+        soundSystem.pokemonCry(800);
+
+        // Update Pikachu follower visibility
+        this.pikachuVisible = true;
+        this.pikachuGridX = this.playerGridX;
+        this.pikachuGridY = this.playerGridY;
+        this.pikachu.setPosition(
+          this.pikachuGridX * TILE_SIZE + TILE_SIZE / 2,
+          this.pikachuGridY * TILE_SIZE + TILE_SIZE / 2
+        );
+      });
       return true;
     }
-    if (this.playerState.hasItem('oaks_parcel') && !this.playerState.storyFlags['delivered_parcel']) {
-      // Parcel delivery sequence
-      this.textBox.show(
-        [
-          'OAK: Oh! That\'s the\nparcel I was waiting\nfor!',
-          this.fmt('Thank you, {PLAYER}!'),
-          'OAK: I have something\nfor you in return!',
-          this.fmt('{PLAYER} handed over\nthe OAK\'S PARCEL!'),
-          'OAK: This is a\nPOKeDEX!',
-          'It automatically\nrecords data on\nPOKeMON you\'ve seen\nor caught!',
-          this.fmt('{PLAYER} received\nthe POKeDEX!'),
-          "Here, take these\ntoo!",
-          this.fmt('{PLAYER} received\n5 POKe BALLs!'),
-        ],
-        () => {
-          this.playerState.useItem('oaks_parcel');
-          this.playerState.addItem('pokedex');
-          this.playerState.addItem('poke_ball', 5);
-          this.playerState.storyFlags['delivered_parcel'] = true;
-          this.playerState.storyFlags['has_pokedex'] = true;
-        }
-      );
+    if (stage === 'deliver_parcel') {
+      this.textBox.show(messages, () => applyOakStage(stage, this.playerState));
       return true;
     }
-    if (this.playerState.storyFlags['delivered_parcel']) {
-      this.textBox.show([
-        'OAK: Good luck filling\nup that POKeDEX!',
-        'The world is full of\namazing POKeMON!',
-      ]);
-      return true;
-    }
-    // Has Pikachu but no parcel yet
-    this.textBox.show([
-      'OAK: Go explore the\nworld with PIKACHU!',
-      'The VIRIDIAN CITY\nMart might have\nsomething for me...',
-    ]);
+    // post_delivery / awaiting_parcel: dialogue only, nothing granted.
+    this.textBox.show(messages);
     return true;
   }
 
@@ -2362,27 +2333,31 @@ export class OverworldScene extends Phaser.Scene {
         const tx = this.playerGridX + vec.x;
         const ty = this.playerGridY + vec.y;
         if (!this.handleCut(tx, ty)) {
-          this.textBox.show(["There's nothing to\nCUT here!"]);
+          this.textBox.show(FIELD_MOVE_MESSAGES.cut.noTarget);
         }
         break;
       }
-      case 19: // FLY
-        if (!this.playerState.badges.includes('THUNDER')) {
-          this.textBox.show(["You need the THUNDER\nBADGE to use FLY!"]);
+      case 19: { // FLY
+        const decision = canUseFieldMove('fly', this.playerState);
+        if (decision.outcome !== 'ok') {
+          this.textBox.show(decision.message);
         } else {
           this.showFlyMap();
         }
         break;
+      }
       case 57: { // SURF
-        if (!this.playerState.badges.includes('SOUL')) {
-          this.textBox.show(["You need the SOUL\nBADGE to use SURF!"]);
+        const vec = DIR_VECTORS[this.playerDirection];
+        const tx = this.playerGridX + vec.x;
+        const ty = this.playerGridY + vec.y;
+        const decision = canUseFieldMove('surf', this.playerState, {
+          targetValid: OverworldScene.isWaterTile(this.currentMap.tiles[ty]?.[tx]),
+          isSurfing: this.isSurfing,
+        });
+        if (decision.outcome !== 'ok') {
+          this.textBox.show(decision.message);
         } else {
-          const vec = DIR_VECTORS[this.playerDirection];
-          const tx = this.playerGridX + vec.x;
-          const ty = this.playerGridY + vec.y;
-          if (!this.handleSurf(tx, ty)) {
-            this.textBox.show(["You can't SURF here!"]);
-          }
+          this.handleSurf(tx, ty);
         }
         break;
       }
@@ -2391,7 +2366,7 @@ export class OverworldScene extends Phaser.Scene {
         const tx = this.playerGridX + vec.x;
         const ty = this.playerGridY + vec.y;
         if (!this.handleStrength(tx, ty)) {
-          this.textBox.show(["There's nothing to\nuse STRENGTH on!"]);
+          this.textBox.show(FIELD_MOVE_MESSAGES.strength.noTarget);
         }
         break;
       }
@@ -2767,16 +2742,18 @@ export class OverworldScene extends Phaser.Scene {
 
   // HM field helpers
   private partyHasMove(moveId: number): boolean {
-    return this.playerState.party.some(p => p.moves.some(m => m.moveId === moveId));
+    return partyKnowsMove(this.playerState, moveId);
   }
 
   private handleCut(targetX: number, targetY: number): boolean {
     const tileType = this.currentMap.tiles[targetY]?.[targetX];
-    if (tileType !== TileType.CUT_TREE) return false;
-
-    // Need CUT (move 15) and CASCADE badge
-    if (!this.partyHasMove(15) || !this.playerState.badges.includes('CASCADE')) {
-      this.textBox.show(['This tree looks like\nit can be CUT down!']);
+    // Needs a CUT_TREE in front, CUT (move 15) in the party and the CASCADE badge
+    const decision = canUseFieldMove('cut', this.playerState, {
+      targetValid: tileType === TileType.CUT_TREE,
+    });
+    if (!decision.handled) return false;
+    if (decision.outcome !== 'ok') {
+      this.textBox.show(decision.message);
       return true;
     }
 
@@ -2893,14 +2870,14 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private handleSurf(targetX: number, targetY: number): boolean {
-    if (this.isSurfing) return false;
     const tileType = this.currentMap.tiles[targetY]?.[targetX];
-    if (!OverworldScene.isWaterTile(tileType)) return false;
-
-    // Need SURF (move 57) and SOUL badge
-    if (!this.partyHasMove(57) || !this.playerState.badges.includes('SOUL')) {
-      return false;
-    }
+    // Needs water in front, SURF (move 57) in the party and the SOUL badge.
+    // Every denial is silent here; the party-menu caller shows the message.
+    const decision = canUseFieldMove('surf', this.playerState, {
+      targetValid: OverworldScene.isWaterTile(tileType),
+      isSurfing: this.isSurfing,
+    });
+    if (decision.outcome !== 'ok') return false;
 
     this.textBox.show(['The water is a deep\nblue color...', 'Want to SURF?'], () => {
       this.isSurfing = true;
@@ -2917,11 +2894,13 @@ export class OverworldScene extends Phaser.Scene {
 
   private handleStrength(targetX: number, targetY: number): boolean {
     const tileType = this.currentMap.tiles[targetY]?.[targetX];
-    if (tileType !== TileType.BOULDER) return false;
-
-    // Need STRENGTH (move 70) and RAINBOW badge
-    if (!this.partyHasMove(70) || !this.playerState.badges.includes('RAINBOW')) {
-      this.textBox.show(['This boulder looks\nlike it can be moved!']);
+    // Needs a BOULDER in front, STRENGTH (move 70) in the party and the RAINBOW badge
+    const decision = canUseFieldMove('strength', this.playerState, {
+      targetValid: tileType === TileType.BOULDER,
+    });
+    if (!decision.handled) return false;
+    if (decision.outcome !== 'ok') {
+      this.textBox.show(decision.message);
       return true;
     }
 
@@ -3170,8 +3149,13 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private useFlash(): void {
-    if (!this.currentMap.isDark || this.flashUsed) return;
-    if (!this.partyHasMove(148) || !this.playerState.badges.includes('BOULDER')) return;
+    // Needs a dark map not yet lit, FLASH (move 148) in the party and the
+    // BOULDER badge. Every denial is silent.
+    const decision = canUseFieldMove('flash', this.playerState, {
+      isDark: !!this.currentMap.isDark,
+      flashUsed: this.flashUsed,
+    });
+    if (decision.outcome !== 'ok') return;
 
     this.textBox.show(['Used FLASH!'], () => {
       this.flashUsed = true;

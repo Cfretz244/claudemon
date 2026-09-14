@@ -96,12 +96,14 @@ src/
     Pokemon.ts                      # createPokemon() factory, stat calculation
   logic/                            # Pure, unit-tested game logic (no Phaser)
     npcVisibility.ts                # shouldSkipNPC() — NPC show/hide from story flags
+    oakLab.ts                       # Oak's lab chain: oakStage()/grants + the lab rival trigger
     trainerSight.ts                 # Trainer line-of-sight math (axis, range, obstacles, surf)
     encounters.ts                   # Weighted wild-encounter pick + encounter music theme
     surgePuzzle.ts                  # Lt. Surge trash-can switch puzzle state machine
     storyFlagSync.ts                # Derived story flags/catch-up grants from defeated trainers
     saveMigration.ts                # Legacy map-id remaps for old saves
     cutTrees.ts                     # cut_<map>_<x>_<y> flag parsing
+    fieldMoves.ts                   # canUseFieldMove(): HM badge/party-move gates + messages
     learnset.ts                     # effectiveMovesAt(): stone evolutions inherit the pre-evo's moves
     slotMachine.ts                  # Game Corner slot machine reel/payout logic
     roadBlocks.ts                   # Oak/Pewter-guide warp interceptions + Route 23 badge checks
