@@ -7,10 +7,16 @@ export function fill2D<V>(width: number, height: number, value: V): V[][] {
   return Array.from({ length: height }, () => Array(width).fill(value));
 }
 
-// Collision lookup: which tiles block movement
+// Collision lookup: which tiles block movement.
+//
+// SIGN and MUSEUM_PLAQUE are solid: both are read by facing them (see
+// `OverworldScene.interact` -> `readSign`), so a walkable sign meant a
+// keypress towards it stepped ONTO it instead of facing it — the Game Corner
+// poster that opens the Rocket Hideout was unreadable that way.
+// `tests/data/signsSolid.test.ts` proves no map loses reachable ground to it.
 export const SOLID_TILES = new Set([
   T.WALL, T.WATER, T.TREE, T.BUILDING, T.FENCE, T.COUNTER, T.MART_SHELF, T.CAVE_WALL, T.PC,
-  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN, T.GATE, T.CURRENT,
+  T.CUT_TREE, T.BOULDER, T.ROOF, T.FOUNTAIN, T.GATE, T.CURRENT, T.SIGN, T.MUSEUM_PLAQUE,
 ]);
 
 export interface MapShape {
