@@ -252,6 +252,32 @@ export const MAX_OVERRIDE_DURATION_MS = 1200;
  * hyperBeam: a charge, a beam that widens as it is held, and the recoil - the
  * generic beam budget (520 ms) cannot hold a beam long enough to read as
  * "sustained".
+ *
+ * thunderbolt: a charge, one held bolt, and then a CAGE of small bolts that
+ * has to crackle for long enough to read as a cage rather than as noise - at
+ * the generic beam budget the cage gets about four frames.
+ *
+ * surf: the wave has to rise, cross the entire 160 px field and drain, and the
+ * "the whole screen is water" beat in the middle is the point of the move; a
+ * sweep fast enough to fit the generic beam budget reads as a swipe.
+ *
+ * earthquake: the tremor has to build before it breaks, and the defender is
+ * thrown up and down four times - a single jolt reads as a flinch.
+ *
+ * hydroPump: the jet's width ramp only reads if the jet is held, and the
+ * defender has to be shoved back and stay shoved while it is.
+ *
+ * fireBlast: the star travels the width of the field growing as it goes, which
+ * needs half the budget on its own, before the burst.
+ *
+ * blizzard: a field-wide storm needs enough frames for the streaks to sweep
+ * across and wrap, plus the freeze and the shatter at the end.
+ *
+ * psychic: rings collapsing inward, the distortion, and the magenta crush -
+ * three beats that have to land in order.
+ *
+ * nightShade: the field darkens, the shade rises, crosses and settles, the
+ * defender flickers, and only then does the dark lift.
  */
 export const OVERRIDE_DURATION: Record<string, number> = {
   thunder: 1000,
@@ -261,6 +287,14 @@ export const OVERRIDE_DURATION: Record<string, number> = {
   selfDestruct: 1000,
   explosion: 1100,
   hyperBeam: 1000,
+  thunderbolt: 1100,
+  surf: 1150,
+  earthquake: 1100,
+  hydroPump: 1000,
+  fireBlast: 1100,
+  blizzard: 1150,
+  psychic: 1000,
+  nightShade: 1100,
 };
 
 const MOTION_BASE_MS: Record<BaseMotion, number> = {

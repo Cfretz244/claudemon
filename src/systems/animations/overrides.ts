@@ -23,6 +23,7 @@ import {
   emitterAlong,
   impactBurst,
   registerSpecOverride,
+  ring,
   screenFlash,
   screenShake,
   spriteFlash,
@@ -826,3 +827,815 @@ registerSpecOverride('solarBeam', renderSolarBeam);
 registerSpecOverride('selfDestruct', renderSelfDestruct);
 registerSpecOverride('explosion', renderExplosion);
 registerSpecOverride('hyperBeam', renderHyperBeam);
+
+// ===========================================================================
+// Signature attacks (THUNDERBOLT / SURF / EARTHQUAKE / HYDRO PUMP /
+// FIRE BLAST / BLIZZARD / PSYCHIC / NIGHT SHADE)
+// ===========================================================================
+//
+// Each of these eight has a generic sibling that renders through the same
+// tier-1/2 motion (THUNDER SHOCK, WATER GUN, BONE CLUB, FLAMETHROWER, ICE
+// BEAM, CONFUSION, LICK), so "is it distinct?" is a measurable question, not a
+// taste one - `tools/anim-e2e.mjs` diffs every one of them against both its
+// sibling and the same spec with the override key stripped.
+//
+// Palette rule, learned the hard way on the fireballs above: the e2e's TYPED
+// check votes each changed pixel for its NEAREST of the 15 type colours, so a
+// set-piece has to stay in its own corner of colour space. Two traps in this
+// batch:
+//   - dark blue goes GHOST long before it goes WATER (0x1155AA already votes
+//     GHOST), so the "dark blue edge" on the wave and the jet is 0x1166CC and
+//     no deeper.
+//   - dark brown goes FIGHTING (GROUND_DARK 0x997733 already does), so
+//     EARTHQUAKE's dust has to be bulk 0xDDBB55 with the browns as outline.
+
+const WATER = 0x3399FF;
+/** Spray/foam. Pale enough to read as water on the #f8f8f8 sky. */
+const WATER_PALE = 0xBBE4FF;
+/** The deepest blue that still votes WATER rather than GHOST. */
+const WATER_DEEP = 0x1166CC;
+const ICE = 0x66CCFF;
+const ICE_PALE = 0xDDF4FF;
+/** The blizzard veil. At alpha 0.45 over the sky it composites to a pixel that
+ *  still votes ICE, which is what keeps a full-field wash from flipping the
+ *  TYPED vote to NORMAL. */
+const ICE_VEIL = 0x88DDFF;
+const PSY = 0xFF5599;
+/** 0xFFAACC, not 0xFFCCE0: the lighter pink is a coin-flip against NORMAL. */
+const PSY_PALE = 0xFFAACC;
+const PSY_EDGE = 0x7A1F4A;
+const GHOST_C = 0x6666BB;
+const GHOST_PALE = 0x8877CC;
+/** Night Shade's veil: dark indigo, which composites to a GHOST-voting pixel. */
+const NIGHT = 0x33228A;
+
+/**
+ * ID 85 THUNDERBOLT - one heavy bolt, then a cage of small bolts.
+ *
+ * Sits between its two siblings on purpose. THUNDER (87) never involves the
+ * attacker and falls out of the sky; THUNDER SHOCK (84) is the generic thin
+ * electric beam. THUNDERBOLT is a single thick attacker->defender arc with a
+ * wide halo, and then - the part neither sibling has - a ring of short bolts
+ * standing around the defender, reseeded every few frames so it crackles,
+ * while the sprite strobes.
+ *
+ * Timing note for the e2e: the runner asserts that at the ~40 % frame
+ * THUNDERBOLT lights ZERO bright pixels in the strip above the defender (that
+ * strip is THUNDER's signature). So nothing yellow or white may be drawn above
+ * `defY - 12` before the bolt has faded: the cage bars stand BELOW the
+ * defender's centre line and the sprite strobe and the white flash are both
+ * held until half-way through the budget.
+ */
+async function renderThunderbolt(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite, defenderSprite } = ctx;
+  const d = spec.duration; // 1100 ms via OVERRIDE_DURATION
+  const ax = Math.round(attackerSprite.x);
+  const ay = Math.round(attackerSprite.y) - 2;
+  const dx = Math.round(defenderSprite.x);
+  const dy = Math.round(defenderSprite.y);
+
+  soundSystem.thunderZap();
+
+  // 1. Charge (0 -> 10 %): the attacker gathers a knot of sparks.
+  const chg = newG(scene, 820);
+  await frames(scene, Math.round(d * 0.10), t => {
+    chg.clear();
+    const r = Math.round(2 + t * 7);
+    chg.fillStyle(EDGE, 1);
+    chg.fillCircle(ax, ay, r + 2);
+    chg.fillStyle(YELLOW, 1);
+    chg.fillCircle(ax, ay, r);
+    chg.fillStyle(WHITE, 1);
+    chg.fillCircle(ax, ay, Math.max(1, r - 4));
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + t * 9;
+      const px = Math.round(ax + Math.cos(a) * (r + 6));
+      const py = Math.round(ay + Math.sin(a) * (r + 6));
+      strokePath(chg, spine(ax, ay, px, py, 3, 3), 2, YELLOW, 1);
+    }
+  });
+  chg.destroy();
+
+  // 2. The bolt (10 -> 46 %): one thick jagged arc, held on screen. `spine`
+  //    jitters x only, so the path's y stays exactly on the attacker->defender
+  //    line - which is what keeps the halo clear of the sky strip above the
+  //    defender. It is still lit when the cage starts, and only fades once the
+  //    ring has closed.
+  soundSystem.thunderZap();
+  const bolt = newG(scene, 880);
+  const path = spine(ax, ay, dx, dy, 9, 6);
+  const forks = [
+    fork(path[3], -1, 12),
+    fork(path[5], 1, 12),
+    fork(path[7], -1, 9),
+  ];
+  const paint = (): void => {
+    bolt.clear();
+    strokePath(bolt, path, 16, YELLOW, 0.3);   // the wide halo
+    strokePath(bolt, path, 11, YELLOW, 0.5);
+    strokePath(bolt, path, 8, EDGE, 0.95);
+    for (const f of forks) strokePath(bolt, f, 5, EDGE, 0.9);
+    strokePath(bolt, path, 5, YELLOW, 1);
+    for (const f of forks) strokePath(bolt, f, 3, YELLOW, 1);
+    strokePath(bolt, path, 2, WHITE, 1);
+  };
+  paint();
+  await delay(scene, Math.round(d * 0.36));
+
+  // 3. The cage (46 -> 86 %): fourteen short bolts standing on an ellipse that
+  //    RINGS the defender - above it as well as below - reseeded every ~56 ms
+  //    so the ring crackles rather than sits there, with the sprite strobing
+  //    yellow/white underneath. Nothing is drawn above the defender until now,
+  //    which is what keeps THUNDERBOLT out of the sky strip THUNDER owns.
+  soundSystem.crackle();
+  const cage = newG(scene, 878);
+  const cageMs = Math.round(d * 0.40);
+  const BARS = 14;
+  await Promise.all([
+    frames(scene, cageMs, t => {
+      // Reseeding on a coarse clock: at 16 ms the ring reads as static noise.
+      const beat = Math.floor(t * cageMs / 56);
+      const grow = Math.min(1, t / 0.08);
+      const fade = t > 0.86 ? Math.max(0, 1 - (t - 0.86) / 0.14) : 1;
+      cage.clear();
+      cage.setAlpha(fade);
+      for (let i = 0; i < BARS; i++) {
+        const a = (i / BARS) * Math.PI * 2 + beat * 0.3;
+        const bx = Math.round(dx + Math.cos(a) * 23 * grow);
+        const by = Math.round(dy + Math.sin(a) * 19 * grow);
+        const half = Math.round(8 + Math.sin(beat + i) * 2);
+        const bar = spine(bx, by - half, bx + (i % 2 ? 3 : -3), by + half, 4, 4);
+        strokePath(cage, bar, 7, EDGE, 0.9);
+        strokePath(cage, bar, 4, YELLOW, 1);
+        strokePath(cage, bar, 2, WHITE, 1);
+      }
+      // The strobe, driven off the same beat so every sampled frame catches it.
+      // Both tints are electric-yellow: a pure-white tint is a no-op (tinting
+      // multiplies), so it would blink the strobe off at every other sample.
+      defenderSprite.setTint(beat % 2 ? YELLOW : 0xFFEE66);
+    }),
+    // The bolt only dies once the ring has closed around the target.
+    (async () => {
+      await delay(scene, Math.round(d * 0.06));
+      await tweenPromise(scene, { targets: bolt, alpha: 0, duration: Math.round(d * 0.08) });
+      bolt.destroy();
+    })(),
+    (async () => {
+      await delay(scene, Math.round(d * 0.02));
+      await Promise.all([
+        screenFlash(scene, WHITE, Math.round(d * 0.09)),
+        screenShake(scene, 5, Math.round(d * 0.16)),
+        directionalParticles(scene, dx, dy + 6, YELLOW, 12, {
+          dirY: 1, spread: 26, duration: Math.round(d * 0.24),
+          shape: 'bolt', accentColor: WHITE,
+        }),
+      ]);
+    })(),
+  ]);
+  cage.destroy();
+  defenderSprite.clearTint();
+
+  // 4. Residual charge (86 -> 100 %).
+  await afterglow(scene, dx, dy, Math.round(d * 0.12));
+}
+
+/**
+ * ID 57 SURF - one wave, the whole field.
+ *
+ * The generic water body (and HYDRO PUMP, 56) is a thing that travels from the
+ * attacker to the defender and stops. SURF is the opposite shape of event: a
+ * wall of water rises on the attacker's side, crosses the entire screen, and
+ * for a beat the field IS water - the defender is underneath it, not hit by
+ * it. The e2e measures exactly that: at the 50 % frame changed pixels must
+ * span >= 70 % of the 160 px width, which no projectile can do.
+ */
+async function renderSurf(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, defenderSprite } = ctx;
+  const d = spec.duration; // 1150 ms via OVERRIDE_DURATION
+  const dir = ctx.isPlayer ? 1 : -1;          // the side the wave comes from
+  const originX = ctx.isPlayer ? -24 : GAME_W + 24;
+  const BOT = 104;                            // just above the battle text box
+
+  soundSystem.waveCrash();
+
+  const sea = newG(scene, 865);
+  /** Paints the water mass between `back` and `front` with a crest height of
+   *  `h` at the front, tapering only slightly behind it - the body has to stay
+   *  tall enough all the way back to pass OVER the defender's sprite (its top
+   *  sits at y 12 on the enemy side), not lap at its feet. */
+  const paint = (front: number, back: number, h: number, phase: number): void => {
+    sea.clear();
+    const x0 = Math.max(0, Math.round(Math.min(front, back)));
+    const x1 = Math.min(GAME_W - 1, Math.round(Math.max(front, back)));
+    for (let x = x0; x <= x1; x++) {
+      // Distance behind the breaking front, 0 at the front.
+      const behind = Math.abs(front - x);
+      const swell = h * Math.max(0.5, 1 - behind / 400);
+      const top = Math.round(BOT - swell + Math.sin(x * 0.22 + phase) * 3);
+      if (top >= BOT) continue;
+      sea.fillStyle(WATER_DEEP, 1);
+      sea.fillRect(x, top, 1, BOT - top);
+      sea.fillStyle(WATER, 1);
+      sea.fillRect(x, top + 4, 1, Math.max(0, BOT - top - 8));
+      sea.fillStyle(WHITE, 1);
+      sea.fillRect(x, top, 1, 3);              // the crest
+      if (behind < 5) {                        // the breaking face, dark
+        sea.fillStyle(WATER_DEEP, 1);
+        sea.fillRect(x, top, 1, BOT - top);
+        sea.fillStyle(WATER_PALE, 1);
+        sea.fillRect(x, top, 1, 4);
+      }
+    }
+  };
+
+  // 1. Rise (0 -> 30 %): the wall builds on the attacker's side, going nowhere.
+  await frames(scene, Math.round(d * 0.30), t => {
+    paint(originX + dir * (10 + t * 50), originX - dir * 40, 30 + t * 72, t * 14);
+  });
+
+  // 2. Sweep (30 -> 48 %): the front crosses the field and runs off the far
+  //    edge; the body behind it never retreats, so by the end of the sweep the
+  //    whole width is under water.
+  soundSystem.splash();
+  await Promise.all([
+    frames(scene, Math.round(d * 0.18), t => {
+      paint(originX + dir * (60 + t * 180), originX - dir * 40, 102 + t * 22, t * 22);
+    }),
+    screenShake(scene, 4, Math.round(d * 0.18)),
+  ]);
+
+  // 3. Submerged (48 -> 66 %): the field is water. The defender is under it,
+  //    tumbling, which is the beat the generic body has nowhere to put. The
+  //    flash and the tumble are kept SHORTER than the painted phase - a
+  //    spriteFlash(n) runs n*60 + (n-1)*60 ms and would otherwise hold the
+  //    water at full height well into the drain.
+  const homeY = defenderSprite.y;
+  await Promise.all([
+    frames(scene, Math.round(d * 0.18), t => {
+      paint(originX + dir * 240, originX - dir * 40, 124 - t * 10, t * 26);
+    }),
+    spriteFlash(defenderSprite, scene, WATER, 2),
+    tweenPromise(scene, {
+      targets: defenderSprite, y: homeY + 4, duration: Math.round(d * 0.045),
+      yoyo: true, repeat: 1, ease: 'Sine.easeInOut',
+    }),
+  ]);
+
+  // 4. Drain + spray (66 -> 92 %): the water falls away and leaves droplets.
+  await Promise.all([
+    frames(scene, Math.round(d * 0.26), t => {
+      paint(originX + dir * 240, originX - dir * 40, Math.max(0, 114 - t * 120), t * 30);
+    }),
+    directionalParticles(scene, GAME_W / 2, BOT - 40, WATER_PALE, 20, {
+      dirY: -1, spread: 60, duration: Math.round(d * 0.26),
+      shape: 'droplet', accentColor: WATER, gravity: 1.5,
+    }),
+  ]);
+  sea.destroy();
+  await delay(scene, Math.round(d * 0.08));
+}
+
+/**
+ * ID 89 EARTHQUAKE - nothing travels.
+ *
+ * The whole point is that there is no projectile, no beam and no attacker
+ * motion: the ground itself fails, under BOTH Pokemon at once. The generic
+ * ground body is a single dust puff at the defender, so the e2e checks the one
+ * thing only a field-wide quake produces - changed pixels under the attacker's
+ * feet AND under the defender's feet in the same frame.
+ */
+async function renderEarthquake(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite, defenderSprite } = ctx;
+  const d = spec.duration; // 1100 ms via OVERRIDE_DURATION
+  const feet = [attackerSprite, defenderSprite].map(s => ({
+    x: Math.round(s.x), y: Math.round(s.y) + FOOT_OFFSET,
+  }));
+
+  soundSystem.rumble();
+
+  const g = newG(scene, 862);
+  /** Cracks along both ground lines plus dust and rock chunks rising from
+   *  them. `open` 0 -> 1 widens the cracks; `lift` 0 -> 1 raises the dust. */
+  const paintGround = (open: number, lift: number, phase: number): void => {
+    g.clear();
+    for (const f of feet) {
+      const x0 = Math.max(0, f.x - 46);
+      const x1 = Math.min(GAME_W - 1, f.x + 46);
+      // The dust body: bulk GROUND, because that is the colour the TYPED check
+      // is looking for, with the browns used only as outline and speckle.
+      const h = Math.round(4 + lift * 22);
+      for (let x = x0; x <= x1; x++) {
+        const edgeFade = 1 - Math.abs(x - f.x) / 50;
+        const top = f.y - Math.round(h * edgeFade * (0.65 + 0.35 * Math.sin(x * 0.4 + phase)));
+        if (top >= f.y) continue;
+        g.fillStyle(GROUND_EDGE, 1);
+        g.fillRect(x, top, 1, f.y - top + 4);
+        g.fillStyle(GROUND, 1);
+        g.fillRect(x, top + 1, 1, f.y - top + 2);
+        if ((x + Math.round(phase)) % 7 === 0) {
+          g.fillStyle(GROUND_DARK, 1);
+          g.fillRect(x, top + 2, 1, 3);
+        }
+      }
+      // The crack: a jagged black-brown split running through the feet line.
+      const crack: Pt[] = [];
+      for (let x = x0; x <= x1; x += 6) {
+        crack.push({ x, y: f.y + 2 + Math.round(Math.sin(x * 0.7 + phase) * 3) });
+      }
+      strokePath(g, crack, Math.max(1, Math.round(1 + open * 5)), GROUND_EDGE, 1);
+      strokePath(g, crack, Math.max(1, Math.round(open * 2)), 0x1A1208, 1);
+    }
+  };
+
+  // 1. Tremor (0 -> 22 %): cracks open, the shake builds.
+  await Promise.all([
+    frames(scene, Math.round(d * 0.22), t => paintGround(t * 0.5, t * 0.35, t * 20)),
+    screenShake(scene, 7, Math.round(d * 0.22)),
+  ]);
+
+  // 2. The quake (22 -> 74 %): the biggest shake in the game, dust and rock
+  //    chunks off both ground lines, and the defender thrown up and down.
+  soundSystem.thud();
+  const homeY = defenderSprite.y;
+  await Promise.all([
+    frames(scene, Math.round(d * 0.52), t => {
+      paintGround(0.5 + t * 0.5, 0.35 + Math.sin(t * Math.PI) * 0.65, 4 + t * 40);
+    }),
+    screenShake(scene, 14, Math.round(d * 0.52)),
+    ...feet.map(f => directionalParticles(scene, f.x, f.y, GROUND, 16, {
+      dirY: -1, spread: 40, duration: Math.round(d * 0.5),
+      shape: 'grit', accentColor: GROUND_DARK, gravity: 1.4,
+    })),
+    ...feet.map(f => directionalParticles(scene, f.x, f.y - 2, GROUND_DARK, 8, {
+      dirY: -1, spread: 30, duration: Math.round(d * 0.44),
+      shape: 'block', accentColor: GROUND_EDGE, gravity: 1.8,
+    })),
+    // Repeated jolts, not one hop: the ground keeps letting go under it.
+    tweenPromise(scene, {
+      targets: defenderSprite, y: homeY - 5, duration: Math.round(d * 0.065),
+      yoyo: true, repeat: 3, ease: 'Quad.easeOut',
+    }),
+    spriteFlash(defenderSprite, scene, GROUND, 3),
+  ]);
+
+  // 3. Settling (74 -> 100 %): the dust falls back into the cracks.
+  await Promise.all([
+    frames(scene, Math.round(d * 0.24), t => paintGround(1 - t * 0.7, Math.max(0, 0.5 - t * 0.5), 44 + t * 10)),
+    ...feet.map(f => directionalParticles(scene, f.x, f.y - 14, GROUND, 8, {
+      dirY: 1, spread: 26, duration: Math.round(d * 0.2),
+      shape: 'grit', accentColor: GROUND_EDGE, gravity: 2,
+    })),
+  ]);
+  g.destroy();
+}
+
+/**
+ * ID 56 HYDRO PUMP - pressure, not volume.
+ *
+ * The counterpart to SURF: SURF is the whole field going under, HYDRO PUMP is
+ * one jet aimed at one target. The tells are the width ramp (the beam GROWS
+ * from a needle to a column while it is held, which no generic beam does) and
+ * the defender being physically shoved back on contact and staying shoved
+ * until the jet stops.
+ */
+async function renderHydroPump(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite, defenderSprite } = ctx;
+  const d = spec.duration; // 1000 ms via OVERRIDE_DURATION
+  const ax = Math.round(attackerSprite.x);
+  const ay = Math.round(attackerSprite.y) - 2;
+  const dx = Math.round(defenderSprite.x);
+  const dy = Math.round(defenderSprite.y);
+  const homeX = defenderSprite.x;
+  const push = ctx.isPlayer ? 6 : -6;         // away from the attacker
+
+  soundSystem.bubblePop();
+
+  // 1. Pressurise (0 -> 18 %).
+  const chg = newG(scene, 820);
+  await frames(scene, Math.round(d * 0.18), t => {
+    chg.clear();
+    const r = Math.round(2 + t * 8);
+    chg.fillStyle(WATER_DEEP, 1);
+    chg.fillCircle(ax, ay, r + 2);
+    chg.fillStyle(WATER, 1);
+    chg.fillCircle(ax, ay, r);
+    chg.fillStyle(WATER_PALE, 1);
+    chg.fillCircle(ax, ay, Math.max(1, r - 4));
+  });
+  chg.destroy();
+
+  // 2. The jet (18 -> 64 %): width 5 -> 24, white core 1 -> 9, held.
+  soundSystem.splash();
+  const jet = newG(scene, 858);
+  const jetMs = Math.round(d * 0.46);
+  await Promise.all([
+    frames(scene, jetMs, t => {
+      jet.clear();
+      const reach = Math.min(1, t / 0.14);
+      const w = 5 + t * 19;
+      const stop = t > 0.88 ? Math.max(0, 1 - (t - 0.88) / 0.12) : 1;
+      const wob = Math.round(Math.sin(t * 34) * 2);
+      const ex = ax + (dx - ax) * reach;
+      const ey = ay + (dy - ay) * reach;
+      jet.setAlpha(stop);
+      const stroke = (lw: number, c: number): void => {
+        jet.lineStyle(Math.max(1, Math.round(lw)), c, 1);
+        jet.beginPath();
+        jet.moveTo(ax, ay + wob);
+        jet.lineTo(ex, ey);
+        jet.strokePath();
+      };
+      stroke(w + 6, WATER_DEEP);
+      stroke(w, WATER);
+      stroke(Math.max(1, w * 0.38), WHITE);
+    }),
+    emitterAlong(scene, ax, ay, dx, dy, WATER_PALE, WATER_DEEP, 12, jetMs, 'droplet'),
+    (async () => {
+      // Contact: shoved back, and held there for as long as the jet lasts.
+      await delay(scene, Math.round(jetMs * 0.2));
+      await tweenPromise(scene, {
+        targets: defenderSprite, x: homeX + push,
+        duration: Math.round(d * 0.06), ease: 'Quad.easeOut',
+      });
+      await Promise.all([
+        spriteFlash(defenderSprite, scene, WATER, 2),
+        screenShake(scene, 5, Math.round(d * 0.2)),
+      ]);
+      await tweenPromise(scene, {
+        targets: defenderSprite, x: homeX,
+        duration: Math.round(d * 0.1), ease: 'Sine.easeInOut',
+      });
+    })(),
+  ]);
+  jet.destroy();
+
+  // 3. Splash (64 -> 90 %): a big ring plus droplets thrown off the target.
+  await Promise.all([
+    ring(scene, dx, dy, WATER_DEEP, 34, Math.round(d * 0.26), 3),
+    ring(scene, dx, dy, WATER_PALE, 26, Math.round(d * 0.26), 2),
+    impactBurst(scene, dx, dy, WATER, WHITE, 16, Math.round(d * 0.22)),
+    directionalParticles(scene, dx, dy, WATER_PALE, 18, {
+      spread: 40, duration: Math.round(d * 0.28),
+      shape: 'droplet', accentColor: WATER_DEEP, gravity: 1.4,
+    }),
+  ]);
+}
+
+/**
+ * ID 126 FIRE BLAST - the five-pointed star.
+ *
+ * FLAMETHROWER (53) is the generic fire beam; FIRE BLAST is a SHAPE. The
+ * kanji-shaped blast (one head, two arms, two legs around a core) travels to
+ * the defender growing the whole way, then bursts into flames that climb off
+ * the sprite. Like the other fireballs in this file the burst COLLAPSES rather
+ * than fading, because a fading red on a #f8f8f8 sky turns tan and the nearest
+ * colour vote flips out of FIRE.
+ */
+async function renderFireBlast(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite, defenderSprite } = ctx;
+  const d = spec.duration; // 1100 ms via OVERRIDE_DURATION
+  const ax = Math.round(attackerSprite.x);
+  const ay = Math.round(attackerSprite.y) - 2;
+  const dx = Math.round(defenderSprite.x);
+  const dy = Math.round(defenderSprite.y);
+
+  /** The five lobes plus the core, in unit coordinates. */
+  const LOBES: { x: number; y: number; r: number }[] = [
+    { x: 0, y: -13, r: 11 },
+    { x: -15, y: -2, r: 9 },
+    { x: 15, y: -2, r: 9 },
+    { x: -11, y: 14, r: 9 },
+    { x: 11, y: 14, r: 9 },
+    { x: 0, y: 0, r: 10 },
+  ];
+  const drawStar = (g: Phaser.GameObjects.Graphics, cx: number, cy: number, s: number): void => {
+    const band = (c: number, k: number): void => {
+      g.fillStyle(c, 1);
+      for (const l of LOBES) {
+        g.fillCircle(Math.round(cx + l.x * s), Math.round(cy + l.y * s), Math.max(1, Math.round(l.r * s * k)));
+      }
+    };
+    band(FIRE_EDGE, 1.1);
+    band(FIRE_RED, 1);
+    band(FIRE_ORANGE, 0.7);
+    band(FIRE_YELLOW, 0.44);
+    band(WHITE, 0.2);
+  };
+
+  soundSystem.roar();
+
+  // 1. Ignition (0 -> 12 %).
+  const star = newG(scene, 866);
+  await frames(scene, Math.round(d * 0.12), t => {
+    star.clear();
+    drawStar(star, ax, ay, 0.12 + t * 0.2);
+  });
+
+  // 2. Travel (12 -> 56 %): the star crosses the field, growing as it goes.
+  await Promise.all([
+    frames(scene, Math.round(d * 0.44), t => {
+      star.clear();
+      const e = t * t * (3 - 2 * t);            // smoothstep: slow, then fast
+      drawStar(star, Math.round(ax + (dx - ax) * e), Math.round(ay + (dy - ay) * e), 0.32 + t * 1.0);
+    }),
+    directionalParticles(scene, ax, ay, FIRE_ORANGE, 10, {
+      dirX: dx > ax ? 1 : -1, spread: 20, duration: Math.round(d * 0.4),
+      shape: 'mote', accentColor: FIRE_YELLOW,
+    }),
+  ]);
+
+  // 3. The burst (56 -> 84 %): the star opens out over the sprite and the
+  //    flames climb off it.
+  soundSystem.boom();
+  const fire = newG(scene, 868);
+  await Promise.all([
+    frames(scene, Math.round(d * 0.28), t => {
+      star.clear();
+      const collapse = t < 0.7 ? 1 : Math.max(0, 1 - (t - 0.7) / 0.3);
+      drawStar(star, dx, dy, (1.3 + t * 0.9) * collapse);
+      // Tongues of flame licking up off the defender.
+      fire.clear();
+      fire.setAlpha(1);
+      for (let i = 0; i < 7; i++) {
+        const fx = Math.round(dx - 18 + i * 6);
+        const lick = Math.round((10 + Math.sin(i * 2.1 + t * 9) * 7) * (1 - Math.abs(t - 0.5) * 1.1));
+        if (lick <= 0) continue;
+        fire.fillStyle(FIRE_EDGE, 1);
+        fire.fillRect(fx - 3, dy - 12 - lick, 6, lick + 6);
+        fire.fillStyle(FIRE_RED, 1);
+        fire.fillRect(fx - 2, dy - 11 - lick, 4, lick + 5);
+        fire.fillStyle(FIRE_YELLOW, 1);
+        fire.fillRect(fx - 1, dy - 9 - lick, 2, lick + 3);
+      }
+    }),
+    screenFlash(scene, FIRE_ORANGE, Math.round(d * 0.1)),
+    screenShake(scene, 7, Math.round(d * 0.2)),
+    spriteFlash(defenderSprite, scene, FIRE_ORANGE, 3),
+    directionalParticles(scene, dx, dy, FIRE_RED, 16, {
+      spread: 42, duration: Math.round(d * 0.28),
+      shape: 'mote', accentColor: FIRE_YELLOW,
+    }),
+  ]);
+  star.destroy();
+  fire.destroy();
+
+  // 4. Embers (84 -> 100 %).
+  await directionalParticles(scene, dx, dy, FIRE_ORANGE, 10, {
+    dirY: -1, spread: 24, duration: Math.round(d * 0.10),
+    shape: 'mote', accentColor: FIRE_EDGE, gravity: -0.6,
+  });
+}
+
+/**
+ * ID 59 BLIZZARD - the storm, not the beam.
+ *
+ * ICE BEAM (58) is one line from the attacker to the defender. BLIZZARD has no
+ * line at all: a pale veil drops over the whole field, diagonal streaks sweep
+ * across everything including both sprites, the defender is caught in a
+ * crystal and then the crystal shatters. Like SURF it is checked on width -
+ * at 50 % the storm has to have touched >= 70 % of the screen's columns.
+ */
+async function renderBlizzard(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, defenderSprite } = ctx;
+  const d = spec.duration; // 1150 ms via OVERRIDE_DURATION
+  const dx = Math.round(defenderSprite.x);
+  const dy = Math.round(defenderSprite.y);
+
+  soundSystem.iceWind();
+
+  const veil = newG(scene, 866);
+  veil.fillStyle(ICE_VEIL, 1);
+  veil.fillRect(0, 0, GAME_W, 144);
+  veil.setAlpha(0);
+
+  // 22 streaks with fixed seeds so the storm reads as one wind, not confetti.
+  const streaks = Array.from({ length: 22 }, (_, i) => ({
+    y: -20 + (i * 173) % 160,
+    off: (i * 97) % 200,
+    len: 14 + (i % 4) * 6,
+    pale: i % 3 === 0,
+  }));
+  const storm = newG(scene, 872);
+
+  const stormMs = Math.round(d * 0.74);
+  const stormJob = frames(scene, stormMs, t => {
+    storm.clear();
+    const fade = t > 0.86 ? Math.max(0, 1 - (t - 0.86) / 0.14) : 1;
+    storm.setAlpha(fade);
+    for (const s of streaks) {
+      // Every streak runs on the same diagonal, wrapping across the field.
+      const p = (s.off + t * 520) % 260;
+      const x = 200 - p;
+      const y = s.y + p * 0.42;
+      if (y > 120) continue;
+      const c = s.pale ? ICE : WHITE;
+      storm.lineStyle(3, 0x2E7FB8, 1);
+      storm.beginPath();
+      storm.moveTo(x, y);
+      storm.lineTo(x - s.len, y + s.len * 0.62);
+      storm.strokePath();
+      storm.lineStyle(2, c, 1);
+      storm.beginPath();
+      storm.moveTo(x, y);
+      storm.lineTo(x - s.len, y + s.len * 0.62);
+      storm.strokePath();
+    }
+  });
+
+  await Promise.all([
+    stormJob,
+    (async () => {
+      await tweenPromise(scene, { targets: veil, alpha: 0.45, duration: Math.round(d * 0.16) });
+      await delay(scene, Math.round(d * 0.52));
+      await tweenPromise(scene, { targets: veil, alpha: 0, duration: Math.round(d * 0.14) });
+    })(),
+    (async () => {
+      // 2. Frozen (55 -> 78 %): a crystal closes over the defender.
+      await delay(scene, Math.round(d * 0.55));
+      soundSystem.glassPing();
+      const ice = newG(scene, 876);
+      await Promise.all([
+        frames(scene, Math.round(d * 0.23), t => {
+          ice.clear();
+          const grow = Math.min(1, t / 0.4);
+          const r = Math.round(20 * grow);
+          const pts: Pt[] = [
+            { x: dx, y: dy - r - 4 }, { x: dx + r, y: dy - 6 },
+            { x: dx + r - 3, y: dy + r }, { x: dx - r + 3, y: dy + r },
+            { x: dx - r, y: dy - 6 }, { x: dx, y: dy - r - 4 },
+          ];
+          strokePath(ice, pts, 5, 0x2E7FB8, 1);
+          strokePath(ice, pts, 3, ICE, 1);
+          ice.fillStyle(ICE_PALE, t > 0.55 ? Math.max(0, 1 - (t - 0.55) / 0.45) : 0.55);
+          ice.fillPoints(pts.slice(0, 5), true);
+        }),
+        spriteFlash(defenderSprite, scene, WHITE, 3),
+        screenShake(scene, 5, Math.round(d * 0.14)),
+      ]);
+      ice.destroy();
+      // 3. Shatter.
+      await directionalParticles(scene, dx, dy, ICE, 20, {
+        spread: 44, duration: Math.round(d * 0.2),
+        shape: 'shard', accentColor: ICE_PALE,
+      });
+    })(),
+  ]);
+  storm.destroy();
+  veil.destroy();
+}
+
+/**
+ * ID 94 PSYCHIC - the target is crushed where it stands.
+ *
+ * CONFUSION (93) renders the generic psychic body. PSYCHIC sends nothing
+ * across the field at all: rings collapse INWARD onto the defender, the sprite
+ * is squeezed and stretched (scaleX, which `renderSpec`'s restore puts back),
+ * and the screen goes magenta for a beat at the moment of the crush.
+ */
+async function renderPsychic(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, defenderSprite } = ctx;
+  const d = spec.duration; // 1000 ms via OVERRIDE_DURATION
+  const dx = Math.round(defenderSprite.x);
+  const dy = Math.round(defenderSprite.y);
+
+  soundSystem.warble();
+
+  // 1. The collapse (0 -> 56 %): four rings falling in, and an aura tightening
+  //    around the sprite underneath them.
+  const g = newG(scene, 864);
+  const crush = Math.round(d * 0.56);
+  await Promise.all([
+    frames(scene, crush, t => {
+      g.clear();
+      for (let i = 0; i < 4; i++) {
+        const phase = (t * 1.25 + i / 4) % 1;
+        const r = Math.round((1 - phase) * 48);
+        if (r < 3) continue;
+        g.lineStyle(7, PSY_EDGE, 1);
+        g.strokeCircle(dx, dy, r);
+        g.lineStyle(4, PSY, 1);
+        g.strokeCircle(dx, dy, r);
+        g.lineStyle(1, PSY_PALE, 1);
+        g.strokeCircle(dx, dy, r);
+      }
+      // The aura: a solid magenta field held around the target the whole time,
+      // so the frame is unmistakably psychic even between rings.
+      const ar = Math.round(20 - t * 4);
+      g.fillStyle(PSY_EDGE, 1);
+      g.fillEllipse(dx, dy, ar * 2 + 5, ar * 2 + 5);
+      g.fillStyle(PSY, 1);
+      g.fillEllipse(dx, dy, ar * 2, ar * 2);
+      g.fillStyle(PSY_PALE, 1);
+      g.fillEllipse(dx, dy, ar, ar);
+    }),
+    // The distortion: squeezed, stretched, squeezed again.
+    tweenPromise(scene, {
+      targets: defenderSprite, scaleX: 1.4, scaleY: 0.72,
+      duration: Math.round(d * 0.14), yoyo: true, repeat: 1, ease: 'Sine.easeInOut',
+    }),
+    spriteFlash(defenderSprite, scene, PSY, 4),
+  ]);
+  g.destroy();
+
+  // 2. The crush (56 -> 76 %): the screen goes magenta, the sprite snaps.
+  soundSystem.glassPing();
+  await Promise.all([
+    screenFlash(scene, PSY, Math.round(d * 0.2)),
+    screenShake(scene, 6, Math.round(d * 0.16)),
+    tweenPromise(scene, {
+      targets: defenderSprite, scaleX: 0.62, scaleY: 1.32,
+      duration: Math.round(d * 0.1), yoyo: true, ease: 'Quad.easeOut',
+    }),
+  ]);
+
+  // 3. Release (76 -> 100 %).
+  await Promise.all([
+    impactBurst(scene, dx, dy, PSY, PSY_PALE, 18, Math.round(d * 0.22)),
+    directionalParticles(scene, dx, dy, PSY, 14, {
+      spread: 36, duration: Math.round(d * 0.24),
+      shape: 'ring', accentColor: PSY_PALE,
+    }),
+  ]);
+}
+
+/**
+ * ID 101 NIGHT SHADE - the attacker's shadow does the hitting.
+ *
+ * LICK (122) and the rest of the generic ghost body are wisps at the defender.
+ * NIGHT SHADE is a lighting change: the field goes dark, a translucent copy of
+ * the ATTACKER peels off it, rises, drifts across and settles over the
+ * defender, the defender flickers in and out, and only then does the dark
+ * lift. The e2e checks the lighting change directly - the field's mean
+ * luminance at ~30 % has to be well below the idle field's.
+ */
+async function renderNightShade(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, attackerSprite, defenderSprite } = ctx;
+  const d = spec.duration; // 1100 ms via OVERRIDE_DURATION
+  const ax = attackerSprite.x;
+  const ay = attackerSprite.y;
+  const dx = Math.round(defenderSprite.x);
+  const dy = Math.round(defenderSprite.y);
+
+  soundSystem.wail();
+
+  const veil = newG(scene, 860);
+  veil.fillStyle(NIGHT, 1);
+  veil.fillRect(0, 0, GAME_W, 144);
+  veil.setAlpha(0);
+
+  // The shade: a tinted copy of the attacker's own sprite, which is the one
+  // thing no generic body can draw - it has no access to the attacker's frame.
+  const shade = scene.add.image(ax, ay, attackerSprite.texture.key, attackerSprite.frame.name);
+  shade.setDepth(874);
+  shade.setScrollFactor(0);
+  shade.setTint(GHOST_C);
+  shade.setAlpha(0);
+
+  await Promise.all([
+    // 1. The field goes dark (0 -> 20 %), stays dark, lifts at the end.
+    (async () => {
+      await tweenPromise(scene, { targets: veil, alpha: 0.62, duration: Math.round(d * 0.2) });
+      await delay(scene, Math.round(d * 0.62));
+      await tweenPromise(scene, { targets: veil, alpha: 0, duration: Math.round(d * 0.18) });
+    })(),
+    // 2. The shade rises off the attacker and drifts onto the defender.
+    (async () => {
+      await delay(scene, Math.round(d * 0.14));
+      soundSystem.whoosh();
+      await tweenPromise(scene, {
+        targets: shade, alpha: 0.7, y: ay - 16, scaleX: 1.15, scaleY: 1.15,
+        duration: Math.round(d * 0.16), ease: 'Sine.easeOut',
+      });
+      await tweenPromise(scene, {
+        targets: shade, x: dx, y: dy, scaleX: 1.5, scaleY: 1.5,
+        duration: Math.round(d * 0.28), ease: 'Sine.easeInOut',
+      });
+      await Promise.all([
+        tweenPromise(scene, {
+          targets: shade, alpha: 0, scaleX: 1.9, scaleY: 1.9,
+          duration: Math.round(d * 0.2), ease: 'Quad.easeIn',
+        }),
+        // 3. The defender flickers out of existence and back.
+        tweenPromise(scene, {
+          targets: defenderSprite, alpha: 0.2,
+          duration: Math.round(d * 0.05), yoyo: true, repeat: 3, ease: 'Linear',
+        }),
+        directionalParticles(scene, dx, dy, GHOST_PALE, 14, {
+          spread: 34, duration: Math.round(d * 0.24),
+          shape: 'wisp', accentColor: GHOST_C,
+        }),
+      ]);
+    })(),
+  ]);
+  shade.destroy();
+  veil.destroy();
+}
+
+registerSpecOverride('thunderbolt', renderThunderbolt);
+registerSpecOverride('surf', renderSurf);
+registerSpecOverride('earthquake', renderEarthquake);
+registerSpecOverride('hydroPump', renderHydroPump);
+registerSpecOverride('fireBlast', renderFireBlast);
+registerSpecOverride('blizzard', renderBlizzard);
+registerSpecOverride('psychic', renderPsychic);
+registerSpecOverride('nightShade', renderNightShade);

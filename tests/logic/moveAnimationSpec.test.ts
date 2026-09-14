@@ -220,10 +220,35 @@ describe('moveAnimationSpec — intensity and duration', () => {
     }
   });
 
-  it('THUNDER gets the sky-strike budget, THUNDERBOLT and THUNDER SHOCK do not', () => {
+  it('the two Electric set-pieces get their own budgets, THUNDER SHOCK does not', () => {
+    // 84 is the generic sibling both overrides are measured against, so it has
+    // to keep the plain beam budget.
     expect(resolveAnimation(87).duration).toBe(OVERRIDE_DURATION.thunder);
-    expect(resolveAnimation(85).duration).toBeLessThanOrEqual(MAX_DURATION_MS);
+    expect(resolveAnimation(85).duration).toBe(OVERRIDE_DURATION.thunderbolt);
     expect(resolveAnimation(84).duration).toBeLessThanOrEqual(MAX_DURATION_MS);
+    expect(resolveAnimation(84).override).toBeUndefined();
+  });
+
+  it('each signature attack outranks the generic sibling it is measured against', () => {
+    // left: the override, right: the move that still renders the generic body.
+    const pairs: [number, number][] = [
+      [85, 84],   // THUNDERBOLT  vs THUNDER SHOCK
+      [57, 55],   // SURF         vs WATER GUN
+      [56, 55],   // HYDRO PUMP   vs WATER GUN
+      [89, 125],  // EARTHQUAKE   vs BONE CLUB
+      [126, 53],  // FIRE BLAST   vs FLAMETHROWER
+      [59, 58],   // BLIZZARD     vs ICE BEAM
+      [94, 93],   // PSYCHIC      vs CONFUSION
+      [101, 122], // NIGHT SHADE  vs LICK
+    ];
+    for (const [ovr, generic] of pairs) {
+      const a = resolveAnimation(ovr);
+      const b = resolveAnimation(generic);
+      expect(a.override, `move ${ovr}`).toBeDefined();
+      expect(b.override, `move ${generic}`).toBeUndefined();
+      expect(a.duration, `move ${ovr} vs ${generic}`).toBeGreaterThan(b.duration);
+      expect(a.duration).toBeLessThanOrEqual(MAX_OVERRIDE_DURATION_MS);
+    }
   });
 
   it('duration never shrinks as intensity grows within one motion', () => {

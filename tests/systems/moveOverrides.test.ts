@@ -30,7 +30,36 @@ const IMPLEMENTED = [
   'selfDestruct',
   'explosion',
   'hyperBeam',
+  // The signature attacks: each one replaces a generic body that a sibling
+  // move still renders, so `tools/anim-e2e.mjs` can diff them against it.
+  'thunderbolt',
+  'surf',
+  'earthquake',
+  'hydroPump',
+  'fireBlast',
+  'blizzard',
+  'psychic',
+  'nightShade',
 ];
+
+/** move id -> the override key it must resolve to, for every registered key. */
+const BY_ID: Record<number, string> = {
+  87: 'thunder',
+  19: 'fly',
+  91: 'dig',
+  76: 'solarBeam',
+  120: 'selfDestruct',
+  153: 'explosion',
+  63: 'hyperBeam',
+  85: 'thunderbolt',
+  57: 'surf',
+  89: 'earthquake',
+  56: 'hydroPump',
+  126: 'fireBlast',
+  59: 'blizzard',
+  94: 'psychic',
+  101: 'nightShade',
+};
 
 describe('tier-3 move overrides', () => {
   it('registers exactly the implemented set-pieces', () => {
@@ -51,20 +80,37 @@ describe('tier-3 move overrides', () => {
     }
   });
 
-  it('the six new set-pieces resolve to their declared budgets', () => {
-    const expected: Record<number, string> = {
-      19: 'fly',
-      91: 'dig',
-      76: 'solarBeam',
-      120: 'selfDestruct',
-      153: 'explosion',
-      63: 'hyperBeam',
-    };
-    for (const [idStr, key] of Object.entries(expected)) {
+  it('every set-piece resolves to its declared budget', () => {
+    for (const [idStr, key] of Object.entries(BY_ID)) {
       const spec = resolveAnimation(Number(idStr));
       expect(spec.override, `move ${idStr}`).toBe(key);
       expect(spec.duration, `move ${idStr} duration`).toBe(OVERRIDE_DURATION[key]);
+      expect(spec.duration, `move ${idStr} budget`).toBeLessThanOrEqual(MAX_OVERRIDE_DURATION_MS);
       expect(registered.has(key), `move ${idStr} override registered`).toBe(true);
+    }
+  });
+
+  it('every registered key has a declared budget and an id that reaches it', () => {
+    const byKey = new Set(Object.values(BY_ID));
+    for (const key of registered) {
+      expect(byKey.has(key), `registered override ${key} has no move id in BY_ID`).toBe(true);
+      expect(OVERRIDE_DURATION[key], `OVERRIDE_DURATION.${key}`).toBeGreaterThan(0);
+    }
+  });
+
+  it('each signature attack owns a sound effect and cleans up its graphics', () => {
+    // A tier-3 override is skipped by playTypeSfx, so silence is a bug; and
+    // every Graphics it creates has to be destroyed or it leaks onto the next
+    // animation. Counted on the source, which is all the node env can see.
+    const newG = (OVERRIDES_SRC.match(/newG\(scene/g) ?? []).length;
+    const destroyed = (OVERRIDES_SRC.match(/\.destroy\(\)/g) ?? []).length;
+    expect(destroyed).toBeGreaterThanOrEqual(newG);
+    for (const key of ['thunderbolt', 'surf', 'earthquake', 'hydroPump',
+      'fireBlast', 'blizzard', 'psychic', 'nightShade']) {
+      const fn = `render${key[0].toUpperCase()}${key.slice(1)}`;
+      const body = OVERRIDES_SRC.slice(OVERRIDES_SRC.indexOf(`function ${fn}(`));
+      expect(body.slice(0, body.indexOf('\nasync function') + 1 || undefined))
+        .toMatch(/soundSystem\.[a-zA-Z]+\(/);
     }
   });
 
