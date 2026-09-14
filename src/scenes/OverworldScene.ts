@@ -30,6 +30,11 @@ import { resyncMobileInput } from '../utils/mobileControls';
 import { shouldSkipNPC as shouldSkipNPCLogic } from '../logic/npcVisibility';
 import { STATIC_LEGENDARIES, getStaticLegendary, legendaryClearedFlag } from '../data/staticLegendaries';
 import { shouldGiveOaksParcel } from '../logic/oaksParcel';
+import {
+  oakStage, applyOakStage, OAK_DIALOGUE, shouldTriggerLabRivalBattle,
+  labRivalTriggerOutcome, LAB_MAP_ID, LAB_RIVAL_NPC_ID, LAB_RIVAL_TRAINER_ID,
+  RIVAL_BATTLE_LAB_FLAG,
+} from '../logic/oakLab';
 import { checkEntryGates } from '../logic/warpGate';
 import { MapInstance, instantiateMap, landedBoulders, pushBoulder, isFlagGateOpen, tileUnder } from '../logic/boulders';
 import { restoreParty } from '../logic/healing';
@@ -648,8 +653,7 @@ export class OverworldScene extends Phaser.Scene {
         const warp = this.currentMap.warps.find(w => w.x === newX && w.y === newY);
         if (warp) {
           // Rival intercepts when trying to leave Oak's lab after getting Pikachu
-          if (this.currentMap.id === 'oaks_lab' && this.playerState.storyFlags['has_pikachu']
-              && !this.playerState.storyFlags['rival_battle_lab']) {
+          if (shouldTriggerLabRivalBattle(this.currentMap.id, this.playerState)) {
             this.triggerRivalLabBattle();
             return;
           }
@@ -1167,9 +1171,13 @@ export class OverworldScene extends Phaser.Scene {
 
   private triggerRivalLabBattle(): void {
     // Rival walks up and initiates battle after player receives Pikachu
-    const rivalNpc = this.currentMap.npcs.find(n => n.id === 'rival');
-    if (!rivalNpc || this.playerState.defeatedTrainers.includes('rival_lab')) {
-      this.playerState.storyFlags['rival_battle_lab'] = true;
+    const rivalNpc = this.currentMap.npcs.find(n => n.id === LAB_RIVAL_NPC_ID);
+    const outcome = labRivalTriggerOutcome({
+      rivalNpcPresent: !!rivalNpc,
+      defeatedTrainers: this.playerState.defeatedTrainers,
+    });
+    if (outcome === 'flag_only') {
+      this.playerState.storyFlags[RIVAL_BATTLE_LAB_FLAG] = true;
       return;
     }
 
@@ -1181,7 +1189,7 @@ export class OverworldScene extends Phaser.Scene {
         `${this.playerState.rivalName} wants\nto battle!`,
       ],
       () => {
-        this.startRivalBattle('rival_lab');
+        this.startRivalBattle(LAB_RIVAL_TRAINER_ID);
       }
     );
   }
@@ -1808,73 +1816,35 @@ export class OverworldScene extends Phaser.Scene {
 
   /** Oak's story progression chain. */
   private handleOak(_npc: NPCData): boolean {
-    if (this.currentMap.id !== 'oaks_lab') {
+    if (this.currentMap.id !== LAB_MAP_ID) {
       soundSystem.startMusic('oaks_theme');
     }
-    if (!this.playerState.storyFlags['has_pikachu']) {
-      // Give Pikachu
-      this.textBox.show(
-        [
-          this.fmt('OAK: Ah, {PLAYER}!\nI\'ve been waiting\nfor you!'),
-          'I have a POKeMON\nhere for you!',
-          'This PIKACHU is quite\nenergetic!',
-          'Go on! Take it with\nyou on your journey!',
-          this.fmt('{PLAYER} received\nPIKACHU!'),
-        ],
-        () => {
-          const pikachu = createPokemon(25, 5);
-          this.playerState.addToParty(pikachu);
-          this.playerState.storyFlags['has_pikachu'] = true;
-          soundSystem.pokemonCry(800);
+    // Which speech (and which grant) is decided in src/logic/oakLab.ts.
+    const stage = oakStage(this.playerState);
+    const messages = OAK_DIALOGUE[stage].map(m => this.fmt(m));
 
-          // Update Pikachu follower visibility
-          this.pikachuVisible = true;
-          this.pikachuGridX = this.playerGridX;
-          this.pikachuGridY = this.playerGridY;
-          this.pikachu.setPosition(
-            this.pikachuGridX * TILE_SIZE + TILE_SIZE / 2,
-            this.pikachuGridY * TILE_SIZE + TILE_SIZE / 2
-          );
-        }
-      );
+    if (stage === 'give_pikachu') {
+      this.textBox.show(messages, () => {
+        applyOakStage(stage, this.playerState);
+        soundSystem.pokemonCry(800);
+
+        // Update Pikachu follower visibility
+        this.pikachuVisible = true;
+        this.pikachuGridX = this.playerGridX;
+        this.pikachuGridY = this.playerGridY;
+        this.pikachu.setPosition(
+          this.pikachuGridX * TILE_SIZE + TILE_SIZE / 2,
+          this.pikachuGridY * TILE_SIZE + TILE_SIZE / 2
+        );
+      });
       return true;
     }
-    if (this.playerState.hasItem('oaks_parcel') && !this.playerState.storyFlags['delivered_parcel']) {
-      // Parcel delivery sequence
-      this.textBox.show(
-        [
-          'OAK: Oh! That\'s the\nparcel I was waiting\nfor!',
-          this.fmt('Thank you, {PLAYER}!'),
-          'OAK: I have something\nfor you in return!',
-          this.fmt('{PLAYER} handed over\nthe OAK\'S PARCEL!'),
-          'OAK: This is a\nPOKeDEX!',
-          'It automatically\nrecords data on\nPOKeMON you\'ve seen\nor caught!',
-          this.fmt('{PLAYER} received\nthe POKeDEX!'),
-          "Here, take these\ntoo!",
-          this.fmt('{PLAYER} received\n5 POKe BALLs!'),
-        ],
-        () => {
-          this.playerState.useItem('oaks_parcel');
-          this.playerState.addItem('pokedex');
-          this.playerState.addItem('poke_ball', 5);
-          this.playerState.storyFlags['delivered_parcel'] = true;
-          this.playerState.storyFlags['has_pokedex'] = true;
-        }
-      );
+    if (stage === 'deliver_parcel') {
+      this.textBox.show(messages, () => applyOakStage(stage, this.playerState));
       return true;
     }
-    if (this.playerState.storyFlags['delivered_parcel']) {
-      this.textBox.show([
-        'OAK: Good luck filling\nup that POKeDEX!',
-        'The world is full of\namazing POKeMON!',
-      ]);
-      return true;
-    }
-    // Has Pikachu but no parcel yet
-    this.textBox.show([
-      'OAK: Go explore the\nworld with PIKACHU!',
-      'The VIRIDIAN CITY\nMart might have\nsomething for me...',
-    ]);
+    // post_delivery / awaiting_parcel: dialogue only, nothing granted.
+    this.textBox.show(messages);
     return true;
   }
 
