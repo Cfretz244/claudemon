@@ -6,6 +6,9 @@ import {
   applyParcelDelivery,
   shouldTriggerLabRivalBattle,
   labRivalTriggerOutcome,
+  consumeLabRivalEncounter,
+  labRivalTalkOutcome,
+  LAB_RIVAL_TALK_DIALOGUE,
   OAK_DIALOGUE,
   OakStage,
   LAB_MAP_ID,
@@ -319,6 +322,97 @@ describe('labRivalTriggerOutcome', () => {
   it('other defeated trainers do not suppress it', () => {
     expect(labRivalTriggerOutcome({ rivalNpcPresent: true, defeatedTrainers: ['rival_route22', 'brock'] }))
       .toBe('battle');
+  });
+});
+
+describe('consumeLabRivalEncounter', () => {
+  // These pins changed with the "losing the lab battle must not re-fire the
+  // ambush" fix. They used to document that the 'battle' path left the flag to
+  // syncDerivedStoryFlags(), which only runs off `defeatedTrainers` — so a LOST
+  // battle came back from the whiteout with the flag unset and the ambush fired
+  // again. The flag is now written when the battle LAUNCHES.
+  it('sets rival_battle_lab, which closes the trigger for good', () => {
+    const state = player({ [HAS_PIKACHU_FLAG]: true });
+    expect(shouldTriggerLabRivalBattle(LAB_MAP_ID, state)).toBe(true);
+    consumeLabRivalEncounter(state);
+    expect(state.storyFlags[RIVAL_BATTLE_LAB_FLAG]).toBe(true);
+    expect(shouldTriggerLabRivalBattle(LAB_MAP_ID, state)).toBe(false);
+  });
+
+  it('is idempotent', () => {
+    const state = player({ [HAS_PIKACHU_FLAG]: true });
+    consumeLabRivalEncounter(state);
+    consumeLabRivalEncounter(state);
+    expect(state.storyFlags[RIVAL_BATTLE_LAB_FLAG]).toBe(true);
+  });
+
+  it('survives a LOSS: the flag is in the snapshot the whiteout restores', () => {
+    // The scene consumes the encounter, then startRivalBattle passes
+    // playerState.toSave() to BattleScene; the whiteout restarts the overworld
+    // from that same PlayerState. Round-trip it and the trigger stays shut.
+    const state = player({ [HAS_PIKACHU_FLAG]: true, intro_complete: true });
+    consumeLabRivalEncounter(state);
+    const afterWhiteout = PlayerState.fromSave(state.toSave());
+    expect(afterWhiteout.storyFlags[RIVAL_BATTLE_LAB_FLAG]).toBe(true);
+    // rival_lab is NOT in defeatedTrainers (the player lost), so the derived
+    // sync would not have set it — this is exactly the case that used to loop.
+    expect(afterWhiteout.defeatedTrainers).not.toContain(LAB_RIVAL_TRAINER_ID);
+    syncDerivedStoryFlags(afterWhiteout);
+    expect(shouldTriggerLabRivalBattle(LAB_MAP_ID, afterWhiteout)).toBe(false);
+  });
+
+  it('a loss without consuming would re-fire (the bug this fix closes)', () => {
+    const state = player({ [HAS_PIKACHU_FLAG]: true });
+    const afterWhiteout = PlayerState.fromSave(state.toSave());
+    syncDerivedStoryFlags(afterWhiteout);
+    expect(shouldTriggerLabRivalBattle(LAB_MAP_ID, afterWhiteout)).toBe(true);
+  });
+});
+
+describe('labRivalTalkOutcome', () => {
+  it('no Pikachu yet: he is still waiting on Oak', () => {
+    expect(labRivalTalkOutcome(player())).toBe('no_pikachu');
+    // ...even if the flag somehow exists, the Pikachu check comes first.
+    expect(labRivalTalkOutcome(player({ [RIVAL_BATTLE_LAB_FLAG]: true }))).toBe('no_pikachu');
+  });
+
+  it('Pikachu in hand and the encounter open: he challenges you', () => {
+    expect(labRivalTalkOutcome(player({ [HAS_PIKACHU_FLAG]: true }))).toBe('battle');
+  });
+
+  it('after the battle starts — win OR loss — he gives the post-battle line', () => {
+    const state = player({ [HAS_PIKACHU_FLAG]: true });
+    consumeLabRivalEncounter(state);
+    expect(labRivalTalkOutcome(state)).toBe('post_battle');
+  });
+
+  it('mirrors shouldTriggerLabRivalBattle: he only battles while the ambush is live', () => {
+    for (const pikachu of BOOLS) {
+      for (const fought of BOOLS) {
+        const flags: Record<string, boolean> = {};
+        if (pikachu) flags[HAS_PIKACHU_FLAG] = true;
+        if (fought) flags[RIVAL_BATTLE_LAB_FLAG] = true;
+        const state = { storyFlags: flags };
+        expect(labRivalTalkOutcome(state) === 'battle')
+          .toBe(shouldTriggerLabRivalBattle(LAB_MAP_ID, state));
+      }
+    }
+  });
+
+  it('every branch has dialogue, and only the battle branch names the player', () => {
+    for (const talk of ['no_pikachu', 'post_battle', 'battle'] as const) {
+      const lines = LAB_RIVAL_TALK_DIALOGUE[talk];
+      expect(lines.length, talk).toBeGreaterThan(0);
+      for (const line of lines) expect(line.length, line).toBeLessThanOrEqual(80);
+    }
+    expect(LAB_RIVAL_TALK_DIALOGUE.battle.join('')).toContain('{PLAYER}');
+    // Every line that opens with the rival's name uses the placeholder, so the
+    // scene's fmt() is the only place a name is substituted.
+    for (const lines of Object.values(LAB_RIVAL_TALK_DIALOGUE)) {
+      for (const line of lines) {
+        expect(line.includes(': '), line).toBe(line.startsWith('{RIVAL}'));
+      }
+    }
   });
 });
 
