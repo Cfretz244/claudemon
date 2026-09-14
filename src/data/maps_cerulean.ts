@@ -394,9 +394,10 @@ export const CERULEAN_CITY: MapData = (() => {
   fillRect(3, 5, 6, 1, T.ROOF); fillRect(3, 6, 6, 4, T.BUILDING);
   setTile(6, 9, T.DOOR);
 
-  // Pokemon Center (right area)
-  fillRect(16, 5, 5, 1, T.ROOF); fillRect(16, 6, 5, 3, T.BUILDING);
-  setTile(18, 8, T.DOOR);
+  // Pokemon Center (right area) — sits on the main path row so the NE corner
+  // is free for the burgled house and its back garden.
+  fillRect(16, 8, 5, 1, T.ROOF); fillRect(16, 9, 5, 3, T.BUILDING);
+  setTile(18, 11, T.DOOR);
 
   // Pokemart (right, lower)
   fillRect(16, 15, 5, 1, T.ROOF); fillRect(16, 16, 5, 3, T.BUILDING);
@@ -408,12 +409,27 @@ export const CERULEAN_CITY: MapData = (() => {
 
   // Signs near gym and center
   setTile(5, 11, T.SIGN);   // Gym sign
-  setTile(17, 10, T.SIGN);  // Pokemon Center sign
+  setTile(15, 11, T.SIGN);  // Pokemon Center sign
 
   // Bulbasaur house (small house north of path, center area)
   fillRect(14, 2, 3, 1, T.ROOF);
   fillRect(14, 3, 3, 2, T.BUILDING);
   setTile(15, 4, T.DOOR);
+
+  // Burgled house (NE corner, as in Gen I): a 4-wide facade (x18-21) with a
+  // roof row, the front door on the south face and the burglar's hole in the
+  // back wall. Column x22 beside it stays grass — that is the garden's way out
+  // down the east edge of town.
+  fillRect(18, 4, 4, 1, T.ROOF);
+  fillRect(18, 5, 4, 2, T.BUILDING);
+  setTile(20, 6, T.DOOR);   // front door  → burgled_house (3,6)
+  setTile(20, 4, T.DOOR);   // hole in the back wall → burgled_house (3,2)
+
+  // Its back garden (x18-22, y2-3) is sealed by the tree border to the north
+  // and east, the house's roof row to the south and a short fence to the west:
+  // the only way in is through the house.
+  setTile(17, 2, T.FENCE);
+  setTile(17, 3, T.FENCE);
 
   // Flowers and decoration
   setTile(9, 6, T.FLOWER);
@@ -452,22 +468,21 @@ export const CERULEAN_CITY: MapData = (() => {
 
   // === Story progression gates ===
 
-  // Fence barrier at y:22 blocks south exit (x:2 to x:22)
-  for (let x = 2; x <= 22; x++) {
-    setTile(x, 22, T.FENCE);
-  }
+  // Fence at y:22 seals the town off from the southern strip: the only gap is
+  // at (21,22)/(22,22), at the foot of the east-edge corridor. Route 5 (and,
+  // through the Cut trees, Route 9) is therefore behind the burgled house,
+  // exactly as in Gen I.
+  for (let x = 2; x <= 20; x++) setTile(x, 22, T.FENCE);
 
-  // Burgled House building (straddles fence line, center-right)
-  fillRect(14, 21, 4, 2, T.BUILDING);
-
-  // Building facade around front door (forces approach through officer)
-  setTile(14, 20, T.BUILDING);
-  setTile(15, 20, T.DOOR);
-  setTile(16, 20, T.BUILDING);
-  setTile(17, 20, T.BUILDING);
-
-  // Back door on south face of house (overwrites building tile at fence line)
-  setTile(15, 22, T.DOOR);
+  // East-edge corridor (x21-22, y7-21): the fenced lane that runs from the
+  // garden's exit at (22,4) down past the Cut trees to the fence gap. It is
+  // sealed from the town by the Center (x16-20, y8-11), the Mart (x16-20,
+  // y15-18) and a fence on x20 in every row those two do not cover.
+  for (const y of [12, 13, 14, 19, 20, 21]) setTile(20, y, T.FENCE);
+  // Row y7 is the exception: (20,7) is the front door's landing tile and has
+  // to stay walkable from the town, so the corridor is closed one tile further
+  // east, at (21,7). The lane enters from (22,6) instead.
+  setTile(21, 7, T.FENCE);
 
   // CUT_TREE blocks east exit until player has Cut
   setTile(22, 12, T.CUT_TREE);
@@ -498,17 +513,19 @@ export const CERULEAN_CITY: MapData = (() => {
       // Cerulean Gym door
       { x: 6, y: 9, targetMap: 'cerulean_gym', targetX: 4, targetY: 13 },
       // Pokemon Center door
-      { x: 18, y: 8, targetMap: 'pokemon_center_cerulean', targetX: 4, targetY: 7 },
+      { x: 18, y: 11, targetMap: 'pokemon_center_cerulean', targetX: 4, targetY: 7 },
       // Pokemart door (no interior defined yet, placeholder)
       { x: 18, y: 18, targetMap: 'pokemart_cerulean', targetX: 3, targetY: 7 },
       // Bike Shop door
       { x: 5, y: 18, targetMap: 'bike_shop', targetX: 3, targetY: 7 },
       // Bulbasaur house door
       { x: 15, y: 4, targetMap: 'cerulean_house', targetX: 3, targetY: 6 },
-      // Burgled House front door (north face)
-      { x: 15, y: 20, targetMap: 'burgled_house', targetX: 3, targetY: 6 },
-      // Burgled House back door (south face, re-entry from behind)
-      { x: 15, y: 22, targetMap: 'burgled_house', targetX: 3, targetY: 2 },
+      // Burgled House front door (south face, NE corner)
+      { x: 20, y: 6, targetMap: 'burgled_house', targetX: 3, targetY: 6 },
+      // Burgled House back wall hole (north face, from the garden). It lands
+      // on (4,2), the floor tile beside the hole: (3,2) itself is where the
+      // policeman stands, and no warp may drop the player onto an NPC.
+      { x: 20, y: 4, targetMap: 'burgled_house', targetX: 4, targetY: 2 },
     ],
     npcs: [
       {
@@ -541,29 +558,22 @@ export const CERULEAN_CITY: MapData = (() => {
           'Five trainers in a row\nchallenge all comers!',
         ],
       },
-      // Police officer blocks burgled house door until bill_helped
-      {
-        id: 'cerulean_officer',
-        x: 15, y: 19,
-        spriteColor: 0x4060c0,
-        direction: Direction.DOWN,
-        dialogue: [
-          'This house was\nburglarized!',
-          'No one may enter.',
-        ],
-      },
-      // Rocket grunt hiding south of fence (left of back door)
+      // Rocket grunt hiding in the burgled house's back garden, standing on
+      // (22,3) — the garden's only exit, so beating him is mandatory before
+      // the east-edge corridor (and with it Route 5 and Route 9) opens. He
+      // faces LEFT with a sight range of 1, so he watches (21,3) only: the
+      // player lands on (20,3) out of the hole and is never ambushed there.
       {
         id: 'cerulean_rocket',
-        x: 13, y: 23,
+        x: 22, y: 3,
         spriteColor: 0x404040,
-        direction: Direction.RIGHT,
+        direction: Direction.LEFT,
         dialogue: [
           'ROCKET: I burglarized\nthat house! Hehe!',
           "You want to battle?\nBring it on!",
         ],
         isTrainer: true,
-        sightRange: 3,
+        sightRange: 1,
       },
     ],
   };
@@ -688,8 +698,8 @@ export const POKEMON_CENTER_CERULEAN: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'cerulean_city', targetX: 18, targetY: 9 },
-      { x: 5, y: 7, targetMap: 'cerulean_city', targetX: 18, targetY: 9 },
+      { x: 4, y: 7, targetMap: 'cerulean_city', targetX: 18, targetY: 12 },
+      { x: 5, y: 7, targetMap: 'cerulean_city', targetX: 18, targetY: 12 },
     ],
     npcs: [
       {
@@ -1123,12 +1133,24 @@ export const BURGLED_HOUSE: MapData = (() => {
     tiles,
     collision,
     warps: [
-      // Back door (north) → behind house, south of fence
-      { x: 3, y: 1, targetMap: 'cerulean_city', targetX: 15, targetY: 23 },
-      // Front entrance (south) → back to Cerulean front door
-      { x: 3, y: 7, targetMap: 'cerulean_city', targetX: 15, targetY: 20 },
+      // The hole in the back wall (north) → the back garden, above the hole
+      { x: 3, y: 1, targetMap: 'cerulean_city', targetX: 20, targetY: 3 },
+      // Front entrance (south) → the grass below the front door
+      { x: 3, y: 7, targetMap: 'cerulean_city', targetX: 20, targetY: 7 },
     ],
     npcs: [
+      // The policeman stands INSIDE, in front of the hole: (3,1) is only
+      // reachable through (3,2), so he is a real chokepoint until bill_helped.
+      {
+        id: 'cerulean_officer',
+        x: 3, y: 2,
+        spriteColor: 0x4060c0,
+        direction: Direction.DOWN,
+        dialogue: [
+          'This house was\nburglarized!',
+          "Stay away from that\nhole in the wall\nuntil we're done here.",
+        ],
+      },
       {
         id: 'burgled_house_npc',
         x: 4, y: 4,
@@ -1136,7 +1158,7 @@ export const BURGLED_HOUSE: MapData = (() => {
         direction: Direction.DOWN,
         dialogue: [
           'A thief broke in\nthrough the wall!',
-          'He went out the\nback toward ROUTE 5!',
+          "He's still lurking in\nmy back garden!",
         ],
       },
     ],

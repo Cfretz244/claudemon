@@ -46,6 +46,7 @@ import { SurgePuzzle } from '../logic/surgePuzzle';
 import { syncDerivedStoryFlags } from '../logic/storyFlagSync';
 import { migrateLegacyLocation } from '../logic/saveMigration';
 import { getCutTiles } from '../logic/cutTrees';
+import { canUseFieldMove, partyKnowsMove, FIELD_MOVE_MESSAGES } from '../logic/fieldMoves';
 import { getAvailableFlyDestinations } from '../data/flyDestinations';
 import { GIFT_NPCS, GiftNpcResult } from '../data/giftNpcs';
 import { SIGNS } from '../data/signs';
@@ -2353,27 +2354,31 @@ export class OverworldScene extends Phaser.Scene {
         const tx = this.playerGridX + vec.x;
         const ty = this.playerGridY + vec.y;
         if (!this.handleCut(tx, ty)) {
-          this.textBox.show(["There's nothing to\nCUT here!"]);
+          this.textBox.show(FIELD_MOVE_MESSAGES.cut.noTarget);
         }
         break;
       }
-      case 19: // FLY
-        if (!this.playerState.badges.includes('THUNDER')) {
-          this.textBox.show(["You need the THUNDER\nBADGE to use FLY!"]);
+      case 19: { // FLY
+        const decision = canUseFieldMove('fly', this.playerState);
+        if (decision.outcome !== 'ok') {
+          this.textBox.show(decision.message);
         } else {
           this.showFlyMap();
         }
         break;
+      }
       case 57: { // SURF
-        if (!this.playerState.badges.includes('SOUL')) {
-          this.textBox.show(["You need the SOUL\nBADGE to use SURF!"]);
+        const vec = DIR_VECTORS[this.playerDirection];
+        const tx = this.playerGridX + vec.x;
+        const ty = this.playerGridY + vec.y;
+        const decision = canUseFieldMove('surf', this.playerState, {
+          targetValid: OverworldScene.isWaterTile(this.currentMap.tiles[ty]?.[tx]),
+          isSurfing: this.isSurfing,
+        });
+        if (decision.outcome !== 'ok') {
+          this.textBox.show(decision.message);
         } else {
-          const vec = DIR_VECTORS[this.playerDirection];
-          const tx = this.playerGridX + vec.x;
-          const ty = this.playerGridY + vec.y;
-          if (!this.handleSurf(tx, ty)) {
-            this.textBox.show(["You can't SURF here!"]);
-          }
+          this.handleSurf(tx, ty);
         }
         break;
       }
@@ -2382,7 +2387,7 @@ export class OverworldScene extends Phaser.Scene {
         const tx = this.playerGridX + vec.x;
         const ty = this.playerGridY + vec.y;
         if (!this.handleStrength(tx, ty)) {
-          this.textBox.show(["There's nothing to\nuse STRENGTH on!"]);
+          this.textBox.show(FIELD_MOVE_MESSAGES.strength.noTarget);
         }
         break;
       }
@@ -2758,16 +2763,18 @@ export class OverworldScene extends Phaser.Scene {
 
   // HM field helpers
   private partyHasMove(moveId: number): boolean {
-    return this.playerState.party.some(p => p.moves.some(m => m.moveId === moveId));
+    return partyKnowsMove(this.playerState, moveId);
   }
 
   private handleCut(targetX: number, targetY: number): boolean {
     const tileType = this.currentMap.tiles[targetY]?.[targetX];
-    if (tileType !== TileType.CUT_TREE) return false;
-
-    // Need CUT (move 15) and CASCADE badge
-    if (!this.partyHasMove(15) || !this.playerState.badges.includes('CASCADE')) {
-      this.textBox.show(['This tree looks like\nit can be CUT down!']);
+    // Needs a CUT_TREE in front, CUT (move 15) in the party and the CASCADE badge
+    const decision = canUseFieldMove('cut', this.playerState, {
+      targetValid: tileType === TileType.CUT_TREE,
+    });
+    if (!decision.handled) return false;
+    if (decision.outcome !== 'ok') {
+      this.textBox.show(decision.message);
       return true;
     }
 
@@ -2884,14 +2891,14 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private handleSurf(targetX: number, targetY: number): boolean {
-    if (this.isSurfing) return false;
     const tileType = this.currentMap.tiles[targetY]?.[targetX];
-    if (!OverworldScene.isWaterTile(tileType)) return false;
-
-    // Need SURF (move 57) and SOUL badge
-    if (!this.partyHasMove(57) || !this.playerState.badges.includes('SOUL')) {
-      return false;
-    }
+    // Needs water in front, SURF (move 57) in the party and the SOUL badge.
+    // Every denial is silent here; the party-menu caller shows the message.
+    const decision = canUseFieldMove('surf', this.playerState, {
+      targetValid: OverworldScene.isWaterTile(tileType),
+      isSurfing: this.isSurfing,
+    });
+    if (decision.outcome !== 'ok') return false;
 
     this.textBox.show(['The water is a deep\nblue color...', 'Want to SURF?'], () => {
       this.isSurfing = true;
@@ -2908,11 +2915,13 @@ export class OverworldScene extends Phaser.Scene {
 
   private handleStrength(targetX: number, targetY: number): boolean {
     const tileType = this.currentMap.tiles[targetY]?.[targetX];
-    if (tileType !== TileType.BOULDER) return false;
-
-    // Need STRENGTH (move 70) and RAINBOW badge
-    if (!this.partyHasMove(70) || !this.playerState.badges.includes('RAINBOW')) {
-      this.textBox.show(['This boulder looks\nlike it can be moved!']);
+    // Needs a BOULDER in front, STRENGTH (move 70) in the party and the RAINBOW badge
+    const decision = canUseFieldMove('strength', this.playerState, {
+      targetValid: tileType === TileType.BOULDER,
+    });
+    if (!decision.handled) return false;
+    if (decision.outcome !== 'ok') {
+      this.textBox.show(decision.message);
       return true;
     }
 
@@ -3161,8 +3170,13 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private useFlash(): void {
-    if (!this.currentMap.isDark || this.flashUsed) return;
-    if (!this.partyHasMove(148) || !this.playerState.badges.includes('BOULDER')) return;
+    // Needs a dark map not yet lit, FLASH (move 148) in the party and the
+    // BOULDER badge. Every denial is silent.
+    const decision = canUseFieldMove('flash', this.playerState, {
+      isDark: !!this.currentMap.isDark,
+      flashUsed: this.flashUsed,
+    });
+    if (decision.outcome !== 'ok') return;
 
     this.textBox.show(['Used FLASH!'], () => {
       this.flashUsed = true;
