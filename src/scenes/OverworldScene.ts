@@ -33,6 +33,10 @@ import { shouldGiveOaksParcel } from '../logic/oaksParcel';
 import { checkEntryGates } from '../logic/warpGate';
 import { MapInstance, instantiateMap, landedBoulders, pushBoulder, isFlagGateOpen, tileUnder } from '../logic/boulders';
 import { restoreParty } from '../logic/healing';
+import {
+  interceptWarp, needsOakEscort, badgeCheckOutcome, OAK_INTERCEPT_MESSAGES,
+  OAK_ESCORT_DESTINATION, PEWTER_GUIDE_NPC_ID,
+} from '../logic/roadBlocks';
 import { elevatorAccess, elevatorTarget, visitedFlag } from '../logic/elevator';
 import { computeCurrentSlide, computeSlide, Slide } from '../logic/spinTiles';
 import { computeTrainerSight } from '../logic/trainerSight';
@@ -889,14 +893,14 @@ export class OverworldScene extends Phaser.Scene {
       return;
     }
 
-    // Oak intercept: can't leave to route1 without Pokemon
-    if (mapId === 'route1' && this.playerState.party.length === 0) {
+    // Hard-coded NPC interceptions (Oak on Route 1, the Pewter guide on Route 3):
+    // see src/logic/roadBlocks.ts. Both run before the data-driven gates below.
+    const block = interceptWarp(this.currentMap?.id || '', mapId, this.playerState);
+    if (block.kind === 'oak_escort') {
       this.triggerOakIntercept();
       return;
     }
-
-    // Pewter east exit: guide blocks Route 3 without Boulder badge
-    if (mapId === 'route3' && this.currentMap.id === 'pewter_city' && !this.playerState.badges.includes('BOULDER')) {
+    if (block.kind === 'pewter_guide') {
       this.triggerPewterGuideIntercept();
       return;
     }
@@ -1127,7 +1131,7 @@ export class OverworldScene extends Phaser.Scene {
     if (!rollsEncounterOn(this.currentMap, tileType, this.isSurfing)) return;
 
     // Oak intercept: if player has no Pokemon, Oak stops them
-    if (this.playerState.party.length === 0) {
+    if (needsOakEscort(this.playerState)) {
       this.triggerOakIntercept();
       return;
     }
@@ -1373,14 +1377,14 @@ export class OverworldScene extends Phaser.Scene {
     this.isWarping = true;
 
     // Find the guide NPC data
-    const guideNpc = this.currentMap.npcs.find(n => n.id === 'pewter_guide');
+    const guideNpc = this.currentMap.npcs.find(n => n.id === PEWTER_GUIDE_NPC_ID);
     if (!guideNpc) {
       this.isWarping = false;
       return;
     }
 
     // Use the existing guide sprite or create one
-    const guideSprite = this.npcSprites.get('pewter_guide');
+    const guideSprite = this.npcSprites.get(PEWTER_GUIDE_NPC_ID);
     if (!guideSprite) {
       this.isWarping = false;
       return;
@@ -1469,12 +1473,8 @@ export class OverworldScene extends Phaser.Scene {
       // Oak arrived next to player - allow text advancement
       this.isWarping = false;
 
-      this.textBox.show(["OAK: Hey! Wait!\nDon't go out!"], () => {
-        this.textBox.show([
-          "It's unsafe! Wild\nPOKeMON live in\ntall grass!",
-          'You need your own\nPOKeMON for your\nprotection.',
-          "Come with me to\nmy lab!",
-        ], () => {
+      this.textBox.show(OAK_INTERCEPT_MESSAGES[0], () => {
+        this.textBox.show(OAK_INTERCEPT_MESSAGES[1], () => {
           // Block input for walk to lab
           this.isWarping = true;
 
@@ -1498,9 +1498,9 @@ export class OverworldScene extends Phaser.Scene {
             this.cameras.main.fadeOut(200, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {
               this.scene.restart({
-                mapId: 'oaks_lab',
-                playerX: 4,
-                playerY: 11,
+                mapId: OAK_ESCORT_DESTINATION.mapId,
+                playerX: OAK_ESCORT_DESTINATION.x,
+                playerY: OAK_ESCORT_DESTINATION.y,
                 saveData: this.playerState.toSave(),
               } as SceneData);
             });
@@ -1982,29 +1982,8 @@ export class OverworldScene extends Phaser.Scene {
 
   /** Route 23 badge check NPCs. */
   private handleBadgeCheck(npc: NPCData): boolean {
-    const requiredBadges: Record<string, { badge: string; name: string }> = {
-      'badge_check1': { badge: 'BOULDER', name: 'BOULDER BADGE' },
-      'badge_check2': { badge: 'CASCADE', name: 'CASCADE BADGE' },
-      'badge_check3': { badge: 'THUNDER', name: 'THUNDER BADGE' },
-    };
-    const req = requiredBadges[npc.id];
-    if (req && this.playerState.badges.includes(req.badge)) {
-      this.textBox.show([
-        `GUARD: ${req.name}?\nVery good!`,
-        "You may pass!",
-      ]);
-    } else if (req) {
-      this.textBox.show([
-        `GUARD: You need the\n${req.name} to pass!`,
-        "Come back when you\nhave it!",
-      ]);
-    } else {
-      if (this.playerState.badges.length >= 8) {
-        this.textBox.show(["GUARD: All BADGES\nverified! Go ahead!"]);
-      } else {
-        this.textBox.show(["GUARD: You need more\nBADGES to pass!"]);
-      }
-    }
+    // Which badge this guard asks for, and what he says: src/logic/roadBlocks.ts.
+    this.textBox.show(badgeCheckOutcome(npc.id, this.playerState).message);
     return true;
   }
 
