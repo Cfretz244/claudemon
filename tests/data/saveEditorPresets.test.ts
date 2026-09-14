@@ -65,7 +65,7 @@ describe('save editor presets', () => {
   it('the chips name flags the game reads, and none twice', () => {
     const ids = STORY_FLAG_GROUPS.flatMap(g => g.flags.map(f => f.id));
     expect(new Set(ids).size).toBe(ids.length);
-    for (const must of ['champion', 'got_silph_scope', 'got_poke_flute', 'marowak_ghost_defeated', 'articuno_seafoam_cleared', 'zapdos_power_plant_cleared', 'moltres_victory_road_cleared', 'surge_gate_open', 'game_corner_poster_found']) {
+    for (const must of ['champion', 'got_silph_scope', 'got_poke_flute', 'marowak_ghost_defeated', 'articuno_seafoam_cleared', 'zapdos_power_plant_cleared', 'moltres_victory_road_cleared', 'mewtwo_cleared', 'surge_gate_open', 'game_corner_poster_found']) {
       expect(KNOWN_FLAGS.has(must), must).toBe(true);
     }
   });

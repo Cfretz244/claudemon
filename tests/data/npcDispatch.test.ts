@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ALL_MAPS } from '../../src/data/maps';
 import { GIFT_NPCS } from '../../src/data/giftNpcs';
 import { NPCData } from '../../src/types/map.types';
+import { STATIC_LEGENDARIES } from '../../src/data/staticLegendaries';
 
 /**
  * Pins the story-NPC dispatch contract in OverworldScene.interactWithNPC.
@@ -21,7 +22,7 @@ import { NPCData } from '../../src/types/map.types';
 const HANDLER_IDS = [
   'oak', 'rival',
   'snorlax_route12', 'snorlax_route16',
-  'articuno_seafoam', 'zapdos_power_plant', 'moltres_victory_road',
+  ...Object.keys(STATIC_LEGENDARIES),
   'game_corner_clerk', 'game_corner_coin_vendor', 'celadon_mansion_coin_case_giver',
   'giovanni_game_corner', 'giovanni_silph',
 ];
@@ -40,7 +41,7 @@ const VISIBILITY_IDS = [
   'jessie_mtmoon', 'james_mtmoon', 'mt_moon_rocket_guard',
   'jessie_gamecorner', 'james_gamecorner',
   'jessie_tower', 'james_tower', 'jessie_silph', 'james_silph',
-  'articuno_seafoam', 'zapdos_power_plant', 'moltres_victory_road',
+  ...Object.keys(STATIC_LEGENDARIES),
   'league_guard_lorelei', 'league_guard_bruno', 'league_guard_agatha', 'league_guard_lance',
 ];
 
