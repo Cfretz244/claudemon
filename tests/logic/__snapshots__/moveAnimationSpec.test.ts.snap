@@ -56,10 +56,10 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
  53 FLAMETHROWER   FIRE     beam           heavy mote    crackle   520 #FF4422 -
  54 MIST           ICE      self-aura      light shard   ping      320 #66CCFF -
  55 WATER GUN      WATER    projectile     light droplet splash    320 #3399FF -
- 56 HYDRO PUMP     WATER    projectile     heavy droplet splash    440 #3399FF hydroPump
- 57 SURF           WATER    beam           heavy droplet splash    520 #3399FF surf
+ 56 HYDRO PUMP     WATER    projectile     heavy droplet splash    1000 #3399FF hydroPump
+ 57 SURF           WATER    beam           heavy droplet splash    1150 #3399FF surf
  58 ICE BEAM       ICE      beam           heavy shard   ping      520 #66CCFF -
- 59 BLIZZARD       ICE      beam           heavy shard   ping      520 #66CCFF blizzard
+ 59 BLIZZARD       ICE      beam           heavy shard   ping      1150 #66CCFF blizzard
  60 PSYBEAM        PSYCHIC  beam           mid   ring    warble    460 #FF5599 -
  61 BUBBLE BEAM    WATER    beam           mid   droplet splash    460 #3399FF -
  62 AURORA BEAM    ICE      beam           mid   shard   ping      460 #66CCFF -
@@ -85,23 +85,23 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
  82 DRAGON RAGE    DRAGON   special-strike light trail   roar      460 #7766EE -
  83 FIRE SPIN      FIRE     bind           light mote    crackle   460 #FF4422 -
  84 THUNDER SHOCK  ELECTRIC beam           light bolt    zap       400 #FFCC00 -
- 85 THUNDERBOLT    ELECTRIC beam           heavy bolt    zap       520 #FFCC00 thunderbolt
+ 85 THUNDERBOLT    ELECTRIC beam           heavy bolt    zap       1100 #FFCC00 thunderbolt
  86 THUNDER WAVE   ELECTRIC status-cloud   light bolt    zap       340 #FFCC00 thunderWave
  87 THUNDER        ELECTRIC beam           heavy bolt    zap       1000 #FFCC00 thunder
  88 ROCK THROW     ROCK     projectile     mid   block   thud      380 #BBAA66 -
- 89 EARTHQUAKE     GROUND   contact        heavy grit    rumble    360 #DDBB55 earthquake
+ 89 EARTHQUAKE     GROUND   contact        heavy grit    rumble    1100 #DDBB55 earthquake
  90 FISSURE        GROUND   special-strike light grit    rumble    460 #DDBB55 -
  91 DIG            GROUND   charge         heavy grit    rumble    1000 #DDBB55 dig
  92 TOXIC          POISON   status-cloud   light bubble  bubblePop 340 #AA5599 toxic
  93 CONFUSION      PSYCHIC  beam           mid   ring    warble    460 #FF5599 -
- 94 PSYCHIC        PSYCHIC  beam           heavy ring    warble    520 #FF5599 psychic
+ 94 PSYCHIC        PSYCHIC  beam           heavy ring    warble    1000 #FF5599 psychic
  95 HYPNOSIS       PSYCHIC  status-cloud   light ring    warble    340 #FF5599 -
  96 MEDITATE       PSYCHIC  self-aura      light ring    warble    320 #FF5599 -
  97 AGILITY        PSYCHIC  self-aura      light ring    warble    320 #FF5599 -
  98 QUICK ATTACK   NORMAL   contact        light dust    hit       240 #A8A878 quickAttack
  99 RAGE           NORMAL   contact        light dust    hit       240 #A8A878 -
 100 TELEPORT       PSYCHIC  self-aura      light ring    warble    320 #FF5599 -
-101 NIGHT SHADE    GHOST    special-strike light wisp    wail      460 #6666BB nightShade
+101 NIGHT SHADE    GHOST    special-strike light wisp    wail      1100 #6666BB nightShade
 102 MIMIC          NORMAL   self-aura      light dust    hit       320 #A8A878 -
 103 SCREECH        NORMAL   status-cloud   light dust    hit       340 #A8A878 -
 104 DOUBLE TEAM    NORMAL   self-aura      light dust    hit       320 #A8A878 doubleTeam
@@ -126,7 +126,7 @@ exports[`moveAnimationSpec — full table snapshot > matches the recorded 165-ro
 123 SMOG           POISON   projectile     light bubble  bubblePop 320 #AA5599 -
 124 SLUDGE         POISON   projectile     mid   bubble  bubblePop 380 #AA5599 -
 125 BONE CLUB      GROUND   contact        mid   grit    rumble    300 #DDBB55 -
-126 FIRE BLAST     FIRE     projectile     heavy mote    crackle   440 #FF4422 fireBlast
+126 FIRE BLAST     FIRE     projectile     heavy mote    crackle   1100 #FF4422 fireBlast
 127 WATERFALL      WATER    contact        mid   droplet splash    300 #3399FF -
 128 CLAMP          WATER    bind           light droplet splash    460 #3399FF -
 129 SWIFT          NORMAL   contact        mid   dust    hit       300 #A8A878 swift

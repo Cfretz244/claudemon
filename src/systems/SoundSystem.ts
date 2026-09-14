@@ -620,6 +620,38 @@ export class SoundSystem {
     ], 'triangle', 0.06);
   }
 
+  /** SURF: a low swell that rolls up into a breaking crest. */
+  waveCrash(): void {
+    this.playNotes([
+      { freq: 90, dur: 0.12, delay: 0 },
+      { freq: 120, dur: 0.12, delay: 0.1 },
+      { freq: 160, dur: 0.14, delay: 0.2 },
+      { freq: 210, dur: 0.18, delay: 0.32 },
+    ], 'sawtooth', 0.07);
+    this.playNotes([
+      { freq: 420, dur: 0.06, delay: 0.34 },
+      { freq: 330, dur: 0.07, delay: 0.41 },
+      { freq: 250, dur: 0.09, delay: 0.49 },
+      { freq: 180, dur: 0.14, delay: 0.58 },
+    ], 'triangle', 0.06);
+  }
+
+  /** BLIZZARD: a howling wind, two detuned sweeps beating against each other. */
+  iceWind(): void {
+    this.playNotes([
+      { freq: 1200, dur: 0.16, delay: 0 },
+      { freq: 1500, dur: 0.16, delay: 0.12 },
+      { freq: 1300, dur: 0.16, delay: 0.26 },
+      { freq: 1700, dur: 0.22, delay: 0.4 },
+    ], 'sine', 0.035);
+    this.playNotes([
+      { freq: 1160, dur: 0.2, delay: 0.02 },
+      { freq: 1460, dur: 0.2, delay: 0.14 },
+      { freq: 1260, dur: 0.2, delay: 0.28 },
+      { freq: 1640, dur: 0.26, delay: 0.42 },
+    ], 'triangle', 0.03);
+  }
+
   /** Dragon: a low guttural roar. */
   roar(): void {
     this.playNotes([
