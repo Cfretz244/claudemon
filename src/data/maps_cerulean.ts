@@ -416,10 +416,12 @@ export const CERULEAN_CITY: MapData = (() => {
   fillRect(14, 3, 3, 2, T.BUILDING);
   setTile(15, 4, T.DOOR);
 
-  // Burgled house (NE corner, as in Gen I): a 5-wide facade with a roof row,
-  // the front door on the south face and the burglar's hole in the back wall.
-  fillRect(18, 4, 5, 1, T.ROOF);
-  fillRect(18, 5, 5, 2, T.BUILDING);
+  // Burgled house (NE corner, as in Gen I): a 4-wide facade (x18-21) with a
+  // roof row, the front door on the south face and the burglar's hole in the
+  // back wall. Column x22 beside it stays grass — that is the garden's way out
+  // down the east edge of town.
+  fillRect(18, 4, 4, 1, T.ROOF);
+  fillRect(18, 5, 4, 2, T.BUILDING);
   setTile(20, 6, T.DOOR);   // front door  → burgled_house (3,6)
   setTile(20, 4, T.DOOR);   // hole in the back wall → burgled_house (3,2)
 
@@ -466,10 +468,21 @@ export const CERULEAN_CITY: MapData = (() => {
 
   // === Story progression gates ===
 
-  // Fence at y:22, with the main road (x:10-13) left open so Route 5 is
-  // reachable from the start — the town's south gate is a road, not a house.
-  for (let x = 2; x <= 9; x++) setTile(x, 22, T.FENCE);
-  for (let x = 14; x <= 22; x++) setTile(x, 22, T.FENCE);
+  // Fence at y:22 seals the town off from the southern strip: the only gap is
+  // at (21,22)/(22,22), at the foot of the east-edge corridor. Route 5 (and,
+  // through the Cut trees, Route 9) is therefore behind the burgled house,
+  // exactly as in Gen I.
+  for (let x = 2; x <= 20; x++) setTile(x, 22, T.FENCE);
+
+  // East-edge corridor (x21-22, y7-21): the fenced lane that runs from the
+  // garden's exit at (22,4) down past the Cut trees to the fence gap. It is
+  // sealed from the town by the Center (x16-20, y8-11), the Mart (x16-20,
+  // y15-18) and a fence on x20 in every row those two do not cover.
+  for (const y of [12, 13, 14, 19, 20, 21]) setTile(20, y, T.FENCE);
+  // Row y7 is the exception: (20,7) is the front door's landing tile and has
+  // to stay walkable from the town, so the corridor is closed one tile further
+  // east, at (21,7). The lane enters from (22,6) instead.
+  setTile(21, 7, T.FENCE);
 
   // CUT_TREE blocks east exit until player has Cut
   setTile(22, 12, T.CUT_TREE);
@@ -545,9 +558,11 @@ export const CERULEAN_CITY: MapData = (() => {
           'Five trainers in a row\nchallenge all comers!',
         ],
       },
-      // Rocket grunt hiding in the burgled house's back garden. He faces LEFT
-      // with a sight range of 1, so he watches (21,3) only: the player lands
-      // on (20,3) coming out of the hole and is never ambushed on arrival.
+      // Rocket grunt hiding in the burgled house's back garden, standing on
+      // (22,3) — the garden's only exit, so beating him is mandatory before
+      // the east-edge corridor (and with it Route 5 and Route 9) opens. He
+      // faces LEFT with a sight range of 1, so he watches (21,3) only: the
+      // player lands on (20,3) out of the hole and is never ambushed there.
       {
         id: 'cerulean_rocket',
         x: 22, y: 3,

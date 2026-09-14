@@ -3,11 +3,13 @@ import { ALL_MAPS } from '../../src/data/maps';
 import { MapData, NPCData, TileType } from '../../src/types/map.types';
 import { computeTrainerSight } from '../../src/logic/trainerSight';
 
-// The Cerulean "dig house" rebuilt to the Gen I layout: the house sits in the
+// The Cerulean "dig house" rebuilt to the Gen I layout. The house sits in the
 // NE corner with its front door on the south face and the burglar's hole in
-// the back wall, the policeman stands INSIDE in front of the hole, the Rocket
-// waits in the sealed back garden, and the town's south road to Route 5 is a
-// road again instead of a house you have to walk through.
+// the back wall; the policeman stands INSIDE in front of the hole; the Rocket
+// waits on the back garden's only exit. South and east Cerulean stay fenced
+// off, so the route out of town is: officer (bill_helped) -> hole -> garden ->
+// beat the Rocket -> the east-edge corridor -> the Cut trees (Route 9) and the
+// southern strip (Route 5).
 
 const city = ALL_MAPS['cerulean_city'];
 const house = ALL_MAPS['burgled_house'];
@@ -15,6 +17,18 @@ const centre = ALL_MAPS['pokemon_center_cerulean'];
 
 const GARDEN: Array<[number, number]> = [];
 for (let x = 18; x <= 22; x++) for (let y = 2; y <= 3; y++) GARDEN.push([x, y]);
+
+/** The fenced lane down the east edge: x22 beside the house, then x21-22. */
+const CORRIDOR: Array<[number, number]> = [];
+for (let y = 4; y <= 6; y++) CORRIDOR.push([22, y]);
+for (let y = 7; y <= 21; y++) for (const x of [21, 22]) {
+  if (x === 21 && y === 7) continue;            // the seam that seals row y7
+  if (x === 22 && (y === 12 || y === 13)) continue; // the Cut trees
+  CORRIDOR.push([x, y]);
+}
+
+const STRIP: Array<[number, number]> = [];
+for (let x = 2; x <= 22; x++) for (const y of [23, 24]) STRIP.push([x, y]);
 
 /**
  * Flood fill from `start` treating every NPC in `solidNpcs` as a wall. Warp
@@ -41,16 +55,22 @@ function reachable(map: MapData, start: [number, number], solidNpcs: NPCData[] =
 const can = (set: Set<string>, x: number, y: number) => set.has(`${x},${y}`);
 const warpAt = (map: MapData, x: number, y: number) => map.warps.find(w => w.x === x && w.y === y);
 const npc = (map: MapData, id: string) => map.npcs?.find(n => n.id === id);
+const withoutRocket = () => city.npcs!.filter(n => n.id !== 'cerulean_rocket');
+
+// The Route 4 gate lands the player on (1,12)/(1,13), the west entrance.
+const fromTown = () => reachable(city, [1, 12]);
 
 describe('Cerulean burgled house — exterior', () => {
-  it('the house is in the NE corner with a roof row above its facade', () => {
-    for (let x = 18; x <= 22; x++) {
+  it('the house is a 4-wide facade in the NE corner with a roof row', () => {
+    for (let x = 18; x <= 21; x++) {
       expect(city.tiles[4][x], `(${x},4) should be roof or the back door`).toBe(x === 20 ? TileType.DOOR : TileType.ROOF);
       for (const y of [5, 6]) {
         expect(city.tiles[y][x], `(${x},${y}) should be building or the front door`)
           .toBe(x === 20 && y === 6 ? TileType.DOOR : TileType.BUILDING);
       }
     }
+    // Column x22 beside the house is the garden's way down to the corridor.
+    for (const y of [4, 5, 6]) expect(city.collision[y][22], `(22,${y}) is walkable`).toBe(false);
   });
 
   it('the old south-centre house and its facade are gone', () => {
@@ -63,11 +83,23 @@ describe('Cerulean burgled house — exterior', () => {
       .toEqual(['20,4', '20,6']);
   });
 
-  it('the fence at y22 opens for the road so Route 5 is reachable from the start', () => {
-    for (let x = 2; x <= 22; x++) {
-      const expected = x >= 10 && x <= 13 ? TileType.PATH : TileType.FENCE;
-      expect(city.tiles[22][x], `(${x},22)`).toBe(expected);
+  it('the fence at y22 seals the town off except at the foot of the corridor', () => {
+    for (let x = 2; x <= 20; x++) expect(city.tiles[22][x], `(${x},22) fence`).toBe(TileType.FENCE);
+    expect(city.collision[22][21], 'the gap at (21,22)').toBe(false);
+    expect(city.collision[22][22], 'the gap at (22,22)').toBe(false);
+    // The southern strip and the Route 5 warps themselves are untouched.
+    for (const [x, y] of STRIP) expect(city.collision[y][x], `(${x},${y}) strip`).toBe(false);
+    expect(warpAt(city, 11, 24)?.targetMap).toBe('route5');
+    expect(warpAt(city, 12, 24)?.targetMap).toBe('route5');
+    for (let x = 10; x <= 13; x++) expect(city.collision[23][x], `route5 landing (${x},23)`).toBe(false);
+  });
+
+  it('every row of the east-edge corridor is walled off from the town', () => {
+    for (let y = 7; y <= 21; y++) {
+      const seam = city.collision[y][20] || city.collision[y][21];
+      expect(seam, `row ${y} must have a solid tile at x20 or x21 or the corridor leaks`).toBe(true);
     }
+    for (const [x, y] of CORRIDOR) expect(city.collision[y][x], `(${x},${y}) corridor is walkable`).toBe(false);
   });
 
   it('the Pokemon Center moved down onto the path row; its exit lands below the door', () => {
@@ -80,8 +112,6 @@ describe('Cerulean burgled house — exterior', () => {
       expect([w.targetX, w.targetY]).toEqual([18, 12]);
     }
     expect(city.tiles[11][15], 'the Center sign moved with it').toBe(TileType.SIGN);
-    // The rows the Center used to sit in (y5-8, x16-20) are free again: the
-    // only solid tiles left there belong to the new house at x18-22.
     for (const y of [5, 6, 7]) for (const x of [16, 17]) {
       expect(city.tiles[y][x], `(${x},${y}) should be open grass now`).toBe(TileType.GRASS);
     }
@@ -92,14 +122,16 @@ describe('Cerulean burgled house — exterior', () => {
     expect(city.collision[11][14], 'Fly lands on (14,11)').toBe(false);
     expect(city.tiles[12][22]).toBe(TileType.CUT_TREE);
     expect(city.tiles[13][22]).toBe(TileType.CUT_TREE);
+    expect(warpAt(city, 24, 12)?.targetMap).toBe('route9');
+    expect(warpAt(city, 24, 13)?.targetMap).toBe('route9');
     expect(city.tiles[2][14]).toBe(TileType.ROOF);       // Bulbasaur house
     expect(city.tiles[4][15]).toBe(TileType.DOOR);
     for (const id of ['cerulean_npc1', 'cerulean_npc2', 'cerulean_npc3']) expect(npc(city, id)).toBeDefined();
   });
 });
 
-describe('Cerulean burgled house — the back garden', () => {
-  it('is grass, sealed by the trees, the fence and the house roof', () => {
+describe('Cerulean burgled house — the town is sealed south and east', () => {
+  it('the garden is grass, fenced to the west and walled in everywhere else', () => {
     for (const [x, y] of GARDEN) expect(city.collision[y][x], `(${x},${y}) is walkable garden`).toBe(false);
     expect(city.tiles[2][17]).toBe(TileType.FENCE);
     expect(city.tiles[3][17]).toBe(TileType.FENCE);
@@ -108,33 +140,66 @@ describe('Cerulean burgled house — the back garden', () => {
     for (let x = 18; x <= 22; x++) expect(city.tiles[1][x], `(${x},1) tree border`).toBe(TileType.TREE);
   });
 
-  it('is unreachable from town — the house is the only way in', () => {
-    // Route 4 lands the player on (2,12); every NPC counts as solid.
-    const town = reachable(city, [2, 12]);
-    for (const [x, y] of GARDEN) expect(can(town, x, y), `(${x},${y}) must not be reachable from town`).toBe(false);
+  it('from the Route 4 landing, with no flags, nothing past the house is reachable', () => {
+    const town = fromTown();
+    for (const [x, y] of GARDEN) expect(can(town, x, y), `garden (${x},${y})`).toBe(false);
+    for (const [x, y] of CORRIDOR) expect(can(town, x, y), `corridor (${x},${y})`).toBe(false);
+    for (const [x, y] of STRIP) expect(can(town, x, y), `strip (${x},${y})`).toBe(false);
+    expect(can(town, 11, 24), 'Route 5 warp (11,24)').toBe(false);
+    expect(can(town, 12, 24), 'Route 5 warp (12,24)').toBe(false);
+    expect(can(town, 24, 12), 'Route 9 warp (24,12)').toBe(false);
+    expect(can(town, 24, 13), 'Route 9 warp (24,13)').toBe(false);
     expect(can(town, 20, 4), 'nor the back door itself').toBe(false);
   });
 
-  it('from the hole landing (20,3) the whole garden and the back door are reachable', () => {
-    const garden = reachable(city, [20, 3]);
-    for (const [x, y] of GARDEN) expect(can(garden, x, y) || (x === 22 && y === 3), `(${x},${y})`).toBe(true);
-    expect(can(garden, 20, 4), 'the back door (20,4)').toBe(true);
-    expect(can(garden, 11, 12), 'and no leak back into town').toBe(false);
-  });
-
-  it('the town road, the Route 5 warps and the front door approach are reachable with no flags', () => {
-    const town = reachable(city, [2, 12]);
-    expect(can(town, 11, 24), 'Route 5 warp (11,24)').toBe(true);
-    expect(can(town, 12, 24), 'Route 5 warp (12,24)').toBe(true);
+  it('but the front door and its approach are reachable from the road', () => {
+    const town = fromTown();
     expect(can(town, 20, 7), 'the front-door approach (20,7)').toBe(true);
     expect(can(town, 20, 6), 'the front door itself').toBe(true);
+    expect(can(town, 18, 11), 'and the Pokemon Center door').toBe(true);
+  });
+
+  it('the Rocket bars the garden exit: with him there (20,3) is a dead end', () => {
+    const garden = reachable(city, [20, 3]);
+    for (const [x, y] of GARDEN) {
+      if (x === 22 && y === 3) continue;   // that is the Rocket's own tile
+      expect(can(garden, x, y), `garden (${x},${y})`).toBe(true);
+    }
+    expect(can(garden, 20, 4), 'the way back in through the hole').toBe(true);
+    expect(can(garden, 22, 4), 'the exit down the east edge is blocked').toBe(false);
+    for (const [x, y] of CORRIDOR) expect(can(garden, x, y), `corridor (${x},${y})`).toBe(false);
+  });
+
+  it('with him defeated the corridor opens all the way to Route 5 and the Cut trees', () => {
+    const open = reachable(city, [20, 3], withoutRocket());
+    for (const [x, y] of CORRIDOR) expect(can(open, x, y), `corridor (${x},${y})`).toBe(true);
+    expect(can(open, 21, 12), 'up against the first Cut tree').toBe(true);
+    expect(can(open, 21, 13), 'and the second').toBe(true);
+    expect(can(open, 21, 22), 'the fence gap (21,22)').toBe(true);
+    expect(can(open, 22, 22), 'the fence gap (22,22)').toBe(true);
+    for (const [x, y] of STRIP) expect(can(open, x, y), `strip (${x},${y})`).toBe(true);
+    expect(can(open, 11, 24), 'the Route 5 warp').toBe(true);
+    expect(can(open, 12, 24), 'the other Route 5 warp').toBe(true);
+    expect(can(open, 24, 12), 'Route 9 stays behind the Cut trees').toBe(false);
+  });
+
+  it('the sealed side never leaks back into town on foot — the house is the only way', () => {
+    const open = reachable(city, [20, 3], withoutRocket());
+    expect(can(open, 11, 12), 'the town road').toBe(false);
+    expect(can(open, 20, 7), 'the front-door approach').toBe(false);
+    // Coming back the other way: from the Route 5 landing, up the corridor and
+    // into the garden to the back door.
+    const home = reachable(city, [13, 23], withoutRocket());
+    expect(can(home, 20, 3), 'the garden landing').toBe(true);
+    expect(can(home, 20, 4), 'the back door').toBe(true);
+    expect(can(home, 11, 12), 'and still no shortcut into town').toBe(false);
   });
 });
 
 describe('Cerulean burgled house — the Rocket', () => {
   const rocket = npc(city, 'cerulean_rocket')!;
 
-  it('waits in the garden facing the one tile beside the landing', () => {
+  it('stands on the garden exit facing the one tile beside the landing', () => {
     expect([rocket.x, rocket.y]).toEqual([22, 3]);
     expect(rocket.isTrainer).toBe(true);
     expect(rocket.sightRange).toBe(1);
@@ -205,8 +270,6 @@ describe('Cerulean burgled house — round trips', () => {
   it('the interior mats face the way the exterior doors do', () => {
     expect(house.tiles[1][3]).toBe(TileType.DOORMAT);   // hole, north wall
     expect(house.tiles[7][3]).toBe(TileType.DOORMAT);   // front door, south wall
-    // Walking north out of the hole comes out north of the house; walking
-    // south out of the front door comes out south of it.
     expect(warpAt(house, 3, 1)!.targetY).toBeLessThan(warpAt(city, 20, 4)!.y);
     expect(warpAt(house, 3, 7)!.targetY).toBeGreaterThan(warpAt(city, 20, 6)!.y);
   });
