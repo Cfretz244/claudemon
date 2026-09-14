@@ -21,8 +21,11 @@ import {
   afterimage,
   delay,
   directionalParticles,
+  clearImpactTint,
   emitterAlong,
   impactBurst,
+  impactTint,
+  newBodyGraphics,
   registerSpecOverride,
   ring,
   screenFlash,
@@ -44,10 +47,11 @@ const GAME_W = 160;
 interface Pt { x: number; y: number }
 
 function newG(scene: Phaser.Scene, depth: number): Phaser.GameObjects.Graphics {
-  const g = scene.add.graphics();
-  g.setDepth(depth);
-  g.setScrollFactor(0);
-  return g;
+  // Delegated to the shared factory so tier 4 can reach it: on a miss or an
+  // immunity it hangs a cutout over the defender, which is what stops the
+  // set-pieces that draw their detonation by hand (FIRE BLAST, THUNDER) from
+  // marking a target they did not connect with.
+  return newBodyGraphics(scene, depth);
 }
 
 function strokePath(
@@ -973,7 +977,7 @@ async function renderThunderbolt(spec: AnimationSpec, ctx: AnimationContext): Pr
       // The strobe, driven off the same beat so every sampled frame catches it.
       // Both tints are electric-yellow: a pure-white tint is a no-op (tinting
       // multiplies), so it would blink the strobe off at every other sample.
-      defenderSprite.setTint(beat % 2 ? YELLOW : 0xFFEE66);
+      impactTint(defenderSprite, beat % 2 ? YELLOW : 0xFFEE66);
     }),
     // The bolt only dies once the ring has closed around the target.
     (async () => {
@@ -994,7 +998,7 @@ async function renderThunderbolt(spec: AnimationSpec, ctx: AnimationContext): Pr
     })(),
   ]);
   cage.destroy();
-  defenderSprite.clearTint();
+  clearImpactTint(defenderSprite);
 
   // 4. Residual charge (86 -> 100 %).
   await afterglow(scene, dx, dy, Math.round(d * 0.12));
@@ -1914,7 +1918,7 @@ async function renderSleepPowder(spec: AnimationSpec, ctx: AnimationContext): Pr
     }),
     (async () => {
       await delay(scene, Math.round(rain * 0.3));
-      defenderSprite.setTint(POWDER);
+      impactTint(defenderSprite, POWDER);
       await tweenPromise(scene, {
         targets: defenderSprite, y: homeY + 2,
         duration: Math.round(rain * 0.4), ease: 'Sine.easeInOut',
@@ -1985,7 +1989,7 @@ async function renderToxic(spec: AnimationSpec, ctx: AnimationContext): Promise<
   };
 
   const splat = Math.round(d * 0.28);
-  defenderSprite.setTint(POISON_C);
+  impactTint(defenderSprite, POISON_C);
   await Promise.all([
     frames(scene, splat, t => { g.clear(); paintSplat(0.35 + t * 0.65); }),
     screenShake(scene, 3, Math.round(splat * 0.4)),
@@ -2096,7 +2100,7 @@ async function renderLeechSeed(spec: AnimationSpec, ctx: AnimationContext): Prom
     }),
     (async () => {
       await delay(scene, Math.round(grow * 0.4));
-      defenderSprite.setTint(GRASS);
+      impactTint(defenderSprite, GRASS);
       await tweenPromise(scene, {
         targets: defenderSprite, scaleX: 0.86, scaleY: 1.08,
         duration: Math.round(grow * 0.3), yoyo: true, ease: 'Sine.easeInOut',
@@ -2217,7 +2221,7 @@ async function renderThunderWave(spec: AnimationSpec, ctx: AnimationContext): Pr
       spark.strokeEllipse(dx, dy + 12, 62, 30);
     }),
     (async () => {
-      defenderSprite.setTint(YELLOW);
+      impactTint(defenderSprite, YELLOW);
       await tweenPromise(scene, {
         targets: defenderSprite, x: homeX + 3,
         duration: 40, yoyo: true, repeat: Math.floor(zap / 90), ease: 'Linear',
@@ -2399,7 +2403,7 @@ async function renderQuickAttack(spec: AnimationSpec, ctx: AnimationContext): Pr
   });
 
   // The impact is already happening by the time the streaks resolve.
-  defenderSprite.setTint(NORMAL_PALE);
+  impactTint(defenderSprite, NORMAL_PALE);
   await Promise.all([
     impactBurst(scene, dx, dy, NORMAL, NORMAL_PALE, 20, Math.round(d * 0.3)),
     tweenPromise(scene, {
@@ -2528,7 +2532,7 @@ async function renderGrowl(spec: AnimationSpec, ctx: AnimationContext): Promise<
 
   soundSystem.roar();
   const two = Math.round(d * 0.46);
-  defenderSprite.setTint(TAN);
+  impactTint(defenderSprite, TAN);
   await Promise.all([
     frames(scene, two, t => { g.clear(); burst(t); }),
     (async () => {
@@ -2599,7 +2603,7 @@ async function renderTailWhip(spec: AnimationSpec, ctx: AnimationContext): Promi
 
   // The defence drop: the target sinks and dulls.
   const sink = Math.round(d * 0.22);
-  defenderSprite.setTint(NORMAL);
+  impactTint(defenderSprite, NORMAL);
   await Promise.all([
     frames(scene, sink, t => {
       g.clear();

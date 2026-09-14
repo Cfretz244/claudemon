@@ -7,6 +7,13 @@ import {
   SfxId,
   resolveAnimation,
 } from '../logic/moveAnimationSpec';
+import {
+  MoveOutcome,
+  OutcomePlan,
+  NEUTRAL_PLAN,
+  IMMUNE_WEIGHT,
+  outcomePlan,
+} from '../logic/animationOutcome';
 
 // === Types ===
 
@@ -15,6 +22,80 @@ export interface AnimationContext {
   attackerSprite: Phaser.GameObjects.Sprite;
   defenderSprite: Phaser.GameObjects.Sprite;
   isPlayer: boolean; // true = player attacking (bottom-left → top-right)
+  /**
+   * Tier 4. Optional: leave it undefined (the battle simulator, the e2e, every
+   * status move) and the move renders exactly as it did before tier 4.
+   */
+  outcome?: MoveOutcome;
+}
+
+// === Tier-4 outcome gate ===
+//
+// The shared impact helpers - `impactBurst`, `spriteFlash` on the defender,
+// `screenShake`, plus `impactTint`/`impactTween` for the set-pieces that move
+// the defender by hand - consult this gate, so a tier-3 override gets miss /
+// immune / not-very-effective feedback without knowing tier 4 exists.
+// `renderSpec` owns it: it sets the gate for the duration of one animation and
+// restores the previous one in a finally. Animations are awaited one at a time
+// by BattleScene, so a single module-level gate is enough; nesting (METRONOME)
+// is handled by save/restore rather than by a stack.
+
+let activePlan: OutcomePlan = NEUTRAL_PLAN;
+/** The inverted mask `newGraphics` hangs on body drawings while it is set. */
+let gateCutout: Phaser.Display.Masks.GeometryMask | null = null;
+let gateDefender: Phaser.GameObjects.Sprite | null = null;
+let gateAttacker: Phaser.GameObjects.Sprite | null = null;
+
+/** The plan in force for the animation currently rendering. */
+export function currentOutcomePlan(): OutcomePlan {
+  return activePlan;
+}
+
+/** True when (x, y) is on the defender's side of the field, i.e. an impact. */
+function atDefender(x: number, y: number): boolean {
+  if (!gateDefender) return false;
+  const dd = Phaser.Math.Distance.Between(x, y, gateDefender.x, gateDefender.y);
+  if (!gateAttacker) return dd <= 40;
+  return dd <= Phaser.Math.Distance.Between(x, y, gateAttacker.x, gateAttacker.y);
+}
+
+/** Blends a tint toward "no tint" (0xFFFFFF multiplies to the original sprite). */
+function dimTint(color: number, strength: number): number {
+  const mix = (c: number, w: number): number => Math.round(0xFF + (c - 0xFF) * w);
+  return (mix((color >> 16) & 0xFF, strength) << 16)
+    | (mix((color >> 8) & 0xFF, strength) << 8)
+    | mix(color & 0xFF, strength);
+}
+
+/**
+ * "This draw lands on the defender and this outcome wants no impact there."
+ * True for a miss (nothing connects) and for an immunity (the only thing drawn
+ * at the defender is the single grey puff `renderSpec`'s overlay adds).
+ */
+function skipDrawAt(x: number, y: number): boolean {
+  if (!activePlan.skipImpact && !activePlan.grey) return false;
+  return atDefender(x, y);
+}
+
+/** The same question for a helper that draws the impact without a position. */
+function skipImpactDraw(): boolean {
+  return activePlan.skipImpact || activePlan.grey;
+}
+
+/** Does this tween move the sprite tier 4 is protecting? */
+function targetsDefender(config: Phaser.Types.Tweens.TweenBuilderConfig): boolean {
+  const t = config.targets as unknown;
+  if (!gateDefender) return false;
+  if (Array.isArray(t)) return t.includes(gateDefender);
+  return t === gateDefender;
+}
+
+/** Wall-clock length of a tween config, so a suppressed one still costs its time. */
+function tweenSpan(config: Phaser.Types.Tweens.TweenBuilderConfig): number {
+  const dur = Number(config.duration ?? 0);
+  const legs = config.yoyo ? 2 : 1;
+  const reps = Number(config.repeat ?? 0) + 1;
+  return Math.round(dur * legs * reps + Number(config.delay ?? 0) + Number(config.hold ?? 0));
 }
 
 // === Tier-3 override registry ===
@@ -42,7 +123,7 @@ export function delay(scene: Phaser.Scene, ms: number): Promise<void> {
   });
 }
 
-export function tweenPromise(scene: Phaser.Scene, config: Phaser.Types.Tweens.TweenBuilderConfig): Promise<void> {
+function rawTweenPromise(scene: Phaser.Scene, config: Phaser.Types.Tweens.TweenBuilderConfig): Promise<void> {
   return new Promise(resolve => {
     scene.tweens.add({
       ...config,
@@ -51,11 +132,24 @@ export function tweenPromise(scene: Phaser.Scene, config: Phaser.Types.Tweens.Tw
   });
 }
 
-export function screenFlash(scene: Phaser.Scene, color: number, duration: number): Promise<void> {
+/**
+ * Gated (tier 4). A tween that moves the DEFENDER is impact reaction - the
+ * knock-back, the squash, the stagger a tier-3 set-piece writes by hand - so a
+ * miss suppresses it and pays its time instead. Everything else (the attacker's
+ * lunge, a Graphics fade) passes straight through.
+ */
+export function tweenPromise(scene: Phaser.Scene, config: Phaser.Types.Tweens.TweenBuilderConfig): Promise<void> {
+  if (activePlan.skipImpact && targetsDefender(config)) return delay(scene, tweenSpan(config));
+  return rawTweenPromise(scene, config);
+}
+
+function rawScreenFlash(
+  scene: Phaser.Scene, color: number, duration: number, alpha = 0.6,
+): Promise<void> {
   const overlay = scene.add.graphics();
   overlay.setDepth(900);
   overlay.setScrollFactor(0);
-  overlay.fillStyle(color, 0.6);
+  overlay.fillStyle(color, alpha);
   overlay.fillRect(0, 0, 160, 144);
   overlay.setAlpha(1);
 
@@ -67,16 +161,44 @@ export function screenFlash(scene: Phaser.Scene, color: number, duration: number
   }).then(() => { overlay.destroy(); });
 }
 
-export function screenShake(scene: Phaser.Scene, intensity: number, duration: number): Promise<void> {
+/**
+ * Gated (tier 4). A miss connects with nothing and an immunity connects with
+ * something that does not care, so neither lights the field; "not very
+ * effective" gets the brief's SHORTER flash - scaled in both length and
+ * opacity, because a half-length flash at full opacity still whites the field
+ * out for the frame a sample lands on.
+ */
+export function screenFlash(scene: Phaser.Scene, color: number, duration: number): Promise<void> {
+  if (skipImpactDraw()) return delay(scene, duration);
+  if (activePlan.weight !== 1) {
+    return rawScreenFlash(scene, color, Math.round(duration * activePlan.weight), 0.6 * activePlan.weight)
+      .then(() => delay(scene, Math.round(duration * (1 - activePlan.weight))));
+  }
+  return rawScreenFlash(scene, color, duration);
+}
+
+function rawScreenShake(scene: Phaser.Scene, intensity: number, duration: number): Promise<void> {
   scene.cameras.main.shake(duration, intensity / 160);
   return delay(scene, duration);
 }
 
-export function spriteFlash(sprite: Phaser.GameObjects.Sprite, scene: Phaser.Scene, color: number, count: number): Promise<void> {
+/**
+ * Gated (tier 4). Miss, immunity and "not very effective" all shake nothing;
+ * tier 4's own crit / super-effective shakes call `rawScreenShake` so they are
+ * not swallowed by the outcome that asked for them.
+ */
+export function screenShake(scene: Phaser.Scene, intensity: number, duration: number): Promise<void> {
+  if (!activePlan.shake) return delay(scene, duration);
+  return rawScreenShake(scene, intensity, duration);
+}
+
+function rawSpriteFlash(
+  sprite: Phaser.GameObjects.Sprite, scene: Phaser.Scene, color: number, count: number, fill = false,
+): Promise<void> {
   return new Promise(resolve => {
     let flashes = 0;
     const doFlash = () => {
-      sprite.setTint(color);
+      if (fill) sprite.setTintFill(color); else sprite.setTint(color);
       scene.time.delayedCall(60, () => {
         sprite.clearTint();
         flashes++;
@@ -89,6 +211,44 @@ export function spriteFlash(sprite: Phaser.GameObjects.Sprite, scene: Phaser.Sce
     };
     doFlash();
   });
+}
+
+/**
+ * Gated (tier 4), but only for the DEFENDER: a flash on the attacker (drain's
+ * recovery, a self-buff) is not impact feedback. Miss and immunity drop it;
+ * "not very effective" dims the tint toward white - tinting multiplies, so a
+ * tint half-way to 0xFFFFFF is literally half the colour - and shortens it.
+ */
+export function spriteFlash(sprite: Phaser.GameObjects.Sprite, scene: Phaser.Scene, color: number, count: number): Promise<void> {
+  if (sprite === gateDefender) {
+    if (activePlan.skipImpact || activePlan.grey) return delay(scene, count * 120);
+    if (activePlan.flashAlpha < 1) {
+      return rawSpriteFlash(
+        sprite, scene, dimTint(color, activePlan.flashAlpha),
+        Math.max(1, Math.round(count * activePlan.weight)),
+      );
+    }
+  }
+  return rawSpriteFlash(sprite, scene, color, count);
+}
+
+/**
+ * Gated (tier 4) stand-in for `defenderSprite.setTint(...)`. Several tier-3
+ * set-pieces hold a tint across their own frame loop instead of calling
+ * `spriteFlash`; routing them through here is what makes their impact obey the
+ * outcome as well.
+ */
+export function impactTint(sprite: Phaser.GameObjects.Sprite, color: number): void {
+  if (sprite === gateDefender) {
+    if (activePlan.skipImpact || activePlan.grey) return;
+    if (activePlan.flashAlpha < 1) { sprite.setTint(dimTint(color, activePlan.flashAlpha)); return; }
+  }
+  sprite.setTint(color);
+}
+
+/** Always clears: putting a sprite back is never something tier 4 wants skipped. */
+export function clearImpactTint(sprite: Phaser.GameObjects.Sprite): void {
+  sprite.clearTint();
 }
 
 export function lunge(
@@ -129,6 +289,7 @@ export function sparkle(
   count: number,
   duration: number,
 ): Promise<void> {
+  if (skipDrawAt(x, y)) return delay(scene, duration);
   const graphics: Phaser.GameObjects.Graphics[] = [];
   for (let i = 0; i < count; i++) {
     const g = scene.add.graphics();
@@ -192,11 +353,34 @@ function animateFrames(
   });
 }
 
-function newGraphics(scene: Phaser.Scene, depth = 800): Phaser.GameObjects.Graphics {
+function rawNewGraphics(scene: Phaser.Scene, depth = 800): Phaser.GameObjects.Graphics {
   const g = scene.add.graphics();
   g.setDepth(depth);
   g.setScrollFactor(0);
   return g;
+}
+
+/**
+ * Gated (tier 4). Every Graphics an animation BODY draws into - tier 1/2 here
+ * and every tier-3 override, which routes its own `newG` through
+ * `newBodyGraphics` below - is created here, so this is the one place tier 4
+ * can reach a set-piece that draws its impact by hand.
+ *
+ * On a miss or an immunity `renderSpec` hangs an inverted geometry mask over
+ * the defender on all of them: everything the body draws still renders, except
+ * inside the defender's own footprint. A fireball still crosses the field and
+ * a bolt still falls out of the sky; neither leaves a detonation on a target
+ * it did not connect with. No override has to know an outcome exists.
+ */
+function newGraphics(scene: Phaser.Scene, depth = 800): Phaser.GameObjects.Graphics {
+  const g = rawNewGraphics(scene, depth);
+  if (gateCutout) g.setMask(gateCutout);
+  return g;
+}
+
+/** The same factory, for the tier-3 overrides in `animations/overrides.ts`. */
+export function newBodyGraphics(scene: Phaser.Scene, depth: number): Phaser.GameObjects.Graphics {
+  return newGraphics(scene, depth);
 }
 
 /**
@@ -343,6 +527,10 @@ export function directionalParticles(
   count: number,
   opts: EmitOptions = {},
 ): Promise<void> {
+  if (skipDrawAt(x, y)) return delay(scene, opts.duration ?? 300);
+  // "Not very effective" is the brief's FEWER particles: the same emission,
+  // thinned at the defender only, so a self-buff's own motes are untouched.
+  if (atDefender(x, y) && activePlan.weight !== 1) count = Math.max(1, Math.round(count * activePlan.weight));
   const {
     dirX = 0, dirY = 0, spread = 14, duration = 260,
     shape = 'dust', accentColor = color, gravity = 0, wobble = 0,
@@ -431,6 +619,7 @@ export function ring(
   count = 2,
   inward = false,
 ): Promise<void> {
+  if (skipDrawAt(x, y)) return delay(scene, duration);
   const g = newGraphics(scene);
   return animateFrames(scene, duration, t => {
     g.clear();
@@ -453,6 +642,7 @@ export function fallingBlocks(
   count: number,
   duration: number,
 ): Promise<void> {
+  if (skipDrawAt(x, y)) return delay(scene, duration);
   // The defender can sit near the top of the 144 px field, so the blocks start
   // from wherever there is actually room above it rather than off-screen.
   const headroom = Math.max(10, Math.min(34, y - 6));
@@ -486,6 +676,7 @@ export function groundHeave(
   rank: number,
   duration: number,
 ): Promise<void> {
+  if (skipImpactDraw()) return delay(scene, duration);
   const floor = 96;
   const n = 14 + rank * 4;
   const parts = Array.from({ length: n }, (_, i) => ({
@@ -560,6 +751,7 @@ export function warpArcs(
   accentColor: number,
   duration: number,
 ): Promise<void> {
+  if (skipDrawAt(x, y)) return delay(scene, duration);
   const g = newGraphics(scene, 900);
   return animateFrames(scene, duration, t => {
     g.clear();
@@ -652,7 +844,7 @@ export function typeBeam(
  * The frame that has to read: an opaque type-coloured hit burst over the
  * defender, with four spokes so it looks struck rather than merely lit.
  */
-export function impactBurst(
+function rawImpactBurst(
   scene: Phaser.Scene,
   x: number, y: number,
   color: number,
@@ -660,7 +852,7 @@ export function impactBurst(
   radius: number,
   duration: number,
 ): Promise<void> {
-  const g = newGraphics(scene, 810);
+  const g = rawNewGraphics(scene, 810);
   return animateFrames(scene, duration, t => {
     g.clear();
     const r = Math.round(radius * (0.5 + t * 0.7));
@@ -675,6 +867,35 @@ export function impactBurst(
     }
   }).then(() => { g.destroy(); });
 }
+
+/**
+ * Gated (tier 4). At the defender: dropped on a miss, recoloured into the grey
+ * puff on an immunity, scaled by the outcome weight otherwise. A burst centred
+ * on the ATTACKER (self-aura, SELF-DESTRUCT) is never touched.
+ */
+export function impactBurst(
+  scene: Phaser.Scene,
+  x: number, y: number,
+  color: number,
+  accentColor: number,
+  radius: number,
+  duration: number,
+): Promise<void> {
+  if (atDefender(x, y)) {
+    // Miss and immunity both drop it: the one grey puff an immunity does get is
+    // drawn by `renderSpec`, so a body that bursts twice does not puff twice.
+    if (activePlan.skipImpact || activePlan.grey) return delay(scene, duration);
+    if (activePlan.weight !== 1) {
+      const r = Math.max(3, Math.round(radius * activePlan.weight));
+      return rawImpactBurst(scene, x, y, color, accentColor, r, duration);
+    }
+  }
+  return rawImpactBurst(scene, x, y, color, accentColor, radius, duration);
+}
+
+/** The immunity puff: a colourless thump, so "no effect" reads without text. */
+const GREY_IMPACT = 0x888888;
+const GREY_ACCENT = 0xCCCCCC;
 
 // === Type SFX ===
 
@@ -739,7 +960,9 @@ function contactFactor(ctx: AnimationContext, rank: number): number {
 async function typeImpact(spec: AnimationSpec, ctx: AnimationContext, weight = 1): Promise<void> {
   const { scene, defenderSprite } = ctx;
   const rank = INTENSITY_RANK[spec.intensity];
-  const count = Math.max(6, Math.round((8 + rank * 3) * weight));
+  // `weight` is the motion's own emphasis (1.6 for special-strike, 1.4 for a
+  // detonation); `activePlan.weight` is tier 4's (0.6 for "not very effective").
+  const count = Math.max(4, Math.round((8 + rank * 3) * weight * activePlan.weight));
   const dur = Math.round(spec.duration * 0.35);
 
   const jobs: Promise<void>[] = [
@@ -863,9 +1086,153 @@ function gather(spec: AnimationSpec, ctx: AnimationContext, duration: number): P
   }).then(() => { g.destroy(); });
 }
 
+// === Tier 4: the outcome layer ===
+
+/** Half-width of the footprint a miss / an immunity keeps clear (32 px sprite). */
+const CUTOUT_HALF = 20;
+
+/**
+ * The shape `renderSpec` inverts into the body's mask: the defender's own
+ * footprint. Never rendered - it only ever describes a hole.
+ */
+function defenderCutout(ctx: AnimationContext): Phaser.GameObjects.Graphics {
+  const { scene, defenderSprite } = ctx;
+  const g = scene.make.graphics({ x: 0, y: 0 });
+  g.setVisible(false);
+  g.fillStyle(0xFFFFFF, 1);
+  g.fillRect(
+    defenderSprite.x - CUTOUT_HALF, defenderSprite.y - CUTOUT_HALF,
+    CUTOUT_HALF * 2, CUTOUT_HALF * 2,
+  );
+  return g;
+}
+
+/**
+ * The miss streak: a short grey slash sweeping past the defender, drawn where
+ * the impact would have been. Grey, because it is the absence of the move.
+ */
+function whiffStreak(
+  scene: Phaser.Scene, x: number, y: number, dir: number, duration: number,
+): Promise<void> {
+  const g = rawNewGraphics(scene, 810);
+  return animateFrames(scene, duration, t => {
+    g.clear();
+    g.setAlpha(t < 0.6 ? 1 : Math.max(0, 1 - (t - 0.6) / 0.4));
+    const cx = Math.round(x - dir * 18 + dir * 36 * t);
+    g.lineStyle(3, GREY_IMPACT, 1);
+    g.beginPath();
+    g.moveTo(cx - dir * 10, y - 9);
+    g.lineTo(cx + dir * 10, y + 9);
+    g.strokePath();
+    g.lineStyle(1, GREY_ACCENT, 1);
+    g.beginPath();
+    g.moveTo(cx - dir * 10, y - 4);
+    g.lineTo(cx + dir * 10, y + 14);
+    g.strokePath();
+  }).then(() => { g.destroy(); });
+}
+
+/**
+ * Tier 4's own drawing, run ALONGSIDE the body (tier 1/2 or a tier-3 override)
+ * so that it lands at the moment of impact rather than after it. 55 % of the
+ * budget is where every motion in the vocabulary connects: the contact lunge
+ * takes the first half, a projectile/beam its first 50-60 %, and the overrides
+ * are written to the same shape.
+ */
+async function outcomeOverlay(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const plan = activePlan;
+  if (!plan.dodge && !plan.critical && !plan.grey) return;
+  const { scene, attackerSprite, defenderSprite } = ctx;
+  const at = Math.round(spec.duration * 0.55);
+  const away = Math.sign(defenderSprite.x - attackerSprite.x) || 1;
+  const jobs: Promise<void>[] = [];
+
+  if (plan.dodge) {
+    jobs.push((async () => {
+      // Sized as a share of the budget and landed so that it ENDS at ~62 % of
+      // it: the dodge reads as the attack arriving and missing, and by the time
+      // the move is three quarters done the defender is home again and the
+      // ground where the impact would have been is empty.
+      const span = Math.min(140, Math.max(60, Math.round(spec.duration * 0.24)));
+      await delay(scene, Math.max(0, Math.round(spec.duration * 0.62) - span));
+      const homeX = defenderSprite.x;
+      await Promise.all([
+        rawTweenPromise(scene, {
+          targets: defenderSprite, x: homeX + away * 6,
+          duration: Math.round(span / 2), yoyo: true, ease: 'Quad.easeOut',
+        }),
+        whiffStreak(scene, homeX, defenderSprite.y, away, span),
+      ]);
+    })());
+  }
+
+  if (plan.grey) {
+    // The one grey puff an immunity gets. It is drawn HERE rather than left to
+    // `impactBurst` so that a body which bursts several times still puffs once,
+    // and so that a hand-drawn override - whose impact the cutout has just
+    // removed - gets one too.
+    jobs.push((async () => {
+      const dur = Math.min(260, Math.max(140, Math.round(spec.duration * 0.3)));
+      await delay(scene, Math.max(0, at - Math.round(dur * 0.3)));
+      await rawImpactBurst(
+        scene, defenderSprite.x, defenderSprite.y,
+        GREY_IMPACT, GREY_ACCENT, Math.round(16 * IMMUNE_WEIGHT * 2), dur,
+      );
+    })());
+  }
+
+  if (plan.critical) {
+    jobs.push((async () => {
+      await delay(scene, at);
+      const homeX = defenderSprite.x;
+      await Promise.all([
+        rawScreenFlash(scene, 0xFFFFFF, 120),
+        rawScreenShake(scene, 6, 120),
+        rawTweenPromise(scene, {
+          targets: defenderSprite, x: homeX - away * 4,
+          duration: 70, yoyo: true, ease: 'Quad.easeOut',
+        }),
+      ]);
+    })());
+  }
+
+  await Promise.all(jobs);
+}
+
+/**
+ * Super effective: the impact happens a second time, harder, in white. Capped
+ * at 200 ms - the budget the brief allows tier 4 to add - so no move's measured
+ * duration moves by more than that.
+ */
+async function superEffectiveRepeat(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
+  const { scene, defenderSprite } = ctx;
+  const w = activePlan.repeat;
+  const rank = INTENSITY_RANK[spec.intensity];
+  const dur = Math.max(120, Math.min(200, Math.round(spec.duration * 0.22)));
+  await Promise.all([
+    rawScreenFlash(scene, 0xFFFFFF, Math.round(dur * 0.7)),
+    rawScreenShake(scene, 4, 120),
+    rawImpactBurst(
+      scene, defenderSprite.x, defenderSprite.y, spec.color, 0xFFFFFF,
+      Math.round((10 + rank * 4) * w), dur,
+    ),
+    directionalParticles(scene, defenderSprite.x, defenderSprite.y, spec.color, Math.round((8 + rank * 3) * w), {
+      spread: 16 + rank * 6, duration: dur, shape: spec.particle, accentColor: 0xFFFFFF,
+    }),
+    // setTintFill, not setTint: a multiply tint toward white is a no-op, and
+    // the point of the repeat is that the defender blanks out white.
+    rawSpriteFlash(defenderSprite, scene, 0xFFFFFF, 1, true),
+  ]);
+}
+
 /**
  * Renders any AnimationSpec. Every branch restores sprite state in a finally,
  * because applyDamageAnimation tweens the same sprites straight afterwards.
+ *
+ * Tier 4 lives here and nowhere else: `renderSpec` installs the outcome gate
+ * the shared helpers read, runs its own overlay alongside the body, and adds
+ * the super-effective repeat afterwards - so a tier-3 override gets outcome
+ * feedback without one line of its own.
  */
 export async function renderSpec(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
   const { scene, attackerSprite, defenderSprite } = ctx;
@@ -874,15 +1241,38 @@ export async function renderSpec(spec: AnimationSpec, ctx: AnimationContext): Pr
   const d = spec.duration;
   const override = spec.override ? SPEC_OVERRIDES[spec.override] : undefined;
 
-  // A tier-3 override owns the whole body, its own sfx included.
-  if (!override) playTypeSfx(spec.sfx);
+  // Tier 4. Saved and restored rather than stacked: BattleScene awaits one
+  // animation at a time, and the only nesting that exists (METRONOME calling
+  // through to another move) wants the outer outcome to come back afterwards.
+  const prevPlan = activePlan;
+  const prevDefender = gateDefender;
+  const prevAttacker = gateAttacker;
+  const plan = activePlan = outcomePlan(ctx.outcome);
+  const prevCutout = gateCutout;
+  gateDefender = defenderSprite;
+  gateAttacker = attackerSprite;
+  // A miss connects with nothing and an immunity is shrugged off, so neither
+  // may leave marks ON the defender - including from the handful of overrides
+  // that draw their detonation by hand rather than through `impactBurst`. One
+  // inverted mask over the defender's footprint, hung on every body drawing by
+  // `newGraphics`, covers all 34 of them without touching one of them.
+  const cutoutG = plan.skipImpact || plan.grey ? defenderCutout(ctx) : null;
+  gateCutout = cutoutG ? cutoutG.createGeometryMask() : null;
+  if (gateCutout) gateCutout.setInvertAlpha(true);
+
+  // A tier-3 override owns the whole body, its own sfx included. "Not very
+  // effective" swaps the type sfx for a dull thud; over an override, which has
+  // already made its own noise, the thud simply lands on top.
+  if (plan.dullSfx) soundSystem.dullThud();
+  else if (!override) playTypeSfx(spec.sfx);
 
   try {
+    const overlay = outcomeOverlay(spec, ctx);
+    // Marked handled here; the `await overlay` below is what actually reports it.
+    overlay.catch(() => { /* body errors win */ });
     if (override) {
       await override(spec, ctx);
-      return;
-    }
-    switch (spec.motion) {
+    } else switch (spec.motion) {
       case 'contact': {
         if (spec.accent === 'rise') {
           await tweenPromise(scene, { targets: attackerSprite, y: attackerSprite.y - 4, duration: 60, yoyo: false });
@@ -1075,7 +1465,15 @@ export async function renderSpec(spec: AnimationSpec, ctx: AnimationContext): Pr
         break;
       }
     }
+    await overlay;
+    if (plan.repeat > 0) await superEffectiveRepeat(spec, ctx);
   } finally {
+    activePlan = prevPlan;
+    gateDefender = prevDefender;
+    gateAttacker = prevAttacker;
+    if (gateCutout) gateCutout.destroy();
+    gateCutout = prevCutout;
+    if (cutoutG) cutoutG.destroy();
     before.forEach(restore);
   }
 }
