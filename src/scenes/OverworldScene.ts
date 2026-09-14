@@ -11,7 +11,7 @@ import { PCScreen } from '../components/PCScreen';
 import { TrainerCard } from '../components/TrainerCard';
 import { SlotMachineScreen } from '../components/SlotMachineScreen';
 import { PrizeExchangeScreen } from '../components/PrizeExchangeScreen';
-import { generateNPCSprite, generateItemBallSprite, generateStatueSprite, generateJessieSprite, generateJamesSprite, generateSnorlaxNPCSprite, generateArticunoNPCSprite, generateZapdosNPCSprite, generateMoltresNPCSprite } from '../utils/spriteGenerator';
+import { generateNPCSprite, generateItemBallSprite, generateStatueSprite, generateJessieSprite, generateJamesSprite, generateSnorlaxNPCSprite, generateLegendaryNPCSprite } from '../utils/spriteGenerator';
 import { ITEMS } from '../data/items';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
@@ -28,6 +28,7 @@ import { OLD_ROD_ENCOUNTER, GOOD_ROD_ENCOUNTERS, SUPER_ROD_ENCOUNTERS, DEFAULT_S
 import { rollFishingEncounter } from '../systems/EncounterSystem';
 import { resyncMobileInput } from '../utils/mobileControls';
 import { shouldSkipNPC as shouldSkipNPCLogic } from '../logic/npcVisibility';
+import { STATIC_LEGENDARIES, getStaticLegendary, legendaryClearedFlag } from '../data/staticLegendaries';
 import { shouldGiveOaksParcel } from '../logic/oaksParcel';
 import { checkEntryGates } from '../logic/warpGate';
 import { MapInstance, instantiateMap, landedBoulders, pushBoulder, isFlagGateOpen, tileUnder } from '../logic/boulders';
@@ -469,12 +470,8 @@ export class OverworldScene extends Phaser.Scene {
           generateJessieSprite(this, spriteKey);
         } else if (npc.id.startsWith('james_')) {
           generateJamesSprite(this, spriteKey);
-        } else if (npc.id.startsWith('articuno')) {
-          generateArticunoNPCSprite(this, spriteKey);
-        } else if (npc.id.startsWith('zapdos')) {
-          generateZapdosNPCSprite(this, spriteKey);
-        } else if (npc.id.startsWith('moltres')) {
-          generateMoltresNPCSprite(this, spriteKey);
+        } else if (getStaticLegendary(npc.id)) {
+          generateLegendaryNPCSprite(this, spriteKey, getStaticLegendary(npc.id)!.speciesId);
         } else {
           generateNPCSprite(this, spriteKey, npc.spriteColor);
         }
@@ -1787,9 +1784,9 @@ export class OverworldScene extends Phaser.Scene {
       h.set('rival', () => this.handleRivalInLab());
       h.set('snorlax_route12', (npc) => this.handleSnorlax(npc));
       h.set('snorlax_route16', (npc) => this.handleSnorlax(npc));
-      h.set('articuno_seafoam', (npc) => this.handleLegendaryBird(npc));
-      h.set('zapdos_power_plant', (npc) => this.handleLegendaryBird(npc));
-      h.set('moltres_victory_road', (npc) => this.handleLegendaryBird(npc));
+      for (const id of Object.keys(STATIC_LEGENDARIES)) {
+        h.set(id, (npc) => this.handleStaticLegendary(npc));
+      }
       h.set('game_corner_clerk', () => { this.showPrizeExchange(); return true; });
       h.set('game_corner_coin_vendor', () => { this.buyCoinsFromVendor(); return true; });
       h.set('celadon_mansion_coin_case_giver', () => this.handleCoinCaseGiver());
@@ -1929,19 +1926,20 @@ export class OverworldScene extends Phaser.Scene {
     return true;
   }
 
-  /** Legendary bird encounters (Articuno, Zapdos, Moltres). */
-  private handleLegendaryBird(npc: NPCData): boolean {
-    const birdSpecies: Record<string, number> = {
-      articuno_seafoam: 144,
-      zapdos_power_plant: 145,
-      moltres_victory_road: 146,
-    };
-    const speciesId = birdSpecies[npc.id];
+  /**
+   * Static legendary encounters (the three birds, Mewtwo): show the NPC's
+   * dialogue, then launch a wild battle against the species/level in
+   * `STATIC_LEGENDARIES`. The cleared flag is set when the battle LAUNCHES, so
+   * catching it, knocking it out and running all consume the encounter.
+   */
+  private handleStaticLegendary(npc: NPCData): boolean {
+    const legendary = getStaticLegendary(npc.id);
+    if (!legendary) return false;
     this.textBox.show(
       npc.dialogue,
       () => {
-        this.startWildBattle(createPokemon(speciesId, 50));
-        this.playerState.storyFlags[`${npc.id}_cleared`] = true;
+        this.startWildBattle(createPokemon(legendary.speciesId, legendary.level));
+        this.playerState.storyFlags[legendaryClearedFlag(npc.id)] = true;
       }
     );
     return true;

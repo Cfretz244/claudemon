@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { shouldSkipNPC } from '../../src/logic/npcVisibility';
 import { Direction } from '../../src/utils/constants';
 import { NPCData } from '../../src/types/map.types';
+import { STATIC_LEGENDARIES } from '../../src/data/staticLegendaries';
 
 function makeNPC(id: string, overrides: Partial<NPCData> = {}): NPCData {
   return { id, x: 0, y: 0, spriteColor: 0xffffff, direction: Direction.DOWN, dialogue: ['Hi'], ...overrides };
@@ -288,8 +289,22 @@ describe('shouldSkipNPC — remaining story branches', () => {
     ['articuno_seafoam', 'articuno_seafoam_cleared'],
     ['zapdos_power_plant', 'zapdos_power_plant_cleared'],
     ['moltres_victory_road', 'moltres_victory_road_cleared'],
+    ['mewtwo', 'mewtwo_cleared'],
   ])('%s vanishes once %s is set', (id, flag) => {
     expect(shouldSkipNPC(makeNPC(id), noFlags, noBadges, noDefeated, noItems)).toBe(false);
     expect(shouldSkipNPC(makeNPC(id), { [flag]: true }, noBadges, noDefeated, noItems)).toBe(true);
+  });
+
+  it('each static legendary reads only its own cleared flag', () => {
+    const ids = Object.keys(STATIC_LEGENDARIES);
+    for (const id of ids) {
+      for (const other of ids) {
+        if (other === id) continue;
+        expect(
+          shouldSkipNPC(makeNPC(id), { [`${other}_cleared`]: true }, noBadges, noDefeated, noItems),
+          `${id} hidden by ${other}_cleared`
+        ).toBe(false);
+      }
+    }
   });
 });

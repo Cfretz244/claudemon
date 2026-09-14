@@ -226,6 +226,24 @@ describe('Cerulean Cave', () => {
       for (const s of sidesOf(B1, m)) expect(B1.tiles[s.y][s.x]).toBe(TileType.CAVE_FLOOR);
       expect(reach(B1, sidesOf(B1, m)[0], b1e)).toBe(true);
     });
+    it('Mewtwo sits in a dead-end stub: it blocks nothing the floor is for', () => {
+      const m = npc(B1, 'mewtwo');
+      const withMewtwo = reachSet(B1, b1FromE);
+      const without = reachSet(B1, b1FromE, undefined, { pickedUp: ['mewtwo'] });
+      expect(withMewtwo.has(k(m))).toBe(false);
+      // Standing there only seals its own little stub, and that stub is empty:
+      // no ladder, no item, nothing routes through it.
+      const opened = [...without].filter(t => !withMewtwo.has(t));
+      expect(opened).toContain(k(m));
+      expect(opened.length).toBeLessThanOrEqual(4);
+      for (const t of opened) {
+        expect(B1.warps.some(w => k(w) === t), `warp at ${t}`).toBe(false);
+        expect(B1.npcs.some(n => n.isItemBall && k(n) === t), `item ball at ${t}`).toBe(false);
+      }
+      // Everything the floor is for stays reachable with Mewtwo in place.
+      for (const w of B1.warps) expect(reach(B1, b1FromE, w), `warp ${k(w)}`).toBe(true);
+      for (const b of B1.npcs.filter(n => n.isItemBall)) expect(reachNpc(B1, b1FromE, b.id), b.id).toBe(true);
+    });
     it('holds an ESCAPE ROPE on the way in and a REVIVE on an islet', () => {
       const balls = B1.npcs.filter(n => n.isItemBall);
       expect(balls.map(b => b.itemId).sort()).toEqual(['escape_rope', 'revive']);
