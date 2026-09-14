@@ -266,6 +266,17 @@ const GRASS_EDGE = 0x143D14;
 const NORMAL = 0xA8A878;
 const NORMAL_PALE = 0xE8E8D0;
 const NORMAL_EDGE = 0x40402C;
+// A blast is fire, whatever the move's type says (operator, 2026-09-14): a
+// white-hot heart, then yellow -> orange -> red out to a dark red rim that
+// keeps every ring crisp against the #f8f8f8 sky.
+const FIRE_YELLOW = 0xFFCC00;
+// 0xFF7722, not 0xFF8800: in a nearest-colour vote against the 15 type colours
+// 0xFF8800 is marginally CLOSER to ELECTRIC's 0xFFCC00 than to FIRE's 0xFF4422,
+// so the mid band of the fireball read as electric yellow to the e2e (and, at
+// that size, to the eye). A notch deeper is unambiguously fire.
+const FIRE_ORANGE = 0xFF7722;
+const FIRE_RED = 0xFF4422;
+const FIRE_EDGE = 0x5A1A00;
 
 /** Sprites are 32 px tall, so the feet of a sprite drawn at y sit at y + 14. */
 const FOOT_OFFSET = 14;
@@ -602,8 +613,10 @@ async function renderSolarBeam(spec: AnimationSpec, ctx: AnimationContext): Prom
  * than two unrelated animations - and at the 50 % frame EXPLOSION is visibly
  * the bigger of the two.
  *
- * The fireball is Normal-coloured with a dark rim and only a white heart: the
- * battle sky is #f8f8f8, so a white blast on its own would be invisible.
+ * The fireball is fiery rather than Normal-coloured - white heart, yellow,
+ * orange, red, dark red rim - because the battle sky is #f8f8f8 and a white
+ * blast on its own would be invisible, and because a blast that is not red
+ * and orange does not read as an explosion.
  */
 async function detonate(
   spec: AnimationSpec,
@@ -624,19 +637,21 @@ async function detonate(
       halo.clear();
       // Period shrinks as t grows, so the flashes visibly speed up.
       const beats = Math.sin(t * t * strobes * 7);
-      const on = beats > 0.2 ? 1 : 0.25;
+      // The dim beat is 0.55, not 0.25: at 0.25 the off-beat washes out to a
+      // pale smudge on the #f8f8f8 sky, and half the sampled frames land on it.
+      const on = beats > 0.2 ? 1 : 0.55;
       const r = Math.round(9 + t * 12);
       halo.setAlpha(on);
-      halo.fillStyle(NORMAL_EDGE, 1);
+      halo.fillStyle(FIRE_EDGE, 1);
       halo.fillCircle(ax, ay, r + 2);
-      halo.fillStyle(NORMAL, 1);
+      halo.fillStyle(FIRE_ORANGE, 1);
       halo.fillCircle(ax, ay, r);
-      halo.fillStyle(NORMAL_PALE, 1);
+      halo.fillStyle(FIRE_YELLOW, 1);
       halo.fillCircle(ax, ay, Math.max(2, r - 5));
       halo.fillStyle(WHITE, 1);
       halo.fillCircle(ax, ay, Math.max(1, Math.round(r * 0.4)));
     }),
-    spriteFlash(attackerSprite, scene, WHITE, strobes),
+    spriteFlash(attackerSprite, scene, FIRE_YELLOW, strobes),
   ]);
   halo.destroy();
 
@@ -649,30 +664,37 @@ async function detonate(
     frames(scene, blastMs, t => {
       blast.clear();
       // sqrt growth: the front is fastest at the start, like a real shock.
-      const r = Math.round(maxR * Math.sqrt(Math.min(1, t / 0.75)));
-      blast.setAlpha(t < 0.6 ? 1 : Math.max(0, 1 - (t - 0.6) / 0.4));
-      blast.fillStyle(NORMAL_EDGE, 1);
+      // The fireball COLLAPSES at the end instead of fading: fading it over a
+      // #f8f8f8 sky turns red and orange into pale tan (and the e2e's nearest
+      // colour vote flips from FIRE to GROUND/FIGHTING), so every pixel it
+      // draws stays fully saturated right up to the frame it vanishes on.
+      const collapse = t < 0.82 ? 1 : Math.max(0, 1 - (t - 0.82) / 0.18);
+      const r = Math.round(maxR * Math.sqrt(Math.min(1, t / 0.75)) * collapse);
+      blast.fillStyle(FIRE_EDGE, 1);
       blast.fillCircle(ax, ay, r + 3);
-      blast.fillStyle(NORMAL, 1);
+      blast.fillStyle(FIRE_RED, 1);
       blast.fillCircle(ax, ay, r);
-      blast.fillStyle(NORMAL_PALE, 1);
-      blast.fillCircle(ax, ay, Math.round(r * 0.62));
+      blast.fillStyle(FIRE_ORANGE, 1);
+      blast.fillCircle(ax, ay, Math.round(r * 0.74));
+      blast.fillStyle(FIRE_YELLOW, 1);
+      blast.fillCircle(ax, ay, Math.round(r * 0.48));
       blast.fillStyle(WHITE, 1);
-      blast.fillCircle(ax, ay, Math.round(r * 0.3));
-      // Debris rings riding the front.
+      blast.fillCircle(ax, ay, Math.round(r * 0.24));
+      // Debris rings riding the front, alternating rim and red so they stay
+      // legible both over the fireball and over the bare sky outside it.
       for (let i = 0; i < 3; i++) {
         const phase = (t * 1.4 + i / 3) % 1;
-        blast.lineStyle(3, NORMAL_EDGE, 1 - phase * 0.4);
+        blast.lineStyle(3, i % 2 ? FIRE_RED : FIRE_EDGE, 1 - phase * 0.4);
         blast.strokeCircle(ax, ay, Math.round(phase * maxR * 1.25));
       }
     }),
     screenFlash(scene, WHITE, Math.round(d * 0.12)),
     screenShake(scene, 8, Math.round(d * 0.26)),
-    directionalParticles(scene, ax, ay, NORMAL_EDGE, Math.round(18 * scale), {
+    directionalParticles(scene, ax, ay, FIRE_RED, Math.round(18 * scale), {
       spread: Math.round(56 * scale), duration: Math.round(d * 0.38),
-      shape: 'dust', accentColor: NORMAL,
+      shape: 'dust', accentColor: FIRE_ORANGE,
     }),
-    spriteFlash(defenderSprite, scene, NORMAL, 3),
+    spriteFlash(defenderSprite, scene, FIRE_ORANGE, 3),
     tweenPromise(scene, {
       targets: attackerSprite, alpha: 0.15,
       duration: Math.round(d * 0.26), ease: 'Quad.easeIn',
@@ -682,11 +704,11 @@ async function detonate(
 
   // 3. Debris settling (78 -> 100 %).
   await Promise.all([
-    directionalParticles(scene, ax, ay - 6, NORMAL, Math.round(10 * scale), {
+    directionalParticles(scene, ax, ay - 6, FIRE_ORANGE, Math.round(10 * scale), {
       dirY: 1, spread: Math.round(34 * scale), duration: Math.round(d * 0.18),
-      shape: 'dust', accentColor: NORMAL_EDGE, gravity: 1.6,
+      shape: 'dust', accentColor: FIRE_EDGE, gravity: 1.6,
     }),
-    impactBurst(scene, defenderSprite.x, defenderSprite.y, NORMAL, NORMAL_PALE,
+    impactBurst(scene, defenderSprite.x, defenderSprite.y, FIRE_RED, FIRE_YELLOW,
       Math.round(14 * scale), Math.round(d * 0.18)),
   ]);
 }
