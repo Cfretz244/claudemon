@@ -15,6 +15,8 @@
 // fails (to show their hint); Surf only consumes a successful surf, which is
 // why walking up to water without SURF says nothing at all.
 
+import { TileType } from '../types/map.types';
+
 export type FieldMove = 'cut' | 'fly' | 'surf' | 'strength' | 'flash';
 
 /** MOVES_DATA ids, as switched on in OverworldScene.handleFieldMove(). */
@@ -54,15 +56,20 @@ const SURF_NO_SPOT = ["You can't SURF here!"];
 
 /**
  * Every message a failed field-move gate can produce, by move and outcome.
- * Empty = the scene stays silent. `fly.noMove` and `fly.noTarget` are never
- * produced (FLY checks only its badge); they are here to keep the table total.
+ * Empty = the scene stays silent. `fly.noMove` is never produced (FLY checks
+ * the badge and the place, not the party); it is here to keep the table total.
+ * `fly.noTarget` is the indoor/cave refusal, mirroring TELEPORT's wording.
  */
 export const FIELD_MOVE_MESSAGES: Record<
   FieldMove,
   { noTarget: string[]; noBadge: string[]; noMove: string[] }
 > = {
   cut: { noTarget: ["There's nothing to\nCUT here!"], noBadge: CUT_HINT, noMove: CUT_HINT },
-  fly: { noTarget: [], noBadge: ['You need the THUNDER\nBADGE to use FLY!'], noMove: [] },
+  fly: {
+    noTarget: ["Can't use FLY\nhere!"],
+    noBadge: ['You need the THUNDER\nBADGE to use FLY!'],
+    noMove: [],
+  },
   surf: {
     noTarget: SURF_NO_SPOT,
     noBadge: ['You need the SOUL\nBADGE to use SURF!'],
@@ -92,6 +99,10 @@ export interface FieldMoveContext {
   isDark: boolean;
   /** Flash only: flash was already used on this map. */
   flashUsed: boolean;
+  /** Fly only: the current map is an outdoor route/town (`isMapOutdoor`). */
+  isOutdoor: boolean;
+  /** Fly only: the current map has cave tiles (`isMapCave`). */
+  isCave: boolean;
 }
 
 export interface FieldMoveDecision {
@@ -107,6 +118,8 @@ const DEFAULT_CONTEXT: FieldMoveContext = {
   isSurfing: false,
   isDark: true,
   flashUsed: false,
+  isOutdoor: true,
+  isCave: false,
 };
 
 export function partyKnowsMove(state: FieldMoveState, moveId: number): boolean {
@@ -144,8 +157,11 @@ export function canUseFieldMove(
       return { outcome: 'ok', message: [], handled: true };
 
     case 'fly':
-      // handleFieldMove() case 19: badge only, no party-move check.
+      // handleFieldMove() case 19: badge first, then the place. Gen I FLY works
+      // only on outdoor route/town maps -- never inside a building or a cave.
+      // No party-move check: the PartyScreen entry supplies the move.
       if (!hasBadge) return deny('fly', 'no_badge', false);
+      if (!c.isOutdoor || c.isCave) return deny('fly', 'no_target', false);
       return { outcome: 'ok', message: [], handled: true };
 
     case 'surf':
@@ -171,4 +187,47 @@ export function canUseFieldMove(
       if (!hasMove || !hasBadge) return deny('flash', hasMove ? 'no_badge' : 'no_move', false);
       return { outcome: 'ok', message: [], handled: true };
   }
+}
+
+/**
+ * Tiles that only ever appear on an outdoor map. Extracted verbatim from
+ * OverworldScene.OUTDOOR_TILES.
+ */
+export const OUTDOOR_TILES: ReadonlySet<number> = new Set<number>([
+  TileType.TREE, TileType.GRASS, TileType.TALL_GRASS,
+  TileType.WATER, TileType.SAND, TileType.FLOWER,
+  TileType.BUILDING, TileType.FENCE, TileType.ROOF,
+]);
+
+export interface MapShape {
+  width: number;
+  height: number;
+  tiles: number[][];
+}
+
+/**
+ * "Is this an outdoor map?" -- an outdoor tile on the top or bottom edge.
+ * Extracted verbatim from OverworldScene.isMapOutdoor(); the scene delegates.
+ */
+export function isMapOutdoor(map: MapShape): boolean {
+  for (const y of [0, map.height - 1]) {
+    for (let x = 0; x < map.width; x++) {
+      if (OUTDOOR_TILES.has(map.tiles[y][x])) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * "Is this a cave map?" -- any CAVE_FLOOR/CAVE_WALL tile anywhere. Extracted
+ * verbatim from OverworldScene.isCaveMap(); the scene delegates.
+ */
+export function isMapCave(map: MapShape): boolean {
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      const t = map.tiles[y][x];
+      if (t === TileType.CAVE_FLOOR || t === TileType.CAVE_WALL) return true;
+    }
+  }
+  return false;
 }

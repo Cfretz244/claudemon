@@ -159,10 +159,15 @@ export type LabRivalOutcome = 'battle' | 'flag_only';
 /**
  * What triggerRivalLabBattle() does once the trigger fires. If the rival sprite
  * is missing from the map, or `rival_lab` is already in defeatedTrainers, it
- * quietly sets the flag and lets the player walk out; otherwise the rival's
- * three lines run and the battle starts. Note the flag is NOT set on the
- * 'battle' path here — `syncDerivedStoryFlags()` sets it from the defeated list
- * on the next OverworldScene init.
+ * quietly consumes the encounter and lets the player walk out; otherwise the
+ * rival's three lines run and the battle starts.
+ *
+ * BOTH outcomes consume the encounter — see consumeLabRivalEncounter(): the
+ * flag is written as the battle LAUNCHES, not when it is won. Gen I's first
+ * rival fight happens once whatever the result; before this was fixed only
+ * `syncDerivedStoryFlags()` set the flag (from `defeatedTrainers`, on the next
+ * init), so a LOST battle whited the player out with the flag still unset and
+ * the ambush fired again on every attempt to leave the lab, forever.
  */
 export function labRivalTriggerOutcome(ctx: {
   rivalNpcPresent: boolean;
@@ -171,5 +176,57 @@ export function labRivalTriggerOutcome(ctx: {
   if (!ctx.rivalNpcPresent || ctx.defeatedTrainers.includes(LAB_RIVAL_TRAINER_ID)) {
     return 'flag_only';
   }
+  return 'battle';
+}
+
+/**
+ * Consume the one-off lab ambush by writing `rival_battle_lab`.
+ *
+ * Timing is the whole point: the scene calls this at battle START (in the text
+ * box's onComplete, immediately before startRivalBattle builds its return
+ * data), the same moment Snorlax and the static legendaries write their
+ * `<id>_cleared` flags. BattleScene snapshots `playerState.toSave()` when the
+ * battle is launched and the whiteout path restarts the overworld from that
+ * snapshot, so a flag written here survives a LOSS; a flag derived from
+ * `defeatedTrainers` afterwards does not. The 'flag_only' outcome calls it too,
+ * so walking out of a rival-less lab still closes the encounter.
+ */
+export function consumeLabRivalEncounter(state: LabRivalState): void {
+  state.storyFlags[RIVAL_BATTLE_LAB_FLAG] = true;
+}
+
+/** Which line the rival NPC gives when the player talks to him in the lab. */
+export type LabRivalTalk = 'no_pikachu' | 'post_battle' | 'battle';
+
+/**
+ * The rival's lab dialogue per branch, as raw {PLAYER}/{RIVAL} templates the
+ * scene runs through `fmt()` — same convention as OAK_DIALOGUE. The 'battle'
+ * lines are followed by the battle itself (and by consumeLabRivalEncounter,
+ * exactly like the warp-tile ambush).
+ */
+export const LAB_RIVAL_TALK_DIALOGUE: Record<LabRivalTalk, readonly string[]> = {
+  no_pikachu: [
+    "{RIVAL}: What?\nGramps isn't here?",
+    'I want my POKeMON!',
+  ],
+  post_battle: [
+    "{RIVAL}: I'll get\nstronger and beat\nyou next time!",
+  ],
+  battle: [
+    '{RIVAL}: Wait,\n{PLAYER}!',
+    "Let's check out our\nnew POKeMON!",
+  ],
+};
+
+/**
+ * Talking to the rival inside the lab, in handleRivalInLab()'s own order: no
+ * Pikachu yet -> he is still waiting on Oak; `rival_battle_lab` set -> the
+ * post-battle line; otherwise he challenges you on the spot. Because the flag
+ * now goes up at battle start, the post-battle line is what he says after a
+ * LOSS as well as after a win — which is the Gen I behaviour.
+ */
+export function labRivalTalkOutcome(state: LabRivalState): LabRivalTalk {
+  if (!state.storyFlags[HAS_PIKACHU_FLAG]) return 'no_pikachu';
+  if (state.storyFlags[RIVAL_BATTLE_LAB_FLAG]) return 'post_battle';
   return 'battle';
 }

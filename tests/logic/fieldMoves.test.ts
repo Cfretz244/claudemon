@@ -10,6 +10,8 @@ import {
   FieldMove,
   FieldMoveState,
 } from '../../src/logic/fieldMoves';
+import { isMapOutdoor, isMapCave } from '../../src/logic/fieldMoves';
+import { ALL_MAPS } from '../../src/data/maps';
 import { GYM_LEADERS } from '../../src/data/gymLeaders';
 import { MOVES_DATA } from '../../src/data/moves';
 
@@ -81,7 +83,9 @@ describe('field-move tables', () => {
         noMove: ['This tree looks like\nit can be CUT down!'],
       },
       fly: {
-        noTarget: [],
+        // noTarget = the indoor/cave refusal, added with the "FLY only
+        // outdoors" fix; it mirrors TELEPORT's "Can't use TELEPORT here!".
+        noTarget: ["Can't use FLY\nhere!"],
         noBadge: ['You need the THUNDER\nBADGE to use FLY!'],
         noMove: [],
       },
@@ -279,10 +283,50 @@ describe('canUseFieldMove: target conditions', () => {
     }
   });
 
-  it('FLY ignores the target tile entirely', () => {
+  it('FLY ignores the faced tile entirely', () => {
     expect(canUseFieldMove('fly', withAll('fly'), { targetValid: false }).outcome).toBe('ok');
     expect(canUseFieldMove('fly', withAll('fly'), { isSurfing: true }).outcome).toBe('ok');
     expect(canUseFieldMove('fly', noBadge('fly'), { targetValid: false }).outcome).toBe('no_badge');
+  });
+
+  // FLY's place gate. Previously handleFieldMove() case 19 checked only the
+  // THUNDER badge, so the fly map opened from inside Oak's lab, a Pokemon
+  // Center or Mt. Moon; Gen I FLY works only on outdoor route/town maps.
+  it('FLY outdoors with the badge is ok', () => {
+    const d = canUseFieldMove('fly', withAll('fly'), { isOutdoor: true, isCave: false });
+    expect(d.outcome).toBe('ok');
+    expect(d.message).toEqual([]);
+  });
+
+  it('FLY indoors is refused with "Can\'t use FLY here!"', () => {
+    const d = canUseFieldMove('fly', withAll('fly'), { isOutdoor: false, isCave: false });
+    expect(d.outcome).toBe('no_target');
+    expect(d.message).toEqual(["Can't use FLY\nhere!"]);
+    expect(d.handled).toBe(false);
+  });
+
+  it('FLY in a cave is refused even when the map reads as outdoor', () => {
+    // Some cave maps have outdoor tiles on an edge (an open mouth), so the
+    // cave test is an independent veto rather than the inverse of isOutdoor.
+    const d = canUseFieldMove('fly', withAll('fly'), { isOutdoor: true, isCave: true });
+    expect(d.outcome).toBe('no_target');
+    expect(d.message).toEqual(["Can't use FLY\nhere!"]);
+  });
+
+  it('the missing badge wins over the place', () => {
+    for (const ctx of [{ isOutdoor: false }, { isCave: true }, { isOutdoor: false, isCave: true }]) {
+      const d = canUseFieldMove('fly', noBadge('fly'), ctx);
+      expect(d.outcome).toBe('no_badge');
+      expect(d.message).toEqual(['You need the THUNDER\nBADGE to use FLY!']);
+    }
+  });
+
+  it('the FLY place gate defaults to outdoors, so the other gates are untouched', () => {
+    expect(canUseFieldMove('fly', withAll('fly')).outcome).toBe('ok');
+    for (const move of ['cut', 'surf', 'strength', 'flash'] as FieldMove[]) {
+      expect(canUseFieldMove(move, withAll(move), { isOutdoor: false, isCave: true }).outcome, move)
+        .toBe(canUseFieldMove(move, withAll(move)).outcome);
+    }
   });
 
   it('FLASH needs a dark map that has not been lit yet', () => {
@@ -301,5 +345,45 @@ describe('canUseFieldMove: target conditions', () => {
 
   it('the darkness check comes before the badge check', () => {
     expect(canUseFieldMove('flash', neither(), { isDark: false }).outcome).toBe('no_target');
+  });
+});
+
+describe('isMapOutdoor / isMapCave on the real maps (what FLY\'s place gate reads)', () => {
+  it('routes and towns are outdoor and not caves', () => {
+    for (const id of ['pallet_town', 'route1', 'viridian_city', 'cerulean_city']) {
+      const map = ALL_MAPS[id];
+      expect(map, id).toBeDefined();
+      expect(isMapOutdoor(map), id).toBe(true);
+      expect(isMapCave(map), id).toBe(false);
+    }
+  });
+
+  it('buildings are not outdoor', () => {
+    const indoors = Object.keys(ALL_MAPS).filter(
+      id => id === 'oaks_lab' || id.startsWith('pokemon_center') || id.startsWith('pokemart'),
+    );
+    expect(indoors.length).toBeGreaterThan(2);
+    for (const id of indoors) {
+      expect(isMapOutdoor(ALL_MAPS[id]), id).toBe(false);
+    }
+  });
+
+  it('Mt. Moon floors read as caves', () => {
+    for (const id of ['mt_moon', 'mt_moon_b1f', 'mt_moon_b2f']) {
+      const map = ALL_MAPS[id];
+      expect(map, id).toBeDefined();
+      expect(isMapCave(map), id).toBe(true);
+    }
+  });
+
+  it('every map is refused by the FLY gate unless it is outdoor and not a cave', () => {
+    const st = withAll('fly');
+    for (const [id, map] of Object.entries(ALL_MAPS)) {
+      const outcome = canUseFieldMove('fly', st, {
+        isOutdoor: isMapOutdoor(map),
+        isCave: isMapCave(map),
+      }).outcome;
+      expect(outcome, id).toBe(isMapOutdoor(map) && !isMapCave(map) ? 'ok' : 'no_target');
+    }
   });
 });
