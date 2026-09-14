@@ -100,6 +100,7 @@ export const STORY_FLAG_GROUPS: { title: string; flags: { id: string; label: str
       { id: 'articuno_seafoam_cleared', label: 'Articuno (Seafoam)' },
       { id: 'zapdos_power_plant_cleared', label: 'Zapdos (Power Plant)' },
       { id: 'moltres_victory_road_cleared', label: 'Moltres (Victory Road)' },
+      { id: 'mewtwo_cleared', label: 'Mewtwo (Cerulean Cave)' },
       { id: 'champion', label: 'Champion (Hall of Fame; opens Cerulean Cave)' },
     ],
   },
