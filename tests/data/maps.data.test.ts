@@ -184,3 +184,81 @@ describe('Elite Four gauntlet wiring', () => {
     }
   });
 });
+
+// ── Where a warp puts the player ────────────────────────────────────────────
+// Two landing bugs the Cerulean "dig house" had, pinned globally so they can't
+// come back anywhere: a warp that drops the player onto a building's front
+// door (nothing but wall around it — the old burgled house softlocked there)
+// and a warp that drops the player on top of an NPC.
+describe('warp landings', () => {
+  const mapEntries = Object.entries(ALL_MAPS);
+  const key = (from: string, w: { targetMap: string; targetX: number; targetY: number }) =>
+    `${from} -> ${w.targetMap} (${w.targetX},${w.targetY})`;
+
+  /**
+   * A DOOR tile with BUILDING or ROOF next to it is a building's front door on
+   * an outdoor map — the tile you walk INTO, never the tile you come out onto.
+   * (Indoor DOOR tiles used as stairwells between floors have no facade around
+   * them and are legitimate landings.)
+   */
+  const isFacadeDoor = (map: typeof ALL_MAPS[string], x: number, y: number) =>
+    map.tiles[y]?.[x] === TileType.DOOR &&
+    [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
+      const t = map.tiles[y + dy]?.[x + dx];
+      return t === TileType.BUILDING || t === TileType.ROOF;
+    });
+
+  // Pre-existing offenders outside the Cerulean rebuild's scope. Documented,
+  // not fixed: this list must never grow.
+  const KNOWN_FACADE_DOOR_LANDINGS = [
+    'oaks_lab -> pallet_town (10,15)',   // both of the lab's exit warps
+  ];
+  const KNOWN_NPC_LANDINGS = [
+    'bills_house -> route25 (22,8)',     // lands on the `route25_potion` item ball
+  ];
+
+  it('no warp lands the player on a building\'s front door', () => {
+    const offenders: string[] = [];
+    for (const [id, map] of mapEntries) {
+      for (const warp of map.warps) {
+        const target = ALL_MAPS[warp.targetMap];
+        if (!target) continue;
+        if (isFacadeDoor(target, warp.targetX, warp.targetY)) offenders.push(key(id, warp));
+      }
+    }
+    expect([...new Set(offenders)].sort()).toEqual([...KNOWN_FACADE_DOOR_LANDINGS].sort());
+  });
+
+  it('no warp lands the player on top of an NPC', () => {
+    const offenders: string[] = [];
+    for (const [id, map] of mapEntries) {
+      for (const warp of map.warps) {
+        const target = ALL_MAPS[warp.targetMap];
+        if (!target) continue;
+        const npc = target.npcs?.find(n => n.x === warp.targetX && n.y === warp.targetY);
+        if (npc) offenders.push(key(id, warp));
+      }
+    }
+    expect([...new Set(offenders)].sort()).toEqual([...KNOWN_NPC_LANDINGS].sort());
+  });
+
+  it('nothing warps into the Cerulean area onto a door or an NPC', () => {
+    const cerulean = new Set(
+      Object.keys(ALL_MAPS).filter(id => /^(cerulean|burgled_house|bike_shop|bills_house|pokemart_cerulean|pokemon_center_cerulean)/.test(id)),
+    );
+    for (const [id, map] of mapEntries) {
+      for (const warp of map.warps) {
+        if (!cerulean.has(warp.targetMap)) continue;
+        const target = ALL_MAPS[warp.targetMap];
+        expect(
+          target.tiles[warp.targetY][warp.targetX],
+          `${key(id, warp)} lands on a DOOR tile`,
+        ).not.toBe(TileType.DOOR);
+        expect(
+          target.npcs?.find(n => n.x === warp.targetX && n.y === warp.targetY)?.id,
+          `${key(id, warp)} lands on an NPC`,
+        ).toBeUndefined();
+      }
+    }
+  });
+});
