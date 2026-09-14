@@ -307,4 +307,32 @@ describe('shouldSkipNPC — remaining story branches', () => {
       }
     }
   });
+  // Route 23 badge guards: exactly one of each pair is on the map at a time.
+  it.each(['badge_check1', 'badge_check2', 'badge_check3'])(
+    '%s stands in the gap until his flag is set, then his _passed twin takes over',
+    id => {
+      const flag = `${id}_cleared`;
+      expect(shouldSkipNPC(makeNPC(id), noFlags, noBadges, noDefeated, noItems)).toBe(false);
+      expect(shouldSkipNPC(makeNPC(`${id}_passed`), noFlags, noBadges, noDefeated, noItems)).toBe(true);
+      expect(shouldSkipNPC(makeNPC(id), { [flag]: true }, noBadges, noDefeated, noItems)).toBe(true);
+      expect(shouldSkipNPC(makeNPC(`${id}_passed`), { [flag]: true }, noBadges, noDefeated, noItems)).toBe(false);
+    },
+  );
+
+  it('each badge guard reads only his own cleared flag', () => {
+    const ids = ['badge_check1', 'badge_check2', 'badge_check3'];
+    for (const id of ids) {
+      for (const other of ids) {
+        if (other === id) continue;
+        const flags = { [`${other}_cleared`]: true };
+        expect(shouldSkipNPC(makeNPC(id), flags, noBadges, noDefeated, noItems), `${id} by ${other}`).toBe(false);
+        expect(shouldSkipNPC(makeNPC(`${id}_passed`), flags, noBadges, noDefeated, noItems), `${id}_passed by ${other}`).toBe(true);
+      }
+    }
+  });
+
+  it('badges alone never move a guard — only the flag the guard himself sets does', () => {
+    const eight = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW', 'SOUL', 'MARSH', 'VOLCANO', 'EARTH'];
+    expect(shouldSkipNPC(makeNPC('badge_check1'), noFlags, eight, noDefeated, noItems)).toBe(false);
+  });
 });

@@ -1092,6 +1092,11 @@ export const ROUTE22: MapData = (() => {
 // ─────────────────────────────────────────────────────────────
 // 10. ROUTE 23  (15x25 vertical)
 // ─────────────────────────────────────────────────────────────
+/** The rows the three Route 23 badge guards stand in, south to north. */
+export const ROUTE23_GUARD_ROWS = [20, 13, 5] as const;
+/** The one column each fence row leaves open — the guard's tile. */
+export const ROUTE23_GAP_X = 7;
+
 export const ROUTE23: MapData = (() => {
   const W = 15, H = 25;
   const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
@@ -1107,20 +1112,31 @@ export const ROUTE23: MapData = (() => {
   // Vertical path
   fillRect(6, 0, 3, 25, T.PATH);
 
-  // Water sections on sides
-  fillRect(0, 5, 5, 5, T.WATER);
+  // Water sections on sides. The west pool stops at y6 so the y5 fence row has
+  // land under it; neither pool crosses a fence row, so surfing is no way round.
+  fillRect(0, 6, 5, 4, T.WATER);
   fillRect(10, 15, 5, 5, T.WATER);
 
   // Open entrance/exit in tree borders
   setTile(7, 0, T.PATH);
   setTile(7, 24, T.PATH);
 
-  // Tall grass patches
+  // Tall grass patches, kept clear of the fence rows below
   fillRect(2, 2, 3, 3, T.TALL_GRASS);
   fillRect(10, 2, 3, 3, T.TALL_GRASS);
-  fillRect(2, 12, 3, 3, T.TALL_GRASS);
+  fillRect(2, 10, 3, 3, T.TALL_GRASS);
   fillRect(10, 10, 3, 3, T.TALL_GRASS);
-  fillRect(2, 20, 3, 3, T.TALL_GRASS);
+  fillRect(2, 21, 3, 3, T.TALL_GRASS);
+
+  // The three badge checkpoints. Each is a solid fence row right across the
+  // route (the tree borders close x0-1 and x13-14) with a single gap at x7,
+  // and the guard stands IN the gap: without his badge there is no way past
+  // him, on foot or surfing. Pinned by tests/data/route23.test.ts.
+  for (const y of ROUTE23_GUARD_ROWS) {
+    for (let x = 2; x <= 12; x++) {
+      if (x !== ROUTE23_GAP_X) setTile(x, y, T.FENCE);
+    }
+  }
 
   return {
     id: 'route23',
@@ -1136,11 +1152,16 @@ export const ROUTE23: MapData = (() => {
       { x: 7, y: 24, targetMap: 'route22', targetX: 1, targetY: 4 },
     ],
     npcs: [
+      // Each guard stands in his fence row's gap, facing DOWN at the player
+      // coming up from Route 22, and blocks it until he has seen his badge.
+      // What he says is src/logic/roadBlocks.ts (badgeCheckOutcome), not this
+      // dialogue; passing sets `badge_checkN_cleared`, which hides him and
+      // shows the `_passed` twin beside the gap (src/logic/npcVisibility.ts).
       {
         id: 'badge_check1',
         x: 7, y: 20,
         spriteColor: 0x4040c0,
-        direction: Direction.UP,
+        direction: Direction.DOWN,
         dialogue: [
           'GUARD: ROUTE 23 is\nthe road to VICTORY!',
           'Show me your BADGES!',
@@ -1148,14 +1169,28 @@ export const ROUTE23: MapData = (() => {
         ],
       },
       {
+        id: 'badge_check1_passed',
+        x: 6, y: 20,
+        spriteColor: 0x4040c0,
+        direction: Direction.RIGHT,
+        dialogue: ['GUARD: Go on ahead!'],
+      },
+      {
         id: 'badge_check2',
         x: 7, y: 13,
         spriteColor: 0x4040c0,
-        direction: Direction.UP,
+        direction: Direction.DOWN,
         dialogue: [
           'GUARD: You need all\neight BADGES to pass!',
           '...You have them all!\nGo on ahead!',
         ],
+      },
+      {
+        id: 'badge_check2_passed',
+        x: 6, y: 13,
+        spriteColor: 0x4040c0,
+        direction: Direction.RIGHT,
+        dialogue: ['GUARD: Go on ahead!'],
       },
       {
         id: 'badge_check3',
@@ -1167,6 +1202,13 @@ export const ROUTE23: MapData = (() => {
           'Only the strongest\ntrainers make it!',
           'Good luck!',
         ],
+      },
+      {
+        id: 'badge_check3_passed',
+        x: 6, y: 5,
+        spriteColor: 0x4040c0,
+        direction: Direction.RIGHT,
+        dialogue: ['GUARD: VICTORY ROAD\nis just ahead!', 'Good luck!'],
       },
     ],
     wildEncounters: {
