@@ -559,6 +559,18 @@ export class SoundSystem {
     ], 'square', 0.1);
   }
 
+  /**
+   * "It's not very effective..." - `thud` with the top taken off it: lower,
+   * quieter, on a triangle rather than a square, so it reads as a hit that
+   * barely landed rather than as a different move.
+   */
+  dullThud(): void {
+    this.playNotes([
+      { freq: 110, dur: 0.05, delay: 0 },
+      { freq: 70, dur: 0.09, delay: 0.04 },
+    ], 'triangle', 0.05);
+  }
+
   /** Bug: a fast high chitter. */
   chitter(): void {
     this.playNotes([

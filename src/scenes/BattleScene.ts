@@ -29,6 +29,7 @@ import { TRAINERS } from '../data/trainers';
 import { GYM_LEADERS } from '../data/gymLeaders';
 import { ELITE_FOUR, CHAMPION, HALL_OF_FAME_TEXT } from '../data/eliteFour';
 import { playMoveAnimation, AnimationContext } from '../systems/MoveAnimations';
+import { outcomeFor } from '../logic/animationOutcome';
 import '../systems/animations';
 import { getTrainerSpriteKey } from '../utils/trainerSpriteGenerator';
 import { resyncMobileInput } from '../utils/mobileControls';
@@ -682,15 +683,35 @@ export class BattleScene extends Phaser.Scene {
     // Accuracy check (with stat stages)
     const atkStages = isPlayer ? this.playerStatStages : this.opponentStatStages;
     const defStages = isPlayer ? this.opponentStatStages : this.playerStatStages;
-    if (!checkAccuracy(moveData as any, atkStages.acc, defStages.eva)) {
-      this.textBox.show([usedMessage, "But it missed!"], resolve);
-      return;
-    }
+    const hit = checkAccuracy(moveData as any, atkStages.acc, defStages.eva);
 
-    // Show "X used MOVE!" then play animation, then continue with results
+    // === Tier 4: the animation has to know how the move turned out ===
+    //
+    // The crit roll and the damage calculation move UP here, ahead of the
+    // animation, purely so the picture can show what is about to happen.
+    // `checkCritical` and `calculateDamage` are pure - they read `Math.random`
+    // but mutate nothing - so rolling them earlier changes no outcome; the
+    // results are carried down and reused, so nothing is rolled twice. Status
+    // moves and the special-damage effects (all `power: 0`) are skipped, which
+    // leaves their `outcome` undefined and their animation exactly as it was.
+    const damaging = hit && moveData.power > 0 && moveData.category !== MoveCategory.STATUS;
+    const preCrit = damaging ? checkCritical(attacker) : false;
+    const preResult = damaging
+      ? calculateDamage(attacker, defender, moveData as any, preCrit, atkStages, defStages)
+      : undefined;
+    animCtx.outcome = outcomeFor(hit, preResult, moveData);
+
+    // Show "X used MOVE!", play the animation - a miss animation too, which is
+    // why "But it missed!" now comes after it rather than instead of it - then
+    // continue with the results.
     this.textBox.show([usedMessage], async () => {
       // Play move animation
       await playMoveAnimation(move.moveId, animCtx);
+
+      if (!hit) {
+        this.textBox.show(["But it missed!"], resolve);
+        return;
+      }
 
       const messages: string[] = [];
 
@@ -721,8 +742,10 @@ export class BattleScene extends Phaser.Scene {
 
       // === Normal damage path ===
       if (moveData.power > 0 && moveData.category !== MoveCategory.STATUS) {
-        const isCrit = checkCritical(attacker);
-        const result = calculateDamage(attacker, defender, moveData as any, isCrit, atkStages, defStages);
+        // Rolled before the animation (see the tier-4 block above); reused
+        // verbatim here, so the picture and the numbers can never disagree.
+        const isCrit = preCrit;
+        const result = preResult ?? calculateDamage(attacker, defender, moveData as any, isCrit, atkStages, defStages);
 
         if (result.effectiveness === 0) {
           messages.push(getEffectivenessText(0));
