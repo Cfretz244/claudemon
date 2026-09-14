@@ -42,7 +42,7 @@ export interface AnimationContext {
 
 let activePlan: OutcomePlan = NEUTRAL_PLAN;
 /** The inverted mask `newGraphics` hangs on body drawings while it is set. */
-let gateCutout: Phaser.Display.Masks.GeometryMask | null = null;
+let gateCutout: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask | null = null;
 let gateDefender: Phaser.GameObjects.Sprite | null = null;
 let gateAttacker: Phaser.GameObjects.Sprite | null = null;
 
@@ -366,11 +366,15 @@ function rawNewGraphics(scene: Phaser.Scene, depth = 800): Phaser.GameObjects.Gr
  * `newBodyGraphics` below - is created here, so this is the one place tier 4
  * can reach a set-piece that draws its impact by hand.
  *
- * On a miss or an immunity `renderSpec` hangs an inverted geometry mask over
- * the defender on all of them: everything the body draws still renders, except
- * inside the defender's own footprint. A fireball still crosses the field and
+ * On a miss or an immunity `renderSpec` hangs an inverted mask cut to the
+ * defender's own SILHOUETTE over all of them: everything the body draws still
+ * renders, except on the target itself. A fireball still crosses the field and
  * a bolt still falls out of the sky; neither leaves a detonation on a target
  * it did not connect with. No override has to know an outcome exists.
+ *
+ * Only marks aimed AT the defender belong here. Field-wide ambience - a storm
+ * veil, a wall of water, streaks across the sky - is not an impact mark and
+ * must not be punched through: it goes through `newAmbientGraphics`.
  */
 function newGraphics(scene: Phaser.Scene, depth = 800): Phaser.GameObjects.Graphics {
   const g = rawNewGraphics(scene, depth);
@@ -381,6 +385,15 @@ function newGraphics(scene: Phaser.Scene, depth = 800): Phaser.GameObjects.Graph
 /** The same factory, for the tier-3 overrides in `animations/overrides.ts`. */
 export function newBodyGraphics(scene: Phaser.Scene, depth: number): Phaser.GameObjects.Graphics {
   return newGraphics(scene, depth);
+}
+
+/**
+ * Field-wide ambience (storm veil, sea, sky bolts): never an impact mark, so
+ * tier 4 never cuts a hole in it. A miss is the defender stepping out of the
+ * way of the attack - the weather does not step aside with it.
+ */
+export function newAmbientGraphics(scene: Phaser.Scene, depth: number): Phaser.GameObjects.Graphics {
+  return rawNewGraphics(scene, depth);
 }
 
 /**
@@ -851,8 +864,9 @@ function rawImpactBurst(
   accentColor: number,
   radius: number,
   duration: number,
+  depth = 810,
 ): Promise<void> {
-  const g = rawNewGraphics(scene, 810);
+  const g = rawNewGraphics(scene, depth);
   return animateFrames(scene, duration, t => {
     g.clear();
     const r = Math.round(radius * (0.5 + t * 0.7));
@@ -896,6 +910,19 @@ export function impactBurst(
 /** The immunity puff: a colourless thump, so "no effect" reads without text. */
 const GREY_IMPACT = 0x888888;
 const GREY_ACCENT = 0xCCCCCC;
+
+/**
+ * Where tier 4's OWN miss / immune marks are drawn: above every body drawing
+ * (the deepest is THUNDER's bolt at 880) and below the screen flash at 900.
+ *
+ * They used to sit at 810, under the body, and were legible only because the
+ * cutout was a 40x40 rect that erased the body around the defender - the very
+ * bug this layer is being fixed for. With the hole cut to the sprite's own
+ * silhouette the body fills that space again, so a whiff streak or an immunity
+ * puff at 810 disappears under FIRE BLAST's star. Tier 4's verdict on the move
+ * has to be the thing on top of it.
+ */
+const OUTCOME_DEPTH = 885;
 
 // === Type SFX ===
 
@@ -1088,23 +1115,57 @@ function gather(spec: AnimationSpec, ctx: AnimationContext, duration: number): P
 
 // === Tier 4: the outcome layer ===
 
-/** Half-width of the footprint a miss / an immunity keeps clear (32 px sprite). */
-const CUTOUT_HALF = 20;
+/** The hole a miss / an immunity keeps clear, plus how to take it down again. */
+interface Cutout {
+  mask: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask;
+  dispose: () => void;
+}
 
 /**
  * The shape `renderSpec` inverts into the body's mask: the defender's own
- * footprint. Never rendered - it only ever describes a hole.
+ * silhouette. Never rendered - it only ever describes a hole.
+ *
+ * It has to TRACK the defender, because the one thing that always happens on a
+ * miss is the dodge (`outcomeOverlay` slides the sprite 6 px and back). A hole
+ * sampled once at the defender's home leaves the sprite drifting through a
+ * stationary gap in the effect, which is the bug this shape replaced.
+ *
+ * A BitmapMask uses the sprite itself as the mask source, so it is the real
+ * outline and follows the dodge for free - but it is WebGL-only (a NOOP on the
+ * Canvas renderer, which `Phaser.AUTO` can still fall back to). The Canvas
+ * path keeps a geometry mask and redraws the sprite's bounding box every frame
+ * instead: a box rather than an outline, but a box that moves with the sprite.
  */
-function defenderCutout(ctx: AnimationContext): Phaser.GameObjects.Graphics {
+function defenderCutout(ctx: AnimationContext): Cutout {
   const { scene, defenderSprite } = ctx;
-  const g = scene.make.graphics({ x: 0, y: 0 });
-  g.setVisible(false);
-  g.fillStyle(0xFFFFFF, 1);
-  g.fillRect(
-    defenderSprite.x - CUTOUT_HALF, defenderSprite.y - CUTOUT_HALF,
-    CUTOUT_HALF * 2, CUTOUT_HALF * 2,
-  );
-  return g;
+
+  if (scene.game.renderer.type === Phaser.WEBGL) {
+    const mask = defenderSprite.createBitmapMask();
+    mask.invertAlpha = true;
+    return { mask, dispose: () => mask.destroy() };
+  }
+
+  const shape = scene.make.graphics({ x: 0, y: 0 });
+  shape.setVisible(false);
+  const track = (): void => {
+    const w = defenderSprite.displayWidth;
+    const h = defenderSprite.displayHeight;
+    shape.clear();
+    shape.fillStyle(0xFFFFFF, 1);
+    shape.fillRect(defenderSprite.x - w / 2, defenderSprite.y - h / 2, w, h);
+  };
+  track();
+  scene.events.on(Phaser.Scenes.Events.PRE_UPDATE, track);
+  const mask = shape.createGeometryMask();
+  mask.setInvertAlpha(true);
+  return {
+    mask,
+    dispose: () => {
+      scene.events.off(Phaser.Scenes.Events.PRE_UPDATE, track);
+      mask.destroy();
+      shape.destroy();
+    },
+  };
 }
 
 /**
@@ -1112,9 +1173,9 @@ function defenderCutout(ctx: AnimationContext): Phaser.GameObjects.Graphics {
  * the impact would have been. Grey, because it is the absence of the move.
  */
 function whiffStreak(
-  scene: Phaser.Scene, x: number, y: number, dir: number, duration: number,
+  scene: Phaser.Scene, x: number, y: number, dir: number, duration: number, depth: number,
 ): Promise<void> {
-  const g = rawNewGraphics(scene, 810);
+  const g = rawNewGraphics(scene, depth);
   return animateFrames(scene, duration, t => {
     g.clear();
     g.setAlpha(t < 0.6 ? 1 : Math.max(0, 1 - (t - 0.6) / 0.4));
@@ -1161,7 +1222,7 @@ async function outcomeOverlay(spec: AnimationSpec, ctx: AnimationContext): Promi
           targets: defenderSprite, x: homeX + away * 6,
           duration: Math.round(span / 2), yoyo: true, ease: 'Quad.easeOut',
         }),
-        whiffStreak(scene, homeX, defenderSprite.y, away, span),
+        whiffStreak(scene, homeX, defenderSprite.y, away, span, OUTCOME_DEPTH),
       ]);
     })());
   }
@@ -1176,7 +1237,7 @@ async function outcomeOverlay(spec: AnimationSpec, ctx: AnimationContext): Promi
       await delay(scene, Math.max(0, at - Math.round(dur * 0.3)));
       await rawImpactBurst(
         scene, defenderSprite.x, defenderSprite.y,
-        GREY_IMPACT, GREY_ACCENT, Math.round(16 * IMMUNE_WEIGHT * 2), dur,
+        GREY_IMPACT, GREY_ACCENT, Math.round(16 * IMMUNE_WEIGHT * 2), dur, OUTCOME_DEPTH,
       );
     })());
   }
@@ -1254,11 +1315,10 @@ export async function renderSpec(spec: AnimationSpec, ctx: AnimationContext): Pr
   // A miss connects with nothing and an immunity is shrugged off, so neither
   // may leave marks ON the defender - including from the handful of overrides
   // that draw their detonation by hand rather than through `impactBurst`. One
-  // inverted mask over the defender's footprint, hung on every body drawing by
-  // `newGraphics`, covers all 34 of them without touching one of them.
-  const cutoutG = plan.skipImpact || plan.grey ? defenderCutout(ctx) : null;
-  gateCutout = cutoutG ? cutoutG.createGeometryMask() : null;
-  if (gateCutout) gateCutout.setInvertAlpha(true);
+  // inverted mask cut to the defender's silhouette, hung on every body drawing
+  // by `newGraphics`, covers all 34 of them without touching one of them.
+  const cutout = plan.skipImpact || plan.grey ? defenderCutout(ctx) : null;
+  gateCutout = cutout ? cutout.mask : null;
 
   // A tier-3 override owns the whole body, its own sfx included. "Not very
   // effective" swaps the type sfx for a dull thud; over an override, which has
@@ -1471,9 +1531,8 @@ export async function renderSpec(spec: AnimationSpec, ctx: AnimationContext): Pr
     activePlan = prevPlan;
     gateDefender = prevDefender;
     gateAttacker = prevAttacker;
-    if (gateCutout) gateCutout.destroy();
+    if (cutout) cutout.dispose();
     gateCutout = prevCutout;
-    if (cutoutG) cutoutG.destroy();
     before.forEach(restore);
   }
 }
