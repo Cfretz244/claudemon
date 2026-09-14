@@ -1011,13 +1011,16 @@ export async function renderSpec(spec: AnimationSpec, ctx: AnimationContext): Pr
       }
 
       case 'charge': {
-        await gather(spec, ctx, Math.round(d * 0.45));
+        // 0.38 + 0.26 + the impact, not 0.45 + 0.3: each await costs a frame of
+        // timer granularity on top of its budget, and at 0.45/0.3 the heavy
+        // charge moves (SKY ATTACK) overran the 900 ms cap.
+        await gather(spec, ctx, Math.round(d * 0.38));
         await Promise.all([
           typeBeam(
             scene, attackerSprite.x, attackerSprite.y - 2, defenderSprite.x, defenderSprite.y,
-            spec.color, spec.accentColor, 8, Math.round(d * 0.3),
+            spec.color, spec.accentColor, 8, Math.round(d * 0.26),
           ),
-          lunge(scene, attackerSprite, defenderSprite.x, defenderSprite.y, Math.round(d * 0.3), contactFactor(ctx, rank)),
+          lunge(scene, attackerSprite, defenderSprite.x, defenderSprite.y, Math.round(d * 0.26), contactFactor(ctx, rank)),
         ]);
         await typeImpact(spec, ctx, 1.2);
         break;

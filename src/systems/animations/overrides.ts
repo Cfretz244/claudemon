@@ -289,34 +289,35 @@ async function renderFly(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
   // 1. Crouch, then straight up and out through the top edge (0 -> 20 %).
   await tweenPromise(scene, {
     targets: attackerSprite, y: homeY + 3, scaleY: 0.84,
-    duration: Math.round(d * 0.05), ease: 'Sine.easeOut',
+    duration: Math.round(d * 0.04), ease: 'Sine.easeOut',
   });
   await Promise.all([
     tweenPromise(scene, {
       targets: attackerSprite, y: -26, scaleY: 1,
-      duration: Math.round(d * 0.15), ease: 'Quad.easeIn',
+      duration: Math.round(d * 0.11), ease: 'Quad.easeIn',
     }),
     directionalParticles(scene, homeX, homeY + 8, FLYING, 10, {
-      dirY: 1, spread: 20, duration: Math.round(d * 0.22),
+      dirY: 1, spread: 20, duration: Math.round(d * 0.1),
       shape: 'dash', accentColor: FLYING_PALE,
     }),
   ]);
 
-  // 2. Absent (20 -> 40 %). Streaks cross the empty sky so the field still
-  //    moves while the attacker is nowhere on it.
+  // 2. Absent (15 -> 30 %). Streaks cross the empty sky so the field still
+  //    moves while the attacker is nowhere on it. They are the only thing on
+  //    screen, so they are drawn fat and dark-edged rather than as hairlines.
   const sky = newG(scene, 830);
-  await frames(scene, Math.round(d * 0.2), t => {
+  await frames(scene, Math.round(d * 0.15), t => {
     sky.clear();
-    sky.setAlpha(t < 0.75 ? 1 : Math.max(0, 1 - (t - 0.75) / 0.25));
-    for (let i = 0; i < 3; i++) {
-      const y = 8 + i * 9;
-      const x = ((t * 1.4 + i * 0.33) % 1) * (GAME_W + 40) - 20;
+    sky.setAlpha(t < 0.85 ? 1 : Math.max(0, 1 - (t - 0.85) / 0.15));
+    for (let i = 0; i < 4; i++) {
+      const y = 8 + i * 11;
+      const x = ((t * 1.3 + i * 0.27) % 1) * (GAME_W + 56) - 28;
       sky.fillStyle(FLYING_EDGE, 1);
-      sky.fillRect(Math.round(x) - 1, y - 1, 20, 4);
+      sky.fillRect(Math.round(x) - 1, y - 2, 30, 7);
       sky.fillStyle(FLYING, 1);
-      sky.fillRect(Math.round(x), y, 18, 2);
+      sky.fillRect(Math.round(x), y - 1, 28, 5);
       sky.fillStyle(FLYING_PALE, 1);
-      sky.fillRect(Math.round(x) + 13, y, 5, 2);
+      sky.fillRect(Math.round(x) + 20, y - 1, 8, 5);
     }
   });
   sky.destroy();
@@ -328,9 +329,9 @@ async function renderFly(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
   await Promise.all([
     tweenPromise(scene, {
       targets: attackerSprite, x: defenderSprite.x, y: defenderSprite.y - 4,
-      duration: Math.round(d * 0.14), ease: 'Quad.easeIn',
+      duration: Math.round(d * 0.12), ease: 'Quad.easeIn',
     }),
-    frames(scene, Math.round(d * 0.14), () => {
+    frames(scene, Math.round(d * 0.12), () => {
       trail.clear();
       for (let i = 1; i <= 4; i++) {
         const x = Math.round(attackerSprite.x - away * i * 3);
@@ -348,22 +349,44 @@ async function renderFly(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
   //    the budget - the move has to still read at the tail of the animation.
   soundSystem.hit();
   await Promise.all([
-    impactBurst(scene, defenderSprite.x, defenderSprite.y, FLYING, FLYING_PALE, 17, Math.round(d * 0.3)),
+    impactBurst(scene, defenderSprite.x, defenderSprite.y, FLYING, FLYING_PALE, 17, Math.round(d * 0.26)),
     directionalParticles(scene, defenderSprite.x, defenderSprite.y, FLYING, 14, {
-      spread: 30, duration: Math.round(d * 0.3), shape: 'dash', accentColor: FLYING_PALE,
+      spread: 30, duration: Math.round(d * 0.26), shape: 'dash', accentColor: FLYING_PALE,
     }),
     spriteFlash(defenderSprite, scene, FLYING, 3),
     screenShake(scene, 5, Math.round(d * 0.16)),
-    directionalParticles(scene, defenderSprite.x, defenderSprite.y - 4, FLYING_EDGE, 8, {
-      dirY: 1, spread: 16, duration: Math.round(d * 0.44), shape: 'dash',
-      accentColor: FLYING, gravity: 0.9,
-    }),
+    // Feathers keep drifting over the defender for the rest of the budget, so
+    // the hit is still legible at the tail of the animation instead of the
+    // field snapping back to idle the moment the burst ends.
+    (async () => {
+      const feathers = newG(scene, 812);
+      const n = 7;
+      try {
+        await frames(scene, Math.round(d * 0.38), t => {
+          feathers.clear();
+          for (let i = 0; i < n; i++) {
+            const ph = (t + i / n) % 1;
+            const x = Math.round(defenderSprite.x + Math.sin((i * 2.1) + t * 4) * 13);
+            const y = Math.round(defenderSprite.y - 14 + ph * 26);
+            const tilt = (i % 2) ? 1 : -1;
+            feathers.fillStyle(FLYING_EDGE, 1);
+            feathers.fillRect(x - 4, y - 1, 9, 4);
+            feathers.fillStyle(FLYING, 1);
+            feathers.fillRect(x - 3, y, 7, 2);
+            feathers.fillStyle(FLYING_PALE, 1);
+            feathers.fillRect(x + tilt, y, 2, 2);
+          }
+        });
+      } finally {
+        feathers.destroy();
+      }
+    })(),
     // The attacker bounces off and flies home while the feathers fall.
     (async () => {
-      await delay(scene, Math.round(d * 0.1));
+      await delay(scene, Math.round(d * 0.08));
       await tweenPromise(scene, {
         targets: attackerSprite, x: homeX, y: homeY,
-        duration: Math.round(d * 0.16), ease: 'Sine.easeOut',
+        duration: Math.round(d * 0.14), ease: 'Sine.easeOut',
       });
     })(),
   ]);
@@ -402,13 +425,13 @@ async function renderDig(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
     await Promise.all([
       tweenPromise(scene, {
         targets: attackerSprite, y: homeY + 38,
-        duration: Math.round(d * 0.2), ease: 'Quad.easeIn',
+        duration: Math.round(d * 0.16), ease: 'Quad.easeIn',
       }),
       directionalParticles(scene, homeX, fromGround, GROUND, 12, {
-        dirY: -1, spread: 20, duration: Math.round(d * 0.26),
+        dirY: -1, spread: 20, duration: Math.round(d * 0.18),
         shape: 'grit', accentColor: GROUND_DARK, gravity: 1.4,
       }),
-      frames(scene, Math.round(d * 0.2), t => {
+      frames(scene, Math.round(d * 0.16), t => {
         hole.clear();
         const w = Math.round(6 + t * 9);
         hole.fillStyle(GROUND_EDGE, 1);
@@ -419,7 +442,7 @@ async function renderDig(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
     ]);
 
     // 2. Underground (20 -> 52 %): a mound travels along the ground line.
-    await frames(scene, Math.round(d * 0.32), t => {
+    await frames(scene, Math.round(d * 0.26), t => {
       hole.clear();
       const x = Math.round(homeX + (defenderSprite.x - homeX) * t);
       const y = Math.round(fromGround + (toGround - fromGround) * t);
@@ -440,10 +463,10 @@ async function renderDig(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
     await Promise.all([
       tweenPromise(scene, {
         targets: attackerSprite, y: defenderSprite.y - 2,
-        duration: Math.round(d * 0.18), ease: 'Back.easeOut',
+        duration: Math.round(d * 0.15), ease: 'Back.easeOut',
       }),
       directionalParticles(scene, defenderSprite.x, toGround, GROUND, 16, {
-        dirY: -1, spread: 30, duration: Math.round(d * 0.3),
+        dirY: -1, spread: 30, duration: Math.round(d * 0.2),
         shape: 'grit', accentColor: GROUND_DARK, gravity: 1.1,
       }),
     ]);
@@ -451,17 +474,17 @@ async function renderDig(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
 
     // 4. The hit (70 -> 100 %), with the ground still settling.
     await Promise.all([
-      impactBurst(scene, defenderSprite.x, defenderSprite.y, GROUND, GROUND_DARK, 18, Math.round(d * 0.28)),
+      impactBurst(scene, defenderSprite.x, defenderSprite.y, GROUND, GROUND_DARK, 18, Math.round(d * 0.2)),
       spriteFlash(defenderSprite, scene, GROUND, 3),
-      screenShake(scene, 6, Math.round(d * 0.2)),
+      screenShake(scene, 6, Math.round(d * 0.14)),
       directionalParticles(scene, defenderSprite.x, defenderSprite.y, GROUND, 12, {
-        spread: 26, duration: Math.round(d * 0.3), shape: 'grit', accentColor: GROUND_DARK, gravity: 1.2,
+        spread: 26, duration: Math.round(d * 0.22), shape: 'grit', accentColor: GROUND_DARK, gravity: 1.2,
       }),
       (async () => {
-        await delay(scene, Math.round(d * 0.12));
+        await delay(scene, Math.round(d * 0.08));
         await tweenPromise(scene, {
           targets: attackerSprite, x: homeX, y: homeY,
-          duration: Math.round(d * 0.16), ease: 'Sine.easeOut',
+          duration: Math.round(d * 0.12), ease: 'Sine.easeOut',
         });
       })(),
     ]);
@@ -595,7 +618,7 @@ async function detonate(
 
   // 1. Strobe (0 -> 38 %): white flashes on the attacker, accelerating.
   const halo = newG(scene, 805);
-  const strobe = Math.round(d * 0.38);
+  const strobe = Math.round(d * 0.32);
   await Promise.all([
     frames(scene, strobe, t => {
       halo.clear();
@@ -621,7 +644,7 @@ async function detonate(
   soundSystem.boom();
   const maxR = Math.round(70 * scale);
   const blast = newG(scene, 860);
-  const blastMs = Math.round(d * 0.4);
+  const blastMs = Math.round(d * 0.38);
   await Promise.all([
     frames(scene, blastMs, t => {
       blast.clear();
@@ -644,15 +667,15 @@ async function detonate(
       }
     }),
     screenFlash(scene, WHITE, Math.round(d * 0.12)),
-    screenShake(scene, 8, Math.round(d * 0.3)),
+    screenShake(scene, 8, Math.round(d * 0.26)),
     directionalParticles(scene, ax, ay, NORMAL_EDGE, Math.round(18 * scale), {
-      spread: Math.round(56 * scale), duration: Math.round(d * 0.5),
+      spread: Math.round(56 * scale), duration: Math.round(d * 0.38),
       shape: 'dust', accentColor: NORMAL,
     }),
     spriteFlash(defenderSprite, scene, NORMAL, 3),
     tweenPromise(scene, {
       targets: attackerSprite, alpha: 0.15,
-      duration: Math.round(d * 0.3), ease: 'Quad.easeIn',
+      duration: Math.round(d * 0.26), ease: 'Quad.easeIn',
     }),
   ]);
   blast.destroy();
@@ -660,11 +683,11 @@ async function detonate(
   // 3. Debris settling (78 -> 100 %).
   await Promise.all([
     directionalParticles(scene, ax, ay - 6, NORMAL, Math.round(10 * scale), {
-      dirY: 1, spread: Math.round(34 * scale), duration: Math.round(d * 0.22),
+      dirY: 1, spread: Math.round(34 * scale), duration: Math.round(d * 0.18),
       shape: 'dust', accentColor: NORMAL_EDGE, gravity: 1.6,
     }),
     impactBurst(scene, defenderSprite.x, defenderSprite.y, NORMAL, NORMAL_PALE,
-      Math.round(14 * scale), Math.round(d * 0.22)),
+      Math.round(14 * scale), Math.round(d * 0.18)),
   ]);
 }
 
@@ -706,7 +729,7 @@ async function renderHyperBeam(spec: AnimationSpec, ctx: AnimationContext): Prom
 
   // 1. Charge (0 -> 28 %): a glow swells on the attacker's mouth.
   const glow = newG(scene, 820);
-  await frames(scene, Math.round(d * 0.28), t => {
+  await frames(scene, Math.round(d * 0.24), t => {
     glow.clear();
     const r = Math.round(2 + t * t * 12);
     glow.fillStyle(NORMAL_EDGE, 1);
@@ -723,7 +746,7 @@ async function renderHyperBeam(spec: AnimationSpec, ctx: AnimationContext): Prom
   // 2. The beam (28 -> 82 %): width 7 -> 22, core 2 -> 9, held the whole time.
   soundSystem.roar();
   const bm = newG(scene, 815);
-  const fireMs = Math.round(d * 0.54);
+  const fireMs = Math.round(d * 0.46);
   await Promise.all([
     frames(scene, fireMs, t => {
       bm.clear();
@@ -750,11 +773,11 @@ async function renderHyperBeam(spec: AnimationSpec, ctx: AnimationContext): Prom
       // The target is pinned under the beam while it is held.
       await delay(scene, Math.round(fireMs * 0.25));
       await Promise.all([
-        impactBurst(scene, dx, dy, NORMAL, NORMAL_PALE, 20, Math.round(d * 0.36)),
+        impactBurst(scene, dx, dy, NORMAL, NORMAL_PALE, 20, Math.round(d * 0.3)),
         spriteFlash(defenderSprite, scene, NORMAL, 4),
-        screenShake(scene, 6, Math.round(d * 0.3)),
+        screenShake(scene, 6, Math.round(d * 0.24)),
         directionalParticles(scene, dx, dy, NORMAL, 16, {
-          spread: 32, duration: Math.round(d * 0.36), shape: 'dust', accentColor: NORMAL_EDGE,
+          spread: 32, duration: Math.round(d * 0.3), shape: 'dust', accentColor: NORMAL_EDGE,
         }),
       ]);
     })(),
@@ -767,11 +790,11 @@ async function renderHyperBeam(spec: AnimationSpec, ctx: AnimationContext): Prom
   const back = ctx.isPlayer ? -7 : 7;
   await tweenPromise(scene, {
     targets: attackerSprite, x: homeX + back, y: homeY + 3,
-    duration: Math.round(d * 0.08), ease: 'Quad.easeOut',
+    duration: Math.round(d * 0.06), ease: 'Quad.easeOut',
   });
   await tweenPromise(scene, {
     targets: attackerSprite, x: homeX, y: homeY,
-    duration: Math.round(d * 0.1), ease: 'Sine.easeInOut',
+    duration: Math.round(d * 0.08), ease: 'Sine.easeInOut',
   });
 }
 
