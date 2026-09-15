@@ -208,11 +208,10 @@ describe('warp landings', () => {
       return t === TileType.BUILDING || t === TileType.ROOF;
     });
 
-  // Pre-existing offenders outside the Cerulean rebuild's scope. Documented,
-  // not fixed: this list must never grow.
-  const KNOWN_FACADE_DOOR_LANDINGS = [
-    'oaks_lab -> pallet_town (10,15)',   // both of the lab's exit warps
-  ];
+  // Offenders documented but not fixed. Empty since Oak's lab stopped dropping
+  // the player on its own front door (it was the last entry); kept as a
+  // tripwire — this list must never grow.
+  const KNOWN_FACADE_DOOR_LANDINGS: string[] = [];
   const KNOWN_NPC_LANDINGS = [
     'bills_house -> route25 (22,8)',     // lands on the `route25_potion` item ball
   ];
@@ -240,6 +239,76 @@ describe('warp landings', () => {
       }
     }
     expect([...new Set(offenders)].sort()).toEqual([...KNOWN_NPC_LANDINGS].sort());
+  });
+
+  // ── A door and its exit are each other's inverse, offset by one tile ──────
+  // Every building works the same way: the door tile on the outdoor map is what
+  // you walk INTO, and coming back out puts you on the tile directly BELOW it,
+  // so one step UP re-enters. Pinned generically over every facade door so a
+  // new building cannot ship with the lab's old off-by-one.
+  const KNOWN_ASYMMETRIC_DOOR_PAIRS = [
+    // Two facade doors into the same house (the front door at (20,6) and the
+    // hole in the back wall at (20,4)), so "the door" is ambiguous and the
+    // back-wall hole is legitimately entered from ABOVE. Out of scope.
+    'cerulean_city -> burgled_house',
+  ];
+
+  it("an indoor map's exit warps land one tile below the door that leads in", () => {
+    // outer map + inner map -> the facade door tiles leading from outer to inner
+    const doors = new Map<string, Set<string>>();
+    for (const [id, map] of mapEntries) {
+      for (const w of map.warps) {
+        if (!isFacadeDoor(map, w.x, w.y)) continue;
+        const pair = `${id} -> ${w.targetMap}`;
+        if (!doors.has(pair)) doors.set(pair, new Set());
+        doors.get(pair)!.add(`${w.x},${w.y}`);
+      }
+    }
+    const ambiguous: string[] = [];
+    const offenders: string[] = [];
+    let checked = 0;
+    for (const [pair, tiles] of doors) {
+      const [outer, inner] = pair.split(' -> ');
+      if (tiles.size !== 1) { ambiguous.push(pair); continue; }
+      const [dx, dy] = [...tiles][0].split(',').map(Number);
+      const M = ALL_MAPS[inner];
+      if (!M) continue;
+      for (const w of M.warps) {
+        if (w.targetMap !== outer) continue;
+        checked++;
+        if (w.targetX !== dx || w.targetY !== dy + 1) {
+          offenders.push(
+            `${inner} -> ${outer} (${w.targetX},${w.targetY}) should be (${dx},${dy + 1}), below the door at (${dx},${dy})`,
+          );
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(50);   // the rule actually covers the game
+    expect(ambiguous.sort()).toEqual([...KNOWN_ASYMMETRIC_DOOR_PAIRS].sort());
+    expect([...new Set(offenders)].sort()).toEqual([]);
+  });
+
+  it("leaving Oak's lab lands below the door, and one step up goes back in", () => {
+    const town = ALL_MAPS.pallet_town;
+    const door = town.warps.find(w => w.targetMap === 'oaks_lab');
+    expect(door, 'pallet_town has a warp into oaks_lab').toBeDefined();
+    expect(town.tiles[door!.y][door!.x]).toBe(TileType.DOOR);
+
+    const landing = { x: door!.x, y: door!.y + 1 };
+    // Every one of the lab's exits comes out on the tile directly below the door
+    const exits = ALL_MAPS.oaks_lab.warps.filter(w => w.targetMap === 'pallet_town');
+    expect(exits.length).toBeGreaterThan(0);
+    for (const w of exits) {
+      expect({ x: w.targetX, y: w.targetY }, `oaks_lab warp at (${w.x},${w.y})`).toEqual(landing);
+    }
+    // ...which is standable, and NOT the door facade the player used to land on
+    expect(town.tiles[landing.y][landing.x]).toBe(TileType.PATH);
+    expect(town.collision[landing.y][landing.x]).toBe(false);
+    expect(town.npcs?.some(n => n.x === landing.x && n.y === landing.y)).toBeFalsy();
+    expect(town.warps.some(w => w.x === landing.x && w.y === landing.y)).toBe(false);
+    // ...and stepping back UP from it hits the warp into the lab: inverses.
+    const up = town.warps.find(w => w.x === landing.x && w.y === landing.y - 1);
+    expect(up?.targetMap).toBe('oaks_lab');
   });
 
   it('nothing warps into the Cerulean area onto a door or an NPC', () => {

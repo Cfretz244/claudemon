@@ -280,8 +280,11 @@ export const OAKS_LAB: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 15 },
-      { x: 5, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 15 },
+      // Land one tile BELOW pallet_town's lab door (10,15) — the door tile is
+      // the facade you walk INTO, never the tile you come out onto. (10,16) is
+      // PATH; the sign sits at (11,16), so nothing else is there.
+      { x: 4, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 16 },
+      { x: 5, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 16 },
     ],
     npcs: [
       {
