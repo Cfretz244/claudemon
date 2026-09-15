@@ -12,7 +12,6 @@ import { TrainerCard } from '../components/TrainerCard';
 import { SlotMachineScreen } from '../components/SlotMachineScreen';
 import { PrizeExchangeScreen } from '../components/PrizeExchangeScreen';
 import { generateNPCSprite, generateItemBallSprite, generateStatueSprite, generateJessieSprite, generateJamesSprite, generateSnorlaxNPCSprite, generateLegendaryNPCSprite } from '../utils/spriteGenerator';
-import { ITEMS } from '../data/items';
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
 import { getMusicForMap } from '../data/musicTracks';
@@ -48,10 +47,11 @@ import { snorlaxEncounter, marowakAmbush } from '../logic/forcedEncounters';
 import { isPosterSign, posterOutcome } from '../logic/gameCornerPoster';
 import { computeTrainerSight } from '../logic/trainerSight';
 import { pickWildEncounter, getEncounterTheme, rollsEncounterOn, encounterTableOf, itemBallAction } from '../logic/encounters';
-import { SurgePuzzle } from '../logic/surgePuzzle';
+import { itemBallPickup } from '../logic/itemBalls';
+import { SurgePuzzle, surgeTrashCan, SURGE_GATE_FLAG } from '../logic/surgePuzzle';
 import { syncDerivedStoryFlags } from '../logic/storyFlagSync';
 import { migrateLegacyLocation } from '../logic/saveMigration';
-import { getCutTiles } from '../logic/cutTrees';
+import { cutTreeFlag, getCutTiles } from '../logic/cutTrees';
 import { canUseFieldMove, partyKnowsMove, FIELD_MOVE_MESSAGES, isMapOutdoor, isMapCave } from '../logic/fieldMoves';
 import { getAvailableFlyDestinations } from '../data/flyDestinations';
 import { GIFT_NPCS, GiftNpcResult } from '../data/giftNpcs';
@@ -1717,35 +1717,29 @@ export class OverworldScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * A real item ball: the message, the item, the flags and which ball sprites
+   * go away all come from src/logic/itemBalls.ts. Everything is applied from
+   * the text box's onComplete, in the order it always was: addItem, flags,
+   * syncDerivedStoryFlags (so a door key opens this floor's `has_<key>` flag
+   * gates right away), applyFlagGates, then the sprites.
+   */
   private pickUpItemBall(npc: NPCData): void {
-    const item = ITEMS[npc.itemId!];
-    if (!item) return;
-    this.textBox.show(
-      [`${this.playerState.name} found\n${item.name}!`],
-      () => {
-        this.playerState.addItem(npc.itemId!);
-        this.playerState.storyFlags[`picked_up_${npc.id}`] = true;
-        // A door key opens this floor's locked doors right away (has_<key> flag gates).
-        syncDerivedStoryFlags(this.playerState);
-        this.applyFlagGates();
-        // Remove sprite from map
-        const ballSprite = this.npcSprites.get(npc.id);
-        if (ballSprite) {
-          ballSprite.destroy();
-          this.npcSprites.delete(npc.id);
-        }
-        // Mt. Moon fossils: picking one removes the other
-        if (npc.id === 'mt_moon_helix_fossil' || npc.id === 'mt_moon_dome_fossil') {
-          this.playerState.storyFlags['got_fossil'] = true;
-          const otherId = npc.id === 'mt_moon_helix_fossil' ? 'mt_moon_dome_fossil' : 'mt_moon_helix_fossil';
-          const otherSprite = this.npcSprites.get(otherId);
-          if (otherSprite) {
-            otherSprite.destroy();
-            this.npcSprites.delete(otherId);
-          }
+    const pickup = itemBallPickup(npc, this.playerState);
+    if (!pickup) return;
+    this.textBox.show(pickup.messages, () => {
+      this.playerState.addItem(pickup.itemId);
+      for (const flag of pickup.flags) this.playerState.storyFlags[flag] = true;
+      syncDerivedStoryFlags(this.playerState);
+      this.applyFlagGates();
+      for (const id of pickup.removeSprites) {
+        const sprite = this.npcSprites.get(id);
+        if (sprite) {
+          sprite.destroy();
+          this.npcSprites.delete(id);
         }
       }
-    );
+    });
   }
 
   /** Flip a statue switch's flag, open/close the flag gates on this map, then talk. */
@@ -2796,8 +2790,8 @@ export class OverworldScene extends Phaser.Scene {
         this.tileSprites[targetY][targetX] = newSprite;
       }
 
-      // Track for persistence
-      this.playerState.storyFlags[`cut_${this.currentMap.id}_${targetX}_${targetY}`] = true;
+      // Track for persistence (restoreCutTrees parses these back on map load)
+      this.playerState.storyFlags[cutTreeFlag(this.currentMap.id, targetX, targetY)] = true;
       soundSystem.bump();
     });
     return true;
@@ -2809,7 +2803,7 @@ export class OverworldScene extends Phaser.Scene {
     if (this.currentMap.id !== 'vermilion_gym') return;
 
     // If the gate is already open (badge obtained), remove the fence
-    if (this.playerState.storyFlags['surge_gate_open']) {
+    if (this.playerState.storyFlags[SURGE_GATE_FLAG]) {
       this.openSurgeGate();
       return;
     }
@@ -2822,45 +2816,17 @@ export class OverworldScene extends Phaser.Scene {
     const tileType = this.currentMap.tiles[targetY]?.[targetX];
     if (tileType !== TileType.COUNTER) return false;
 
-    // Gate already open - just show empty trash
-    if (this.playerState.storyFlags['surge_gate_open']) {
-      this.textBox.show(['There\'s nothing in\nthe trash can.']);
-      return true;
-    }
-
-    const outcome = this.surgePuzzle.checkCan(targetX, targetY);
-    switch (outcome) {
-      case 'first-found':
-        soundSystem.bump();
-        this.textBox.show([
-          'Hey! There\'s a\nswitch under the',
-          'trash! Turn it on!',
-          'The first lock was\nopened!',
-        ]);
-        break;
-      case 'gate-open':
-        this.playerState.storyFlags['surge_gate_open'] = true;
-        soundSystem.bump();
-        this.textBox.show([
-          'Hey! There\'s another\nswitch under the',
-          'trash! Turn it on!',
-          'The second lock was\nopened!',
-          'The electric gate\nopened!',
-        ], () => {
-          this.openSurgeGate();
-        });
-        break;
-      case 'reset':
-        soundSystem.bump();
-        this.textBox.show([
-          'Nope, there\'s only\ntrash here.',
-          'Hey! The electric\nlock was reset!',
-        ]);
-        break;
-      case 'empty':
-        this.textBox.show(['There\'s nothing in\nthe trash can.']);
-        break;
-    }
+    // Which reading the player gets (and whether it opens the gate) comes from
+    // src/logic/surgePuzzle.ts; with the gate already open the puzzle is not
+    // consulted at all. The flag is written here, before the text box, exactly
+    // as it was; the fence is removed from the text box's onComplete.
+    const result = surgeTrashCan(
+      !!this.playerState.storyFlags[SURGE_GATE_FLAG],
+      () => this.surgePuzzle.checkCan(targetX, targetY),
+    );
+    if (result.opensGate) this.playerState.storyFlags[SURGE_GATE_FLAG] = true;
+    if (result.bump) soundSystem.bump();
+    this.textBox.show(result.messages, result.opensGate ? () => this.openSurgeGate() : undefined);
 
     return true;
   }

@@ -99,12 +99,13 @@ src/
     oakLab.ts                       # Oak's lab chain: oakStage()/grants + the lab rival trigger
     trainerSight.ts                 # Trainer line-of-sight math (axis, range, obstacles, surf)
     encounters.ts                   # Weighted wild-encounter pick + encounter music theme
-    surgePuzzle.ts                  # Lt. Surge trash-can switch puzzle state machine
+    surgePuzzle.ts                  # Lt. Surge trash-can puzzle state + outcome -> messages/gate table
     storyFlagSync.ts                # Derived story flags/catch-up grants from defeated trainers
     forcedEncounters.ts             # Snorlax (POKe FLUTE) + Marowak ghost one-off wild battles
     gameCornerPoster.ts             # Game Corner poster switch -> game_corner_poster_found
     saveMigration.ts                # Legacy map-id remaps for old saves
-    cutTrees.ts                     # cut_<map>_<x>_<y> flag parsing
+    cutTrees.ts                     # cut_<map>_<x>_<y> flag write + parse (round trip)
+    itemBalls.ts                    # itemBallPickup(): message/item/flags/sprites for a taken ball
     fieldMoves.ts                   # canUseFieldMove(): HM badge/party-move gates + messages
     learnset.ts                     # effectiveMovesAt(): stone evolutions inherit the pre-evo's moves
     slotMachine.ts                  # Game Corner slot machine reel/payout logic
