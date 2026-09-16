@@ -1,16 +1,9 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { HealthBar } from './HealthBar';
-import { PokemonInstance, StatusCondition } from '../types/pokemon.types';
+import { PokemonInstance } from '../types/pokemon.types';
 import { POKEMON_DATA } from '../data/pokemon';
-
-const STATUS_LABELS: Record<string, { text: string; color: string; bg: string }> = {
-  [StatusCondition.POISON]: { text: 'PSN', color: '#ffffff', bg: '#a040a0' },
-  [StatusCondition.BURN]: { text: 'BRN', color: '#ffffff', bg: '#f08030' },
-  [StatusCondition.SLEEP]: { text: 'SLP', color: '#ffffff', bg: '#a8a878' },
-  [StatusCondition.PARALYSIS]: { text: 'PAR', color: '#000000', bg: '#f8d030' },
-  [StatusCondition.FREEZE]: { text: 'FRZ', color: '#000000', bg: '#98d8d8' },
-};
+import { statusBadge } from '../logic/statusBadge';
 
 export class BattleHUD {
   private scene: Phaser.Scene;
@@ -95,7 +88,7 @@ export class BattleHUD {
     statusBg: Phaser.GameObjects.Graphics,
     statusText: Phaser.GameObjects.Text,
   ): void {
-    const info = STATUS_LABELS[pokemon.status];
+    const info = statusBadge(pokemon.status);
     if (!info) {
       statusBg.setVisible(false);
       statusText.setVisible(false);
