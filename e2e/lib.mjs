@@ -52,6 +52,13 @@ export async function createRunner(name) {
   /** Whichever scene is up: `{ battle: true, ... }` or the overworld snapshot. */
   const state = () => page.evaluate(() => {
     const g = window.__claudemon; if (!g) return null;
+    // The ids of the NPC sprites the OverworldScene currently has on the map —
+    // an item ball that has been picked up is gone from here. Readable during a
+    // battle too (the scene keeps its sprites while BattleScene is on top).
+    const npcIds = () => {
+      const sprites = g.scene.getScene('OverworldScene')?.npcSprites;
+      return sprites ? [...sprites.keys()] : [];
+    };
     const b = g.scene.getScene('BattleScene');
     if (b && b.scene.isActive()) {
       const opp = b.opponentParty ?? [];
@@ -62,6 +69,7 @@ export async function createRunner(name) {
                team: opp.map(p => [p.speciesId, p.level]),
                menuActive: !!b.menu?.active, menuMode: b.menu?.mode ?? null,
                text: b.textBox?.messages ?? [], textVisible: !!b.textBox?.getIsVisible(),
+               npcs: npcIds(),
                flags: save?.storyFlags ?? {}, defeated: save?.defeatedTrainers ?? [] };
     }
     const s = g.scene.getScene('OverworldScene');
@@ -69,7 +77,7 @@ export async function createRunner(name) {
     const save = s.playerState.toSave();
     return { battle: false, map: s.currentMap?.id, x: s.playerGridX, y: s.playerGridY, dir: s.playerDirection,
              flags: save.storyFlags, bag: save.bag, defeated: save.defeatedTrainers,
-             party: save.party.map(p => [p.speciesId, p.level]),
+             party: save.party.map(p => [p.speciesId, p.level]), npcs: npcIds(),
              text: s.textBox?.messages ?? [], textVisible: !!s.textBox?.getIsVisible(),
              warping: !!s.isWarping, moving: !!s.isMoving };
   });
@@ -113,20 +121,26 @@ export async function createRunner(name) {
   // --- movement --------------------------------------------------------------
   /**
    * Turn to face `dir` without stepping. `update()` turns on the frame a NEW
-   * direction is pressed and walks from the next one, so this is only safe when
-   * the faced tile is solid (a sign, an NPC, a wall) — which is what a runner
-   * that is about to press Z wants. Throws if the player moved.
+   * direction is pressed and only walks from the third, so a very short press
+   * turns in place — but a press can be swallowed between frames, so the hold
+   * escalates. Works over a WALKABLE tile too (an item ball that has already
+   * been taken): a press that did step walks back onto the seat and tries
+   * again. Throws if it cannot end up on the seat facing `dir`.
    */
   async function face(dir) {
     const seat = await state();
-    for (let i = 0; i < 5; i++) {
-      await tap(DIR_KEY[dir]);
-      await page.waitForTimeout(250);
+    if (seat.dir === dir) return seat;
+    for (const ms of [5, 10, 20, 40, 5, 40, 80, 40]) {
+      await tap(DIR_KEY[dir], ms);
+      await page.waitForTimeout(400);
       const st = await state();
-      if (st.x !== seat.x || st.y !== seat.y) throw new Error(`facing ${dir} stepped off ${seat.x},${seat.y}`);
-      if (st.dir === dir) return st;
+      if (st.x === seat.x && st.y === seat.y && st.dir === dir) return st;
+      if (st.x !== seat.x || st.y !== seat.y) {
+        await tap(DIR_KEY[OPPOSITE_DIR[dir]], 250);
+        await page.waitForTimeout(600);
+      }
     }
-    throw new Error(`could not turn ${dir}`);
+    throw new Error(`could not turn ${dir} without stepping off ${seat.x},${seat.y}`);
   }
 
   /** One step: face `dir` if needed, hold until something changes, then settle. */
@@ -147,7 +161,7 @@ export async function createRunner(name) {
 
   /** BFS on the LIVE map (collision, spawned NPCs, ledges and other warps blocked). */
   const pathTo = (x, y) => page.evaluate(([tx, ty]) => {
-    const LEDGE = 9;
+    const LEDGE = 9, TELEPORT_PAD = 24;   // a pad warps on contact, like a warp tile
     const s = window.__claudemon.scene.getScene('OverworldScene'); const m = s.currentMap;
     const npcs = new Set(m.npcs.filter(n => !s.npcSprites || s.npcSprites.has(n.id)).map(n => `${n.x},${n.y}`));
     const warps = new Set(m.warps.map(w => `${w.x},${w.y}`));
@@ -160,7 +174,8 @@ export async function createRunner(name) {
       for (const [dx, dy, d] of [[1, 0, 'right'], [-1, 0, 'left'], [0, 1, 'down'], [0, -1, 'up']]) {
         const nx = cx + dx, ny = cy + dy, nk = k(nx, ny);
         if (nx < 0 || ny < 0 || nx >= m.width || ny >= m.height || prev.has(nk)) continue;
-        if (m.collision[ny][nx] || npcs.has(nk) || m.tiles[ny][nx] === LEDGE) continue;
+        if (m.collision[ny][nx] || npcs.has(nk)) continue;
+        if (m.tiles[ny][nx] === LEDGE || m.tiles[ny][nx] === TELEPORT_PAD) continue;
         if (warps.has(nk) && !(nx === tx && ny === ty)) continue;
         prev.set(nk, [k(cx, cy), d]); q.push([nx, ny]);
       }
@@ -198,22 +213,29 @@ export async function createRunner(name) {
    * the other `tall` sprites) block the tile above and below their own, so those
    * seats are skipped: sitting beside it is what a player would actually do.
    */
-  const seatNextToNpc = (mapId, npcId) => onEditor(() => page.evaluate(async ({ mapId, npcId }) => {
-    const { ALL_MAPS } = await import('/src/data/maps.ts');
-    const map = ALL_MAPS[mapId]; if (!map) throw new Error(`no map ${mapId}`);
-    const npc = map.npcs.find(n => n.id === npcId); if (!npc) throw new Error(`no npc ${npcId} on ${mapId}`);
-    const tall = npc.id.startsWith('snorlax_');
-    for (const [dir, dx, dy] of [['left', 1, 0], ['right', -1, 0], ['up', 0, 1], ['down', 0, -1]]) {
-      const x = npc.x + dx, y = npc.y + dy;
-      if (x < 0 || y < 0 || x >= map.width || y >= map.height) continue;
-      if (map.collision[y][x]) continue;
-      if (tall && x === npc.x) continue;             // inside the extended hitbox
-      if (map.warps.some(o => o.x === x && o.y === y)) continue;
-      if (map.npcs.some(n => n.x === x && n.y === y)) continue;
-      return { x, y, dir, npc: { x: npc.x, y: npc.y } };
-    }
-    throw new Error(`no walkable seat next to ${npcId}`);
-  }, { mapId, npcId }));
+  const seatNextToNpc = (mapId, npcId, { allowGate = false } = {}) =>
+    onEditor(() => page.evaluate(async ({ mapId, npcId, allowGate }) => {
+      const { ALL_MAPS } = await import('/src/data/maps.ts');
+      const map = ALL_MAPS[mapId]; if (!map) throw new Error(`no map ${mapId}`);
+      const npc = map.npcs.find(n => n.id === npcId); if (!npc) throw new Error(`no npc ${npcId} on ${mapId}`);
+      const tall = npc.id.startsWith('snorlax_');
+      const gates = new Set((map.gates ?? []).map(g => `${g.x},${g.y}`));
+      // A gate tile is solid in the raw data; `applyFlagGates()` opens it at
+      // runtime, so it is only a seat when the seeded save opens it — hence
+      // `allowGate`, and only after the ordinary walkable tiles.
+      for (const onGate of allowGate ? [false, true] : [false]) {
+        for (const [dir, dx, dy] of [['left', 1, 0], ['right', -1, 0], ['up', 0, 1], ['down', 0, -1]]) {
+          const x = npc.x + dx, y = npc.y + dy, k = `${x},${y}`;
+          if (x < 0 || y < 0 || x >= map.width || y >= map.height) continue;
+          if (onGate ? !gates.has(k) : (map.collision[y][x] || gates.has(k))) continue;
+          if (tall && x === npc.x) continue;             // inside the extended hitbox
+          if (map.warps.some(o => o.x === x && o.y === y)) continue;
+          if (map.npcs.some(n => n.x === x && n.y === y)) continue;
+          return { x, y, dir, onGate, npc: { x: npc.x, y: npc.y, itemId: npc.itemId ?? null, ambush: npc.ambush ?? null } };
+        }
+      }
+      throw new Error(`no walkable seat next to ${npcId}`);
+    }, { mapId, npcId, allowGate }));
 
   /** A walkable tile next to a tile (a sign, a poster) and the direction that faces it. */
   const seatNextToTile = (mapId, tx, ty) => onEditor(() => page.evaluate(async ({ mapId, tx, ty }) => {
@@ -248,7 +270,13 @@ export async function createRunner(name) {
 
   // --- boot ------------------------------------------------------------------
   // seed: { map, x, y, flags?, party?, bag?, badges?, defeated?, rivalName?,
-  //         noEncounters? }. `party` is [[speciesId, level, currentHp?], ...].
+  //         noEncounters? }. A `party` entry is either `[speciesId, level,
+  //         currentHp?]` or `{ species, level, hp?, moves?, pp?, status? }` —
+  //         the object form is for a runner that needs a specific move (CUT) or
+  //         a hurt Pokemon (a POKeMON CENTER heal). `defeated` is a list of
+  //         trainer ids, or the string `'trainers'` / `'all'` to mark every
+  //         trainer (or every NPC, item balls included) on the seeded map
+  //         beaten, which keeps a sighting from interrupting a walk.
   // Fields left out keep the new-save defaults, so a runner that cares about the
   // bag must pass one. `noEncounters` zeroes every map's encounter rate, which a
   // runner that walks across live maps needs to stay deterministic.
@@ -257,17 +285,26 @@ export async function createRunner(name) {
     await page.evaluate(async (seed) => {
       const { SaveSystem } = await import('/src/systems/SaveSystem.ts');
       const { createPokemon } = await import('/src/entities/Pokemon.ts');
+      const { ALL_MAPS } = await import('/src/data/maps.ts');
       const save = SaveSystem.createNewSave('TEST', seed.rivalName ?? 'RIVAL');
       Object.assign(save.storyFlags, { intro_complete: true, ...seed.flags });
-      save.party = (seed.party ?? [[25, 10]]).map(([id, lv, hp]) => {
-        const mon = createPokemon(id, lv, 'TEST');
+      save.party = (seed.party ?? [[25, 10]]).map(p => {
+        const { species, level, hp, moves, pp, status } =
+          Array.isArray(p) ? { species: p[0], level: p[1], hp: p[2] } : p;
+        const mon = createPokemon(species, level, 'TEST');
+        if (moves !== undefined) mon.moves = moves.map(id => ({ moveId: id, currentPp: 15, maxPp: 15 }));
+        if (pp !== undefined) mon.moves.forEach(m => { m.currentPp = pp; });
+        if (status !== undefined) mon.status = status;
         if (hp !== undefined) mon.currentHp = hp;
         return mon;
       });
       save.currentMap = seed.map; save.playerX = seed.x; save.playerY = seed.y;
       if (seed.bag !== undefined) save.bag = seed.bag;
       if (seed.badges !== undefined) save.badges = seed.badges;
-      if (seed.defeated !== undefined) save.defeatedTrainers = seed.defeated;
+      if (seed.defeated === 'all' || seed.defeated === 'trainers') {
+        save.defeatedTrainers = (ALL_MAPS[seed.map]?.npcs ?? [])
+          .filter(n => seed.defeated === 'all' || n.isTrainer).map(n => n.id);
+      } else if (seed.defeated !== undefined) save.defeatedTrainers = seed.defeated;
       SaveSystem.save(save);
     }, seed);
     await page.goto(`${BASE}/index.html`);
@@ -287,6 +324,21 @@ export async function createRunner(name) {
       await tap('KeyZ'); await page.waitForTimeout(700);
     }
     return waitSettled();
+  }
+
+  /**
+   * Record every message the BattleScene's text box is asked to show from now
+   * on, and return a reader for them in order. The patch lives on the page, so
+   * a runner re-arms it after every boot; `show()` still runs normally.
+   */
+  async function recordTextBox() {
+    await page.evaluate(() => {
+      const tb = window.__claudemon.scene.getScene('BattleScene').textBox;
+      const orig = tb.show.bind(tb);
+      window.__textBoxLog = [];
+      tb.show = (msgs, cb) => { window.__textBoxLog.push(...msgs); return orig(msgs, cb); };
+    });
+    return () => page.evaluate(() => window.__textBoxLog ?? []);
   }
 
   // --- results ---------------------------------------------------------------
@@ -326,5 +378,5 @@ export async function createRunner(name) {
 
   return { browser, page, errors, shotDir, tap, shot, state, overworld, battle, waitOverworld,
            waitSettled, advanceText, face, step, walkTo, seatNextToNpc, seatNextToTile,
-           seatNextToWarp, boot, record, scenario, finish, results };
+           seatNextToWarp, recordTextBox, boot, record, scenario, finish, results };
 }
