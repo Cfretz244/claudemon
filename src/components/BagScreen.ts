@@ -9,6 +9,8 @@ import { PlayerState } from '../entities/Player';
 import { addExperience, learnMove } from '../systems/ExperienceSystem';
 import { MoveForgetUI } from './MoveForgetUI';
 import { bindMenuKeys, clampIndex } from './MenuInput';
+import { reviveHp } from '../logic/reviveItems';
+import { applyVitamin, STAT_DISPLAY_NAME } from '../logic/vitamins';
 
 export class BagScreen {
   private scene: Phaser.Scene;
@@ -494,17 +496,40 @@ export class BagScreen {
       return;
     }
 
-    // Revive check
-    if (item.id === 'revive') {
+    // Revive check (REVIVE -> half HP, MAX REVIVE -> full; logic/reviveItems.ts)
+    const revived = reviveHp(item.id, pokemon.stats.hp);
+    if (revived !== null) {
       if (pokemon.currentHp > 0) {
         this.showMessage(`${this.getPokemonName(pokemon)} isn't\nfainted!`);
         return;
       }
-      pokemon.currentHp = Math.floor(pokemon.stats.hp / 2);
+      pokemon.currentHp = revived;
       this.playerState.useItem(item.id);
       soundSystem.heal();
       this.showMessage(`${this.getPokemonName(pokemon)}'s HP\nwas restored!`);
       this.afterItemUse();
+      return;
+    }
+
+    // Vitamins (HP UP / PROTEIN / CALCIUM / CARBOS; logic/vitamins.ts)
+    const species = POKEMON_DATA[pokemon.speciesId];
+    const vitamin = species ? applyVitamin(pokemon, item.id, species) : null;
+    if (vitamin) {
+      if (!vitamin.ok) {
+        this.showMessage("It won't have any\neffect!");
+        return;
+      }
+      this.playerState.useItem(item.id);
+      soundSystem.heal();
+      this.showMessage(`${this.getPokemonName(pokemon)}'s\n${STAT_DISPLAY_NAME[vitamin.stat!]} rose!`);
+      this.afterItemUse();
+      return;
+    }
+
+    // PP UP needs a move picker, which does not exist yet: it is pickable and
+    // bag-visible but inert, and is NOT consumed.
+    if (item.id === 'pp_up') {
+      this.showMessage("It won't have any\neffect!");
       return;
     }
 

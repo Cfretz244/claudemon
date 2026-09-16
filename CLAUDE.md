@@ -106,6 +106,8 @@ src/
     saveMigration.ts                # Legacy map-id remaps for old saves
     cutTrees.ts                     # cut_<map>_<x>_<y> flag write + parse (round trip)
     itemBalls.ts                    # itemBallPickup(): message/item/flags/sprites for a taken ball
+    reviveItems.ts                  # reviveHp(): REVIVE half / MAX REVIVE full, shared by bag + battle
+    vitamins.ts                     # applyVitamin(): Gen I stat-exp vitamins (HP UP/PROTEIN/CALCIUM/CARBOS)
     fieldMoves.ts                   # canUseFieldMove(): HM badge/party-move gates + messages
     learnset.ts                     # effectiveMovesAt(): stone evolutions inherit the pre-evo's moves
     slotMachine.ts                  # Game Corner slot machine reel/payout logic
