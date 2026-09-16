@@ -32,6 +32,7 @@ import { playMoveAnimation, AnimationContext } from '../systems/MoveAnimations';
 import { outcomeFor } from '../logic/animationOutcome';
 import { reviveHp, isReviveItem } from '../logic/reviveItems';
 import { clearsForcedEncounter, WildBattleEnd } from '../logic/forcedEncounters';
+import { roundContinues } from '../logic/turnFlow';
 import '../systems/animations';
 import { getTrainerSpriteKey } from '../utils/trainerSpriteGenerator';
 import { resyncMobileInput } from '../utils/mobileControls';
@@ -528,7 +529,7 @@ export class BattleScene extends Phaser.Scene {
       await this.executeMove(this.playerPokemon, this.opponentPokemon, playerMove, playerMoveData, true);
       if (this.battleOver) return;
 
-      if (this.opponentPokemon.currentHp > 0) {
+      if (roundContinues(this.playerPokemon, this.opponentPokemon)) {
         await this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false);
         if (this.battleOver) return;
       }
@@ -536,7 +537,7 @@ export class BattleScene extends Phaser.Scene {
       await this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false);
       if (this.battleOver) return;
 
-      if (this.playerPokemon.currentHp > 0) {
+      if (roundContinues(this.opponentPokemon, this.playerPokemon)) {
         await this.executeMove(this.playerPokemon, this.opponentPokemon, playerMove, playerMoveData, true);
         if (this.battleOver) return;
       }
