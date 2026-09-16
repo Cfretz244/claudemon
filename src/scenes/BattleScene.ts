@@ -10,6 +10,7 @@ import { ITEMS } from '../data/items';
 import { TextBox } from '../components/TextBox';
 import { calculateDamage, checkCritical, checkAccuracy } from '../systems/DamageCalculator';
 import { calculateExpGain, addExperience, learnMove } from '../systems/ExperienceSystem';
+import { expGainSegments } from '../logic/expBar';
 import { MoveForgetUI } from '../components/MoveForgetUI';
 import { checkEvolution, evolvePokemon } from '../systems/EvolutionSystem';
 import { attemptCatch } from '../systems/CatchSystem';
@@ -1250,8 +1251,19 @@ export class BattleScene extends Phaser.Scene {
       const pokeName = this.getSpeciesName(pokemon.speciesId);
       await this.showText([`${pokeName} gained\n${expEach} EXP. Points!`]);
 
+      // Captured before addExperience mutates them, so the bar can run from
+      // where the player last saw it through every level the gain crosses.
+      const expBefore = pokemon.exp;
+      const levelBefore = pokemon.level;
+
       soundSystem.levelUp();
       const levelUps = addExperience(pokemon, expEach);
+
+      // Only the active mon has an HP box on screen; a bench participant's
+      // share is awarded silently, exactly as it was before.
+      if (pokemon === this.playerPokemon) {
+        await this.hud.animatePlayerExp(expGainSegments(expBefore, levelBefore, pokemon.exp));
+      }
 
       for (const lu of levelUps) {
         await this.showText([`${pokeName} grew to\nLv. ${lu.newLevel}!`]);
