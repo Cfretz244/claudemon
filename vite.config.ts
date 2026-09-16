@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 export default defineConfig({
+  optimizeDeps: { exclude: ['@claudemon/engine'] },
   server: {
     allowedHosts: ['claudemon.christopherfretz.com'],
   },
@@ -12,13 +13,13 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['tests/**/*.test.ts'],
+    include: ['tests/**/*.test.ts', 'packages/engine/tests/**/*.test.ts'],
     environment: 'node',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary', 'lcov', 'json-summary'],
       reportsDirectory: 'coverage',
-      include: ['src/systems/**', 'src/entities/**', 'src/data/**', 'src/logic/**'],
+      include: ['packages/engine/src/**', 'src/systems/**', 'src/entities/**', 'src/data/**', 'src/logic/**'],
       // Phaser-bound modules that can't run in the node test env are excluded
       // from the denominator so the report reflects testable code
       exclude: [

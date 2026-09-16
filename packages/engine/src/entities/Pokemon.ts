@@ -1,0 +1,131 @@
+import {
+  PokemonInstance,
+  PokemonMove,
+  BaseStats,
+  StatusCondition,
+  PokemonSpecies,
+} from '../types/pokemon.types';
+import { MAX_IV, MAX_MOVES } from '../utils/constants';
+import { POKEMON_DATA } from '../data/pokemon';
+import { MOVES_DATA } from '../data/moves';
+import { effectiveMovesAt } from '../logic/learnset';
+
+// Gen 1 stat calculation
+export function calcHP(base: number, iv: number, ev: number, level: number): number {
+  return Math.floor(((base + iv) * 2 + Math.floor(Math.ceil(Math.sqrt(ev)) / 4)) * level / 100) + level + 10;
+}
+
+export function calcStat(base: number, iv: number, ev: number, level: number): number {
+  return Math.floor(((base + iv) * 2 + Math.floor(Math.ceil(Math.sqrt(ev)) / 4)) * level / 100) + 5;
+}
+
+export function calculateStats(species: PokemonSpecies, level: number, ivs: BaseStats, evs: BaseStats): BaseStats {
+  return {
+    hp: calcHP(species.baseStats.hp, ivs.hp, evs.hp, level),
+    attack: calcStat(species.baseStats.attack, ivs.attack, evs.attack, level),
+    defense: calcStat(species.baseStats.defense, ivs.defense, evs.defense, level),
+    special: calcStat(species.baseStats.special, ivs.special, evs.special, level),
+    speed: calcStat(species.baseStats.speed, ivs.speed, evs.speed, level),
+  };
+}
+
+export function generateIVs(rng: () => number = Math.random): BaseStats {
+  return {
+    hp: Math.floor(rng() * (MAX_IV + 1)),
+    attack: Math.floor(rng() * (MAX_IV + 1)),
+    defense: Math.floor(rng() * (MAX_IV + 1)),
+    special: Math.floor(rng() * (MAX_IV + 1)),
+    speed: Math.floor(rng() * (MAX_IV + 1)),
+  };
+}
+
+export function createPokemon(speciesId: number, level: number, ot: string = 'RED', rng: () => number = Math.random): PokemonInstance {
+  const species = POKEMON_DATA[speciesId];
+  if (!species) {
+    throw new Error(`Unknown Pokemon species: ${speciesId}`);
+  }
+
+  const ivs = generateIVs(rng);
+  const evs: BaseStats = { hp: 0, attack: 0, defense: 0, special: 0, speed: 0 };
+  const stats = calculateStats(species, level, ivs, evs);
+
+  // Get moves: last 4 moves learned by this level. effectiveMovesAt() folds in
+  // the pre-evolution's moves for stone evolutions whose own learnset is
+  // level-1-only (RAICHU, ARCANINE, ...), so a Lv50 RAICHU is armed like a Lv50
+  // PIKACHU rather than with PIKACHU's level-1 moves. Must stay identical to
+  // data/battleSimConfig.defaultMoves.
+  const learnedMoves = effectiveMovesAt(speciesId, level).slice(-MAX_MOVES);
+
+  const moves: PokemonMove[] = learnedMoves.map(entry => {
+    const moveData = MOVES_DATA[entry.moveId];
+    return {
+      moveId: entry.moveId,
+      currentPp: moveData?.pp ?? 20,
+      maxPp: moveData?.pp ?? 20,
+    };
+  });
+
+  // Ensure at least one move (Tackle fallback)
+  if (moves.length === 0) {
+    const tackle = MOVES_DATA[33]; // Tackle
+    moves.push({
+      moveId: 33,
+      currentPp: tackle?.pp ?? 35,
+      maxPp: tackle?.pp ?? 35,
+    });
+  }
+
+  // Exp needed for this level (medium-fast growth group for simplicity)
+  const exp = level * level * level;
+
+  return {
+    speciesId,
+    level,
+    currentHp: stats.hp,
+    stats,
+    ivs,
+    evs,
+    moves,
+    exp,
+    status: StatusCondition.NONE,
+    ot,
+    happiness: 70, // Base happiness for newly obtained Pokemon
+  };
+}
+
+// Happiness utility functions (Gen 1 Pokemon Yellow style, 0-255 range)
+export function gainHappiness(pokemon: PokemonInstance, amount: number): void {
+  pokemon.happiness = Math.min(255, (pokemon.happiness ?? 70) + amount);
+}
+
+export function loseHappiness(pokemon: PokemonInstance, amount: number): void {
+  pokemon.happiness = Math.max(0, (pokemon.happiness ?? 70) - amount);
+}
+
+export function getHappiness(pokemon: PokemonInstance): number {
+  return pokemon.happiness ?? 70;
+}
+
+export function getExpForLevel(level: number): number {
+  return level * level * level;
+}
+
+export function getLevelForExp(exp: number): number {
+  let level = 1;
+  while (getExpForLevel(level + 1) <= exp && level < 100) {
+    level++;
+  }
+  return level;
+}
+
+export function healPokemon(pokemon: PokemonInstance): void {
+  const species = POKEMON_DATA[pokemon.speciesId];
+  if (species) {
+    pokemon.stats = calculateStats(species, pokemon.level, pokemon.ivs, pokemon.evs);
+  }
+  pokemon.currentHp = pokemon.stats.hp;
+  pokemon.status = StatusCondition.NONE;
+  for (const move of pokemon.moves) {
+    move.currentPp = move.maxPp;
+  }
+}
