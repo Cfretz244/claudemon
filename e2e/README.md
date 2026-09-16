@@ -35,12 +35,16 @@ feedback stays `max(test, e2e)` and `test` remains the required check.
 | `lab-rival-reambush` | 10 | the lab rival fires once: LOSING the ambush still ends it — the flag survives the whiteout, the door warp goes through, the rival gives his post-battle line |
 | `oak` | 9 | every stage of Oak's chain (Pikachu, the Parcel, the Pokedex + 5 Poke Balls, no second grant) and the rival ambush on the lab's exit warp |
 | `route22` | 8 | which rival entry Route 22 spawns per badges/defeated, and that walking into the rematch's sight starts his battle |
+| `silph-item-balls` | 46 | all seven Silph Co item balls whose items `data/items.ts` once lacked: each one hands over its item, writes `picked_up_<id>` and takes its sprite off the floor, plus `applyVitamin()` and `reviveHp()` on a live party Pokemon |
 | `story` | 4 | the Viridian Parcel hand-out, Oak's Pokedex grant and its idempotence, and that the Pewter clerk hands out nothing |
 | `story-misc` | 11 | both sleeping Snorlax (POKe FLUTE), the Game Corner poster switch and the Rocket Hideout stairs it opens, and the Marowak ghost on the 7F stairs |
+| `story-pins-6` | 44 | item balls (Route 24 NUGGET, the Mt. Moon fossil pair, the Silph 5F CARD KEY that opens its own door), Cut on Route 2 and the Vermilion Gym trash-can puzzle — each one re-entered with only its flag seeded |
+| `story-pins-7` | 25 | a no-seed NEW GAME hand-over, the Cerulean nurse (heal + `visited_` + the FLY list), the Power Plant fake ball's ambush, and the Champion -> Hall of Fame return |
 
-Wall time for the whole suite: **~4 min 25 s** on the dev container (two runs
-back to back: 262 s and 263 s, 42 checks, no retries). Each runner boots the
-game once per scenario, so the suite is dominated by boots, not by assertions.
+Wall time for the whole suite: **~7 min 52 s** on the dev container (two runs
+back to back: 472 s and 471 s, 157 checks, no retries); the GitHub `e2e` job is
+~8 min 40 s end to end. Each runner boots the game once per scenario, so the
+suite is dominated by boots, not by assertions.
 
 ## The dev hook
 
