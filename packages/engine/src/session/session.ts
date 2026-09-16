@@ -344,28 +344,7 @@ export class GameSession {
           return reject('That move is disabled!');
         if (a.pokemon.moves[index].currentPp <= 0 && a.pokemon.moves.some((m) => m.currentPp > 0))
           return reject('There is no PP left for this move.');
-        b.sides.forEach((s) => (s.volatile.flinched = false));
-        const ai = this.ai();
-        const pm = MOVES_DATA[a.pokemon.moves[index].moveId],
-          am = MOVES_DATA[b.sides[1].pokemon.moves[ai].moveId];
-        const first = resolveTurnOrder(
-          a.pokemon,
-          b.sides[1].pokemon,
-          pm.priority ?? 0,
-          am.priority ?? 0,
-        );
-        this.jobs.push(
-          ...((first
-            ? [
-                { kind: 'attack', side: 0, index },
-                { kind: 'attack', side: 1, index: ai },
-              ]
-            : [
-                { kind: 'attack', side: 1, index: ai },
-                { kind: 'attack', side: 0, index },
-              ]) as Job[]),
-        );
-        this.endRound();
+        this.queueRound(index);
         break;
       }
       case 'selectPokemon': {
@@ -547,6 +526,32 @@ export class GameSession {
       if (alternatives.length) i = alternatives[Math.floor(this.rng() * alternatives.length)];
     }
     return i;
+  }
+  private queueRound(index: number) {
+    const b = this.battle!,
+      a = b.sides[0];
+    b.sides.forEach((s) => (s.volatile.flinched = false));
+    const ai = this.ai();
+    const pm = MOVES_DATA[a.pokemon.moves[index].moveId],
+      am = MOVES_DATA[b.sides[1].pokemon.moves[ai].moveId];
+    const first = resolveTurnOrder(
+      a.pokemon,
+      b.sides[1].pokemon,
+      pm.priority ?? 0,
+      am.priority ?? 0,
+    );
+    this.jobs.push(
+      ...((first
+        ? [
+            { kind: 'attack', side: 0, index },
+            { kind: 'attack', side: 1, index: ai },
+          ]
+        : [
+            { kind: 'attack', side: 1, index: ai },
+            { kind: 'attack', side: 0, index },
+          ]) as Job[]),
+    );
+    this.endRound();
   }
   private endRound() {
     this.jobs.push(
@@ -741,7 +746,10 @@ export class GameSession {
           break;
         case 'faint':
           if (b) {
-            if (b.sides[1].pokemon.currentHp <= 0 && !b.rewarded) {
+            if (!this.player.getFirstAlivePokemon()) {
+              this.say(['Your Pokémon need a rest. You hurry back to a safe place.']);
+              this.jobs.push({ kind: 'finish', outcome: 'loss' });
+            } else if (b.sides[1].pokemon.currentHp <= 0 && !b.rewarded) {
               b.rewarded = true;
               this.say([`${speciesName(b.sides[1].pokemon)} fainted!`]);
               const living = b.participants.filter((i) => this.player.party[i]?.currentHp > 0),
@@ -749,11 +757,10 @@ export class GameSession {
               for (const i of living) this.jobs.push({ kind: 'reward', partyIndex: i, xp });
               this.jobs.push({ kind: 'nextOpponent' });
             } else if (b.sides[0].pokemon.currentHp <= 0) {
-              if (this.player.getFirstAlivePokemon()) b.forcedSwitch = true;
-              else {
-                this.say(['Your Pokémon need a rest. You hurry back to a safe place.']);
-                this.jobs.push({ kind: 'finish', outcome: 'loss' });
-              }
+              b.forcedSwitch = true;
+            } else if (b.sides[0].volatile.charging) {
+              // Phaser also locks the next turn; presentation cannot insert an item or switch.
+              this.queueRound(b.sides[0].volatile.charging.moveIndex);
             }
           }
           break;

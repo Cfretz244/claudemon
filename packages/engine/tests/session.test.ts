@@ -262,14 +262,62 @@ describe('portable save codec', () => {
   });
 });
 
-describe('medicine transactions',()=>{
- it.each([['burn_heal',StatusCondition.BURN],['antidote',StatusCondition.POISON],['paralyze_heal',StatusCondition.PARALYSIS]] as const)('uses %s from canonical mart stock', (itemId,status)=>{
-  const d=save();d.party=[createPokemon(25,5)];d.party[0].status=status;d.bag[itemId]=1;
-  const s=createSession({seed:1,save:d});expect(input(s,{type:'item',itemId,index:0}).accepted).toBe(true);drain(s);
-  expect(s.getSnapshot().player.party[0].status).toBe(StatusCondition.NONE);expect(s.getSnapshot().player.bag[itemId]).toBeUndefined();
- });
- it('does not spend an ineffective medicine',()=>{
-  const d=save();d.party=[createPokemon(25,5)];d.bag.potion=1;const s=createSession({seed:1,save:d});
-  expect(input(s,{type:'item',itemId:'potion',index:0}).accepted).toBe(false);expect(s.getSnapshot().player.bag.potion).toBe(1);
- });
+describe('medicine transactions', () => {
+  it.each([
+    ['burn_heal', StatusCondition.BURN],
+    ['antidote', StatusCondition.POISON],
+    ['paralyze_heal', StatusCondition.PARALYSIS],
+  ] as const)('uses %s from canonical mart stock', (itemId, status) => {
+    const d = save();
+    d.party = [createPokemon(25, 5)];
+    d.party[0].status = status;
+    d.bag[itemId] = 1;
+    const s = createSession({ seed: 1, save: d });
+    expect(input(s, { type: 'item', itemId, index: 0 }).accepted).toBe(true);
+    drain(s);
+    expect(s.getSnapshot().player.party[0].status).toBe(StatusCondition.NONE);
+    expect(s.getSnapshot().player.bag[itemId]).toBeUndefined();
+  });
+  it('does not spend an ineffective medicine', () => {
+    const d = save();
+    d.party = [createPokemon(25, 5)];
+    d.bag.potion = 1;
+    const s = createSession({ seed: 1, save: d });
+    expect(input(s, { type: 'item', itemId: 'potion', index: 0 }).accepted).toBe(false);
+    expect(s.getSnapshot().player.bag.potion).toBe(1);
+  });
+});
+
+describe('round continuation parity', () => {
+  function withMove(moveId: number, hp?: number) {
+    const d = save('oaks_lab', 4, 10);
+    d.storyFlags.has_pikachu = true;
+    const p = createPokemon(25, 40, 'RED', () => 0.5);
+    p.moves = [{ moveId, currentPp: 20, maxPp: 20 }];
+    if (hp !== undefined) p.currentHp = hp;
+    d.party = [p];
+    const s = createSession({ seed: 1, save: d, rng: () => 0.5 });
+    input(s, { type: 'move', direction: Direction.DOWN });
+    drain(s);
+    return s;
+  }
+  it('automatically releases a charged player move without accepting another decision', () => {
+    const s = withMove(19);
+    input(s, { type: 'battleMove', index: 0 });
+    const effects = drain(s);
+    expect(
+      effects
+        .filter((e) => e.kind === 'attack' && e.side === 0)
+        .map((e) => (e.kind === 'attack' ? e.event.phase : null)),
+    ).toEqual(['charge', 'release']);
+    expect(s.getSnapshot().player.party[0].moves[0].currentPp).toBe(19);
+  });
+  it('whites out rather than paying a prize when the last ally self-destructs', () => {
+    const s = withMove(153, 1);
+    input(s, { type: 'battleMove', index: 0 });
+    drain(s);
+    expect(s.getSnapshot().map.id).toBe('player_house');
+    expect(s.getSnapshot().player.money).toBe(1500);
+    expect(s.getSnapshot().player.defeatedTrainers).toEqual([]);
+  });
 });
