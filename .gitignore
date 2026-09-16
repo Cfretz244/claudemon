@@ -4,3 +4,5 @@ dist/
 .DS_Store
 scripts/pokemon-cache.json
 coverage/
+e2e/shots/
+e2e/logs/
