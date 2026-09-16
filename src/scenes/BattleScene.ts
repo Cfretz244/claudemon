@@ -13,6 +13,10 @@ import { calculateExpGain, addExperience, learnMove } from '../systems/Experienc
 import { expGainSegments } from '../logic/expBar';
 import { MoveForgetUI } from '../components/MoveForgetUI';
 import { checkEvolution, evolvePokemon } from '../systems/EvolutionSystem';
+import {
+  PendingEvolution, learnsetAtLevel, queueEvolution,
+} from '../logic/evolutionSequence';
+import { playEvolution } from '../systems/animations/evolution';
 import { attemptCatch } from '../systems/CatchSystem';
 import { selectAIMove } from '../systems/AISystem';
 import {
@@ -120,6 +124,14 @@ export class BattleScene extends Phaser.Scene {
   private turnInProgress = false;
   private currentPlayerPokemonIndex = 0;
   private participantIndices = new Set<number>();
+  /**
+   * Evolutions the EXP loop has earned but not played yet.
+   *
+   * Gen I evolves AFTER the battle, so `checkEvolution` results are queued
+   * here and `processPendingEvolutions` plays them in `endBattle`, on the way
+   * back to the overworld.
+   */
+  private pendingEvolutions: PendingEvolution[] = [];
 
   constructor() {
     super({ key: 'BattleScene' });
@@ -162,6 +174,7 @@ export class BattleScene extends Phaser.Scene {
     this.battleOver = false;
     this.turnInProgress = false;
     this.participantIndices = new Set<number>([this.currentPlayerPokemonIndex]);
+    this.pendingEvolutions = [];
     this.resetBattleStages('player');
     this.resetBattleStages('opponent');
   }
@@ -1281,15 +1294,14 @@ export class BattleScene extends Phaser.Scene {
           }
         }
 
-        // Check evolution
+        // Check evolution. Gen I evolves AFTER the battle, on the way back to
+        // the overworld, so this only QUEUES it: `processPendingEvolutions`
+        // plays the sequence from `endBattle`.
         const evoResult = checkEvolution(pokemon);
         if (evoResult) {
-          soundSystem.evolution();
-          await this.showText([
-            `What? ${evoResult.fromName}\nis evolving!`,
-            `${evoResult.fromName} evolved\ninto ${evoResult.toName}!`,
-          ]);
-          evolvePokemon(pokemon, evoResult.toSpecies);
+          this.pendingEvolutions = queueEvolution(
+            this.pendingEvolutions, partyIdx, evoResult.toSpecies,
+          );
         }
       }
     }
@@ -1678,6 +1690,68 @@ export class BattleScene extends Phaser.Scene {
     // Update party state back
     this.playerState.party[this.currentPlayerPokemonIndex] = this.playerPokemon;
 
+    // Gen I evolves here, between the last line of the battle and the fade out.
+    void this.processPendingEvolutions().then(() => this.leaveBattle());
+  }
+
+  /**
+   * Play every evolution the EXP loop queued, in the order the party earned
+   * them, before the scene hands back.
+   *
+   * Every way out of a battle that reaches the overworld comes through
+   * `endBattle` - a win, a successful catch and a successful run all do - so
+   * this one call site covers all of them. The exception is the whiteout, which
+   * starts `OverworldScene` itself and never gets here: in Gen I a blacked-out
+   * party does not evolve, and nothing is lost by dropping the queue because
+   * `checkEvolution` re-evaluates at the next level-up.
+   *
+   * `playEvolution` is presentation only. Applying the evolution and teaching
+   * what the NEW species learns at this level belongs here, so the learn/forget
+   * prompt is the same one a level-up uses.
+   */
+  private async processPendingEvolutions(): Promise<void> {
+    const queue = this.pendingEvolutions;
+    this.pendingEvolutions = [];
+
+    for (const entry of queue) {
+      const pokemon = this.playerState.party[entry.partyIndex];
+      if (!pokemon) continue;
+      const level = pokemon.level;
+      const name = pokemon.nickname || this.getSpeciesName(pokemon.speciesId);
+
+      const outcome = await playEvolution(this, {
+        fromSpecies: pokemon.speciesId,
+        toSpecies: entry.toSpecies,
+        name,
+      });
+      // Cancelled (B): the entry is simply dropped. Gen I offers it again at
+      // the next level-up, which falls out of `checkEvolution` re-running.
+      if (outcome === 'cancelled') continue;
+
+      evolvePokemon(pokemon, entry.toSpecies);
+
+      // The new species' own level-<level> moves, through the level-up prompt.
+      // Under its NEW name: the evolution lines are the only ones that still
+      // call it what it was.
+      const newName = pokemon.nickname || this.getSpeciesName(pokemon.speciesId);
+      for (const moveId of learnsetAtLevel(entry.toSpecies, level)) {
+        const moveData = MOVES_DATA[moveId];
+        if (!moveData) continue;
+        if (pokemon.moves.some(m => m.moveId === moveId)) continue;
+        if (pokemon.moves.length < 4) {
+          learnMove(pokemon, moveId);
+          await this.showText([`${newName} learned\n${moveData.name}!`]);
+        } else {
+          await this.promptMoveForget(pokemon, moveId);
+        }
+      }
+    }
+
+    this.hud.updatePlayer(this.playerPokemon);
+  }
+
+  /** The hand-off itself: the fade out and `scene.start('OverworldScene')`. */
+  private leaveBattle(): void {
     // Defeating the Champion triggers Hall of Fame
     if (this.trainerId === CHAMPION.id) {
       this.cameras.main.fadeOut(500, 255, 255, 255);

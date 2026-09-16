@@ -237,7 +237,7 @@ function frames(run: Run, ms: number, onFrame: (t: number) => void): Promise<voi
 }
 
 /** Blend a type colour most of the way to white: the silhouette wash. */
-function paleOf(color: number): number {
+export function paleOf(color: number): number {
   const mix = (c: number): number => Math.min(255, Math.round(c + (255 - c) * 0.6));
   const r = mix((color >> 16) & 0xFF);
   const g = mix((color >> 8) & 0xFF);
