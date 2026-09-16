@@ -7,8 +7,8 @@ import {
 } from '../../logic/entranceSpec';
 import {
   afterimage, animateFrames, delay, directionalParticles, fallingBlocks,
-  groundHeave, lunge, ring, screenShake, sparkle, spriteFlash, tweenPromise,
-  warpArcs,
+  groundHeave, impactBurst, lunge, ring, screenFlash, screenShake, sparkle,
+  spriteFlash, tweenPromise, warpArcs,
 } from '../MoveAnimations';
 
 /**
@@ -46,6 +46,14 @@ export interface EntranceContext {
   onMaterialise?: () => void;
   /** Which side is arriving. Chooses the side a slide/swoop comes in from. */
   side?: 'player' | 'opponent';
+  /**
+   * Where a send-out's ball is thrown FROM, in game pixels. The scene passes
+   * the trainer sprite's live position (it is mid-slide-out, so the ball
+   * leaves the hand rather than a spot the trainer has already left); a
+   * switch-in with no trainer on screen leaves this unset and the renderer
+   * falls back to the screen edge on that side.
+   */
+  from?: { x: number; y: number };
 }
 
 /** A tier-3 per-species entrance, keyed by `EntranceSpec.overrideId`. */
@@ -256,6 +264,118 @@ function crossFade(
     duration: Math.max(1, Math.round(ms)), ease: 'Linear',
   }).then(() => { ghost.destroy(); });
 }
+
+// ---------------------------------------------------------------------------
+// The ball throw (design section 3.1, the send-out vehicle)
+// ---------------------------------------------------------------------------
+
+/** The 8x8 ball BootScene bakes for the Pokemon Centre; no new art needed. */
+export const BALL_TEXTURE = 'pokeball_icon';
+/** Just above the battle sprites (depth 5) and far below the text box. */
+export const BALL_DEPTH = 6;
+/** Design section 3.1's throw length; shortened when the budget is tighter. */
+export const BALL_ARC_MS = 350;
+/** The white pop as the ball opens. Short: it is a punctuation mark. */
+export const BALL_OPEN_MS = 60;
+
+/**
+ * Arc a Pokeball from `from` to `to` and open it.
+ *
+ * The arc is the Pokemon Centre's idiom (`OverworldScene.ts:2560-2570`): a
+ * linear interpolation with `sin(t * PI)` lifted out of it, driven by
+ * `animateFrames` so every position is an integer on the 160x144 grid. The
+ * ball spins exactly once on the way over, which is what sells it as thrown
+ * rather than slid.
+ *
+ * The open is `impactBurst` in the arriving mon's type colour (unawaited: it
+ * keeps burning while the mon materialises inside it) plus a 60 ms white
+ * `screenFlash` at depth 900 - over the HP boxes, under the text box.
+ *
+ * The ball image is destroyed here; when a `run` is passed it is also tracked,
+ * so an abort mid-flight cannot leave one on the field.
+ */
+export async function ballThrow(
+  scene: Phaser.Scene,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  palette: PokemonType,
+  ms: number = BALL_ARC_MS,
+  run?: Run,
+): Promise<void> {
+  const vocab = TYPE_VOCAB[palette] ?? TYPE_VOCAB[PokemonType.NORMAL];
+  const x0 = Math.round(from.x);
+  const y0 = Math.round(from.y);
+  const x1 = Math.round(to.x);
+  const y1 = Math.round(to.y);
+
+  // A throw across the field lifts higher than a lob from the screen edge,
+  // but never so high that the ball leaves the 144 px field.
+  const lift = Math.min(26, 10 + Math.round(Math.abs(x1 - x0) * 0.12));
+  const ball = scene.textures.exists(BALL_TEXTURE)
+    ? scene.add.image(x0, y0, BALL_TEXTURE)
+    : null;
+  if (ball) {
+    ball.setDepth(BALL_DEPTH);
+    ball.setScrollFactor(0);
+    if (run) run.junk.push(ball);
+  }
+
+  await animateFrames(scene, Math.max(1, Math.round(ms)), t => {
+    if (!ball || !ball.active || run?.aborted) return;
+    ball.setPosition(
+      Math.round(x0 + (x1 - x0) * t),
+      Math.round(y0 + (y1 - y0) * t - Math.sin(t * Math.PI) * lift),
+    );
+    ball.setAngle(Math.round(t * 360));
+  });
+  // Destroying it here (as well as in the run's finally) is what BALL-SEEN
+  // measures: a ball on the field DURING the throw and none at the end.
+  ball?.destroy();
+  if (run?.aborted) return;
+
+  void impactBurst(scene, x1, y1, vocab.color, vocab.accentColor, 14, 180);
+  await screenFlash(scene, 0xFFFFFF, BALL_OPEN_MS);
+}
+
+/**
+ * Where the ball comes from when the scene did not say: the screen edge on the
+ * arriving side, level with the sprite. That is the switch-in case - the
+ * trainer sprites left the field during the intro.
+ */
+function defaultBallOrigin(run: Run): { x: number; y: number } {
+  return {
+    x: run.ctx.side === 'player' ? -8 : GAME_WIDTH + 8,
+    y: run.homeY,
+  };
+}
+
+/**
+ * The send-out arrival: ball throw, open, materialise. Every species uses it -
+ * the shape row only chooses the flourish, because a mon coming out of a ball
+ * is coming out of a ball whatever shape it is (design section 3.1).
+ */
+const arriveSendOut: ArrivalFn = async (run, ms) => {
+  const { scene, sprite } = run;
+  const throwMs = Math.min(BALL_ARC_MS, Math.round(ms * 0.45));
+  const revealMs = Math.max(120, ms - throwMs - BALL_OPEN_MS);
+
+  // Nothing of the mon is on screen while the ball is in the air.
+  sprite.setPosition(run.homeX, run.homeY);
+  sprite.setScale(1, 1);
+  sprite.setAlpha(0);
+
+  await ballThrow(
+    scene,
+    run.ctx.from ?? defaultBallOrigin(run),
+    { x: run.homeX, y: run.homeY },
+    run.spec.palette,
+    throwMs,
+    run,
+  );
+  if (run.aborted) return;
+  if (run.spec.mass) void screenShake(scene, 2, 120);
+  await materialise(scene, sprite, run.spec.palette, revealMs, run);
+};
 
 // ---------------------------------------------------------------------------
 // The seven shape rows (design section 4)
@@ -543,6 +663,19 @@ const FLOURISHES: Record<EntranceSpec['flourish'], FlourishFn> = {
 /** What the frame driver and the tween scheduler cost us on top of the plan. */
 const QUANTISATION_MS = 90;
 
+/**
+ * A send-out pays the same rounding on two MORE awaited phases than a wild
+ * arrival does (the arc and the ball's open), and its nominal 900 ms IS the
+ * cap, so it reserves more. Without this the flourish is the thing the cap
+ * race eats, every single time - the bug the E2 runner caught for ANGULAR.
+ */
+const SENDOUT_RESERVE_MS = 150;
+
+/** Frame-rounding allowance for a kind, subtracted from its budget. */
+export function reserveFor(spec: EntranceSpec): number {
+  return spec.kind === 'sendout' ? SENDOUT_RESERVE_MS : QUANTISATION_MS;
+}
+
 /** Hard ceiling for a kind, from the spec module so logic and renderer agree. */
 export function capFor(spec: EntranceSpec): number {
   return spec.kind === 'sendout' ? MAX_SENDOUT_MS : MAX_WILD_MS;
@@ -578,7 +711,7 @@ export async function playEntrance(
   // a plan that spends the full nominal duration lands just OVER the cap and
   // the race below cuts the flourish off. The renderer budgets below the cap
   // and gives the difference back to the frame driver.
-  const budget = Math.max(240, Math.min(spec.duration, capFor(spec)) - QUANTISATION_MS);
+  const budget = Math.max(240, Math.min(spec.duration, capFor(spec)) - reserveFor(spec));
   const arrivalMs = Math.max(120, budget - flourishMs);
   const amp = spec.kind === 'sendout' ? 0.6 : 1;
 
@@ -594,7 +727,10 @@ export async function playEntrance(
     if (spec.rare) {
       void sparkle(scene, run.homeX, run.homeY, vocab.accentColor, 8, arrivalMs);
     }
-    await ARRIVALS[spec.shape](run, arrivalMs);
+    // A send-out arrives out of a ball whatever its shape; the shape row is
+    // the WILD vehicle (design section 3.1: two vehicles, one materialise).
+    const arrival = spec.kind === 'sendout' ? arriveSendOut : ARRIVALS[spec.shape];
+    await arrival(run, arrivalMs);
     if (run.aborted) return;
     // The mon is itself now: this is where the cry belongs.
     cry();
