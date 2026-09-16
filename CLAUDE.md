@@ -8,6 +8,7 @@ npm run build    # Type-check + production build
 npx tsc --noEmit # Type-check only (fast)
 npm test         # Run tests (vitest)
 npm run test:coverage  # Tests + coverage report
+npm run e2e      # Playwright smoke suite (see e2e/README.md)
 npm run preview  # Preview production build
 ```
 
@@ -197,6 +198,15 @@ tests/
 Tests use `mockPokemon()` and `mockMove()` from `tests/helpers/pokemon.factory.ts` for deterministic test data. Mock `Math.random` with `vi.spyOn` when testing randomized systems.
 
 Coverage is scoped to `src/systems/`, `src/entities/`, `src/data/`, and `src/logic/`. Run `npm run test:coverage` for a full report.
+
+### End-to-end smoke suite (`e2e/`)
+
+`npm run e2e` starts a vite dev server and drives the real game in headless
+Chromium, asserting on live scene state through the DEV-only `window.__claudemon`
+hook. Unit tests pin the story *decisions*; the e2e runners pin the *wiring* —
+that the scenes call that logic at the right moment. The `e2e` CI job runs in
+parallel with `test`. See `e2e/README.md` for how to run one runner, how to add
+one, and what is deliberately left out.
 
 ## Map System
 
