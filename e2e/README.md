@@ -41,9 +41,10 @@ feedback stays `max(test, e2e)` and `test` remains the required check.
 | `story-pins-6` | 44 | item balls (Route 24 NUGGET, the Mt. Moon fossil pair, the Silph 5F CARD KEY that opens its own door), Cut on Route 2 and the Vermilion Gym trash-can puzzle — each one re-entered with only its flag seeded |
 | `story-pins-7` | 25 | a no-seed NEW GAME hand-over, the Cerulean nurse (heal + `visited_` + the FLY list), the Power Plant fake ball's ambush, and the Champion -> Hall of Fame return |
 
-Wall time for the whole suite: **~4 min 25 s** on the dev container (two runs
-back to back: 262 s and 263 s, 42 checks, no retries). Each runner boots the
-game once per scenario, so the suite is dominated by boots, not by assertions.
+Wall time for the whole suite: **~7 min 52 s** on the dev container (two runs
+back to back: 472 s and 471 s, 157 checks, no retries); the GitHub `e2e` job is
+~8 min 40 s end to end. Each runner boots the game once per scenario, so the
+suite is dominated by boots, not by assertions.
 
 ## The dev hook
 
