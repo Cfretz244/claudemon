@@ -321,18 +321,23 @@ export class BattleScene extends Phaser.Scene {
       const entrance = this.playOpponentEntrance();
       await this.showText([`Wild ${opponentName}\nappeared!`]);
       await entrance;
-      // "Go! Pokemon!" then slide player back sprite out, bring in player pokemon
+      // "Go! Pokemon!" - the trainer slides off and throws the ball under the
+      // text, same rule: started before it, awaited after it.
+      const sendOut = this.slidePlayerIn();
       await this.showText([`Go! ${playerName}!`]);
-      await this.slidePlayerIn();
+      await sendOut;
     } else {
       // Trainer: show both trainer sprites
       await this.showText([`${this.trainerName || 'TRAINER'}\nwants to battle!`]);
-      // "Trainer sent out Pokemon!" - slide opponent trainer out, bring in opponent pokemon
+      // "Trainer sent out Pokemon!" - the trainer slides off and the ball
+      // leaves their hand while the line types.
+      const oppSendOut = this.slideOpponentIn();
       await this.showText([`${this.trainerName || 'TRAINER'} sent\nout ${opponentName}!`]);
-      await this.slideOpponentIn();
-      // "Go! Pokemon!" - slide player back sprite out, bring in player pokemon
+      await oppSendOut;
+      // "Go! Pokemon!" - slide player back sprite out, throw the player's ball
+      const sendOut = this.slidePlayerIn();
       await this.showText([`Go! ${playerName}!`]);
-      await this.slidePlayerIn();
+      await sendOut;
     }
 
     this.showBattleMenu();
@@ -343,11 +348,22 @@ export class BattleScene extends Phaser.Scene {
    * a species); everything else goes through the shape/type contour.
    */
   private opponentCry(): void {
-    const species = POKEMON_DATA[this.opponentPokemon.speciesId];
-    if (this.isGhost || !species) {
+    if (this.isGhost) {
       soundSystem.pokemonCry(300 + this.opponentPokemon.speciesId * 3);
       return;
     }
+    this.cryFor(this.opponentPokemon.speciesId);
+  }
+
+  /**
+   * One species' cry, either side. Both sides cry now (design section 3.1), so
+   * this is the single place a cry is made from a species id; the only other
+   * `pokemonCry` call left in the scene is the ghost's, above, which is not a
+   * species and has no contour.
+   */
+  private cryFor(speciesId: number): void {
+    const species = POKEMON_DATA[speciesId];
+    if (!species) return;
     soundSystem.pokemonCryFor(resolveCry(species));
   }
 
@@ -392,55 +408,79 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private slideOpponentIn(): Promise<void> {
-    return new Promise(resolve => {
-      // Slide opponent trainer sprite off to the right
-      if (this.opponentTrainerSprite) {
-        this.tweens.add({
-          targets: this.opponentTrainerSprite,
-          x: GAME_WIDTH + 40,
-          duration: 400,
-          ease: 'Power2',
-        });
-      }
-      // Fade in opponent Pokemon
-      this.opponentSprite.setAlpha(0);
-      this.tweens.add({
-        targets: this.opponentSprite,
-        alpha: 1,
-        duration: 400,
-        ease: 'Linear',
-        onComplete: () => {
-          // Trainer battles keep their slide-in (E3 gives them the ball throw);
-          // the cry moves here so it still lands when the mon appears.
-          this.opponentCry();
-          resolve();
-        },
-      });
+  /**
+   * Where a send-out's ball is thrown from.
+   *
+   * During the intro that is the trainer sprite's LIVE position: the slide is
+   * only half done when the ball leaves, so the throw reads as the trainer's
+   * own motion. For a switch-in the trainer sprites have long since slid off
+   * the field, so the ball comes in from the screen edge on that side instead.
+   */
+  private ballOrigin(side: 'player' | 'opponent'): { x: number; y: number } {
+    const sprite = side === 'player' ? this.playerSprite : this.opponentSprite;
+    const trainer = side === 'player' ? this.playerTrainerSprite : this.opponentTrainerSprite;
+    if (trainer && trainer.active && trainer.x > -8 && trainer.x < GAME_WIDTH + 8) {
+      return { x: Math.round(trainer.x), y: Math.round(trainer.y) };
+    }
+    return { x: side === 'player' ? -8 : GAME_WIDTH + 8, y: Math.round(sprite.y) };
+  }
+
+  /**
+   * THE send-out: a Pokeball arcs in, opens, and the mon materialises out of
+   * it with its cry (design section 3.1). Every path that puts a Pokemon on
+   * the field other than a wild appearance goes through here - both intro
+   * slides and all three switch-ins - so they cannot drift apart again.
+   */
+  private sendOut(side: 'player' | 'opponent', pokemon: PokemonInstance): Promise<void> {
+    const sprite = side === 'player' ? this.playerSprite : this.opponentSprite;
+    const homeY = side === 'player' ? 76 : 28;
+    this.ensurePokemonSprite(pokemon.speciesId);
+    // The switch-in paths' existing precedent, now shared by all of them: a
+    // faint/damage tween still running would fight the entrance.
+    this.tweens.killTweensOf(sprite);
+    sprite.setTexture(`pokemon_${pokemon.speciesId}`, side === 'player' ? 1 : 0);
+    sprite.setPosition(side === 'player' ? 36 : GAME_WIDTH - 40, homeY);
+    sprite.setAlpha(0);
+
+    const species = POKEMON_DATA[pokemon.speciesId];
+    if (!species) {
+      sprite.setAlpha(1);
+      return Promise.resolve();
+    }
+    return playEntrance(this, sprite, resolveEntrance(species, 'sendout'), {
+      side,
+      from: this.ballOrigin(side),
+      onMaterialise: () => this.cryFor(pokemon.speciesId),
     });
   }
 
-  private slidePlayerIn(): Promise<void> {
-    return new Promise(resolve => {
-      // Slide player back sprite off to the left
-      if (this.playerTrainerSprite) {
-        this.tweens.add({
-          targets: this.playerTrainerSprite,
-          x: -40,
-          duration: 400,
-          ease: 'Power2',
-        });
-      }
-      // Fade in player Pokemon
-      this.playerSprite.setAlpha(0);
+  private slideOpponentIn(): Promise<void> {
+    // Slide opponent trainer sprite off to the right (unchanged, 400 ms)
+    if (this.opponentTrainerSprite) {
       this.tweens.add({
-        targets: this.playerSprite,
-        alpha: 1,
+        targets: this.opponentTrainerSprite,
+        x: GAME_WIDTH + 40,
         duration: 400,
-        ease: 'Linear',
-        onComplete: () => resolve(),
+        ease: 'Power2',
       });
-    });
+    }
+    this.opponentSprite.setAlpha(0);
+    // The ball leaves the hand at the slide's midpoint (design section 3.2).
+    return this.delay(200).then(() => this.sendOut('opponent', this.opponentPokemon));
+  }
+
+  private slidePlayerIn(): Promise<void> {
+    // Slide player back sprite off to the left (unchanged, 400 ms)
+    if (this.playerTrainerSprite) {
+      this.tweens.add({
+        targets: this.playerTrainerSprite,
+        x: -40,
+        duration: 400,
+        ease: 'Power2',
+      });
+    }
+    this.playerSprite.setAlpha(0);
+    return this.delay(200).then(() => this.sendOut('player', this.playerPokemon));
   }
 
   private ensurePokemonSprite(speciesId: number): void {
@@ -1104,17 +1144,15 @@ export class BattleScene extends Phaser.Scene {
         this.ensurePokemonSprite(this.opponentPokemon.speciesId);
         const nextName = this.getSpeciesName(this.opponentPokemon.speciesId);
 
-        const spriteKey = `pokemon_${this.opponentPokemon.speciesId}`;
-        this.tweens.killTweensOf(this.opponentSprite);
-        this.opponentSprite.setTexture(spriteKey, 0);
-        this.opponentSprite.setAlpha(1);
-        this.opponentSprite.setY(28);
-
         this.hud.updateOpponent(this.opponentPokemon);
         this.battleOver = false;
         this.turnInProgress = false;
 
+        // Same send-out as the intro (ball, open, materialise, cry), started
+        // before its line and awaited after it.
+        const entrance = this.sendOut('opponent', this.opponentPokemon);
         await this.showText([`${this.trainerName} sent\nout ${nextName}!`]);
+        await entrance;
         this.showBattleMenu();
         return;
       }
@@ -1193,16 +1231,12 @@ export class BattleScene extends Phaser.Scene {
       this.ensurePokemonSprite(this.playerPokemon.speciesId);
 
       const nextName = this.getSpeciesName(this.playerPokemon.speciesId);
-      const spriteKey = `pokemon_${this.playerPokemon.speciesId}`;
-      this.tweens.killTweensOf(this.playerSprite);
-      this.playerSprite.setTexture(spriteKey, 1);
-      this.playerSprite.setAlpha(1);
-      this.playerSprite.setY(76);
-
       this.hud.updatePlayer(this.playerPokemon);
       this.turnInProgress = false;
 
+      const entrance = this.sendOut('player', this.playerPokemon);
       await this.showText([`Go! ${nextName}!`]);
+      await entrance;
       this.showBattleMenu();
     } else {
       // All Pokemon fainted - white out
@@ -1447,32 +1481,31 @@ export class BattleScene extends Phaser.Scene {
     this.playerPokemon = this.playerState.party[newIndex];
     this.participantIndices.add(newIndex);
 
-    // Update sprite
-    this.ensurePokemonSprite(this.playerPokemon.speciesId);
-    const spriteKey = `pokemon_${this.playerPokemon.speciesId}`;
-    this.playerSprite.setTexture(spriteKey, 1);
-    this.playerSprite.setAlpha(1);
-    this.playerSprite.setY(76);
-
     // Update HUD
     this.hud.updatePlayer(this.playerPokemon);
 
     const name = this.getSpeciesName(this.playerPokemon.speciesId);
+    // Start the ball throw, show the line over it, and let the opponent's free
+    // hit wait for the entrance to finish - the same start-before/await-after
+    // rule the intro follows, so the AI never swings at a mon still arriving.
+    const entrance = this.sendOut('player', this.playerPokemon);
     this.textBox.show([`Go! ${name}!`], () => {
-      // Opponent attacks with pre-selected move (chosen before seeing the switch)
-      if (aiMove && aiMoveData) {
-        this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false).then(() => {
-          if (this.playerPokemon.currentHp <= 0) {
-            this.handlePlayerFaint();
-          } else {
-            this.turnInProgress = false;
-            this.showBattleMenu();
-          }
-        });
-      } else {
-        this.turnInProgress = false;
-        this.showBattleMenu();
-      }
+      void entrance.then(() => {
+        // Opponent attacks with pre-selected move (chosen before seeing the switch)
+        if (aiMove && aiMoveData) {
+          this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false).then(() => {
+            if (this.playerPokemon.currentHp <= 0) {
+              this.handlePlayerFaint();
+            } else {
+              this.turnInProgress = false;
+              this.showBattleMenu();
+            }
+          });
+        } else {
+          this.turnInProgress = false;
+          this.showBattleMenu();
+        }
+      });
     });
   }
 
