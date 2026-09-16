@@ -1,6 +1,7 @@
 import { MapData, NPCData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
 import { createMapFromSketch, SketchShape } from './mapBuilder';
+import { CHAMPION_FLAG } from '../logic/hallOfFame';
 
 const T = TileType;
 
@@ -165,7 +166,7 @@ const CERULEAN_CAVE_1F = floor(F1, CC_1F, {
   ],
   entryGates: [{
     from: ['cerulean_city'],
-    requires: { flag: 'champion' },
+    requires: { flag: CHAMPION_FLAG },
     message: ['The POKeMON inside\nare horribly strong!', 'Only the POKeMON\nLEAGUE CHAMPION\nmay enter.'],
   }],
   npcs: [

@@ -1,4 +1,5 @@
 import { NPCData } from '../types/map.types';
+import { pickedUpFlag } from './itemBalls';
 import { getStaticLegendary, legendaryClearedFlag } from '../data/staticLegendaries';
 import { BADGE_CHECK_PASSED_SUFFIX, badgeCheckClearedFlag } from './roadBlocks';
 
@@ -10,7 +11,7 @@ export function shouldSkipNPC(
   hasItem: (id: string) => boolean
 ): boolean {
   // Item balls disappear once picked up
-  if (npc.isItemBall && storyFlags[`picked_up_${npc.id}`]) {
+  if (npc.isItemBall && storyFlags[pickedUpFlag(npc.id)]) {
     return true;
   }
   // Pewter guide disappears after getting Boulder badge

@@ -98,3 +98,37 @@ export function itemBallPickup(
     removeSprites,
   };
 }
+
+/** What a fake ball does: the same flag as a real pickup, then a wild battle. */
+export interface AmbushBallSpring {
+  /** `picked_up_<id>`: the same flag a real pickup writes, so the ball stays gone. */
+  flag: string;
+  /** The NPC id whose sprite the scene destroys before the battle starts. */
+  removeSprite: string;
+  /** The wild Pokemon that attacks, straight from the map data. */
+  speciesId: number;
+  level: number;
+}
+
+/**
+ * Springing the fake ball `npc` (the Power Plant Voltorb/Electrode ambushes).
+ * Null for any ball with no `ambush` block — `itemBallAction()` already routes
+ * those to `itemBallPickup()`, so the scene never reaches this with one.
+ *
+ * Extracted verbatim from OverworldScene.springAmbushBall(): the same flag
+ * name, the same single sprite removed, and the species/level passed through
+ * untouched. The scene still shows the ball's dialogue first (there is none in
+ * the shipped data) and still starts the battle last, after the flag and the
+ * sprite.
+ */
+export function ambushBallSpring(
+  npc: Pick<NPCData, 'id' | 'ambush'>,
+): AmbushBallSpring | null {
+  if (!npc.ambush) return null;
+  return {
+    flag: pickedUpFlag(npc.id),
+    removeSprite: npc.id,
+    speciesId: npc.ambush.speciesId,
+    level: npc.ambush.level,
+  };
+}
