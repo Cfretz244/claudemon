@@ -1,3 +1,4 @@
+import { oakIntroText, OAK_INTRO_PAGES, NAME_OPTIONS_PLAYER, NAME_OPTIONS_RIVAL } from '@claudemon/engine';
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { SaveSystem } from '../systems/SaveSystem';
@@ -6,8 +7,6 @@ import { resyncMobileInput } from '../utils/mobileControls';
 
 type TitleState = 'menu' | 'name_player' | 'name_rival' | 'oak_intro' | 'shrinking';
 
-const NAME_OPTIONS_PLAYER = ['RED', 'ASH', 'JACK'];
-const NAME_OPTIONS_RIVAL = ['BLUE', 'GARY', 'JOHN'];
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const ALPHA_COLS = 9;
 
@@ -452,21 +451,7 @@ export class TitleScene extends Phaser.Scene {
   private introNidorino: Phaser.GameObjects.Image | null = null;
 
   private getIntroPageText(): string {
-    switch (this.introPageIndex) {
-      case 0: return 'Hello there!\nWelcome to the world\nof POKeMON!';
-      case 1: return "My name is OAK!\nPeople call me the\nPOKeMON PROF!";
-      case 2: return 'This world is\ninhabited by creatures\ncalled POKeMON!';
-      case 3: return 'For some people,\nPOKeMON are pets.\nOthers use them\nfor fights.';
-      case 4: return 'Myself...\nI study POKeMON\nas a profession.';
-      case 5: return 'First, what is\nyour name?';
-      case 6: return `Right! So your\nname is ${this.playerName}!`;
-      case 7: return "This is my grandson.\nHe's been your rival\nsince you were\na baby.";
-      case 8: return '...Erm, what was\nhis name again?';
-      case 9: return `That's right!\nI remember now!\nHis name is ${this.rivalName}!`;
-      case 10: return `${this.playerName}!\nYour very own\nPOKeMON legend is\nabout to unfold!`;
-      case 11: return "A world of dreams\nand adventures with\nPOKeMON awaits!\nLet's go!";
-      default: return '';
-    }
+    return oakIntroText(this.introPageIndex, this.playerName, this.rivalName);
   }
 
   private showOakIntro(): void {
@@ -532,7 +517,7 @@ export class TitleScene extends Phaser.Scene {
     this.introPageIndex++;
 
     // Trigger player naming after "what is your name?"
-    if (this.introPageIndex === 6 && !this.playerName) {
+    if (OAK_INTRO_PAGES[this.introPageIndex - 1]?.name === 'player' && !this.playerName) {
       this.state = 'name_player';
       this.introContainer.setVisible(false);
       this.showNamingScreen('YOUR NAME?', NAME_OPTIONS_PLAYER);
@@ -540,14 +525,14 @@ export class TitleScene extends Phaser.Scene {
     }
 
     // Trigger rival naming after "what was his name?"
-    if (this.introPageIndex === 9 && !this.rivalName) {
+    if (OAK_INTRO_PAGES[this.introPageIndex - 1]?.name === 'rival' && !this.rivalName) {
       this.state = 'name_rival';
       this.introContainer.setVisible(false);
       this.showNamingScreen('RIVAL NAME?', NAME_OPTIONS_RIVAL);
       return;
     }
 
-    if (this.introPageIndex > 11) {
+    if (this.introPageIndex >= OAK_INTRO_PAGES.length) {
       this.startShrinkAnimation();
       return;
     }
@@ -555,21 +540,13 @@ export class TitleScene extends Phaser.Scene {
     this.introText.setText(this.getIntroPageText());
     soundSystem.menuSelect();
 
-    // Show Pikachu on page 2, hide on page 4
+    // Follow the shared reveal cue; the renderer owns the fade animation.
     if (this.introNidorino) {
-      if (this.introPageIndex === 2) {
-        this.tweens.add({
-          targets: this.introNidorino,
-          alpha: 1,
-          duration: 300,
-        });
-      } else if (this.introPageIndex === 4) {
-        this.tweens.add({
-          targets: this.introNidorino,
-          alpha: 0,
-          duration: 300,
-        });
-      }
+      this.tweens.add({
+        targets: this.introNidorino,
+        alpha: OAK_INTRO_PAGES[this.introPageIndex].focus === 'pokemon' ? 1 : 0,
+        duration: 300,
+      });
     }
   }
 

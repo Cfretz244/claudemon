@@ -24,15 +24,15 @@ Both the Phaser Oak/parcel handlers and the session use the engine's story decis
 
 The Phaser full campaign still uses mutable PlayerState and scene-managed round/reward/overworld transitions. Its menus have not all been converted into command dispatch. `compat` is intentionally visible migration debt, not the final public gameplay architecture. A follow-up should extract those sequences in tested slices: full trainer encounter settlement and item/menu operations, then trainer sight/forced motion/warps, then dungeon and endgame stories. Remove each shim only when all callers have moved.
 
-The opening session is tested for its actual chapter, not advertised as a complete full-campaign API. Mid-battle saves, a portable import/export screen, stable cross-session Pokémon ids, full 3D art coverage, and automatic cross-repository update PRs remain follow-ups. No automatic update PR is configured because Codexemon currently has no remote.
+The opening session is tested for its actual chapter, not advertised as a complete full-campaign API. Mid-battle saves, a portable import/export screen, stable cross-session Pokémon ids, full 3D art coverage, and automatic cross-repository update PRs remain follow-ups. Automatic update PRs are not configured.
 
 The session deliberately retains a turn-based logical grid; interpolation, camera and effects are entirely frontend concerns. Browser audio remains in each frontend for this extraction; a browser-audio package can remove that last platform duplication independently.
 
 ## Updating the 3D consumer
 
-Check out Claudemon and Codexemon as sibling directories. Codexemon depends on `file:../claudemon/packages/engine`, importing the compiled package rather than source paths. Its `npm run dev` supervises the engine build watcher and Vite. `engine.lock.json` records a tested Claudemon commit; `npm run engine:verify` rejects a mismatched revision or dirty engine source. `npm run engine:pin` records committed changes, and `npm run engine:update -- <ref>` selects an existing clean revision and runs both builds/test suites before pinning it.
+Codexemon vendors Claudemon as a Git submodule at `vendor/claudemon` and depends on `file:vendor/claudemon/packages/engine`, importing the compiled package rather than source paths. Its `npm run dev` supervises the engine build watcher and Vite. `engine.lock.json` records a tested Claudemon commit; `npm run engine:verify` rejects a mismatched revision or dirty engine source. `npm run engine:pin` records committed changes, and `npm run engine:update -- <ref>` selects an existing clean revision and runs both builds/test suites before pinning it.
 
-A Codexemon CI workflow checks out both repositories at the recorded revision, runs the engine and consumer checks, and runs headless Chromium. It will become active once that repository is hosted. Local browser tests are verified against both apps before this PR is handed off.
+The public Codexemon CI workflow checks out the submodule at the recorded revision, runs the engine and consumer checks, and runs headless Chromium. Local browser tests are verified against both apps before this PR is handed off.
 
 ## Review route
 
@@ -41,3 +41,9 @@ A Codexemon CI workflow checks out both repositories at the recorded revision, r
 3. Review the codec's legacy migration and validation.
 4. Confirm content/rule moves are mechanical apart from explicit RNG injection and shared parcel helpers.
 5. Run `npm ci`, `npm test`, `npm run build`, `npm run engine:check`, and `npm run e2e`. The existing source-audit tests now include the package source tree.
+
+## Shared opening presentation
+
+`story/opening.ts` owns the twelve Oak introduction pages, name presets, focus cues, and the Oak interception/escort choreography. Both Phaser’s TitleScene and Codexemon use these pages. Both overworld renderers execute `createOakEscortScript` steps (music, spawn, concurrent walks, dialogue, facing, removal) using their own animation primitives. Paths come from the actual Pallet collision grid and lab doorway, including approaches from the eastern grass patch.
+
+The session emits a `cutscene` effect and remains locked in Pallet until the renderer acknowledges completion; only then does it enter the canonical lab destination. No save or player movement can interrupt the sequence. Presentation does not grant a starter or change story rewards. The shared opening tests cover all Pallet grass and exit trigger tiles, collision-free cardinal motion, synchronized following, dialogue parity, naming, and effect acknowledgement.
