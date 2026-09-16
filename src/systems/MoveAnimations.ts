@@ -27,6 +27,15 @@ export interface AnimationContext {
    * status move) and the move renders exactly as it did before tier 4.
    */
   outcome?: MoveOutcome;
+  /**
+   * Which half of a two-turn CHARGE move this is (SOLAR BEAM, FLY, DIG, RAZOR
+   * WIND, SKULL BASH, SKY ATTACK). `charge` plays the wind-up and stops;
+   * `release` plays the strike. Leave it UNDEFINED - the battle simulator's
+   * animation preview, `anim-e2e`, anything calling `renderSpec` directly -
+   * and the clip plays whole, exactly as it did when the engine resolved a
+   * charge move in one turn.
+   */
+  phase?: 'charge' | 'release';
 }
 
 // === Tier-4 outcome gate ===
@@ -45,6 +54,34 @@ let activePlan: OutcomePlan = NEUTRAL_PLAN;
 let gateCutout: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask | null = null;
 let gateDefender: Phaser.GameObjects.Sprite | null = null;
 let gateAttacker: Phaser.GameObjects.Sprite | null = null;
+
+/**
+ * The attacker's alpha AFTER `renderSpec` has restored the sprites, when the
+ * animation asked for one. This is the whole "the FLY/DIG user stays off the
+ * field between its two turns" mechanism:
+ *
+ *   * `renderSpec` snapshots both sprites on entry and restores them in a
+ *     `finally` (position, alpha, scale, tint), because `applyDamageAnimation`
+ *     tweens the same sprites straight afterwards. That restore would undo a
+ *     charge half that ends with the attacker hidden.
+ *   * So the charge half calls `holdAttackerAlpha(0)` and the release half
+ *     calls `holdAttackerAlpha(1)`: the restore still runs in full (the sprite
+ *     goes back to its home position and scale), and the requested alpha is
+ *     re-applied on top of it, once, afterwards.
+ *
+ * A single slot, consumed and cleared by the `finally` that reads it, mirrors
+ * the outcome gate above: animations are awaited one at a time, and the only
+ * nesting (METRONOME) cannot reach a two-turn move.
+ */
+let attackerAlphaAfter: number | null = null;
+
+/**
+ * A two-turn override's way of saying "leave the attacker hidden / put it back
+ * on the field when you restore". See `attackerAlphaAfter`.
+ */
+export function holdAttackerAlpha(alpha: number): void {
+  attackerAlphaAfter = alpha;
+}
 
 /** The plan in force for the animation currently rendering. */
 export function currentOutcomePlan(): OutcomePlan {
@@ -1464,13 +1501,22 @@ export async function renderSpec(spec: AnimationSpec, ctx: AnimationContext): Pr
         // 0.38 + 0.26 + the impact, not 0.45 + 0.3: each await costs a frame of
         // timer granularity on top of its budget, and at 0.45/0.3 the heavy
         // charge moves (SKY ATTACK) overran the 900 ms cap.
-        await gather(spec, ctx, Math.round(d * 0.38));
+        //
+        // Split across two turns (RAZOR WIND, SKULL BASH, SKY ATTACK), each
+        // half gets the budget the whole clip used to get, so the wind-up on
+        // its own turn is a beat rather than a flicker - and each half stays
+        // UNDER `spec.duration`, which is the cap the resolver enforces.
+        if (ctx.phase !== 'release') {
+          await gather(spec, ctx, Math.round(d * (ctx.phase === 'charge' ? 0.66 : 0.38)));
+          if (ctx.phase === 'charge') break;
+        }
+        const strike = Math.round(d * (ctx.phase === 'release' ? 0.44 : 0.26));
         await Promise.all([
           typeBeam(
             scene, attackerSprite.x, attackerSprite.y - 2, defenderSprite.x, defenderSprite.y,
-            spec.color, spec.accentColor, 8, Math.round(d * 0.26),
+            spec.color, spec.accentColor, 8, strike,
           ),
-          lunge(scene, attackerSprite, defenderSprite.x, defenderSprite.y, Math.round(d * 0.26), contactFactor(ctx, rank)),
+          lunge(scene, attackerSprite, defenderSprite.x, defenderSprite.y, strike, contactFactor(ctx, rank)),
         ]);
         await typeImpact(spec, ctx, 1.2);
         break;
@@ -1534,6 +1580,11 @@ export async function renderSpec(spec: AnimationSpec, ctx: AnimationContext): Pr
     if (cutout) cutout.dispose();
     gateCutout = prevCutout;
     before.forEach(restore);
+    // Consumed exactly once, AFTER the restore: a two-turn charge half that
+    // ends with its user off the field must not be un-hidden by the restore.
+    const heldAlpha = attackerAlphaAfter;
+    attackerAlphaAfter = null;
+    if (heldAlpha !== null) attackerSprite.setAlpha(heldAlpha);
   }
 }
 

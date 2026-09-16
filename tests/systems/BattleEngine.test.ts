@@ -4,6 +4,7 @@ import {
   resolveTurnOrder, confusionSelfDamage, resolvePreAction,
   rollHitCount, applySpecialDamage, applyMoveEffect,
   applyEndTurnStatus, applyLeechSeed, calculateRunChance, splitExp,
+  evadesSemiInvulnerable,
   StatStages, VolatileStatus, DisableState, EffectContext,
 } from '../../src/systems/BattleEngine';
 import { mockPokemon } from '../helpers/pokemon.factory';
@@ -199,8 +200,74 @@ describe('BattleEngine', () => {
       expect(thawing.status).toBe(StatusCondition.NONE);
     });
 
+    // === Two-turn CHARGE moves ===
+    //
+    // A charge is stored on the volatile status, so the pre-action gate is the
+    // one place that can drop it: everything that costs the user its turn
+    // outright also costs it the stored move (a deliberate Gen II-style
+    // deviation from Gen I's "pause", documented in logic/chargeMoves.ts).
+
+    const charging = () => ({ moveIndex: 2, moveId: 76 });
+
+    it.each([
+      ['asleep', () => mockPokemon({ status: StatusCondition.SLEEP }), volatile(), false, seq(0.6), 'sleep'],
+      ['frozen solid', () => mockPokemon({ status: StatusCondition.FREEZE }), volatile(), false, seq(0.5), 'frozen'],
+      ['fully paralysed', () => mockPokemon({ status: StatusCondition.PARALYSIS }), volatile(), false, seq(0.2), 'paralyzed'],
+      ['flinched', () => mockPokemon(), volatile({ flinched: true }), false, seq(0.5), 'flinch'],
+      ['confused into itself', () => mockPokemon(), volatile({ confused: 3 }), false, seq(0.4), 'confusion-self-hit'],
+    ])('a charge is cancelled when the user is %s', (_label, mon, baseVol, recharging, rng, action) => {
+      const vol = { ...baseVol, charging: charging() };
+      const result = resolvePreAction(mon(), vol, recharging as boolean, rng as () => number);
+      expect(result.action).toBe(action);
+      expect(result.chargeCancelled).toBe(true);
+      expect(vol.charging).toBeNull();
+    });
+
+    it.each([
+      ['woke up', () => mockPokemon({ status: StatusCondition.SLEEP }), volatile(), seq(0.4), 'sleep-wake'],
+      ['thawed out', () => mockPokemon({ status: StatusCondition.FREEZE }), volatile(), seq(0.1), 'thaw'],
+      ['snapped out of confusion', () => mockPokemon(), volatile({ confused: 1 }), seq(0.9), 'confusion-snap'],
+      ['attacked through confusion', () => mockPokemon(), volatile({ confused: 3 }), seq(0.6), 'confusion-attack'],
+      ['is perfectly fine', () => mockPokemon(), volatile(), seq(0.9), 'attack'],
+    ])('a charge survives when the user %s', (_label, mon, baseVol, rng, action) => {
+      const vol = { ...baseVol, charging: charging() };
+      const result = resolvePreAction(mon(), vol, false, rng as () => number);
+      expect(result.action).toBe(action);
+      expect(result.chargeCancelled).toBeUndefined();
+      expect(vol.charging).toEqual({ moveIndex: 2, moveId: 76 });
+    });
+
+    it('never reports a cancellation when there was no charge to cancel', () => {
+      const vol = volatile({ flinched: true });
+      const result = resolvePreAction(mockPokemon(), vol, false);
+      expect(result.action).toBe('flinch');
+      expect(result.chargeCancelled).toBeUndefined();
+    });
+
     it('healthy unencumbered Pokemon just attacks', () => {
       expect(resolvePreAction(mockPokemon(), volatile(), false)).toEqual({ action: 'attack' });
+    });
+  });
+
+  describe('evadesSemiInvulnerable', () => {
+    // FLY / DIG: while the user is in the air or underground, everything aimed
+    // at it misses. Gen I's only exceptions are SWIFT, TRANSFORM and BIDE;
+    // SWIFT is the one that matters here because it is the only one with real
+    // damage behind it, and the codebase already models "never misses" as
+    // accuracy 0 (see MOVES_DATA[129]). TRANSFORM and BIDE are message-only in
+    // this game, so folding them into the same rule changes nothing visible.
+    it('an ordinary move cannot touch a semi-invulnerable defender', () => {
+      expect(evadesSemiInvulnerable(100, true)).toBe(true);
+      expect(evadesSemiInvulnerable(55, true)).toBe(true);
+    });
+
+    it('an always-hit move (accuracy 0, e.g. SWIFT) still connects', () => {
+      expect(evadesSemiInvulnerable(0, true)).toBe(false);
+    });
+
+    it('is inert when the defender is on the field', () => {
+      expect(evadesSemiInvulnerable(100, false)).toBe(false);
+      expect(evadesSemiInvulnerable(0, false)).toBe(false);
     });
   });
 

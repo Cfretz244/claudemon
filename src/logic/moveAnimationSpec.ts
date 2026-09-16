@@ -240,11 +240,14 @@ export const MAX_OVERRIDE_DURATION_MS = 1200;
  * impact, afterglow - and at the generic beam budget (520 ms) each bolt would
  * be on screen for barely three frames.
  *
- * fly / dig / solarBeam: the engine resolves a CHARGE move in ONE turn (see
- * BattleScene.doExecuteMove - nothing defers it), so the override has to fit
- * gather AND release into a single promise. The generic charge budget (680-740
- * ms) leaves no room for "the attacker is off the field" to read as absence
- * rather than as a dropped frame.
+ * fly / dig / solarBeam: these are two-turn CHARGE moves, so the override is
+ * played TWICE - once with `ctx.phase === 'charge'` (gather; for fly and dig
+ * the attacker leaves the field) and once with `'release'` (return + impact).
+ * This budget is the cap for EACH half, not for the pair: either half may use
+ * all of it. Without a phase (the /battle simulator preview, tools/anim-e2e)
+ * the clip still plays whole inside the same budget, and the generic charge
+ * budget (680-740 ms) leaves that whole version no room for "the attacker is
+ * off the field" to read as absence rather than as a dropped frame.
  *
  * selfDestruct / explosion: a strobe, a detonation and settling debris; and
  * EXPLOSION needs to stay visibly bigger and longer than SELF-DESTRUCT.

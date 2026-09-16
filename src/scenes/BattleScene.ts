@@ -17,7 +17,7 @@ import { selectAIMove } from '../systems/AISystem';
 import {
   resolveTurnOrder, resolvePreAction, rollHitCount, applySpecialDamage,
   applyMoveEffect, applyLeechSeed, calculateRunChance,
-  splitExp, getFirstAlivePokemon, EffectContext,
+  splitExp, getFirstAlivePokemon, EffectContext, evadesSemiInvulnerable,
 } from '../systems/BattleEngine';
 import { soundSystem } from '../systems/SoundSystem';
 import { generatePokemonSprite, getShapeForSpecies, generateGhostBattleSprite } from '../utils/spriteGenerator';
@@ -35,6 +35,9 @@ import { outcomeFor } from '../logic/animationOutcome';
 import { reviveHp, isReviveItem } from '../logic/reviveItems';
 import { clearsForcedEncounter, WildBattleEnd } from '../logic/forcedEncounters';
 import { roundContinues } from '../logic/turnFlow';
+import {
+  ChargeState, isChargeMove, isSemiInvulnerableCharge, chargeMessage, resolveChargeStep,
+} from '../logic/chargeMoves';
 import { hallOfFameResult } from '../logic/hallOfFame';
 import { restoreParty } from '../logic/healing';
 import '../systems/animations';
@@ -104,8 +107,8 @@ export class BattleScene extends Phaser.Scene {
   private opponentDisable = { moveIndex: -1, turnsLeft: 0 };
 
   // Volatile battle status (reset on switch/faint)
-  private playerVolatile = { confused: 0, seeded: false, flinched: false, lastDamageTaken: 0, lastDamagePhysical: false, substitute: 0 };
-  private opponentVolatile = { confused: 0, seeded: false, flinched: false, lastDamageTaken: 0, lastDamagePhysical: false, substitute: 0 };
+  private playerVolatile = { confused: 0, seeded: false, flinched: false, lastDamageTaken: 0, lastDamagePhysical: false, substitute: 0, charging: null as ChargeState | null };
+  private opponentVolatile = { confused: 0, seeded: false, flinched: false, lastDamageTaken: 0, lastDamagePhysical: false, substitute: 0, charging: null as ChargeState | null };
 
   // Recharge tracking (Hyper Beam)
   private playerRecharging = false;
@@ -171,6 +174,9 @@ export class BattleScene extends Phaser.Scene {
     const vol = side === 'player' ? this.playerVolatile : this.opponentVolatile;
     vol.confused = 0; vol.seeded = false; vol.flinched = false;
     vol.lastDamageTaken = 0; vol.lastDamagePhysical = false; vol.substitute = 0;
+    // A two-turn CHARGE dies with the mon that stored it: switching out and
+    // fainting both come through here, exactly as the recharge flag does.
+    vol.charging = null;
     if (side === 'player') this.playerRecharging = false;
     else this.opponentRecharging = false;
   }
@@ -498,6 +504,14 @@ export class BattleScene extends Phaser.Scene {
 
   private showBattleMenu(): void {
     if (this.battleOver) return;
+    // Turn 2 of a CHARGE move: the player gets no menu at all (no switching,
+    // no items, no other move) - the stored move index is dispatched for them.
+    const charging = this.playerVolatile.charging;
+    if (charging) {
+      this.turnInProgress = false;
+      void this.executeTurn(charging.moveIndex);
+      return;
+    }
     const bagItems = this.buildBagItems();
     this.menu.show(
       this.playerPokemon,
@@ -572,7 +586,7 @@ export class BattleScene extends Phaser.Scene {
     if (isBall && this.battleType === BattleType.TRAINER) {
       this.textBox.show(["The TRAINER blocked\nthe BALL!", "Don't be a thief!"], () => {
         // Opponent gets a free attack (throwing is your turn)
-        const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+        const aiMoveIndex = this.aiMoveIndex();
         const aiMove = this.opponentPokemon.moves[aiMoveIndex];
         const aiMoveData = MOVES_DATA[aiMove?.moveId];
         if (aiMove && aiMoveData) {
@@ -601,11 +615,35 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * The opponent's move for this round. A charging opponent is locked into the
+   * move it started: `selectAIMove` is bypassed entirely, the same way the
+   * player's menu is. Every AI-move call site goes through here so the lock
+   * cannot be forgotten on one of them (bag, ball, potion, revive, run, switch).
+   */
+  private aiMoveIndex(): number {
+    const charging = this.opponentVolatile.charging;
+    if (charging) return charging.moveIndex;
+    return selectAIMove(this.opponentPokemon, this.playerPokemon);
+  }
+
+  /**
+   * Drop a stored charge and put the user back on the field. Used when the
+   * charge is interrupted (sleep/freeze/paralysis/flinch/confusion self-hit)
+   * and when the mon leaves the field, so a FLY/DIG user is never left hidden.
+   */
+  private clearCharge(isPlayer: boolean): void {
+    const vol = isPlayer ? this.playerVolatile : this.opponentVolatile;
+    vol.charging = null;
+    const sprite = isPlayer ? this.playerSprite : this.opponentSprite;
+    if (sprite) sprite.setAlpha(1);
+  }
+
   private async executeTurn(playerMoveIndex: number): Promise<void> {
     if (this.turnInProgress) return;
 
-    // Block disabled moves
-    if (this.playerDisable.moveIndex === playerMoveIndex) {
+    // Block disabled moves (a charge release is not a fresh selection)
+    if (!this.playerVolatile.charging && this.playerDisable.moveIndex === playerMoveIndex) {
       this.textBox.show(["That move is\ndisabled!"], () => this.showBattleMenu());
       return;
     }
@@ -617,9 +655,9 @@ export class BattleScene extends Phaser.Scene {
     this.opponentVolatile.flinched = false;
 
     const playerMove = this.playerPokemon.moves[playerMoveIndex];
-    let aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
-    // AI: skip disabled move, pick another
-    if (this.opponentDisable.moveIndex === aiMoveIndex) {
+    let aiMoveIndex = this.aiMoveIndex();
+    // AI: skip disabled move, pick another (a charge release is locked in)
+    if (!this.opponentVolatile.charging && this.opponentDisable.moveIndex === aiMoveIndex) {
       const alternatives = this.opponentPokemon.moves
         .map((m, i) => i)
         .filter(i => i !== this.opponentDisable.moveIndex && this.opponentPokemon.moves[i].currentPp > 0);
@@ -708,9 +746,35 @@ export class BattleScene extends Phaser.Scene {
       const atkVol = isPlayer ? this.playerVolatile : this.opponentVolatile;
       const isRecharging = isPlayer ? this.playerRecharging : this.opponentRecharging;
       const name = this.getSpeciesName(attacker.speciesId);
-      const attack = () => this.doExecuteMove(attacker, defender, move, moveData, isPlayer, resolve);
+
+      // Two-turn CHARGE moves. `moveIndex` identifies the slot the charge is
+      // stored against; the fake move METRONOME builds is not in the list, and
+      // is not a charge move either, so the -1 it yields never charges.
+      const moveIndex = attacker.moves.indexOf(move as PokemonInstance['moves'][number]);
+      const step = isChargeMove(move.moveId)
+        ? resolveChargeStep(atkVol.charging, moveIndex)
+        : null;
+
+      const attack = () => {
+        if (step === 'charge') {
+          this.doChargeTurn(attacker, move, moveData, isPlayer, moveIndex, resolve);
+          return;
+        }
+        // Releasing: the state clears BEFORE the move runs, so a miss clears it
+        // too. The sprite is left hidden on purpose - the release half of the
+        // FLY/DIG animation is what brings it back.
+        if (step === 'release') atkVol.charging = null;
+        this.doExecuteMove(
+          attacker, defender, move, moveData, isPlayer, resolve,
+          step === 'release' ? 'release' : undefined,
+        );
+      };
 
       const pre = resolvePreAction(attacker, atkVol, isRecharging);
+      // Asleep / frozen / fully paralysed / flinched / confusion self-hit on the
+      // release turn: the engine has already dropped the charge, the scene just
+      // has to put a hidden FLY/DIG user back on the field.
+      if (pre.chargeCancelled) this.clearCharge(isPlayer);
       switch (pre.action) {
         case 'recharge':
           if (isPlayer) this.playerRecharging = false;
@@ -756,6 +820,43 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Turn 1 of a two-turn CHARGE move: store the lock, print the charge line,
+   * play the `charge` half of the animation. No PP, no accuracy roll, no
+   * damage and no secondary effect - Gen I does all of that on turn 2.
+   */
+  private doChargeTurn(
+    attacker: PokemonInstance,
+    move: { moveId: number; currentPp: number; maxPp: number },
+    moveData: { id: number; name: string },
+    isPlayer: boolean,
+    moveIndex: number,
+    resolve: () => void,
+  ): void {
+    const atkVol = isPlayer ? this.playerVolatile : this.opponentVolatile;
+    atkVol.charging = { moveIndex, moveId: move.moveId };
+
+    const attackerName = isPlayer
+      ? this.getSpeciesName(attacker.speciesId)
+      : `Foe ${this.getSpeciesName(attacker.speciesId)}`;
+    const charge = chargeMessage(move.moveId, attackerName);
+
+    const animCtx: AnimationContext = {
+      scene: this,
+      attackerSprite: isPlayer ? this.playerSprite : this.opponentSprite,
+      defenderSprite: isPlayer ? this.opponentSprite : this.playerSprite,
+      isPlayer,
+      phase: 'charge',
+    };
+
+    const lines = [`${attackerName} used\n${moveData.name}!`];
+    if (charge) lines.push(charge);
+    this.textBox.show(lines, async () => {
+      await playMoveAnimation(move.moveId, animCtx);
+      resolve();
+    });
+  }
+
   /** Core move execution after status/confusion checks pass */
   private doExecuteMove(
     attacker: PokemonInstance,
@@ -764,9 +865,14 @@ export class BattleScene extends Phaser.Scene {
     moveData: { id: number; name: string; type: any; category: any; power: number; accuracy: number; pp: number; effect?: MoveEffect; priority?: number },
     isPlayer: boolean,
     resolve: () => void,
+    phase?: 'charge' | 'release',
   ): void {
     const defVol = isPlayer ? this.opponentVolatile : this.playerVolatile;
 
+    // PP comes off here, i.e. on the turn the move actually executes. Gen I
+    // deducts SOLAR BEAM's PP on the release turn (Bulbapedia, Solar Beam ->
+    // Generation I): an interrupted charge costs nothing, and a full two-turn
+    // use costs exactly 1.
     move.currentPp = Math.max(0, move.currentPp - 1);
 
     const attackerName = isPlayer
@@ -781,6 +887,7 @@ export class BattleScene extends Phaser.Scene {
       attackerSprite: isPlayer ? this.playerSprite : this.opponentSprite,
       defenderSprite: isPlayer ? this.opponentSprite : this.playerSprite,
       isPlayer,
+      phase,
     };
 
     // Metronome: pick a random move and execute it instead
@@ -817,7 +924,11 @@ export class BattleScene extends Phaser.Scene {
     // Accuracy check (with stat stages)
     const atkStages = isPlayer ? this.playerStatStages : this.opponentStatStages;
     const defStages = isPlayer ? this.opponentStatStages : this.playerStatStages;
-    const hit = checkAccuracy(moveData as any, atkStages.acc, defStages.eva);
+    // A FLY / DIG user in mid-charge is off the field: everything aimed at it
+    // misses down the ordinary miss path, except always-hit moves like SWIFT.
+    const defenderSemiInvulnerable = !!defVol.charging && isSemiInvulnerableCharge(defVol.charging.moveId);
+    const hit = !evadesSemiInvulnerable(moveData.accuracy, defenderSemiInvulnerable)
+      && checkAccuracy(moveData as any, atkStages.acc, defStages.eva);
 
     // === Tier 4: the animation has to know how the move turned out ===
     //
@@ -841,6 +952,9 @@ export class BattleScene extends Phaser.Scene {
     this.textBox.show([usedMessage], async () => {
       // Play move animation
       await playMoveAnimation(move.moveId, animCtx);
+      // Belt and braces: the release half of FLY / DIG un-hides the user, but
+      // never leave a sprite invisible if an override bailed out early.
+      if (phase === 'release') animCtx.attackerSprite.setAlpha(1);
 
       if (!hit) {
         this.textBox.show(["But it missed!"], resolve);
@@ -1065,6 +1179,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private async handleOpponentFaint(): Promise<void> {
+    this.clearCharge(false);
     this.battleOver = true;
     const oppName = this.getSpeciesName(this.opponentPokemon.speciesId);
     soundSystem.faint();
@@ -1204,6 +1319,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private async handlePlayerFaint(): Promise<void> {
+    this.clearCharge(true);
     const name = this.getSpeciesName(this.playerPokemon.speciesId);
     soundSystem.faint();
 
@@ -1282,7 +1398,7 @@ export class BattleScene extends Phaser.Scene {
     } else {
       this.textBox.show(["Can't escape!"], () => {
         // Opponent gets a free attack
-        const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+        const aiMoveIndex = this.aiMoveIndex();
         const aiMove = this.opponentPokemon.moves[aiMoveIndex];
         const aiMoveData = MOVES_DATA[aiMove?.moveId];
         if (aiMove && aiMoveData) {
@@ -1356,7 +1472,7 @@ export class BattleScene extends Phaser.Scene {
       await this.showText(["Oh no! The POKeMON\nbroke free!"]);
 
       // Opponent attacks
-      const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+      const aiMoveIndex = this.aiMoveIndex();
       const aiMove = this.opponentPokemon.moves[aiMoveIndex];
       const aiMoveData = MOVES_DATA[aiMove?.moveId];
       if (aiMove && aiMoveData) {
@@ -1373,7 +1489,7 @@ export class BattleScene extends Phaser.Scene {
 
   private usePotion(potionType: string, targetIndex?: number): void {
     // Pre-select AI move before applying item (AI shouldn't react to healing)
-    const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+    const aiMoveIndex = this.aiMoveIndex();
     const aiMove = this.opponentPokemon.moves[aiMoveIndex];
     const aiMoveData = MOVES_DATA[aiMove?.moveId];
 
@@ -1426,7 +1542,7 @@ export class BattleScene extends Phaser.Scene {
 
   private useRevive(itemId: string, targetIndex: number): void {
     // Pre-select AI move before applying item
-    const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+    const aiMoveIndex = this.aiMoveIndex();
     const aiMove = this.opponentPokemon.moves[aiMoveIndex];
     const aiMoveData = MOVES_DATA[aiMove?.moveId];
 
@@ -1466,7 +1582,7 @@ export class BattleScene extends Phaser.Scene {
 
   private switchPlayerPokemon(newIndex: number): void {
     // Pre-select AI move BEFORE switching — AI shouldn't see the incoming Pokemon
-    const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
+    const aiMoveIndex = this.aiMoveIndex();
     const aiMove = this.opponentPokemon.moves[aiMoveIndex];
     const aiMoveData = MOVES_DATA[aiMove?.moveId];
 
