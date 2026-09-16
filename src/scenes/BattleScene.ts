@@ -33,6 +33,8 @@ import { outcomeFor } from '../logic/animationOutcome';
 import { reviveHp, isReviveItem } from '../logic/reviveItems';
 import { clearsForcedEncounter, WildBattleEnd } from '../logic/forcedEncounters';
 import { roundContinues } from '../logic/turnFlow';
+import { hallOfFameResult } from '../logic/hallOfFame';
+import { restoreParty } from '../logic/healing';
 import '../systems/animations';
 import { getTrainerSpriteKey } from '../utils/trainerSpriteGenerator';
 import { resyncMobileInput } from '../utils/mobileControls';
@@ -1448,23 +1450,25 @@ export class BattleScene extends Phaser.Scene {
     zKey.on('down', () => { if (textBox.getIsVisible()) textBox.advance(); });
     enterKey.on('down', () => { if (textBox.getIsVisible()) textBox.advance(); });
 
+    // What beating the Champion does (flags, the heal, where the player comes
+    // back) is src/logic/hallOfFame.ts; this scene only sequences it, in the
+    // same order as before: flag now, heal + return once the credits are read
+    // through and the screen has faded to black.
+    const result = hallOfFameResult();
+
     soundSystem.victory();
-    this.playerState.storyFlags['champion'] = true;
+    for (const flag of result.flags) this.playerState.storyFlags[flag] = true;
 
     textBox.show(HALL_OF_FAME_TEXT, () => {
-      // Return to Pallet Town after credits
+      // Return to the player's house after credits
       this.cameras.main.fadeOut(1000, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         // Heal party before returning
-        for (const p of this.playerState.party) {
-          p.currentHp = p.stats.hp;
-          p.status = StatusCondition.NONE;
-          for (const m of p.moves) m.currentPp = m.maxPp;
-        }
+        if (result.healParty) restoreParty(this.playerState.party);
         this.scene.start('OverworldScene', {
-          mapId: 'player_house',
-          playerX: 3,
-          playerY: 5,
+          mapId: result.returnTo.mapId,
+          playerX: result.returnTo.x,
+          playerY: result.returnTo.y,
           saveData: this.playerState.toSave(),
         });
       });

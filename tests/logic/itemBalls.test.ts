@@ -6,7 +6,7 @@
 // `syncDerivedStoryFlags()` runs).
 import { describe, it, expect } from 'vitest';
 import {
-  itemBallPickup, otherFossilBall, pickedUpFlag,
+  itemBallPickup, ambushBallSpring, otherFossilBall, pickedUpFlag,
   FOSSIL_BALL_IDS, HELIX_FOSSIL_BALL, DOME_FOSSIL_BALL, GOT_FOSSIL_FLAG,
   ItemBallPickup,
 } from '../../src/logic/itemBalls';
@@ -278,5 +278,78 @@ describe('a door-key ball opens its gates through syncDerivedStoryFlags', () => 
     const player = new PlayerState();
     apply(ball('route1_potion', 'potion'), player);
     expect(Object.keys(player.storyFlags).filter(k => k.startsWith('has_'))).toEqual([]);
+  });
+});
+
+// ── Fake balls: the Power Plant ambushes ────────────────────────────────────
+// `ambushBallSpring()` is the other half of `itemBallAction()`: a ball with an
+// `ambush` block is never a pickup, it writes the SAME `picked_up_<id>` flag
+// and then throws a wild Pokemon at the player. Pins the flag against
+// `shouldSkipNPC()` (which is why a sprung ball stays gone) and against the
+// three ambushes in the shipped Power Plant data.
+
+/** Every ambush ball in the shipped maps. */
+const AMBUSH_BALLS = Object.entries(ALL_MAPS).flatMap(([mapId, m]) =>
+  m.npcs.filter(n => n.isItemBall && n.ambush).map(n => ({ mapId, npc: n })));
+
+describe('ambushBallSpring', () => {
+  it('the shipped ambushes are the three Power Plant balls, unchanged', () => {
+    expect(AMBUSH_BALLS.map(({ mapId, npc }) => [mapId, npc.id, ...Object.values(ambushBallSpring(npc)!)]))
+      .toEqual([
+        ['power_plant', 'pp_voltorb1', 'picked_up_pp_voltorb1', 'pp_voltorb1', 100, 40],
+        ['power_plant', 'pp_voltorb2', 'picked_up_pp_voltorb2', 'pp_voltorb2', 100, 40],
+        ['power_plant', 'pp_electrode', 'picked_up_pp_electrode', 'pp_electrode', 101, 43],
+      ]);
+  });
+
+  it('species and level pass through untouched, and only that ball goes away', () => {
+    for (const { npc } of AMBUSH_BALLS) {
+      const spring = ambushBallSpring(npc)!;
+      expect(spring.speciesId).toBe(npc.ambush!.speciesId);
+      expect(spring.level).toBe(npc.ambush!.level);
+      expect(spring.removeSprite).toBe(npc.id);
+    }
+  });
+
+  it('writes the same `picked_up_<id>` flag a real pickup does', () => {
+    for (const { npc } of AMBUSH_BALLS) {
+      expect(ambushBallSpring(npc)!.flag).toBe(pickedUpFlag(npc.id));
+    }
+    // Same template, both halves of the module:
+    expect(ambushBallSpring(ball('x', undefined, { ambush: { speciesId: 100, level: 40 } }))!.flag)
+      .toBe(itemBallPickup(ball('x', 'potion'), RED)!.flags[0]);
+  });
+
+  it('that flag is exactly what shouldSkipNPC() hides the sprung ball by', () => {
+    for (const { npc } of AMBUSH_BALLS) {
+      const flag = ambushBallSpring(npc)!.flag;
+      expect(shouldSkipNPC(npc, {}, [], [], () => false)).toBe(false);
+      expect(shouldSkipNPC(npc, { [flag]: true }, [], [], () => false)).toBe(true);
+    }
+  });
+
+  it('the three flags tools/plant-e2e.mjs seeds hide all three ambushes at once', () => {
+    const seeded = Object.fromEntries(AMBUSH_BALLS.map(({ npc }) => [`picked_up_${npc.id}`, true]));
+    expect(Object.keys(seeded).every(k => k.startsWith('picked_up_pp_'))).toBe(true);
+    for (const { npc } of AMBUSH_BALLS) expect(shouldSkipNPC(npc, seeded, [], [], () => false)).toBe(true);
+  });
+
+  it('a ball with no ambush block is not an ambush', () => {
+    expect(ambushBallSpring(ball('route24_nugget', 'nugget'))).toBeNull();
+    for (const { npc } of SHIPPED_BALLS) expect(ambushBallSpring(npc)).toBeNull();
+  });
+
+  it('pickup and ambush are disjoint: itemBallAction routes each to one of them', () => {
+    for (const { npc } of AMBUSH_BALLS) {
+      const action = itemBallAction(npc);
+      expect(action).toEqual({ kind: 'ambush', speciesId: npc.ambush!.speciesId, level: npc.ambush!.level });
+      // No itemId, so the pickup half would do nothing even if it were reached.
+      expect(npc.itemId).toBeUndefined();
+      expect(itemBallPickup(npc, RED)).toBeNull();
+    }
+    for (const { npc } of SHIPPED_BALLS) {
+      expect(itemBallAction(npc)!.kind).toBe('item');
+      expect(itemBallPickup(npc, RED)).not.toBeNull();
+    }
   });
 });

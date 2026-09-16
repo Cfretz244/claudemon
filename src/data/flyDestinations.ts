@@ -1,5 +1,12 @@
 // Fly destination registry + availability filter, extracted from
 // OverworldScene.showFlyMap (the scene keeps the selection UI).
+//
+// A town is unlocked by healing at its Pokemon Center: the heal writes
+// `visited_<the town the centre's front door opens onto>` (see
+// `healVisitFlag` in `src/logic/healing.ts`), which is the same `visited_`
+// template read here. The shared `visitedFlag()` helper keeps the two ends of
+// that handshake from drifting.
+import { visitedFlag } from '../logic/elevator';
 
 export interface FlyDestination {
   name: string;
@@ -26,6 +33,6 @@ export function getAvailableFlyDestinations(
   storyFlags: Record<string, boolean>,
 ): FlyDestination[] {
   return FLY_DESTINATIONS.filter(
-    d => storyFlags[`visited_${d.mapId}`] || d.mapId === 'pallet_town',
+    d => storyFlags[visitedFlag(d.mapId)] || d.mapId === 'pallet_town',
   );
 }

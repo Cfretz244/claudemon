@@ -36,18 +36,19 @@ import {
 } from '../logic/oakLab';
 import { checkEntryGates } from '../logic/warpGate';
 import { MapInstance, instantiateMap, landedBoulders, pushBoulder, isFlagGateOpen, tileUnder } from '../logic/boulders';
-import { restoreParty } from '../logic/healing';
+import { restoreParty, healVisitFlag } from '../logic/healing';
 import {
   interceptWarp, needsOakEscort, badgeCheckOutcome, OAK_INTERCEPT_MESSAGES,
   OAK_ESCORT_DESTINATION, PEWTER_GUIDE_NPC_ID, BADGE_CHECK_PASSED_SUFFIX,
 } from '../logic/roadBlocks';
 import { elevatorAccess, elevatorTarget, visitedFlag } from '../logic/elevator';
+import { newGameState } from '../logic/newGame';
 import { computeCurrentSlide, computeSlide, Slide } from '../logic/spinTiles';
 import { snorlaxEncounter, marowakAmbush } from '../logic/forcedEncounters';
 import { isPosterSign, posterOutcome } from '../logic/gameCornerPoster';
 import { computeTrainerSight } from '../logic/trainerSight';
 import { pickWildEncounter, getEncounterTheme, rollsEncounterOn, encounterTableOf, itemBallAction } from '../logic/encounters';
-import { itemBallPickup } from '../logic/itemBalls';
+import { itemBallPickup, ambushBallSpring, AmbushBallSpring } from '../logic/itemBalls';
 import { SurgePuzzle, surgeTrashCan, SURGE_GATE_FLAG } from '../logic/surgePuzzle';
 import { syncDerivedStoryFlags } from '../logic/storyFlagSync';
 import { migrateLegacyLocation } from '../logic/saveMigration';
@@ -184,10 +185,7 @@ export class OverworldScene extends Phaser.Scene {
     if (data.saveData) {
       this.playerState = PlayerState.fromSave(data.saveData);
     } else if (data.newGame) {
-      this.playerState = new PlayerState();
-      if (data.playerName) this.playerState.name = data.playerName;
-      if (data.rivalName) this.playerState.rivalName = data.rivalName;
-      this.playerState.storyFlags['intro_complete'] = true;
+      this.playerState = newGameState(data.playerName, data.rivalName);
     } else {
       this.playerState = new PlayerState();
     }
@@ -1642,8 +1640,10 @@ export class OverworldScene extends Phaser.Scene {
     // Item ball pickup (or a fake ball that ambushes the player)
     const ballAction = itemBallAction(npc);
     if (ballAction) {
-      if (ballAction.kind === 'ambush') this.springAmbushBall(npc, ballAction.speciesId, ballAction.level);
-      else this.pickUpItemBall(npc);
+      if (ballAction.kind === 'ambush') {
+        const ambush = ambushBallSpring(npc);
+        if (ambush) this.springAmbushBall(npc, ambush);
+      } else this.pickUpItemBall(npc);
       return;
     }
 
@@ -1763,16 +1763,21 @@ export class OverworldScene extends Phaser.Scene {
     }
   }
 
-  /** A fake item ball: the ball is gone and a wild Pokemon attacks (Power Plant Voltorb). */
-  private springAmbushBall(npc: NPCData, speciesId: number, level: number): void {
+  /**
+   * A fake item ball: the ball is gone and a wild Pokemon attacks (Power Plant
+   * Voltorb). The flag, the sprite to remove and the species/level all come
+   * from `ambushBallSpring()` in src/logic/itemBalls.ts; the scene still shows
+   * any dialogue first and applies flag -> sprite -> battle in that order.
+   */
+  private springAmbushBall(npc: NPCData, ambush: AmbushBallSpring): void {
     const spring = () => {
-      this.playerState.storyFlags[`picked_up_${npc.id}`] = true;
-      const ballSprite = this.npcSprites.get(npc.id);
+      this.playerState.storyFlags[ambush.flag] = true;
+      const ballSprite = this.npcSprites.get(ambush.removeSprite);
       if (ballSprite) {
         ballSprite.destroy();
-        this.npcSprites.delete(npc.id);
+        this.npcSprites.delete(ambush.removeSprite);
       }
-      this.startWildBattle(createPokemon(speciesId, level));
+      this.startWildBattle(createPokemon(ambush.speciesId, ambush.level));
     };
     if (npc.dialogue.length > 0) this.textBox.show(npc.dialogue.map(d => this.fmt(d)), spring);
     else spring();
@@ -2639,11 +2644,10 @@ export class OverworldScene extends Phaser.Scene {
         this.playerState.lastHealX = this.playerGridX;
         this.playerState.lastHealY = this.playerGridY;
 
-        // Mark parent town as visited (for Fly)
-        const exitWarp = this.currentMap.warps[0];
-        if (exitWarp) {
-          this.playerState.storyFlags[`visited_${exitWarp.targetMap}`] = true;
-        }
+        // Mark parent town as visited (for Fly): warps[0] of a centre is its
+        // own front door, so the flag names the town outside it.
+        const visited = healVisitFlag(this.currentMap);
+        if (visited) this.playerState.storyFlags[visited] = true;
 
         this.time.delayedCall(800, nextStep);
       } else if (step === 5) {
