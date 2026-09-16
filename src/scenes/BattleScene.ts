@@ -804,6 +804,11 @@ export class BattleScene extends Phaser.Scene {
           this.textBox.show([`${name} is confused!`], attack);
           return;
         case 'sleep-wake':
+          // `resolvePreAction` has already cleared `status`. Refresh the HUD in
+          // the same tick (as 'confusion-self-hit' does) so the SLP badge is
+          // gone while "woke up!" is on screen, instead of lingering until the
+          // next damage/end-of-turn redraw.
+          this.updateHUD();
           this.textBox.show([`${name} woke up!`], resolve);
           return;
         case 'sleep':
@@ -820,6 +825,8 @@ export class BattleScene extends Phaser.Scene {
           // (same shape as 'confusion-snap'). Previously attack() ran in the
           // same tick, and doExecuteMove's textBox.show() replaced this
           // message before it was ever drawn.
+          // Same as 'sleep-wake': the FRZ badge has to go with the message.
+          this.updateHUD();
           this.textBox.show([`${name} thawed out!`], attack);
           return;
         case 'attack':
@@ -1115,14 +1122,34 @@ export class BattleScene extends Phaser.Scene {
         });
       } else {
         // Status move - effect always applies (already passed accuracy check)
+        const atkHpBefore = attacker.currentHp;
+        const defHpBefore = defender.currentHp;
         if (moveData.effect) {
           applyMoveEffect(moveData.effect, buildEffectCtx(false), messages);
         }
-        if (messages.length > 0) {
-          this.textBox.show(messages, resolve);
-        } else {
-          resolve();
-        }
+        // The damage path redraws the HUD once its HP tween finishes; a status
+        // move never took that path, so nothing redrew the HP box at all and a
+        // status it just applied (THUNDER WAVE -> PAR, TOXIC -> PSN, REST's own
+        // sleep) or an HP change it just made (RECOVER, SOFTBOILED, REST) only
+        // showed up on the NEXT refresh - i.e. during the opponent's reply.
+        // Animate whichever bar moved, exactly as `applyDamageAnimation` does,
+        // then redraw everything before the text goes up.
+        const bars: Promise<void>[] = [];
+        const animate = (mine: boolean, mon: PokemonInstance) => bars.push(
+          mine
+            ? this.hud.animatePlayerHP(mon.currentHp / mon.stats.hp)
+            : this.hud.animateOpponentHP(mon.currentHp / mon.stats.hp),
+        );
+        if (attacker.currentHp !== atkHpBefore) animate(isPlayer, attacker);
+        if (defender.currentHp !== defHpBefore) animate(!isPlayer, defender);
+        void Promise.all(bars).then(() => {
+          this.updateHUD();
+          if (messages.length > 0) {
+            this.textBox.show(messages, resolve);
+          } else {
+            resolve();
+          }
+        });
       }
     });
   }
