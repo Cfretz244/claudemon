@@ -1,3 +1,4 @@
+import { applyMedicine } from '../inventory/medicine';
 import { PlayerState } from '../entities/Player';
 import { createPokemon, gainHappiness } from '../entities/Pokemon';
 import { ALL_MAPS } from '../data/maps';
@@ -427,16 +428,7 @@ export class GameSession {
         const p = this.player.party[command.index];
         if (!Number.isInteger(command.index) || !p || !this.player.hasItem(command.itemId))
           return reject('Item or target unavailable.');
-        if (command.itemId === 'potion') {
-          if (p.currentHp <= 0 || p.currentHp === p.stats.hp)
-            return reject('This Pokémon cannot use that now.');
-          p.currentHp = Math.min(p.stats.hp, p.currentHp + 20);
-        } else if (
-          (command.itemId === 'antidote' && p.status === StatusCondition.POISON) ||
-          (command.itemId === 'paralyze_heal' && p.status === StatusCondition.PARALYSIS)
-        )
-          p.status = StatusCondition.NONE;
-        else return reject('This item has no effect.');
+        if (!applyMedicine(p, command.itemId)) return reject('This item has no effect.');
         this.player.useItem(command.itemId);
         this.say([`${speciesName(p)} is feeling better.`]);
         if (b) this.freeAttack();

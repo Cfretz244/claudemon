@@ -261,3 +261,15 @@ describe('portable save codec', () => {
     expect(decodeSave(JSON.stringify(d), new Set(['player_house']))).toBeNull();
   });
 });
+
+describe('medicine transactions',()=>{
+ it.each([['burn_heal',StatusCondition.BURN],['antidote',StatusCondition.POISON],['paralyze_heal',StatusCondition.PARALYSIS]] as const)('uses %s from canonical mart stock', (itemId,status)=>{
+  const d=save();d.party=[createPokemon(25,5)];d.party[0].status=status;d.bag[itemId]=1;
+  const s=createSession({seed:1,save:d});expect(input(s,{type:'item',itemId,index:0}).accepted).toBe(true);drain(s);
+  expect(s.getSnapshot().player.party[0].status).toBe(StatusCondition.NONE);expect(s.getSnapshot().player.bag[itemId]).toBeUndefined();
+ });
+ it('does not spend an ineffective medicine',()=>{
+  const d=save();d.party=[createPokemon(25,5)];d.bag.potion=1;const s=createSession({seed:1,save:d});
+  expect(input(s,{type:'item',itemId:'potion',index:0}).accepted).toBe(false);expect(s.getSnapshot().player.bag.potion).toBe(1);
+ });
+});
