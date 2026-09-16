@@ -1,0 +1,316 @@
+{
+  "name": "@claudemon/engine",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "ISC",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./content": {
+      "types": "./dist/content.d.ts",
+      "import": "./dist/content.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    },
+    "./save": {
+      "types": "./dist/persistence/codec.d.ts",
+      "import": "./dist/persistence/codec.js"
+    },
+    "./compat/data/items": {
+      "types": "./dist/data/items.d.ts",
+      "import": "./dist/data/items.js"
+    },
+    "./compat/data/pokedexDescriptions": {
+      "types": "./dist/data/pokedexDescriptions.d.ts",
+      "import": "./dist/data/pokedexDescriptions.js"
+    },
+    "./compat/data/musicTracks": {
+      "types": "./dist/data/musicTracks.d.ts",
+      "import": "./dist/data/musicTracks.js"
+    },
+    "./compat/data/mapBuilder": {
+      "types": "./dist/data/mapBuilder.d.ts",
+      "import": "./dist/data/mapBuilder.js"
+    },
+    "./compat/data/trainers": {
+      "types": "./dist/data/trainers.d.ts",
+      "import": "./dist/data/trainers.js"
+    },
+    "./compat/data/pokemon": {
+      "types": "./dist/data/pokemon.d.ts",
+      "import": "./dist/data/pokemon.js"
+    },
+    "./compat/data/maps_central": {
+      "types": "./dist/data/maps_central.d.ts",
+      "import": "./dist/data/maps_central.js"
+    },
+    "./compat/data/maps_vermilion": {
+      "types": "./dist/data/maps_vermilion.d.ts",
+      "import": "./dist/data/maps_vermilion.js"
+    },
+    "./compat/data/maps_cerulean": {
+      "types": "./dist/data/maps_cerulean.d.ts",
+      "import": "./dist/data/maps_cerulean.js"
+    },
+    "./compat/data/staticLegendaries": {
+      "types": "./dist/data/staticLegendaries.d.ts",
+      "import": "./dist/data/staticLegendaries.js"
+    },
+    "./compat/data/prizePokemon": {
+      "types": "./dist/data/prizePokemon.d.ts",
+      "import": "./dist/data/prizePokemon.js"
+    },
+    "./compat/data/maps_south": {
+      "types": "./dist/data/maps_south.d.ts",
+      "import": "./dist/data/maps_south.js"
+    },
+    "./compat/data/maps_silph": {
+      "types": "./dist/data/maps_silph.d.ts",
+      "import": "./dist/data/maps_silph.js"
+    },
+    "./compat/data/typeChart": {
+      "types": "./dist/data/typeChart.d.ts",
+      "import": "./dist/data/typeChart.js"
+    },
+    "./compat/data/maps_tower": {
+      "types": "./dist/data/maps_tower.d.ts",
+      "import": "./dist/data/maps_tower.js"
+    },
+    "./compat/data/flyDestinations": {
+      "types": "./dist/data/flyDestinations.d.ts",
+      "import": "./dist/data/flyDestinations.js"
+    },
+    "./compat/data/maps_cave": {
+      "types": "./dist/data/maps_cave.d.ts",
+      "import": "./dist/data/maps_cave.js"
+    },
+    "./compat/data/maps_hideout": {
+      "types": "./dist/data/maps_hideout.d.ts",
+      "import": "./dist/data/maps_hideout.js"
+    },
+    "./compat/data/eliteFour": {
+      "types": "./dist/data/eliteFour.d.ts",
+      "import": "./dist/data/eliteFour.js"
+    },
+    "./compat/data/fishingEncounters": {
+      "types": "./dist/data/fishingEncounters.d.ts",
+      "import": "./dist/data/fishingEncounters.js"
+    },
+    "./compat/data/giftNpcs": {
+      "types": "./dist/data/giftNpcs.d.ts",
+      "import": "./dist/data/giftNpcs.js"
+    },
+    "./compat/data/signs": {
+      "types": "./dist/data/signs.d.ts",
+      "import": "./dist/data/signs.js"
+    },
+    "./compat/data/maps_endgame": {
+      "types": "./dist/data/maps_endgame.d.ts",
+      "import": "./dist/data/maps_endgame.js"
+    },
+    "./compat/data/moves": {
+      "types": "./dist/data/moves.d.ts",
+      "import": "./dist/data/moves.js"
+    },
+    "./compat/data/maps": {
+      "types": "./dist/data/maps.d.ts",
+      "import": "./dist/data/maps.js"
+    },
+    "./compat/data/gymLeaders": {
+      "types": "./dist/data/gymLeaders.d.ts",
+      "import": "./dist/data/gymLeaders.js"
+    },
+    "./compat/types/pokemon.types": {
+      "types": "./dist/types/pokemon.types.d.ts",
+      "import": "./dist/types/pokemon.types.js"
+    },
+    "./compat/types/map.types": {
+      "types": "./dist/types/map.types.d.ts",
+      "import": "./dist/types/map.types.js"
+    },
+    "./compat/types/battle.types": {
+      "types": "./dist/types/battle.types.d.ts",
+      "import": "./dist/types/battle.types.js"
+    },
+    "./compat/entities/Pokemon": {
+      "types": "./dist/entities/Pokemon.d.ts",
+      "import": "./dist/entities/Pokemon.js"
+    },
+    "./compat/entities/Player": {
+      "types": "./dist/entities/Player.d.ts",
+      "import": "./dist/entities/Player.js"
+    },
+    "./compat/logic/elevator": {
+      "types": "./dist/logic/elevator.d.ts",
+      "import": "./dist/logic/elevator.js"
+    },
+    "./compat/logic/boulders": {
+      "types": "./dist/logic/boulders.d.ts",
+      "import": "./dist/logic/boulders.js"
+    },
+    "./compat/logic/animationOutcome": {
+      "types": "./dist/logic/animationOutcome.d.ts",
+      "import": "./dist/logic/animationOutcome.js"
+    },
+    "./compat/logic/encounters": {
+      "types": "./dist/logic/encounters.d.ts",
+      "import": "./dist/logic/encounters.js"
+    },
+    "./compat/logic/pokemonShape": {
+      "types": "./dist/logic/pokemonShape.d.ts",
+      "import": "./dist/logic/pokemonShape.js"
+    },
+    "./compat/logic/newGame": {
+      "types": "./dist/logic/newGame.d.ts",
+      "import": "./dist/logic/newGame.js"
+    },
+    "./compat/logic/cutTrees": {
+      "types": "./dist/logic/cutTrees.d.ts",
+      "import": "./dist/logic/cutTrees.js"
+    },
+    "./compat/logic/saveMigration": {
+      "types": "./dist/logic/saveMigration.d.ts",
+      "import": "./dist/logic/saveMigration.js"
+    },
+    "./compat/logic/spinTiles": {
+      "types": "./dist/logic/spinTiles.d.ts",
+      "import": "./dist/logic/spinTiles.js"
+    },
+    "./compat/logic/forcedEncounters": {
+      "types": "./dist/logic/forcedEncounters.d.ts",
+      "import": "./dist/logic/forcedEncounters.js"
+    },
+    "./compat/logic/npcVisibility": {
+      "types": "./dist/logic/npcVisibility.d.ts",
+      "import": "./dist/logic/npcVisibility.js"
+    },
+    "./compat/logic/surgePuzzle": {
+      "types": "./dist/logic/surgePuzzle.d.ts",
+      "import": "./dist/logic/surgePuzzle.js"
+    },
+    "./compat/logic/slotMachine": {
+      "types": "./dist/logic/slotMachine.d.ts",
+      "import": "./dist/logic/slotMachine.js"
+    },
+    "./compat/logic/entranceSpec": {
+      "types": "./dist/logic/entranceSpec.d.ts",
+      "import": "./dist/logic/entranceSpec.js"
+    },
+    "./compat/logic/itemBalls": {
+      "types": "./dist/logic/itemBalls.d.ts",
+      "import": "./dist/logic/itemBalls.js"
+    },
+    "./compat/logic/roadBlocks": {
+      "types": "./dist/logic/roadBlocks.d.ts",
+      "import": "./dist/logic/roadBlocks.js"
+    },
+    "./compat/logic/learnset": {
+      "types": "./dist/logic/learnset.d.ts",
+      "import": "./dist/logic/learnset.js"
+    },
+    "./compat/logic/oaksParcel": {
+      "types": "./dist/logic/oaksParcel.d.ts",
+      "import": "./dist/logic/oaksParcel.js"
+    },
+    "./compat/logic/warpGate": {
+      "types": "./dist/logic/warpGate.d.ts",
+      "import": "./dist/logic/warpGate.js"
+    },
+    "./compat/logic/moveAnimationSpec": {
+      "types": "./dist/logic/moveAnimationSpec.d.ts",
+      "import": "./dist/logic/moveAnimationSpec.js"
+    },
+    "./compat/logic/fieldMoves": {
+      "types": "./dist/logic/fieldMoves.d.ts",
+      "import": "./dist/logic/fieldMoves.js"
+    },
+    "./compat/logic/hallOfFame": {
+      "types": "./dist/logic/hallOfFame.d.ts",
+      "import": "./dist/logic/hallOfFame.js"
+    },
+    "./compat/logic/healing": {
+      "types": "./dist/logic/healing.d.ts",
+      "import": "./dist/logic/healing.js"
+    },
+    "./compat/logic/trainerSight": {
+      "types": "./dist/logic/trainerSight.d.ts",
+      "import": "./dist/logic/trainerSight.js"
+    },
+    "./compat/logic/storyFlagSync": {
+      "types": "./dist/logic/storyFlagSync.d.ts",
+      "import": "./dist/logic/storyFlagSync.js"
+    },
+    "./compat/logic/reviveItems": {
+      "types": "./dist/logic/reviveItems.d.ts",
+      "import": "./dist/logic/reviveItems.js"
+    },
+    "./compat/logic/oakLab": {
+      "types": "./dist/logic/oakLab.d.ts",
+      "import": "./dist/logic/oakLab.js"
+    },
+    "./compat/logic/vitamins": {
+      "types": "./dist/logic/vitamins.d.ts",
+      "import": "./dist/logic/vitamins.js"
+    },
+    "./compat/logic/chargeMoves": {
+      "types": "./dist/logic/chargeMoves.d.ts",
+      "import": "./dist/logic/chargeMoves.js"
+    },
+    "./compat/logic/turnFlow": {
+      "types": "./dist/logic/turnFlow.d.ts",
+      "import": "./dist/logic/turnFlow.js"
+    },
+    "./compat/logic/gameCornerPoster": {
+      "types": "./dist/logic/gameCornerPoster.d.ts",
+      "import": "./dist/logic/gameCornerPoster.js"
+    },
+    "./compat/systems/BattleEngine": {
+      "types": "./dist/systems/BattleEngine.d.ts",
+      "import": "./dist/systems/BattleEngine.js"
+    },
+    "./compat/systems/DamageCalculator": {
+      "types": "./dist/systems/DamageCalculator.d.ts",
+      "import": "./dist/systems/DamageCalculator.js"
+    },
+    "./compat/systems/AISystem": {
+      "types": "./dist/systems/AISystem.d.ts",
+      "import": "./dist/systems/AISystem.js"
+    },
+    "./compat/systems/CatchSystem": {
+      "types": "./dist/systems/CatchSystem.d.ts",
+      "import": "./dist/systems/CatchSystem.js"
+    },
+    "./compat/systems/EncounterSystem": {
+      "types": "./dist/systems/EncounterSystem.d.ts",
+      "import": "./dist/systems/EncounterSystem.js"
+    },
+    "./compat/systems/EvolutionSystem": {
+      "types": "./dist/systems/EvolutionSystem.d.ts",
+      "import": "./dist/systems/EvolutionSystem.js"
+    },
+    "./compat/systems/ExperienceSystem": {
+      "types": "./dist/systems/ExperienceSystem.d.ts",
+      "import": "./dist/systems/ExperienceSystem.js"
+    },
+    "./compat/utils/constants": {
+      "types": "./dist/utils/constants.d.ts",
+      "import": "./dist/utils/constants.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/esm.mjs",
+    "watch": "node scripts/watch.mjs"
+  }
+}

@@ -19,6 +19,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Check headless package and packed consumer
+        run: npm run engine:check
+
       - name: Type check
         run: npx tsc --noEmit
 

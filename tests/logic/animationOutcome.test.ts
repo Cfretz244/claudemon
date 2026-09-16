@@ -139,34 +139,20 @@ describe('the tier-4 gate in MoveAnimations.ts (source contract)', () => {
   });
 });
 
-describe('the BattleScene wiring (source contract)', () => {
-  const body = BATTLE_SCENE_SRC.slice(BATTLE_SCENE_SRC.indexOf('private doExecuteMove('));
-  const iAcc = body.indexOf('checkAccuracy(');
-  const iCrit = body.indexOf('checkCritical(');
-  const iDmg = body.indexOf('calculateDamage(');
-  const iAnim = body.indexOf('playMoveAnimation(');
-  const iMiss = body.indexOf('this.textBox.show(["But it missed!"]');
-
-  it('accuracy, crit and damage are all rolled BEFORE the animation', () => {
-    expect(iAcc).toBeGreaterThan(-1);
-    expect(iCrit).toBeGreaterThan(-1);
-    expect(iDmg).toBeGreaterThan(-1);
-    expect(iAnim).toBeGreaterThan(-1);
-    expect(iAcc).toBeLessThan(iAnim);
-    expect(iCrit).toBeLessThan(iAnim);
-    expect(iDmg).toBeLessThan(iAnim);
+describe('the BattleScene engine adapter', () => {
+  const body = BATTLE_SCENE_SRC.slice(BATTLE_SCENE_SRC.indexOf('private async executeMove('));
+  it('resolves the move before presentation begins', () => {
+    expect(body.indexOf('executeBattleMove(')).toBeGreaterThan(-1);
+    expect(body.indexOf('executeBattleMove(')).toBeLessThan(body.indexOf('playMoveAnimation('));
   });
-
-  it('"But it missed!" is now shown AFTER the animation', () => {
-    expect(iMiss).toBeGreaterThan(iAnim);
+  it('shows result messages after the animation', () => {
+    expect(body.indexOf('await this.showText(event.messages)')).toBeGreaterThan(body.indexOf('playMoveAnimation('));
   });
-
-  it('the outcome handed to the renderer comes from the shared helper', () => {
-    expect(body).toMatch(/animCtx\.outcome = outcomeFor\(hit, preResult, moveData\)/);
-    expect(BATTLE_SCENE_SRC).toMatch(/import \{ outcomeFor \} from '\.\.\/logic\/animationOutcome'/);
+  it('passes the exact engine outcome into the animation', () => {
+    expect(body).toContain('outcome: event.outcome');
   });
-
-  it('rollHitCount still runs after the animation (no mutation was moved)', () => {
-    expect(body.indexOf('rollHitCount(')).toBeGreaterThan(iAnim);
+  it('does not reroll damage or multi-hit counts in the renderer', () => {
+    const move = body.slice(0, body.indexOf('private applyStatusDamage'));
+    expect(move).not.toMatch(/calculateDamage\(|rollHitCount\(|Math.random\(/);
   });
 });

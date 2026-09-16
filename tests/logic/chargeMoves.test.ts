@@ -143,25 +143,18 @@ describe('BattleScene honours the charge lock', () => {
   });
 
   it('a cancelled charge puts the user back on the field', () => {
-    expect(BATTLE_SCENE_SRC).toMatch(/if \(pre\.chargeCancelled\) this\.clearCharge\(isPlayer\);/);
+    expect(BATTLE_SCENE_SRC).toMatch(/if \(event\.chargeCancelled\) this\.clearCharge\(isPlayer\);/);
     expect(BATTLE_SCENE_SRC).toMatch(/this\.clearCharge\(true\);/);   // player faint
     expect(BATTLE_SCENE_SRC).toMatch(/this\.clearCharge\(false\);/);  // opponent faint
     expect(BATTLE_SCENE_SRC).toMatch(/vol\.charging = null;/);        // switch / reset
   });
 
-  it('PP comes off on the release turn only, and the charge turn is separate', () => {
-    // doChargeTurn never touches currentPp; doExecuteMove (the release path)
-    // holds the single decrement in the whole scene.
-    const decrements = [...BATTLE_SCENE_SRC.matchAll(/currentPp = Math\.max\(0, move\.currentPp - 1\)/g)];
-    expect(decrements).toHaveLength(1);
-    const from = BATTLE_SCENE_SRC.indexOf('private doChargeTurn(');
-    const to = BATTLE_SCENE_SRC.indexOf('private doExecuteMove(');
-    expect(from).toBeGreaterThan(-1);
-    expect(BATTLE_SCENE_SRC.slice(from, to)).not.toMatch(/currentPp -/);
+  it('delegates charge and release to the engine', () => {
+    expect(BATTLE_SCENE_SRC).toContain('executeBattleMove(isPlayer ? player : opponent');
+    expect(BATTLE_SCENE_SRC).not.toContain('private doChargeTurn(');
   });
-
-  it('the release turn plays the release half of the animation', () => {
-    expect(BATTLE_SCENE_SRC).toMatch(/phase: 'charge'/);
-    expect(BATTLE_SCENE_SRC).toMatch(/step === 'release' \? 'release' : undefined/);
+  it('plays the engine phase and restores the sprite after release', () => {
+    expect(BATTLE_SCENE_SRC).toContain('phase: event.phase');
+    expect(BATTLE_SCENE_SRC).toContain("if (event.phase === 'release') sprite.setAlpha(1)");
   });
 });

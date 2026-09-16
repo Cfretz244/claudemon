@@ -19,8 +19,8 @@ import { TileType } from '../../src/types/map.types';
  * query hands back the text instead of the module.
  */
 const SRC_FILES = (import.meta as unknown as {
-  glob(pattern: string, opts: object): Record<string, string>;
-}).glob('../../src/**/*.ts', { query: '?raw', import: 'default', eager: true });
+  glob(pattern: string | string[], opts: object): Record<string, string>;
+}).glob(['../../src/**/*.ts', '../../packages/engine/src/**/*.ts'], { query: '?raw', import: 'default', eager: true });
 
 const gateState = (storyFlags: Record<string, boolean>) => ({
   storyFlags, badges: [], defeatedTrainers: [], hasItem: () => false,
@@ -105,7 +105,7 @@ describe('champion: the flag the Cerulean Cave guard reads', () => {
     const files = Object.entries(SRC_FILES)
       .filter(([, text]) => literal.test(text))
       .map(([path]) => path.replace('../../', ''));
-    expect(files.sort()).toEqual(['src/data/saveEditorPresets.ts', 'src/logic/hallOfFame.ts']);
+    expect(files.sort()).toEqual(['packages/engine/src/logic/hallOfFame.ts', 'src/data/saveEditorPresets.ts']);
   });
 });
 
