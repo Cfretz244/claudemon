@@ -331,7 +331,7 @@ export function sparkle(
  * instead of one Graphics per particle, which is what keeps the object count
  * flat as the type vocabulary adds shapes.
  */
-function animateFrames(
+export function animateFrames(
   scene: Phaser.Scene,
   duration: number,
   onFrame: (t: number) => void,

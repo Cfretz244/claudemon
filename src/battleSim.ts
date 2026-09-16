@@ -394,6 +394,20 @@ function init(): void {
       start: startBattle,
       end: () => endBattle('Battle ended by the test harness.'),
       musicTrackId: () => soundSystem.getCurrentTrackId(),
+      /**
+       * Play any species' entrance on either side of the live battle. The
+       * renderer itself is on `window.__claudemon.entrances` (BattleScene
+       * publishes it there, next to how the move animations are reached).
+       */
+      replayIntro: (
+        speciesId: number,
+        side: 'player' | 'opponent',
+        kind: 'wild' | 'sendout',
+      ): Promise<void> => {
+        const scene = game?.scene.getScene('BattleScene') as BattleScene | undefined;
+        if (!scene?.scene.isActive()) return Promise.resolve();
+        return scene.replayIntro(speciesId, side, kind);
+      },
     };
   }
 }
