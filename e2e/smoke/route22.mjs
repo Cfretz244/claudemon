@@ -5,20 +5,14 @@
 import { createRunner } from '../lib.mjs';
 
 const t = await createRunner('route22');
-const { page } = t;
+const { page, battle } = t;
 
-// --- route22-only state readers ---------------------------------------------
+// --- route22-only state reader (the battle reader lives in lib.mjs) ---------
 const rivalSprites = () => page.evaluate(() => {
   const g = window.__claudemon; if (!g) return null;
   const s = g.scene.getScene('OverworldScene');
   if (!s || !s.scene.isActive()) return null;
   return [...s.npcSprites.keys()].filter(k => k.startsWith('rival'));
-});
-const battle = () => page.evaluate(() => {
-  const g = window.__claudemon; if (!g) return null;
-  const s = g.scene.getScene('BattleScene');
-  if (!s || !s.scene.isActive() || !s.opponentParty) return null;
-  return { trainerId: s.trainerId, team: s.opponentParty.map(p => [p.speciesId, p.level]) };
 });
 
 const ALL_BADGES = ['BOULDER', 'CASCADE', 'THUNDER', 'RAINBOW', 'SOUL', 'MARSH', 'VOLCANO', 'EARTH'];
