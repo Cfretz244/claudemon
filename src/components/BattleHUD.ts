@@ -15,6 +15,9 @@ const EXP_BAR_WIDTH = 62;            // same width as the player HP bar
 const EXP_BAR_HEIGHT = 2;
 const EXP_TRACK_COLOR = 0x383838;    // COLORS.MENU_BORDER, as the HP bar's track
 const EXP_FILL_COLOR = 0xc0c0c0;     // COLORS.LIGHT_GRAY
+// A full bar that wraps on the very frame it fills is never actually seen:
+// hold it full for a beat, the way Yellow does, before the level ticks over.
+const EXP_LEVEL_HOLD_MS = 150;
 
 export class BattleHUD {
   private scene: Phaser.Scene;
@@ -158,13 +161,15 @@ export class BattleHUD {
           onUpdate: () => this.setPlayerExp(seg.from + (seg.to - seg.from) * counter.value),
           onComplete: () => {
             this.setPlayerExp(seg.to);
-            if (next) {
-              // The level the bar just finished is behind us: show the new one
-              // and wrap the bar before the next leg starts.
+            if (!next) { resolve(); return; }
+            // The level the bar just finished is behind us: let the full bar
+            // sit for a beat, then show the new level and wrap to empty before
+            // the next leg starts.
+            this.scene.time.delayedCall(EXP_LEVEL_HOLD_MS, () => {
               this.playerLevelText.setText(`Lv${next.level}`);
               this.setPlayerExp(next.from);
-            }
-            resolve();
+              resolve();
+            });
           },
         });
       }).then(() => (next ? runSegment(index + 1) : undefined));

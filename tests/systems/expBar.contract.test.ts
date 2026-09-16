@@ -85,6 +85,10 @@ describe('the EXP bar exists only in the player box', () => {
     expect(body).toContain('this.playerLevelText.setText(`Lv${next.level}`)');
     expect(body).toContain('this.setPlayerExp(next.from)');
     expect(BATTLE_HUD_SRC).toContain('msPerFull: number = 600');
+    // The full bar is held for a beat before it wraps, or the player never
+    // sees it full: the tween's last frame and the wrap are the same frame.
+    expect(body).toContain('this.scene.time.delayedCall(EXP_LEVEL_HOLD_MS');
+    expect(BATTLE_HUD_SRC).toMatch(/const EXP_LEVEL_HOLD_MS = \d+;/);
   });
 });
 
