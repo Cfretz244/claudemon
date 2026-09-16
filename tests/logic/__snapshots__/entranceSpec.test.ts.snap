@@ -1,0 +1,460 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`entranceSpec — full table snapshot > matches the recorded 151 x {wild, sendout} entrance table 1`] = `
+"  1 BULBASAUR    wild    wide    GRASS    settle      rare 700 -
+  1 BULBASAUR    sendout wide    GRASS    settle      rare 900 -
+  2 IVYSAUR      wild    wide    GRASS    settle      rare 700 -
+  2 IVYSAUR      sendout wide    GRASS    settle      rare 900 -
+  3 VENUSAUR     wild    wide    GRASS    settle      rare 700 venusaur
+  3 VENUSAUR     sendout wide    GRASS    settle      rare 900 venusaur
+  4 CHARMANDER   wild    tall    FIRE     stance      rare 650 -
+  4 CHARMANDER   sendout tall    FIRE     stance      rare 900 -
+  5 CHARMELEON   wild    tall    FIRE     stance      rare 650 -
+  5 CHARMELEON   sendout tall    FIRE     stance      rare 900 -
+  6 CHARIZARD    wild    bird    FIRE     bob         rare 750 charizard
+  6 CHARIZARD    sendout bird    FIRE     bob         rare 900 charizard
+  7 SQUIRTLE     wild    round   WATER    hop         rare 700 -
+  7 SQUIRTLE     sendout round   WATER    hop         rare 900 -
+  8 WARTORTLE    wild    round   WATER    hop         rare 700 -
+  8 WARTORTLE    sendout round   WATER    hop         rare 900 -
+  9 BLASTOISE    wild    round   WATER    hop         rare 700 blastoise
+  9 BLASTOISE    sendout round   WATER    hop         rare 900 blastoise
+ 10 CATERPIE     wild    bug     BUG      twitch           650 -
+ 10 CATERPIE     sendout bug     BUG      twitch           900 -
+ 11 METAPOD      wild    bug     BUG      twitch           650 -
+ 11 METAPOD      sendout bug     BUG      twitch           900 -
+ 12 BUTTERFREE   wild    bug     BUG      twitch      rare 650 -
+ 12 BUTTERFREE   sendout bug     BUG      twitch      rare 900 -
+ 13 WEEDLE       wild    bug     BUG      twitch           650 -
+ 13 WEEDLE       sendout bug     BUG      twitch           900 -
+ 14 KAKUNA       wild    bug     BUG      twitch           650 -
+ 14 KAKUNA       sendout bug     BUG      twitch           900 -
+ 15 BEEDRILL     wild    bug     BUG      twitch      rare 650 -
+ 15 BEEDRILL     sendout bug     BUG      twitch      rare 900 -
+ 16 PIDGEY       wild    bird    NORMAL   bob              750 -
+ 16 PIDGEY       sendout bird    NORMAL   bob              900 -
+ 17 PIDGEOTTO    wild    bird    NORMAL   bob              750 -
+ 17 PIDGEOTTO    sendout bird    NORMAL   bob              900 -
+ 18 PIDGEOT      wild    bird    NORMAL   bob         rare 750 -
+ 18 PIDGEOT      sendout bird    NORMAL   bob         rare 900 -
+ 19 RATTATA      wild    round   NORMAL   hop              700 -
+ 19 RATTATA      sendout round   NORMAL   hop              900 -
+ 20 RATICATE     wild    round   NORMAL   hop              700 -
+ 20 RATICATE     sendout round   NORMAL   hop              900 -
+ 21 SPEAROW      wild    bird    NORMAL   bob              750 -
+ 21 SPEAROW      sendout bird    NORMAL   bob              900 -
+ 22 FEAROW       wild    bird    NORMAL   bob              750 -
+ 22 FEAROW       sendout bird    NORMAL   bob              900 -
+ 23 EKANS        wild    snake   POISON   tilt             750 -
+ 23 EKANS        sendout snake   POISON   tilt             900 -
+ 24 ARBOK        wild    snake   POISON   tilt             750 -
+ 24 ARBOK        sendout snake   POISON   tilt             900 -
+ 25 PIKACHU      wild    round   ELECTRIC hop              700 pikachu
+ 25 PIKACHU      sendout round   ELECTRIC hop              900 pikachu
+ 26 RAICHU       wild    round   ELECTRIC hop              700 -
+ 26 RAICHU       sendout round   ELECTRIC hop              900 -
+ 27 SANDSHREW    wild    angular GROUND   shake            800 -
+ 27 SANDSHREW    sendout angular GROUND   shake            900 -
+ 28 SANDSLASH    wild    angular GROUND   shake            800 -
+ 28 SANDSLASH    sendout angular GROUND   shake            900 -
+ 29 NIDORAN F    wild    round   POISON   hop              700 -
+ 29 NIDORAN F    sendout round   POISON   hop              900 -
+ 30 NIDORINA     wild    round   POISON   hop              700 -
+ 30 NIDORINA     sendout round   POISON   hop              900 -
+ 31 NIDOQUEEN    wild    round   POISON   hop         rare 700 -
+ 31 NIDOQUEEN    sendout round   POISON   hop         rare 900 -
+ 32 NIDORAN M    wild    round   POISON   hop              700 -
+ 32 NIDORAN M    sendout round   POISON   hop              900 -
+ 33 NIDORINO     wild    round   POISON   hop              700 -
+ 33 NIDORINO     sendout round   POISON   hop              900 -
+ 34 NIDOKING     wild    round   POISON   hop         rare 700 -
+ 34 NIDOKING     sendout round   POISON   hop         rare 900 -
+ 35 CLEFAIRY     wild    round   NORMAL   hop              700 -
+ 35 CLEFAIRY     sendout round   NORMAL   hop              900 -
+ 36 CLEFABLE     wild    round   NORMAL   hop         rare 700 -
+ 36 CLEFABLE     sendout round   NORMAL   hop         rare 900 -
+ 37 VULPIX       wild    tall    FIRE     stance           650 -
+ 37 VULPIX       sendout tall    FIRE     stance           900 -
+ 38 NINETALES    wild    tall    FIRE     stance           650 -
+ 38 NINETALES    sendout tall    FIRE     stance           900 -
+ 39 JIGGLYPUFF   wild    round   NORMAL   hop    mass      700 -
+ 39 JIGGLYPUFF   sendout round   NORMAL   hop    mass      900 -
+ 40 WIGGLYTUFF   wild    round   NORMAL   hop    mass rare 700 -
+ 40 WIGGLYTUFF   sendout round   NORMAL   hop    mass rare 900 -
+ 41 ZUBAT        wild    bird    POISON   bob              750 -
+ 41 ZUBAT        sendout bird    POISON   bob              900 -
+ 42 GOLBAT       wild    bird    POISON   bob              750 -
+ 42 GOLBAT       sendout bird    POISON   bob              900 -
+ 43 ODDISH       wild    wide    GRASS    settle           700 -
+ 43 ODDISH       sendout wide    GRASS    settle           900 -
+ 44 GLOOM        wild    wide    GRASS    settle           700 -
+ 44 GLOOM        sendout wide    GRASS    settle           900 -
+ 45 VILEPLUME    wild    wide    GRASS    settle      rare 700 -
+ 45 VILEPLUME    sendout wide    GRASS    settle      rare 900 -
+ 46 PARAS        wild    bug     BUG      twitch           650 -
+ 46 PARAS        sendout bug     BUG      twitch           900 -
+ 47 PARASECT     wild    bug     BUG      twitch           650 -
+ 47 PARASECT     sendout bug     BUG      twitch           900 -
+ 48 VENONAT      wild    bug     BUG      twitch           650 -
+ 48 VENONAT      sendout bug     BUG      twitch           900 -
+ 49 VENOMOTH     wild    bug     BUG      twitch           650 -
+ 49 VENOMOTH     sendout bug     BUG      twitch           900 -
+ 50 DIGLETT      wild    angular GROUND   shake            800 -
+ 50 DIGLETT      sendout angular GROUND   shake            900 -
+ 51 DUGTRIO      wild    angular GROUND   shake            800 -
+ 51 DUGTRIO      sendout angular GROUND   shake            900 -
+ 52 MEOWTH       wild    round   NORMAL   hop              700 -
+ 52 MEOWTH       sendout round   NORMAL   hop              900 -
+ 53 PERSIAN      wild    round   NORMAL   hop              700 -
+ 53 PERSIAN      sendout round   NORMAL   hop              900 -
+ 54 PSYDUCK      wild    round   WATER    hop              700 -
+ 54 PSYDUCK      sendout round   WATER    hop              900 -
+ 55 GOLDUCK      wild    round   WATER    hop              700 -
+ 55 GOLDUCK      sendout round   WATER    hop              900 -
+ 56 MANKEY       wild    tall    FIGHTING stance           650 -
+ 56 MANKEY       sendout tall    FIGHTING stance           900 -
+ 57 PRIMEAPE     wild    tall    FIGHTING stance           650 -
+ 57 PRIMEAPE     sendout tall    FIGHTING stance           900 -
+ 58 GROWLITHE    wild    tall    FIRE     stance           650 -
+ 58 GROWLITHE    sendout tall    FIRE     stance           900 -
+ 59 ARCANINE     wild    tall    FIRE     stance           650 -
+ 59 ARCANINE     sendout tall    FIRE     stance           900 -
+ 60 POLIWAG      wild    round   WATER    hop              700 -
+ 60 POLIWAG      sendout round   WATER    hop              900 -
+ 61 POLIWHIRL    wild    round   WATER    hop              700 -
+ 61 POLIWHIRL    sendout round   WATER    hop              900 -
+ 62 POLIWRATH    wild    round   WATER    hop         rare 700 -
+ 62 POLIWRATH    sendout round   WATER    hop         rare 900 -
+ 63 ABRA         wild    tall    PSYCHIC  stance           650 -
+ 63 ABRA         sendout tall    PSYCHIC  stance           900 -
+ 64 KADABRA      wild    tall    PSYCHIC  stance           650 -
+ 64 KADABRA      sendout tall    PSYCHIC  stance           900 -
+ 65 ALAKAZAM     wild    tall    PSYCHIC  stance           650 -
+ 65 ALAKAZAM     sendout tall    PSYCHIC  stance           900 -
+ 66 MACHOP       wild    tall    FIGHTING stance           650 -
+ 66 MACHOP       sendout tall    FIGHTING stance           900 -
+ 67 MACHOKE      wild    tall    FIGHTING stance           650 -
+ 67 MACHOKE      sendout tall    FIGHTING stance           900 -
+ 68 MACHAMP      wild    tall    FIGHTING stance      rare 650 -
+ 68 MACHAMP      sendout tall    FIGHTING stance      rare 900 -
+ 69 BELLSPROUT   wild    wide    GRASS    settle           700 -
+ 69 BELLSPROUT   sendout wide    GRASS    settle           900 -
+ 70 WEEPINBELL   wild    wide    GRASS    settle           700 -
+ 70 WEEPINBELL   sendout wide    GRASS    settle           900 -
+ 71 VICTREEBEL   wild    wide    GRASS    settle      rare 700 -
+ 71 VICTREEBEL   sendout wide    GRASS    settle      rare 900 -
+ 72 TENTACOOL    wild    round   WATER    hop              700 -
+ 72 TENTACOOL    sendout round   WATER    hop              900 -
+ 73 TENTACRUEL   wild    round   WATER    hop              700 -
+ 73 TENTACRUEL   sendout round   WATER    hop              900 -
+ 74 GEODUDE      wild    angular ROCK     shake            800 -
+ 74 GEODUDE      sendout angular ROCK     shake            900 -
+ 75 GRAVELER     wild    angular ROCK     shake            800 -
+ 75 GRAVELER     sendout angular ROCK     shake            900 -
+ 76 GOLEM        wild    angular ROCK     shake       rare 800 -
+ 76 GOLEM        sendout angular ROCK     shake       rare 900 -
+ 77 PONYTA       wild    tall    FIRE     stance           650 -
+ 77 PONYTA       sendout tall    FIRE     stance           900 -
+ 78 RAPIDASH     wild    tall    FIRE     stance           650 -
+ 78 RAPIDASH     sendout tall    FIRE     stance           900 -
+ 79 SLOWPOKE     wild    wide    WATER    settle           700 -
+ 79 SLOWPOKE     sendout wide    WATER    settle           900 -
+ 80 SLOWBRO      wild    tall    WATER    stance           650 -
+ 80 SLOWBRO      sendout tall    WATER    stance           900 -
+ 81 MAGNEMITE    wild    round   ELECTRIC hop              700 -
+ 81 MAGNEMITE    sendout round   ELECTRIC hop              900 -
+ 82 MAGNETON     wild    round   ELECTRIC hop              700 -
+ 82 MAGNETON     sendout round   ELECTRIC hop              900 -
+ 83 FARFETCH'D   wild    bird    NORMAL   bob         rare 750 -
+ 83 FARFETCH'D   sendout bird    NORMAL   bob         rare 900 -
+ 84 DODUO        wild    bird    NORMAL   bob              750 -
+ 84 DODUO        sendout bird    NORMAL   bob              900 -
+ 85 DODRIO       wild    bird    NORMAL   bob         rare 750 -
+ 85 DODRIO       sendout bird    NORMAL   bob         rare 900 -
+ 86 SEEL         wild    round   WATER    hop              700 -
+ 86 SEEL         sendout round   WATER    hop              900 -
+ 87 DEWGONG      wild    round   WATER    hop              700 -
+ 87 DEWGONG      sendout round   WATER    hop              900 -
+ 88 GRIMER       wild    round   POISON   hop              700 -
+ 88 GRIMER       sendout round   POISON   hop              900 -
+ 89 MUK          wild    round   POISON   hop    mass      700 -
+ 89 MUK          sendout round   POISON   hop    mass      900 -
+ 90 SHELLDER     wild    round   WATER    hop              700 -
+ 90 SHELLDER     sendout round   WATER    hop              900 -
+ 91 CLOYSTER     wild    round   WATER    hop              700 -
+ 91 CLOYSTER     sendout round   WATER    hop              900 -
+ 92 GASTLY       wild    round   GHOST    hop              700 -
+ 92 GASTLY       sendout round   GHOST    hop              900 -
+ 93 HAUNTER      wild    round   GHOST    hop              700 -
+ 93 HAUNTER      sendout round   GHOST    hop              900 -
+ 94 GENGAR       wild    round   GHOST    hop         rare 700 gengar
+ 94 GENGAR       sendout round   GHOST    hop         rare 900 gengar
+ 95 ONIX         wild    snake   ROCK     tilt        rare 750 onix
+ 95 ONIX         sendout snake   ROCK     tilt        rare 900 onix
+ 96 DROWZEE      wild    tall    PSYCHIC  stance           650 -
+ 96 DROWZEE      sendout tall    PSYCHIC  stance           900 -
+ 97 HYPNO        wild    tall    PSYCHIC  stance           650 -
+ 97 HYPNO        sendout tall    PSYCHIC  stance           900 -
+ 98 KRABBY       wild    round   WATER    hop              700 -
+ 98 KRABBY       sendout round   WATER    hop              900 -
+ 99 KINGLER      wild    round   WATER    hop              700 -
+ 99 KINGLER      sendout round   WATER    hop              900 -
+100 VOLTORB      wild    round   ELECTRIC hop              700 -
+100 VOLTORB      sendout round   ELECTRIC hop              900 -
+101 ELECTRODE    wild    round   ELECTRIC hop              700 -
+101 ELECTRODE    sendout round   ELECTRIC hop              900 -
+102 EXEGGCUTE    wild    wide    GRASS    settle           700 -
+102 EXEGGCUTE    sendout wide    GRASS    settle           900 -
+103 EXEGGUTOR    wild    wide    GRASS    settle      rare 700 -
+103 EXEGGUTOR    sendout wide    GRASS    settle      rare 900 -
+104 CUBONE       wild    angular GROUND   shake            800 -
+104 CUBONE       sendout angular GROUND   shake            900 -
+105 MAROWAK      wild    angular GROUND   shake            800 -
+105 MAROWAK      sendout angular GROUND   shake            900 -
+106 HITMONLEE    wild    tall    FIGHTING stance      rare 650 -
+106 HITMONLEE    sendout tall    FIGHTING stance      rare 900 -
+107 HITMONCHAN   wild    tall    FIGHTING stance      rare 650 -
+107 HITMONCHAN   sendout tall    FIGHTING stance      rare 900 -
+108 LICKITUNG    wild    round   NORMAL   hop         rare 700 -
+108 LICKITUNG    sendout round   NORMAL   hop         rare 900 -
+109 KOFFING      wild    round   POISON   hop              700 -
+109 KOFFING      sendout round   POISON   hop              900 -
+110 WEEZING      wild    round   POISON   hop              700 -
+110 WEEZING      sendout round   POISON   hop              900 -
+111 RHYHORN      wild    angular GROUND   shake            800 -
+111 RHYHORN      sendout angular GROUND   shake            900 -
+112 RHYDON       wild    angular GROUND   shake  mass      800 -
+112 RHYDON       sendout angular GROUND   shake  mass      900 -
+113 CHANSEY      wild    round   NORMAL   hop    mass rare 700 -
+113 CHANSEY      sendout round   NORMAL   hop    mass rare 900 -
+114 TANGELA      wild    wide    GRASS    settle      rare 700 -
+114 TANGELA      sendout wide    GRASS    settle      rare 900 -
+115 KANGASKHAN   wild    round   NORMAL   hop    mass rare 700 -
+115 KANGASKHAN   sendout round   NORMAL   hop    mass rare 900 -
+116 HORSEA       wild    round   WATER    hop              700 -
+116 HORSEA       sendout round   WATER    hop              900 -
+117 SEADRA       wild    round   WATER    hop              700 -
+117 SEADRA       sendout round   WATER    hop              900 -
+118 GOLDEEN      wild    round   WATER    hop              700 -
+118 GOLDEEN      sendout round   WATER    hop              900 -
+119 SEAKING      wild    round   WATER    hop              700 -
+119 SEAKING      sendout round   WATER    hop              900 -
+120 STARYU       wild    round   WATER    hop              700 -
+120 STARYU       sendout round   WATER    hop              900 -
+121 STARMIE      wild    round   WATER    hop              700 -
+121 STARMIE      sendout round   WATER    hop              900 -
+122 MR. MIME     wild    tall    PSYCHIC  stance      rare 650 -
+122 MR. MIME     sendout tall    PSYCHIC  stance      rare 900 -
+123 SCYTHER      wild    bug     BUG      twitch      rare 650 -
+123 SCYTHER      sendout bug     BUG      twitch      rare 900 -
+124 JYNX         wild    angular ICE      shake       rare 800 -
+124 JYNX         sendout angular ICE      shake       rare 900 -
+125 ELECTABUZZ   wild    round   ELECTRIC hop         rare 700 -
+125 ELECTABUZZ   sendout round   ELECTRIC hop         rare 900 -
+126 MAGMAR       wild    tall    FIRE     stance      rare 650 -
+126 MAGMAR       sendout tall    FIRE     stance      rare 900 -
+127 PINSIR       wild    bug     BUG      twitch      rare 650 -
+127 PINSIR       sendout bug     BUG      twitch      rare 900 -
+128 TAUROS       wild    round   NORMAL   hop         rare 700 -
+128 TAUROS       sendout round   NORMAL   hop         rare 900 -
+129 MAGIKARP     wild    round   WATER    hop              700 magikarp
+129 MAGIKARP     sendout round   WATER    hop              900 magikarp
+130 GYARADOS     wild    bird    WATER    bob         rare 750 gyarados
+130 GYARADOS     sendout bird    WATER    bob         rare 900 gyarados
+131 LAPRAS       wild    round   WATER    hop    mass rare 700 -
+131 LAPRAS       sendout round   WATER    hop    mass rare 900 -
+132 DITTO        wild    round   NORMAL   hop         rare 700 -
+132 DITTO        sendout round   NORMAL   hop         rare 900 -
+133 EEVEE        wild    round   NORMAL   hop         rare 700 -
+133 EEVEE        sendout round   NORMAL   hop         rare 900 -
+134 VAPOREON     wild    round   WATER    hop    mass rare 700 -
+134 VAPOREON     sendout round   WATER    hop    mass rare 900 -
+135 JOLTEON      wild    round   ELECTRIC hop         rare 700 -
+135 JOLTEON      sendout round   ELECTRIC hop         rare 900 -
+136 FLAREON      wild    tall    FIRE     stance      rare 650 -
+136 FLAREON      sendout tall    FIRE     stance      rare 900 -
+137 PORYGON      wild    round   NORMAL   hop         rare 700 -
+137 PORYGON      sendout round   NORMAL   hop         rare 900 -
+138 OMANYTE      wild    round   ROCK     hop         rare 700 -
+138 OMANYTE      sendout round   ROCK     hop         rare 900 -
+139 OMASTAR      wild    round   ROCK     hop         rare 700 -
+139 OMASTAR      sendout round   ROCK     hop         rare 900 -
+140 KABUTO       wild    bug     ROCK     twitch      rare 650 -
+140 KABUTO       sendout bug     ROCK     twitch      rare 900 -
+141 KABUTOPS     wild    bug     ROCK     twitch      rare 650 -
+141 KABUTOPS     sendout bug     ROCK     twitch      rare 900 -
+142 AERODACTYL   wild    bird    ROCK     bob         rare 750 -
+142 AERODACTYL   sendout bird    ROCK     bob         rare 900 -
+143 SNORLAX      wild    wide    NORMAL   settle mass rare 700 snorlax
+143 SNORLAX      sendout wide    NORMAL   settle mass rare 900 snorlax
+144 ARTICUNO     wild    bird    ICE      bob         rare 750 legendary_bird
+144 ARTICUNO     sendout bird    ICE      bob         rare 900 legendary_bird
+145 ZAPDOS       wild    bird    ELECTRIC bob         rare 750 legendary_bird
+145 ZAPDOS       sendout bird    ELECTRIC bob         rare 900 legendary_bird
+146 MOLTRES      wild    bird    FIRE     bob         rare 750 legendary_bird
+146 MOLTRES      sendout bird    FIRE     bob         rare 900 legendary_bird
+147 DRATINI      wild    snake   DRAGON   tilt        rare 750 -
+147 DRATINI      sendout snake   DRAGON   tilt        rare 900 -
+148 DRAGONAIR    wild    snake   DRAGON   tilt        rare 750 -
+148 DRAGONAIR    sendout snake   DRAGON   tilt        rare 900 -
+149 DRAGONITE    wild    bird    DRAGON   bob         rare 750 dragonite
+149 DRAGONITE    sendout bird    DRAGON   bob         rare 900 dragonite
+150 MEWTWO       wild    tall    PSYCHIC  stance mass rare 650 mewtwo
+150 MEWTWO       sendout tall    PSYCHIC  stance mass rare 900 mewtwo
+151 MEW          wild    tall    PSYCHIC  stance mass rare 650 -
+151 MEW          sendout tall    PSYCHIC  stance mass rare 900 -"
+`;
+
+exports[`entranceSpec — full table snapshot > matches the recorded 151-row cry table 1`] = `
+"  1 BULBASAUR     303 long_low sawtooth                 420ms
+  2 IVYSAUR       306 long_low sawtooth                 420ms
+  3 VENUSAUR      309 long_low sawtooth                 420ms
+  4 CHARMANDER    312 bark2    sawtooth tremolo         250ms
+  5 CHARMELEON    315 bark2    sawtooth tremolo         250ms
+  6 CHARIZARD     318 chirp2   sawtooth tremolo         200ms
+  7 SQUIRTLE      321 triad    sawtooth                 350ms
+  8 WARTORTLE     324 triad    sawtooth                 350ms
+  9 BLASTOISE     327 triad    sawtooth                 350ms
+ 10 CATERPIE      330 buzz     square                   280ms
+ 11 METAPOD       333 buzz     square                   280ms
+ 12 BUTTERFREE    336 buzz     square                   280ms
+ 13 WEEDLE        339 buzz     square                   280ms
+ 14 KAKUNA        342 buzz     square                   280ms
+ 15 BEEDRILL      345 buzz     square                   280ms
+ 16 PIDGEY        348 chirp2   sawtooth                 200ms
+ 17 PIDGEOTTO     351 chirp2   sawtooth                 200ms
+ 18 PIDGEOT       354 chirp2   sawtooth                 200ms
+ 19 RATTATA       357 triad    sawtooth                 350ms
+ 20 RATICATE      360 triad    sawtooth                 350ms
+ 21 SPEAROW       363 chirp2   sawtooth                 200ms
+ 22 FEAROW        366 chirp2   sawtooth                 200ms
+ 23 EKANS         369 slide    sawtooth                 420ms
+ 24 ARBOK         372 slide    sawtooth                 420ms
+ 25 PIKACHU       600 chirp2   square                   200ms
+ 26 RAICHU        378 triad    square                   350ms
+ 27 SANDSHREW     381 rumble   triangle                 380ms
+ 28 SANDSLASH     384 rumble   triangle                 380ms
+ 29 NIDORAN F     387 triad    sawtooth                 350ms
+ 30 NIDORINA      390 triad    sawtooth                 350ms
+ 31 NIDOQUEEN     393 triad    sawtooth                 350ms
+ 32 NIDORAN M     396 triad    sawtooth                 350ms
+ 33 NIDORINO      399 triad    sawtooth                 350ms
+ 34 NIDOKING      402 triad    sawtooth                 350ms
+ 35 CLEFAIRY      405 triad    sawtooth                 350ms
+ 36 CLEFABLE      408 triad    sawtooth                 350ms
+ 37 VULPIX        411 bark2    sawtooth tremolo         250ms
+ 38 NINETALES     414 bark2    sawtooth tremolo         250ms
+ 39 JIGGLYPUFF    417 triad    sawtooth                 350ms
+ 40 WIGGLYTUFF    420 triad    sawtooth                 350ms
+ 41 ZUBAT         423 chirp2   sawtooth                 200ms
+ 42 GOLBAT        426 chirp2   sawtooth                 200ms
+ 43 ODDISH        429 long_low sawtooth                 420ms
+ 44 GLOOM         432 long_low sawtooth                 420ms
+ 45 VILEPLUME     435 long_low sawtooth                 420ms
+ 46 PARAS         438 buzz     square                   280ms
+ 47 PARASECT      441 buzz     square                   280ms
+ 48 VENONAT       444 buzz     square                   280ms
+ 49 VENOMOTH      447 buzz     square                   280ms
+ 50 DIGLETT       450 rumble   triangle                 380ms
+ 51 DUGTRIO       453 rumble   triangle                 380ms
+ 52 MEOWTH        456 triad    sawtooth                 350ms
+ 53 PERSIAN       459 triad    sawtooth                 350ms
+ 54 PSYDUCK       462 triad    sawtooth                 350ms
+ 55 GOLDUCK       465 triad    sawtooth                 350ms
+ 56 MANKEY        468 bark2    sawtooth                 250ms
+ 57 PRIMEAPE      471 bark2    sawtooth                 250ms
+ 58 GROWLITHE     474 bark2    sawtooth tremolo         250ms
+ 59 ARCANINE      477 bark2    sawtooth tremolo         250ms
+ 60 POLIWAG       480 triad    sawtooth                 350ms
+ 61 POLIWHIRL     483 triad    sawtooth                 350ms
+ 62 POLIWRATH     486 triad    sawtooth                 350ms
+ 63 ABRA          489 bark2    sawtooth                 250ms
+ 64 KADABRA       492 bark2    sawtooth                 250ms
+ 65 ALAKAZAM      495 bark2    sawtooth                 250ms
+ 66 MACHOP        498 bark2    sawtooth                 250ms
+ 67 MACHOKE       501 bark2    sawtooth                 250ms
+ 68 MACHAMP       504 bark2    sawtooth                 250ms
+ 69 BELLSPROUT    507 long_low sawtooth                 420ms
+ 70 WEEPINBELL    510 long_low sawtooth                 420ms
+ 71 VICTREEBEL    513 long_low sawtooth                 420ms
+ 72 TENTACOOL     516 triad    sawtooth                 350ms
+ 73 TENTACRUEL    519 triad    sawtooth                 350ms
+ 74 GEODUDE       522 rumble   triangle                 380ms
+ 75 GRAVELER      525 rumble   triangle                 380ms
+ 76 GOLEM         528 rumble   triangle                 380ms
+ 77 PONYTA        531 bark2    sawtooth tremolo         250ms
+ 78 RAPIDASH      534 bark2    sawtooth tremolo         250ms
+ 79 SLOWPOKE      537 long_low sawtooth                 420ms
+ 80 SLOWBRO       540 bark2    sawtooth                 250ms
+ 81 MAGNEMITE     543 triad    square                   350ms
+ 82 MAGNETON      546 triad    square                   350ms
+ 83 FARFETCH'D    549 chirp2   sawtooth                 200ms
+ 84 DODUO         552 chirp2   sawtooth                 200ms
+ 85 DODRIO        555 chirp2   sawtooth                 200ms
+ 86 SEEL          558 triad    sawtooth                 350ms
+ 87 DEWGONG       561 triad    sawtooth                 350ms
+ 88 GRIMER        564 triad    sawtooth                 350ms
+ 89 MUK           567 triad    sawtooth                 350ms
+ 90 SHELLDER      570 triad    sawtooth                 350ms
+ 91 CLOYSTER      573 triad    sawtooth                 350ms
+ 92 GASTLY        576 triad    sine             vibrato 350ms
+ 93 HAUNTER       579 triad    sine             vibrato 350ms
+ 94 GENGAR        582 triad    sine             vibrato 350ms
+ 95 ONIX          585 slide    sawtooth                 420ms
+ 96 DROWZEE       588 bark2    sawtooth                 250ms
+ 97 HYPNO         591 bark2    sawtooth                 250ms
+ 98 KRABBY        594 triad    sawtooth                 350ms
+ 99 KINGLER       597 triad    sawtooth                 350ms
+100 VOLTORB       600 triad    square                   350ms
+101 ELECTRODE     603 triad    square                   350ms
+102 EXEGGCUTE     606 long_low sawtooth                 420ms
+103 EXEGGUTOR     609 long_low sawtooth                 420ms
+104 CUBONE        612 rumble   triangle                 380ms
+105 MAROWAK       615 rumble   triangle                 380ms
+106 HITMONLEE     618 bark2    sawtooth                 250ms
+107 HITMONCHAN    621 bark2    sawtooth                 250ms
+108 LICKITUNG     624 triad    sawtooth                 350ms
+109 KOFFING       627 triad    sawtooth                 350ms
+110 WEEZING       630 triad    sawtooth                 350ms
+111 RHYHORN       633 rumble   triangle                 380ms
+112 RHYDON        636 rumble   triangle                 380ms
+113 CHANSEY       639 triad    sawtooth                 350ms
+114 TANGELA       642 long_low sawtooth                 420ms
+115 KANGASKHAN    645 triad    sawtooth                 350ms
+116 HORSEA        648 triad    sawtooth                 350ms
+117 SEADRA        651 triad    sawtooth                 350ms
+118 GOLDEEN       654 triad    sawtooth                 350ms
+119 SEAKING       657 triad    sawtooth                 350ms
+120 STARYU        660 triad    sawtooth                 350ms
+121 STARMIE       663 triad    sawtooth                 350ms
+122 MR. MIME      666 bark2    sawtooth                 250ms
+123 SCYTHER       669 buzz     square                   280ms
+124 JYNX          672 rumble   triangle                 380ms
+125 ELECTABUZZ    675 triad    square                   350ms
+126 MAGMAR        678 bark2    sawtooth tremolo         250ms
+127 PINSIR        681 buzz     square                   280ms
+128 TAUROS        684 triad    sawtooth                 350ms
+129 MAGIKARP      687 triad    sawtooth                 350ms
+130 GYARADOS      690 chirp2   sawtooth                 200ms
+131 LAPRAS        693 triad    sawtooth                 350ms
+132 DITTO         696 triad    sawtooth                 350ms
+133 EEVEE         699 triad    sawtooth                 350ms
+134 VAPOREON      702 triad    sawtooth                 350ms
+135 JOLTEON       705 triad    square                   350ms
+136 FLAREON       708 bark2    sawtooth tremolo         250ms
+137 PORYGON       711 triad    sawtooth                 350ms
+138 OMANYTE       714 triad    sawtooth                 350ms
+139 OMASTAR       717 triad    sawtooth                 350ms
+140 KABUTO        720 buzz     square                   280ms
+141 KABUTOPS      723 buzz     square                   280ms
+142 AERODACTYL    726 chirp2   sawtooth                 200ms
+143 SNORLAX       729 long_low sawtooth                 420ms
+144 ARTICUNO      732 chirp2   sawtooth                 200ms
+145 ZAPDOS        735 chirp2   square                   200ms
+146 MOLTRES       738 chirp2   sawtooth tremolo         200ms
+147 DRATINI       741 slide    sawtooth                 420ms
+148 DRAGONAIR     744 slide    sawtooth                 420ms
+149 DRAGONITE     747 chirp2   sawtooth                 200ms
+150 MEWTWO        750 bark2    sawtooth                 250ms
+151 MEW           753 bark2    sawtooth                 250ms"
+`;
