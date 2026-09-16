@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import ENTRANCES_SRC from '../../src/systems/animations/entrances.ts?raw';
+import OVERRIDES_SRC from '../../src/systems/animations/entranceOverrides.ts?raw';
+import ANIMATIONS_INDEX_SRC from '../../src/systems/animations/index.ts?raw';
 import BATTLE_SCENE_SRC from '../../src/scenes/BattleScene.ts?raw';
 import BATTLE_SIM_SRC from '../../src/battleSim.ts?raw';
 import MOVE_ANIMATIONS_SRC from '../../src/systems/MoveAnimations.ts?raw';
@@ -7,7 +9,7 @@ import { soundSystem } from '../../src/systems/SoundSystem';
 import { POKEMON_DATA } from '../../src/data/pokemon';
 import {
   resolveEntrance, resolveCry, MAX_WILD_MS, MAX_SENDOUT_MS, SHAPE_FLOURISH,
-  CRY_CONTOURS,
+  CRY_CONTOURS, ENTRANCE_OVERRIDES,
 } from '../../src/logic/entranceSpec';
 
 /**
@@ -114,10 +116,21 @@ describe('entrance renderer: restore, cleanup and cap', () => {
     expect(MAX_SENDOUT_MS).toBe(900);
   });
 
-  it('ignores overrideId in this PR but leaves the registry for E4', () => {
+  it('consults the override registry, and falls through when it is empty', () => {
+    // E2 pinned the opposite of this ("ignores overrideId in this PR but leaves
+    // the registry for E4"): at the time nothing was registered, so dispatching
+    // would have meant dispatching to nothing. E4 fills the registry, so the
+    // assertion flips - what has to stay true is the FALLTHROUGH, which is why
+    // the lookup is a `const override = ...` and the shape row is still the
+    // unconditional else rather than a branch that can throw.
     expect(ENTRANCES_SRC).toContain('export function registerEntranceOverride');
     const play = ENTRANCES_SRC.split('export async function playEntrance')[1] ?? '';
-    expect(play).not.toContain('entranceOverride(');
+    expect(play).toContain('spec.overrideId ? entranceOverride(spec.overrideId) : undefined');
+    expect(play).toContain('if (override) {');
+    // An id with no renderer resolves to undefined and takes the shape path.
+    const lookup = ENTRANCES_SRC.split('export function entranceOverride')[1].split('\n}')[0];
+    expect(lookup).toContain('entranceOverrides.get(id)');
+    expect(lookup).not.toContain('throw');
   });
 
   it('drives its flourishes at 0.6x for a send-out', () => {
@@ -170,6 +183,154 @@ describe('entrance renderer: restore, cleanup and cap', () => {
       expect(ENTRANCES_SRC).toContain(fn);
       expect(MOVE_ANIMATIONS_SRC).toContain(`export function ${fn}`);
     }
+  });
+});
+
+describe('entrance overrides: the twelve hand-authored arrivals (E4)', () => {
+  const ids = [...new Set(Object.values(ENTRANCE_OVERRIDES))];
+
+  /** Every renderer, as source text: `const entranceX: EntranceOverrideFn = ...`. */
+  const renderers = [...OVERRIDES_SRC.matchAll(
+    /const (entrance\w+): EntranceOverrideFn = async kit => \{([\s\S]*?)\n\};/g,
+  )].map(m => ({ name: m[1], body: m[2] }));
+
+  it('registers a renderer for every id in ENTRANCE_OVERRIDES', () => {
+    expect(ids).toHaveLength(12);
+    for (const id of ids) {
+      expect(OVERRIDES_SRC).toContain(`registerEntranceOverride('${id}', entrance`);
+    }
+    // ...and registers nothing the resolver cannot ask for.
+    const registered = [...OVERRIDES_SRC.matchAll(/registerEntranceOverride\('(\w+)'/g)]
+      .map(m => m[1]);
+    expect(registered.sort()).toEqual([...ids].sort());
+  });
+
+  it('is loaded by the barrel the scene imports, so the registry is populated', () => {
+    expect(ANIMATIONS_INDEX_SRC).toContain("import './entranceOverrides'");
+    expect(BATTLE_SCENE_SRC).toContain("import '../systems/animations'");
+  });
+
+  it('writes one renderer for the three legendary birds, not three', () => {
+    const bird = [...OVERRIDES_SRC.matchAll(/registerEntranceOverride\('legendary_bird'/g)];
+    expect(bird).toHaveLength(1);
+    // Its palette comes from the kit (the resolver filled it from types[0]),
+    // so ICE/ELECTRIC/FIRE give three different entrances out of one function.
+    const body = renderers.find(r => r.name === 'entranceLegendaryBird')!.body;
+    expect(body).toContain('kit.color');
+    expect(body).toContain('kit.accent');
+    expect(body).not.toMatch(/\b(articuno|zapdos|moltres|0x[0-9A-Fa-f]{6})\b/i);
+  });
+
+  it('touches no Phaser scene API of its own: only the kit and the primitives', () => {
+    // The renderer module is the one place in the entrance code that a
+    // contributor will copy-paste from, so it must not grow direct scene
+    // access: anything it draws has to be a primitive (which destroys its own
+    // graphics) or a kit method (whose objects go on the run's junk list), or
+    // the cap can abort mid-beat and leave the field dirty.
+    expect(OVERRIDES_SRC).not.toMatch(/from 'phaser'/);
+    expect(OVERRIDES_SRC).not.toMatch(/\bPhaser\./);
+    for (const api of ['add', 'make', 'tweens', 'time', 'cameras', 'children',
+      'textures', 'sys', 'events', 'input', 'load']) {
+      expect(OVERRIDES_SRC).not.toMatch(new RegExp(`scene\\.${api}\\b`));
+    }
+    // The scene reference it does hold is only ever handed to a primitive.
+    const uses = [...OVERRIDES_SRC.matchAll(/kit\.scene\b(.)/g)].map(m => m[1]);
+    expect(uses.length).toBeGreaterThan(0);
+    for (const next of uses) expect(next).toBe(',');
+  });
+
+  it('imports only primitives MoveAnimations actually exports', () => {
+    const imported = OVERRIDES_SRC.split("} from '../MoveAnimations'")[0]
+      .split('import {').pop()!
+      .split(',').map(s => s.trim()).filter(Boolean);
+    expect(imported.length).toBeGreaterThan(5);
+    for (const fn of imported) {
+      expect(MOVE_ANIMATIONS_SRC).toContain(`export function ${fn}`);
+    }
+  });
+
+  it('gives all twelve the same skeleton: phases from splitPhases, a cry, abort checks', () => {
+    expect(renderers).toHaveLength(12);
+    for (const { name, body } of renderers) {
+      // Beats are WEIGHTS, not milliseconds: the window is smaller for a
+      // send-out and varies by shape row, so a hard-coded ms would overrun.
+      expect(body, name).toContain('splitPhases(kit.ms, [');
+      // The cry is E1's, fired once, on the reveal.
+      expect([...body.matchAll(/kit\.cry\(\)/g)], name).toHaveLength(1);
+      // The cap can abort at any await; a renderer that ignores that keeps
+      // drawing into a field the finally has already cleaned.
+      expect(body, name).toContain('if (kit.aborted) return;');
+      // Travel scales with the amplitude, so a send-out cannot upstage a
+      // fight: every pixel distance in the file is `N * kit.amp`, never `N`.
+      for (const m of body.matchAll(/Math\.round\(\d+ \* ([\w.]+)\)/g)) {
+        expect(m[1], name).toBe('kit.amp');
+      }
+    }
+  });
+
+  it('keeps the design section 5 details that are easy to get wrong', () => {
+    const byName = Object.fromEntries(renderers.map(r => [r.name, r.body]));
+    // GENGAR is a hole in the field, not a pale silhouette.
+    expect(OVERRIDES_SRC).toContain('GENGAR_TINT = 0x202040');
+    expect(byName.entranceGengar).toContain('kit.silhouette(GENGAR_TINT)');
+    // ...and it fades UP to 0.3 rather than starting there (see the const's
+    // comment): a full-size silhouette on frame one is a mon already present.
+    expect(OVERRIDES_SRC).toContain('GENGAR_GHOST_ALPHA = 0.3');
+    expect(byName.entranceGengar).toContain('kit.sprite.setAlpha(0)');
+    // MEWTWO dims the screen 20 %, under the text box, and never lands.
+    expect(OVERRIDES_SRC).toContain('MEWTWO_DIM = 0.2');
+    expect(byName.entranceMewtwo).toContain('kit.dim(MEWTWO_DIM');
+    expect(byName.entranceMewtwo).not.toContain('screenShake');
+    expect(ENTRANCES_SRC).toContain('export const DIM_DEPTH = 899');
+    // SNORLAX brings its own mass beat, louder than the generic one.
+    expect(byName.entranceSnorlax).toContain('screenShake(kit.scene, 3,');
+    expect(byName.entranceSnorlax).toContain("ease: 'Bounce.easeOut'");
+    // PIKACHU: burst, two sparks, two hops.
+    expect(byName.entrancePikachu).toContain('impactBurst(');
+    expect(byName.entrancePikachu).toContain('kit.accent, 2,');
+    expect([...byName.entrancePikachu.matchAll(/kit\.flourish\('hop'/g)]).toHaveLength(2);
+    // The beam-led reveals put an empty beat FIRST, or the pillar is on screen
+    // before the entrance has visibly begun (the runner samples at t0).
+    for (const n of ['entranceCharizard', 'entranceLegendaryBird']) {
+      expect(byName[n].indexOf('kit.frames(lead, NOTHING)'))
+        .toBeLessThan(byName[n].indexOf('typeBeam('));
+    }
+  });
+
+  it('folds the mass shake into the override but leaves the rare sparkle generic', () => {
+    const play = ENTRANCES_SRC.split('export async function playEntrance')[1] ?? '';
+    // Rarity is a property of the species, not of the arrival, so MEWTWO and
+    // the birds keep the generic sparkle wherever the dispatch goes...
+    expect(play.indexOf('if (spec.rare)')).toBeLessThan(play.indexOf('if (override) {'));
+    // ...while the generic mass shake belongs to the shape rows only: a
+    // hand-authored landing lands its own weight (SNORLAX at 3, MEWTWO never).
+    expect(play).toContain('No generic mass shake here');
+  });
+
+  it('still throws the ball for a send-out, then hands the rest to the override', () => {
+    const play = ENTRANCES_SRC.split('export async function playEntrance')[1] ?? '';
+    const branch = play.split('if (override) {')[1].split('\n    }')[0];
+    expect(branch.indexOf("spec.kind === 'sendout'")).toBeLessThan(branch.indexOf('await override('));
+    expect(branch).toContain('await ballThrow(');
+    // The override's window is what is left after the arc and the ball's open.
+    expect(branch).toContain('budget - throwMs - BALL_OPEN_MS - OVERRIDE_BEAT_RESERVE_MS');
+    // ...minus one more beat allowance, because a tier-3 window is split into
+    // up to six phases and every one of them rounds up to the next frame.
+    expect(ENTRANCES_SRC).toContain('OVERRIDE_BEAT_RESERVE_MS = 40');
+    // ...and it runs at the send-out amplitude the shape rows use.
+    expect(branch).toContain('makeKit(run, overrideMs, amp, cry)');
+  });
+
+  it('reports which renderer ran, so the e2e can prove the override fired', () => {
+    expect(ENTRANCES_SRC).toContain('export const entranceTelemetry');
+    expect(ENTRANCES_SRC).toContain('lastRenderer');
+    expect(ENTRANCES_SRC).toContain('overrideRuns');
+    // Hung off playEntrance itself: BattleScene already publishes that function
+    // on window.__claudemon, so the runner needs no scene change to read it.
+    expect(ENTRANCES_SRC).toContain('(playEntrance as unknown as { telemetry: EntranceTelemetry }).telemetry');
+    const play = ENTRANCES_SRC.split('export async function playEntrance')[1] ?? '';
+    expect(play).toContain('entranceTelemetry.lastRenderer = override ? spec.overrideId!');
+    expect(play).toContain('entranceTelemetry.overrideRuns++');
   });
 });
 

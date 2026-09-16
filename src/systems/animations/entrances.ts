@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH } from '../../utils/constants';
+import { GAME_WIDTH, GAME_HEIGHT } from '../../utils/constants';
 import { PokemonType } from '../../types/pokemon.types';
 import { TYPE_VOCAB } from '../../logic/moveAnimationSpec';
 import {
-  EntranceSpec, EntranceShape, MAX_WILD_MS, MAX_SENDOUT_MS,
+  EntranceSpec, EntranceShape, Flourish, MAX_WILD_MS, MAX_SENDOUT_MS,
 } from '../../logic/entranceSpec';
 import {
   afterimage, animateFrames, delay, directionalParticles, fallingBlocks,
@@ -56,25 +56,88 @@ export interface EntranceContext {
   from?: { x: number; y: number };
 }
 
+/**
+ * Everything a tier-3 entrance override (`animations/entranceOverrides.ts`) is
+ * allowed to touch.
+ *
+ * An override replaces a shape row's arrival AND its flourish, so it needs the
+ * same tools the rows use - but it must not be able to break the three
+ * contracts above. The kit is how: every drawing it can do is either a
+ * `MoveAnimations` primitive (which cleans up after itself) or a method here
+ * that registers its objects with the run's junk list, and `aborted` tells a
+ * frame loop when the cap has fired. An override file therefore never names a
+ * Phaser scene API of its own, which a contract test pins.
+ */
+export interface EntranceKit {
+  /** For the `MoveAnimations` primitives, which all take the scene first. */
+  readonly scene: Phaser.Scene;
+  readonly sprite: Phaser.GameObjects.Sprite;
+  readonly spec: EntranceSpec;
+  readonly ctx: EntranceContext;
+  /** Where the mon has to end up (integers). */
+  readonly homeX: number;
+  readonly homeY: number;
+  /** The primary type's palette, already resolved out of `TYPE_VOCAB`. */
+  readonly color: number;
+  readonly accent: number;
+  /** The silhouette wash: the type colour blended most of the way to white. */
+  readonly pale: number;
+  /** The whole window the override may spend, arrival AND flourish. */
+  readonly ms: number;
+  /** 1 for a wild arrival, 0.6 out of a ball: travel and flourish amplitude. */
+  readonly amp: number;
+  /** True once the cap has fired. Stop drawing: the restore is on its way. */
+  readonly aborted: boolean;
+  /** `animateFrames` that goes quiet on abort instead of fighting `restore`. */
+  frames(ms: number, onFrame: (t: number) => void): Promise<void>;
+  /** `tweenPromise` on this scene. */
+  tween(config: Phaser.Types.Tweens.TweenBuilderConfig): Promise<void>;
+  /** A rectangular reveal window over the sprite (the DIG mask idiom). */
+  wipe(): Wipe;
+  /** A black sheet over the field that holds and fades (MEWTWO, design 5). */
+  dim(alpha: number, ms: number): Promise<void>;
+  /** Put the sprite into its flat pre-reveal silhouette, without moving it. */
+  silhouette(tint?: number): void;
+  /** Silhouette pops 0 -> 1 `Back.easeOut`, then cross-fades to real colours. */
+  materialise(ms: number, tint?: number): Promise<void>;
+  /** Just the cross-fade, for a row that formed its silhouette its own way. */
+  crossFade(ms: number, tint?: number): Promise<void>;
+  /** One of the seven shape flourishes, at this run's amplitude. */
+  flourish(name: Flourish, ms: number, amp?: number): Promise<void>;
+  /** Fire the cry. Idempotent: the end of materialise is where it belongs. */
+  cry(): void;
+}
+
 /** A tier-3 per-species entrance, keyed by `EntranceSpec.overrideId`. */
-export type EntranceOverrideFn = (
-  scene: Phaser.Scene,
-  sprite: Phaser.GameObjects.Sprite,
-  spec: EntranceSpec,
-  ctx: EntranceContext,
-) => Promise<void>;
+export type EntranceOverrideFn = (kit: EntranceKit) => Promise<void>;
 
 const entranceOverrides = new Map<string, EntranceOverrideFn>();
 
 /**
  * Register a hand-authored entrance for one species, mirroring
- * `registerSpecOverride`. NOTHING consults this registry yet: `playEntrance`
- * ignores `overrideId` in this PR and always draws the shape row, so that the
- * seven generic arrivals can be reviewed on their own. E4 adds the lookup.
+ * `registerSpecOverride`. `playEntrance` consults this registry: a spec with an
+ * `overrideId` that has a renderer plays it instead of the shape row, and an
+ * id with no renderer falls through to the row rather than throwing.
  */
 export function registerEntranceOverride(id: string, fn: EntranceOverrideFn): void {
   entranceOverrides.set(id, fn);
 }
+
+/**
+ * DEV telemetry: which renderer the last entrance went through and how many
+ * entrances have gone through a tier-3 override.
+ *
+ * It is published on `playEntrance` itself (bottom of this file) so it rides
+ * along on the scene's `game.entrances` DEV hook and the e2e runner can assert
+ * OVERRIDE-USED without the scene having to know this exists.
+ */
+export interface EntranceTelemetry {
+  /** An override id, or `shape:<row>` when the generic row drew the arrival. */
+  lastRenderer: string | null;
+  overrideRuns: number;
+}
+
+export const entranceTelemetry: EntranceTelemetry = { lastRenderer: null, overrideRuns: 0 };
 
 /** The override registered for `id`, or undefined. For E4 and for tests. */
 export function entranceOverride(id: string): EntranceOverrideFn | undefined {
@@ -186,7 +249,7 @@ function paleOf(color: number): number {
  * shape, whereas a wipe is a rectangle by definition and a geometry mask draws
  * a rectangle identically on both renderers (which is why DIG uses one).
  */
-interface Wipe {
+export interface Wipe {
   to(x: number, y: number, w: number, h: number): void;
 }
 
@@ -203,6 +266,36 @@ function makeWipe(run: Run): Wipe {
       shape.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
     },
   };
+}
+
+/**
+ * MEWTWO's "the screen dims 20 %" (design section 5).
+ *
+ * Depth 899 is the one number that matters: it is UNDER the text box (1000)
+ * and under the ball's white `screenFlash` (900), so the sheet can cover the
+ * whole 160x144 field and still never darken a line of text the player is
+ * reading. It holds at full opacity for most of its life and fades out over
+ * the rest, so the dim reads as an event rather than a slow bruise.
+ */
+export const DIM_DEPTH = 899;
+
+function dimField(run: Run, alpha: number, ms: number): Promise<void> {
+  const g = run.scene.add.graphics();
+  g.setDepth(DIM_DEPTH);
+  g.setScrollFactor(0);
+  g.fillStyle(0x000000, alpha);
+  g.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  track(run, g);
+  // Ramp in / hold / ramp out, driven by frames rather than a tween: a sheet
+  // that is already at full opacity on frame one darkens the home box before
+  // the mon has drawn anything, which is the runner's INVISIBLE-AT-T0 reading
+  // a dimmer as an arrival. 20 % black over the field is above the sampler's
+  // per-channel threshold on its own.
+  g.setAlpha(0);
+  const total = Math.max(2, Math.round(ms));
+  return frames(run, total, t => {
+    g.setAlpha(t < 0.25 ? t / 0.25 : t > 0.6 ? Math.max(0, 1 - (t - 0.6) / 0.4) : 1);
+  }).then(() => { g.destroy(); });
 }
 
 // ---------------------------------------------------------------------------
@@ -223,9 +316,12 @@ export async function materialise(
   palette: PokemonType,
   ms: number,
   run?: Run,
+  tint?: number,
 ): Promise<void> {
   const vocab = TYPE_VOCAB[palette] ?? TYPE_VOCAB[PokemonType.NORMAL];
-  const pale = paleOf(vocab.color);
+  // GENGAR forms out of a DARK silhouette rather than a pale one, so the wash
+  // is a parameter rather than always `paleOf(type)` (design section 5).
+  const pale = tint ?? paleOf(vocab.color);
   const pop = Math.round(ms * 0.62);
   const fade = Math.max(1, ms - pop);
   const sx = run ? 1 : sprite.scaleX;
@@ -617,7 +713,7 @@ function vocabParticle(run: Run): 'dust' | 'leaf' | 'mote' {
   return particleFor(run.spec.palette);
 }
 
-function particleFor(palette: PokemonType): 'dust' | 'leaf' | 'mote' {
+export function particleFor(palette: PokemonType): 'dust' | 'leaf' | 'mote' {
   const p = TYPE_VOCAB[palette]?.particle;
   return p === 'leaf' ? 'leaf' : p === 'mote' ? 'mote' : 'dust';
 }
@@ -626,7 +722,12 @@ function particleFor(palette: PokemonType): 'dust' | 'leaf' | 'mote' {
 // Flourishes (design section 4, right-hand column)
 // ---------------------------------------------------------------------------
 
-type FlourishFn = (run: Run, amp: number) => Promise<void>;
+/**
+ * `ms` is optional and defaults to the row's own length: a shape row always
+ * plays its flourish at the design's length, while a tier-3 override borrowing
+ * one has to fit it inside whatever is left of its own window.
+ */
+type FlourishFn = (run: Run, amp: number, ms?: number) => Promise<void>;
 
 /** Flourish lengths in ms, all inside the design's 150-250 window. */
 export const FLOURISH_MS: Record<EntranceSpec['flourish'], number> = {
@@ -634,27 +735,58 @@ export const FLOURISH_MS: Record<EntranceSpec['flourish'], number> = {
 };
 
 const FLOURISHES: Record<EntranceSpec['flourish'], FlourishFn> = {
-  hop: (run, amp) =>
-    lunge(run.scene, run.sprite, run.homeX, run.homeY - 4 * amp, FLOURISH_MS.hop, 1),
-  shake: (run, amp) => frames(run, FLOURISH_MS.shake, t => {
+  hop: (run, amp, ms = FLOURISH_MS.hop) =>
+    lunge(run.scene, run.sprite, run.homeX, run.homeY - 4 * amp, ms, 1),
+  shake: (run, amp, ms = FLOURISH_MS.shake) => frames(run, ms, t => {
     run.sprite.setX(run.homeX + Math.round(Math.sin(t * Math.PI * 4) * 2 * amp));
   }).then(() => { run.sprite.setX(run.homeX); }),
-  stance: (run, amp) => frames(run, FLOURISH_MS.stance, t => {
+  stance: (run, amp, ms = FLOURISH_MS.stance) => frames(run, ms, t => {
     run.sprite.setScale(1 + 0.1 * amp * (1 - t), 1);
   }).then(() => { run.sprite.setScale(1, 1); }),
-  settle: (run, amp) => frames(run, FLOURISH_MS.settle, t => {
+  settle: (run, amp, ms = FLOURISH_MS.settle) => frames(run, ms, t => {
     run.sprite.setY(run.homeY + Math.round(Math.sin(t * Math.PI) * 2 * amp));
   }).then(() => { run.sprite.setY(run.homeY); }),
-  bob: (run, amp) => frames(run, FLOURISH_MS.bob, t => {
+  bob: (run, amp, ms = FLOURISH_MS.bob) => frames(run, ms, t => {
     run.sprite.setY(run.homeY - Math.round(Math.abs(Math.sin(t * Math.PI * 2)) * 2 * amp));
   }).then(() => { run.sprite.setY(run.homeY); }),
-  tilt: (run, amp) => frames(run, FLOURISH_MS.tilt, t => {
+  tilt: (run, amp, ms = FLOURISH_MS.tilt) => frames(run, ms, t => {
     run.sprite.setAngle(Math.sin(t * Math.PI * 2) * 6 * amp);
   }).then(() => { run.sprite.setAngle(0); }),
-  twitch: (run, amp) => frames(run, FLOURISH_MS.twitch, t => {
+  twitch: (run, amp, ms = FLOURISH_MS.twitch) => frames(run, ms, t => {
     run.sprite.setAngle(Math.sin(t * Math.PI * 6) * 4 * amp);
   }).then(() => { run.sprite.setAngle(0); }),
 };
+
+/** Hand a running entrance to a tier-3 override, with nothing else attached. */
+function makeKit(run: Run, ms: number, amp: number, cry: () => void): EntranceKit {
+  return {
+    scene: run.scene,
+    sprite: run.sprite,
+    spec: run.spec,
+    ctx: run.ctx,
+    homeX: run.homeX,
+    homeY: run.homeY,
+    color: run.color,
+    accent: run.accent,
+    pale: run.pale,
+    ms,
+    amp,
+    get aborted(): boolean { return run.aborted; },
+    frames: (d, onFrame) => frames(run, d, onFrame),
+    tween: config => tweenPromise(run.scene, config),
+    wipe: () => makeWipe(run),
+    dim: (alpha, d) => dimField(run, alpha, d),
+    silhouette: tint => {
+      run.sprite.setAlpha(1);
+      run.sprite.setTintFill(tint ?? run.pale);
+    },
+    materialise: (d, tint) =>
+      materialise(run.scene, run.sprite, run.spec.palette, d, run, tint),
+    crossFade: (d, tint) => crossFade(run.scene, run.sprite, tint ?? run.pale, d, run),
+    flourish: (name, d, a) => FLOURISHES[name](run, a ?? amp, d),
+    cry,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // playEntrance
@@ -670,6 +802,17 @@ const QUANTISATION_MS = 90;
  * race eats, every single time - the bug the E2 runner caught for ANGULAR.
  */
 const SENDOUT_RESERVE_MS = 150;
+
+/**
+ * What a hand-authored send-out gives back on top of that.
+ *
+ * `SENDOUT_RESERVE_MS` was measured against the shape rows, which await three
+ * phases (arc, open, arrival). A tier-3 renderer splits its window into up to
+ * six beats and every one of them rounds up to the next 16 ms frame, so the
+ * same reserve left the longest of them measuring ~920 ms against a 900 ms cap
+ * - inside the runner's slack, but over the number the design promises.
+ */
+const OVERRIDE_BEAT_RESERVE_MS = 40;
 
 /** Frame-rounding allowance for a kind, subtracted from its budget. */
 export function reserveFor(spec: EntranceSpec): number {
@@ -722,11 +865,50 @@ export async function playEntrance(
     ctx.onMaterialise?.();
   };
 
+  // Tier 3 (design section 5): a hand-authored arrival for this species, which
+  // replaces BOTH the shape row and its flourish. An `overrideId` with nothing
+  // registered for it falls straight through to the row - the resolver names
+  // the twelve keys, and an unfinished renderer must never be able to throw.
+  const override = spec.overrideId ? entranceOverride(spec.overrideId) : undefined;
+  entranceTelemetry.lastRenderer = override ? spec.overrideId! : `shape:${spec.shape}`;
+
   const body = (async () => {
-    // Rarity reads as a shimmer over the whole reveal (catchRate <= 45).
+    // Rarity reads as a shimmer over the whole reveal (catchRate <= 45). It is
+    // a property of the SPECIES, not of the row, so an override gets it too.
     if (spec.rare) {
       void sparkle(scene, run.homeX, run.homeY, vocab.accentColor, 8, arrivalMs);
     }
+
+    if (override) {
+      entranceTelemetry.overrideRuns++;
+      let overrideMs = budget;
+      if (spec.kind === 'sendout') {
+        // The ball is the VEHICLE (design section 3.1) and stays the renderer's
+        // job for every species: the override owns what happens once it opens.
+        const throwMs = Math.min(BALL_ARC_MS, Math.round(budget * 0.35));
+        sprite.setPosition(run.homeX, run.homeY);
+        sprite.setScale(1, 1);
+        sprite.setAlpha(0);
+        await ballThrow(
+          scene,
+          ctx.from ?? defaultBallOrigin(run),
+          { x: run.homeX, y: run.homeY },
+          spec.palette,
+          throwMs,
+          run,
+        );
+        overrideMs = Math.max(160, budget - throwMs - BALL_OPEN_MS - OVERRIDE_BEAT_RESERVE_MS);
+      }
+      if (run.aborted) return;
+      // No generic mass shake here: a hand-authored arrival lands its own
+      // weight (SNORLAX shakes harder than the row does, MEWTWO never lands).
+      await override(makeKit(run, overrideMs, amp, cry));
+      // Belt and braces - every override cries at its own materialise, and
+      // `cry` is idempotent.
+      cry();
+      return;
+    }
+
     // A send-out arrives out of a ball whatever its shape; the shape row is
     // the WILD vehicle (design section 3.1: two vehicles, one materialise).
     const arrival = spec.kind === 'sendout' ? arriveSendOut : ARRIVALS[spec.shape];
@@ -760,3 +942,9 @@ export async function playEntrance(
     cry();
   }
 }
+
+// The DEV hook the scene publishes is `{ playEntrance, resolveEntrance,
+// replayIntro }`, so hanging the telemetry off the function itself is what
+// puts it on `game.entrances` for the e2e runner without BattleScene.ts (owned
+// by another PR right now) needing a line about it.
+(playEntrance as unknown as { telemetry: EntranceTelemetry }).telemetry = entranceTelemetry;

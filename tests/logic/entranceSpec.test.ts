@@ -5,6 +5,7 @@ import {
   cryBaseFreq,
   contourLengthMs,
   ENTRANCE_OVERRIDES,
+  splitPhases,
   SHAPE_FLOURISH,
   CRY_CONTOURS,
   MAX_WILD_MS,
@@ -364,5 +365,50 @@ describe('entranceSpec — full table snapshot', () => {
       ].join(' ');
     });
     expect(rows.join('\n')).toMatchSnapshot();
+  });
+});
+
+describe('splitPhases: the beat clock the tier-3 entrances share (E4)', () => {
+  it('spends the whole window and nothing more', () => {
+    for (const total of [160, 240, 428, 560, 610, 660, 750]) {
+      for (const weights of [[8, 46, 14, 16, 16], [10, 26, 30, 22, 12], [62, 20, 18],
+        [6, 22, 22, 22, 18, 10], [1]]) {
+        const out = splitPhases(total, weights);
+        expect(out).toHaveLength(weights.length);
+        expect(out.reduce((a, b) => a + b, 0)).toBe(total);
+      }
+    }
+  });
+
+  it('splits in proportion to the weights', () => {
+    // 62/20/18 of 1000 is the DRAGONITE shape, to the pixel of a frame.
+    expect(splitPhases(1000, [62, 20, 18])).toEqual([620, 200, 180]);
+    expect(splitPhases(100, [1, 1, 1, 1])).toEqual([25, 25, 25, 25]);
+  });
+
+  it('gives the rounding remainder to the last beat, never drops it', () => {
+    // Every beat floors, so up to `weights.length - 1` ms would otherwise be
+    // lost - and an entrance that spends less than its window ends early with
+    // the sprite mid-tween.
+    const out = splitPhases(101, [1, 1, 1]);
+    expect(out.reduce((a, b) => a + b, 0)).toBe(101);
+    expect(out[2]).toBeGreaterThanOrEqual(out[0]);
+  });
+
+  it('never hands a beat zero milliseconds, however lopsided the split', () => {
+    // A zero-length beat is a frame driver that resolves before it has drawn
+    // anything, which is how a phase silently disappears from an entrance.
+    for (const out of [splitPhases(160, [1, 1, 1, 1, 1, 1]), splitPhases(4, [90, 1, 1]),
+      splitPhases(10, [0, 0, 100])]) {
+      for (const ms of out) expect(ms).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('degrades safely on the inputs a renderer should never pass', () => {
+    expect(splitPhases(500, [])).toEqual([]);
+    // All-zero weights: an even split rather than a divide by zero.
+    expect(splitPhases(100, [0, 0])).toEqual([50, 50]);
+    // A negative total is clamped, not propagated into a tween duration.
+    for (const ms of splitPhases(-40, [1, 2])) expect(ms).toBeGreaterThanOrEqual(1);
   });
 });

@@ -80,6 +80,32 @@ const WILD_DURATION: Record<EntranceShape, number> = {
  */
 const SENDOUT_DURATION_MS = 900;
 
+/**
+ * Split an animation window into whole-millisecond phases by weight.
+ *
+ * Every arrival divides its budget between two to five beats, and doing that
+ * with a `Math.round(ms * 0.3)` per beat quietly loses or gains a few ms each
+ * time - the same frame-rounding drift the renderer already has to keep a
+ * reserve against. This hands out `total` in proportion to `weights`, gives
+ * every phase at least 1 ms, and puts the whole remainder on the LAST phase,
+ * so the parts sum to `Math.round(total)` exactly and a renderer can never
+ * overrun its own plan.
+ *
+ * The one exception is a window smaller than the number of phases: every phase
+ * still gets its 1 ms, so the parts add up to more than the window. A budget
+ * that small has already lost, and clamping is the renderer's cap, not this.
+ */
+export function splitPhases(total: number, weights: number[]): number[] {
+  const t = Math.max(0, Math.round(total));
+  const sum = weights.reduce((acc, w) => acc + Math.max(0, w), 0);
+  if (!weights.length) return [];
+  if (sum <= 0) return weights.map(() => Math.max(1, Math.floor(t / weights.length)));
+  const out = weights.map(w => Math.max(1, Math.floor((t * Math.max(0, w)) / sum)));
+  const used = out.reduce((acc, ms) => acc + ms, 0);
+  out[out.length - 1] = Math.max(1, out[out.length - 1] + (t - used));
+  return out;
+}
+
 // === Tier-3 override keys (design §5) ===
 
 /**
