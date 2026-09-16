@@ -266,12 +266,43 @@ describe('tier-3 move overrides', () => {
     expect(MOVE_ANIMATIONS_SRC).not.toMatch(/setTexture/);
   });
 
-  it('the two-turn overrides play in one promise (the engine never defers them)', () => {
-    // BattleScene.doExecuteMove calls playMoveAnimation once per move use, so
-    // the resolver only ever emits 'charge' - there is no release turn.
+  it('the two-turn overrides split on ctx.phase, and play whole without one', () => {
+    // FLIPPED by the two-turn CHARGE fix. This used to assert that the three
+    // overrides "play in one promise (the engine never defers them)", because
+    // BattleScene called playMoveAnimation exactly once per move use. It now
+    // calls it twice - `phase: 'charge'` on the charging turn and
+    // `phase: 'release'` on the turn the move fires - so what is worth pinning
+    // is that each override actually branches on the phase, and that a caller
+    // with NO phase (the /battle simulator preview, tools/anim-e2e) still gets
+    // the whole clip.
     for (const id of [19, 76, 91]) {
       expect(resolveAnimation(id).twoTurn).toBe('charge');
     }
+    for (const key of ['fly', 'dig', 'solarBeam']) {
+      const body = bodyOf(key);
+      expect(body, `${key} must read ctx.phase`).toMatch(/const phase = ctx\.phase/);
+      // The gather is skipped only for 'release', so an unphased call runs it.
+      expect(body).toMatch(/if \(phase !== 'release'\)/);
+      // ...and the early return happens only for an explicit 'charge'.
+      expect(body).toMatch(/phase === 'charge'/);
+    }
+    // FLY and DIG leave the field, so they hand the hidden alpha to
+    // MoveAnimations.holdAttackerAlpha, which survives renderSpec's restore.
+    for (const key of ['fly', 'dig']) {
+      expect(bodyOf(key)).toMatch(/holdAttackerAlpha\(0\)/);
+      expect(bodyOf(key)).toMatch(/holdAttackerAlpha\(1\)/);
+    }
+    // SOLAR BEAM is not semi-invulnerable: it never hides its user.
+    expect(bodyOf('solarBeam')).not.toMatch(/holdAttackerAlpha/);
+  });
+
+  it('renderSpec applies the held alpha AFTER its restore, and clears the slot', () => {
+    // The restore contract snapshots alpha on entry and puts it back in a
+    // `finally`; without this the charge half's hidden sprite would pop back
+    // on screen the moment the promise settled.
+    expect(MOVE_ANIMATIONS_SRC).toMatch(/before\.forEach\(restore\);[\s\S]{0,300}?const heldAlpha = attackerAlphaAfter;/);
+    expect(MOVE_ANIMATIONS_SRC).toMatch(/attackerAlphaAfter = null;/);
+    expect(MOVE_ANIMATIONS_SRC).toMatch(/if \(heldAlpha !== null\) attackerSprite\.setAlpha\(heldAlpha\);/);
   });
 });
 

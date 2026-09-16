@@ -27,6 +27,7 @@ import {
   impactTint,
   newAmbientGraphics,
   newBodyGraphics,
+  holdAttackerAlpha,
   registerSpecOverride,
   ring,
   screenFlash,
@@ -310,6 +311,18 @@ const FOOT_OFFSET = 14;
  * The point of the move is the ABSENCE: between the launch and the dive there
  * is no attacker on screen at all, which no generic body can do (the generic
  * charge motion never moves the attacker further than a lunge).
+ *
+ * Two-turn split (`ctx.phase`). The natural midpoint is the top of the arc:
+ *   * `charge`  - crouch, launch, and the empty sky. Ends with
+ *                 `holdAttackerAlpha(0)`, so `renderSpec`'s restore puts the
+ *                 sprite back at home WITHOUT putting it back on screen: the
+ *                 user stays gone until its release turn.
+ *   * `release` - `holdAttackerAlpha(1)` up front, then the dive, the hit and
+ *                 the flight home.
+ *   * no phase  - the whole clip, exactly as before (battle simulator preview,
+ *                 `anim-e2e`, any direct `renderSpec` call).
+ * Each half's beats are scaled to fill its own turn, so both stay inside the
+ * single `spec.duration` cap rather than splitting one budget in two.
  */
 async function renderFly(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
   const { scene, attackerSprite, defenderSprite } = ctx;
@@ -317,44 +330,65 @@ async function renderFly(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
   const homeX = attackerSprite.x;
   const homeY = attackerSprite.y;
   const away = ctx.isPlayer ? -1 : 1; // the side the dive comes in from
+  const phase = ctx.phase;
+  // Beat scales: a phased half owns the whole budget, so its beats stretch.
+  const up = phase === 'charge' ? 1.9 : 1;
+  const down = phase === 'release' ? 1.7 : 1;
 
-  soundSystem.whoosh();
+  if (phase !== 'release') {
+    soundSystem.whoosh();
 
-  // 1. Crouch, then straight up and out through the top edge (0 -> 20 %).
-  await tweenPromise(scene, {
-    targets: attackerSprite, y: homeY + 3, scaleY: 0.84,
-    duration: Math.round(d * 0.04), ease: 'Sine.easeOut',
-  });
-  await Promise.all([
-    tweenPromise(scene, {
-      targets: attackerSprite, y: -26, scaleY: 1,
-      duration: Math.round(d * 0.11), ease: 'Quad.easeIn',
-    }),
-    directionalParticles(scene, homeX, homeY + 8, FLYING, 10, {
-      dirY: 1, spread: 20, duration: Math.round(d * 0.1),
-      shape: 'dash', accentColor: FLYING_PALE,
-    }),
-  ]);
+    // 1. Crouch, then straight up and out through the top edge (0 -> 20 %).
+    await tweenPromise(scene, {
+      targets: attackerSprite, y: homeY + 3, scaleY: 0.84,
+      duration: Math.round(d * 0.04 * up), ease: 'Sine.easeOut',
+    });
+    await Promise.all([
+      tweenPromise(scene, {
+        targets: attackerSprite, y: -26, scaleY: 1,
+        duration: Math.round(d * 0.11 * up), ease: 'Quad.easeIn',
+      }),
+      directionalParticles(scene, homeX, homeY + 8, FLYING, 10, {
+        dirY: 1, spread: 20, duration: Math.round(d * 0.1 * up),
+        shape: 'dash', accentColor: FLYING_PALE,
+      }),
+    ]);
 
-  // 2. Absent (15 -> 30 %). Streaks cross the empty sky so the field still
-  //    moves while the attacker is nowhere on it. They are the only thing on
-  //    screen, so they are drawn fat and dark-edged rather than as hairlines.
-  const sky = ambientG(scene, 830);
-  await frames(scene, Math.round(d * 0.15), t => {
-    sky.clear();
-    sky.setAlpha(t < 0.85 ? 1 : Math.max(0, 1 - (t - 0.85) / 0.15));
-    for (let i = 0; i < 4; i++) {
-      const y = 8 + i * 11;
-      const x = ((t * 1.3 + i * 0.27) % 1) * (GAME_W + 56) - 28;
-      sky.fillStyle(FLYING_EDGE, 1);
-      sky.fillRect(Math.round(x) - 1, y - 2, 30, 7);
-      sky.fillStyle(FLYING, 1);
-      sky.fillRect(Math.round(x), y - 1, 28, 5);
-      sky.fillStyle(FLYING_PALE, 1);
-      sky.fillRect(Math.round(x) + 20, y - 1, 8, 5);
+    // 2. Absent (15 -> 30 %). Streaks cross the empty sky so the field still
+    //    moves while the attacker is nowhere on it. They are the only thing on
+    //    screen, so they are drawn fat and dark-edged rather than as hairlines.
+    const sky = ambientG(scene, 830);
+    await frames(scene, Math.round(d * 0.15 * up), t => {
+      sky.clear();
+      sky.setAlpha(t < 0.85 ? 1 : Math.max(0, 1 - (t - 0.85) / 0.15));
+      for (let i = 0; i < 4; i++) {
+        const y = 8 + i * 11;
+        const x = ((t * 1.3 + i * 0.27) % 1) * (GAME_W + 56) - 28;
+        sky.fillStyle(FLYING_EDGE, 1);
+        sky.fillRect(Math.round(x) - 1, y - 2, 30, 7);
+        sky.fillStyle(FLYING, 1);
+        sky.fillRect(Math.round(x), y - 1, 28, 5);
+        sky.fillStyle(FLYING_PALE, 1);
+        sky.fillRect(Math.round(x) + 20, y - 1, 8, 5);
+      }
+    });
+    sky.destroy();
+
+    // The charging turn ends here, with the user off the field. The alpha hold
+    // survives renderSpec's restore; the scene puts the sprite back (alpha 1)
+    // if the charge is cancelled before it can be released.
+    if (phase === 'charge') {
+      attackerSprite.setAlpha(0);
+      holdAttackerAlpha(0);
+      return;
     }
-  });
-  sky.destroy();
+  }
+
+  if (phase === 'release') {
+    // Back from the charging turn: the sprite is hidden and parked at home.
+    attackerSprite.setAlpha(1);
+    holdAttackerAlpha(1);
+  }
 
   // 3. The dive (40 -> 54 %): back in from off the top, onto the defender.
   soundSystem.whoosh();
@@ -363,9 +397,9 @@ async function renderFly(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
   await Promise.all([
     tweenPromise(scene, {
       targets: attackerSprite, x: defenderSprite.x, y: defenderSprite.y - 4,
-      duration: Math.round(d * 0.12), ease: 'Quad.easeIn',
+      duration: Math.round(d * 0.12 * down), ease: 'Quad.easeIn',
     }),
-    frames(scene, Math.round(d * 0.12), () => {
+    frames(scene, Math.round(d * 0.12 * down), () => {
       trail.clear();
       for (let i = 1; i <= 4; i++) {
         const x = Math.round(attackerSprite.x - away * i * 3);
@@ -383,12 +417,12 @@ async function renderFly(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
   //    the budget - the move has to still read at the tail of the animation.
   soundSystem.hit();
   await Promise.all([
-    impactBurst(scene, defenderSprite.x, defenderSprite.y, FLYING, FLYING_PALE, 17, Math.round(d * 0.26)),
+    impactBurst(scene, defenderSprite.x, defenderSprite.y, FLYING, FLYING_PALE, 17, Math.round(d * 0.26 * down)),
     directionalParticles(scene, defenderSprite.x, defenderSprite.y, FLYING, 14, {
-      spread: 30, duration: Math.round(d * 0.26), shape: 'dash', accentColor: FLYING_PALE,
+      spread: 30, duration: Math.round(d * 0.26 * down), shape: 'dash', accentColor: FLYING_PALE,
     }),
     spriteFlash(defenderSprite, scene, FLYING, 3),
-    screenShake(scene, 5, Math.round(d * 0.16)),
+    screenShake(scene, 5, Math.round(d * 0.16 * down)),
     // Feathers keep drifting over the defender for the rest of the budget, so
     // the hit is still legible at the tail of the animation instead of the
     // field snapping back to idle the moment the burst ends.
@@ -396,7 +430,7 @@ async function renderFly(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
       const feathers = newG(scene, 812);
       const n = 7;
       try {
-        await frames(scene, Math.round(d * 0.38), t => {
+        await frames(scene, Math.round(d * 0.38 * down), t => {
           feathers.clear();
           for (let i = 0; i < n; i++) {
             const ph = (t + i / n) % 1;
@@ -417,10 +451,10 @@ async function renderFly(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
     })(),
     // The attacker bounces off and flies home while the feathers fall.
     (async () => {
-      await delay(scene, Math.round(d * 0.08));
+      await delay(scene, Math.round(d * 0.08 * down));
       await tweenPromise(scene, {
         targets: attackerSprite, x: homeX, y: homeY,
-        duration: Math.round(d * 0.14), ease: 'Sine.easeOut',
+        duration: Math.round(d * 0.14 * down), ease: 'Sine.easeOut',
       });
     })(),
   ]);
@@ -432,6 +466,15 @@ async function renderFly(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
  * The sprite is masked to the ground line while it is below it, so it really
  * is gone rather than merely faded; a mound crawls across the field in the
  * gap, which is the only thing on screen while the attacker is underground.
+ *
+ * Two-turn split (`ctx.phase`), midpoint = the end of the underground crawl:
+ *   * `charge`  - sink + crawl, then `holdAttackerAlpha(0)`. The geometry mask
+ *                 cannot survive the turn (it is destroyed in the `finally`),
+ *                 so the held alpha is what keeps the user off the field.
+ *   * `release` - erupt under the defender (alpha restored the instant the
+ *                 sprite is repositioned below the ground line, so it is never
+ *                 seen at home), hit, return, `holdAttackerAlpha(1)`.
+ *   * no phase  - the whole clip, exactly as before.
  */
 async function renderDig(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
   const { scene, attackerSprite, defenderSprite } = ctx;
@@ -440,6 +483,10 @@ async function renderDig(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
   const homeY = attackerSprite.y;
   const fromGround = Math.round(homeY) + FOOT_OFFSET;
   const toGround = Math.round(defenderSprite.y) + FOOT_OFFSET;
+  const phase = ctx.phase;
+  // Beat scales: a phased half owns the whole budget, so its beats stretch.
+  const down = phase === 'charge' ? 1.6 : 1;
+  const upOut = phase === 'release' ? 1.8 : 1;
 
   // Geometry mask: everything above the ground line is drawn, the rest is not.
   const shape = scene.make.graphics({ x: 0, y: 0 }, false);
@@ -452,55 +499,72 @@ async function renderDig(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
   const mask = shape.createGeometryMask();
   attackerSprite.setMask(mask);
 
-  soundSystem.rumble();
   try {
-    // 1. Sink (0 -> 20 %), throwing grit up out of the hole.
-    const hole = newG(scene, 795);
-    await Promise.all([
-      tweenPromise(scene, {
-        targets: attackerSprite, y: homeY + 38,
-        duration: Math.round(d * 0.16), ease: 'Quad.easeIn',
-      }),
-      directionalParticles(scene, homeX, fromGround, GROUND, 12, {
-        dirY: -1, spread: 20, duration: Math.round(d * 0.18),
-        shape: 'grit', accentColor: GROUND_DARK, gravity: 1.4,
-      }),
-      frames(scene, Math.round(d * 0.16), t => {
-        hole.clear();
-        const w = Math.round(6 + t * 9);
-        hole.fillStyle(GROUND_EDGE, 1);
-        hole.fillEllipse(homeX, fromGround + 1, w * 2, 7);
-        hole.fillStyle(GROUND_DARK, 1);
-        hole.fillEllipse(homeX, fromGround, w * 2 - 4, 5);
-      }),
-    ]);
+    if (phase !== 'release') {
+      soundSystem.rumble();
+      // 1. Sink (0 -> 20 %), throwing grit up out of the hole.
+      const hole = newG(scene, 795);
+      await Promise.all([
+        tweenPromise(scene, {
+          targets: attackerSprite, y: homeY + 38,
+          duration: Math.round(d * 0.16 * down), ease: 'Quad.easeIn',
+        }),
+        directionalParticles(scene, homeX, fromGround, GROUND, 12, {
+          dirY: -1, spread: 20, duration: Math.round(d * 0.18 * down),
+          shape: 'grit', accentColor: GROUND_DARK, gravity: 1.4,
+        }),
+        frames(scene, Math.round(d * 0.16 * down), t => {
+          hole.clear();
+          const w = Math.round(6 + t * 9);
+          hole.fillStyle(GROUND_EDGE, 1);
+          hole.fillEllipse(homeX, fromGround + 1, w * 2, 7);
+          hole.fillStyle(GROUND_DARK, 1);
+          hole.fillEllipse(homeX, fromGround, w * 2 - 4, 5);
+        }),
+      ]);
 
-    // 2. Underground (20 -> 52 %): a mound travels along the ground line.
-    await frames(scene, Math.round(d * 0.26), t => {
-      hole.clear();
-      const x = Math.round(homeX + (defenderSprite.x - homeX) * t);
-      const y = Math.round(fromGround + (toGround - fromGround) * t);
-      const lift = 4 + Math.sin(t * Math.PI * 5) * 2;
-      hole.fillStyle(GROUND_EDGE, 1);
-      hole.fillEllipse(x, y, 22, 10 + lift);
-      hole.fillStyle(GROUND, 1);
-      hole.fillEllipse(x, y - 1, 17, 7 + lift);
-      hole.fillStyle(GROUND_DARK, 1);
-      hole.fillEllipse(x - 5, y - 1, 6, 4);
-    });
-    hole.destroy();
+      // 2. Underground (20 -> 52 %): a mound travels along the ground line.
+      await frames(scene, Math.round(d * 0.26 * down), t => {
+        hole.clear();
+        const x = Math.round(homeX + (defenderSprite.x - homeX) * t);
+        const y = Math.round(fromGround + (toGround - fromGround) * t);
+        const lift = 4 + Math.sin(t * Math.PI * 5) * 2;
+        hole.fillStyle(GROUND_EDGE, 1);
+        hole.fillEllipse(x, y, 22, 10 + lift);
+        hole.fillStyle(GROUND, 1);
+        hole.fillEllipse(x, y - 1, 17, 7 + lift);
+        hole.fillStyle(GROUND_DARK, 1);
+        hole.fillEllipse(x - 5, y - 1, 6, 4);
+      });
+      hole.destroy();
+
+      // The charging turn ends underground. The mask dies with this call, so the
+      // held alpha is what keeps the user off the field until it erupts.
+      if (phase === 'charge') {
+        attackerSprite.setPosition(homeX, homeY);
+        attackerSprite.setAlpha(0);
+        holdAttackerAlpha(0);
+        return;
+      }
+    }
 
     // 3. Erupt under the defender (52 -> 70 %).
     soundSystem.thud();
     maskTo(toGround);
     attackerSprite.setPosition(defenderSprite.x, toGround + 30);
+    if (phase === 'release') {
+      // Masked and below the ground line: safe to un-hide, and the hold makes
+      // the un-hiding outlive renderSpec's restore.
+      attackerSprite.setAlpha(1);
+      holdAttackerAlpha(1);
+    }
     await Promise.all([
       tweenPromise(scene, {
         targets: attackerSprite, y: defenderSprite.y - 2,
-        duration: Math.round(d * 0.15), ease: 'Back.easeOut',
+        duration: Math.round(d * 0.15 * upOut), ease: 'Back.easeOut',
       }),
       directionalParticles(scene, defenderSprite.x, toGround, GROUND, 16, {
-        dirY: -1, spread: 30, duration: Math.round(d * 0.2),
+        dirY: -1, spread: 30, duration: Math.round(d * 0.2 * upOut),
         shape: 'grit', accentColor: GROUND_DARK, gravity: 1.1,
       }),
     ]);
@@ -508,17 +572,17 @@ async function renderDig(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
 
     // 4. The hit (70 -> 100 %), with the ground still settling.
     await Promise.all([
-      impactBurst(scene, defenderSprite.x, defenderSprite.y, GROUND, GROUND_DARK, 18, Math.round(d * 0.2)),
+      impactBurst(scene, defenderSprite.x, defenderSprite.y, GROUND, GROUND_DARK, 18, Math.round(d * 0.2 * upOut)),
       spriteFlash(defenderSprite, scene, GROUND, 3),
-      screenShake(scene, 6, Math.round(d * 0.14)),
+      screenShake(scene, 6, Math.round(d * 0.14 * upOut)),
       directionalParticles(scene, defenderSprite.x, defenderSprite.y, GROUND, 12, {
-        spread: 26, duration: Math.round(d * 0.22), shape: 'grit', accentColor: GROUND_DARK, gravity: 1.2,
+        spread: 26, duration: Math.round(d * 0.22 * upOut), shape: 'grit', accentColor: GROUND_DARK, gravity: 1.2,
       }),
       (async () => {
-        await delay(scene, Math.round(d * 0.08));
+        await delay(scene, Math.round(d * 0.08 * upOut));
         await tweenPromise(scene, {
           targets: attackerSprite, x: homeX, y: homeY,
-          duration: Math.round(d * 0.12), ease: 'Sine.easeOut',
+          duration: Math.round(d * 0.12 * upOut), ease: 'Sine.easeOut',
         });
       })(),
     ]);
@@ -536,6 +600,14 @@ async function renderDig(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
  * Distinct from every generic body: no other move builds a core on the
  * attacker for nearly half its budget, and the beam is twice the width of the
  * generic one with a core wide enough to read as "solar" rather than "green".
+ *
+ * Two-turn split (`ctx.phase`), midpoint = the moment the beam fires:
+ *   * `charge`  - the mote spiral and the core building on the attacker
+ *                 (`beamCharge()`), stretched to fill the charging turn.
+ *   * `release` - the beam and the impact (`leafSweep()`).
+ *   * no phase  - the whole clip, exactly as before.
+ * SOLAR BEAM is not semi-invulnerable, so neither half touches the attacker's
+ * alpha: the user stays on the field between the turns.
  */
 async function renderSolarBeam(spec: AnimationSpec, ctx: AnimationContext): Promise<void> {
   const { scene, attackerSprite, defenderSprite } = ctx;
@@ -544,46 +616,55 @@ async function renderSolarBeam(spec: AnimationSpec, ctx: AnimationContext): Prom
   const ay = Math.round(attackerSprite.y) - 2;
   const dx = Math.round(defenderSprite.x);
   const dy = Math.round(defenderSprite.y);
+  const phase = ctx.phase;
+  // Beat scales: a phased half owns the whole budget, so its beats stretch.
+  const gatherScale = phase === 'charge' ? 1.9 : 1;
+  const fireScale = phase === 'release' ? 1.6 : 1;
 
-  soundSystem.beamCharge();
+  if (phase !== 'release') {
+    soundSystem.beamCharge();
 
-  // 1. Gather (0 -> 42 %): motes spiral in and a core builds on the attacker.
-  const g = newG(scene, 820);
-  const motes = Array.from({ length: 12 }, (_, i) => ({
-    ang: (i / 12) * Math.PI * 2,
-    r: 26 + (i % 4) * 7,
-    seed: i,
-  }));
-  await frames(scene, Math.round(d * 0.42), t => {
-    g.clear();
-    for (const m of motes) {
-      const r = m.r * (1 - t * 0.95);
-      const x = Math.round(ax + Math.cos(m.ang + t * 3) * r);
-      const y = Math.round(ay + Math.sin(m.ang + t * 3) * r * 0.7);
+    // 1. Gather (0 -> 42 %): motes spiral in and a core builds on the attacker.
+    const g = newG(scene, 820);
+    const motes = Array.from({ length: 12 }, (_, i) => ({
+      ang: (i / 12) * Math.PI * 2,
+      r: 26 + (i % 4) * 7,
+      seed: i,
+    }));
+    await frames(scene, Math.round(d * 0.42 * gatherScale), t => {
+      g.clear();
+      for (const m of motes) {
+        const r = m.r * (1 - t * 0.95);
+        const x = Math.round(ax + Math.cos(m.ang + t * 3) * r);
+        const y = Math.round(ay + Math.sin(m.ang + t * 3) * r * 0.7);
+        g.fillStyle(GRASS_EDGE, 1);
+        g.fillRect(x - 3, y - 3, 7, 7);
+        g.fillStyle(GRASS_PALE, 1);
+        g.fillRect(x - 2, y - 2, 5, 5);
+        g.fillStyle(WHITE, 1);
+        g.fillRect(x - 1, y - 1, 2, 2);
+      }
+      const core = Math.round(3 + t * t * 11);
       g.fillStyle(GRASS_EDGE, 1);
-      g.fillRect(x - 3, y - 3, 7, 7);
+      g.fillCircle(ax, ay, core + 3);
+      g.fillStyle(GRASS, 1);
+      g.fillCircle(ax, ay, core + 1);
       g.fillStyle(GRASS_PALE, 1);
-      g.fillRect(x - 2, y - 2, 5, 5);
+      g.fillCircle(ax, ay, Math.max(2, core - 2));
       g.fillStyle(WHITE, 1);
-      g.fillRect(x - 1, y - 1, 2, 2);
-    }
-    const core = Math.round(3 + t * t * 11);
-    g.fillStyle(GRASS_EDGE, 1);
-    g.fillCircle(ax, ay, core + 3);
-    g.fillStyle(GRASS, 1);
-    g.fillCircle(ax, ay, core + 1);
-    g.fillStyle(GRASS_PALE, 1);
-    g.fillCircle(ax, ay, Math.max(2, core - 2));
-    g.fillStyle(WHITE, 1);
-    g.fillCircle(ax, ay, Math.max(1, Math.round(core * 0.45)));
-  });
-  g.destroy();
+      g.fillCircle(ax, ay, Math.max(1, Math.round(core * 0.45)));
+    });
+    g.destroy();
+
+    // The charging turn ends with the core built and no beam fired.
+    if (phase === 'charge') return;
+  }
 
   // 2. Fire (42 -> 78 %): a thick beam, wide white core, dark rim so it reads
   //    against the #f8f8f8 sky.
   soundSystem.leafSweep();
   const bm = newG(scene, 815);
-  const fire = Math.round(d * 0.36);
+  const fire = Math.round(d * 0.36 * fireScale);
   await Promise.all([
     frames(scene, fire, t => {
       bm.clear();
@@ -613,11 +694,11 @@ async function renderSolarBeam(spec: AnimationSpec, ctx: AnimationContext): Prom
     (async () => {
       await delay(scene, Math.round(fire * 0.45));
       await Promise.all([
-        impactBurst(scene, dx, dy, GRASS, GRASS_PALE, 20, Math.round(d * 0.3)),
+        impactBurst(scene, dx, dy, GRASS, GRASS_PALE, 20, Math.round(d * 0.3 * fireScale)),
         spriteFlash(defenderSprite, scene, GRASS, 3),
-        screenShake(scene, 5, Math.round(d * 0.16)),
+        screenShake(scene, 5, Math.round(d * 0.16 * fireScale)),
         directionalParticles(scene, dx, dy, GRASS, 16, {
-          spread: 32, duration: Math.round(d * 0.32), shape: 'leaf',
+          spread: 32, duration: Math.round(d * 0.32 * fireScale), shape: 'leaf',
           accentColor: GRASS_PALE, wobble: 3,
         }),
       ]);

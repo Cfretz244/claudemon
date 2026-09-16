@@ -6,6 +6,7 @@
 
 import { PokemonInstance, StatusCondition, MoveEffect } from '../types/pokemon.types';
 import { MOVES_DATA } from '../data/moves';
+import { ChargeState, cancelsCharge } from '../logic/chargeMoves';
 
 export interface StatStages {
   atk: number; def: number; spd: number; spc: number; acc: number; eva: number;
@@ -18,6 +19,13 @@ export interface VolatileStatus {
   lastDamageTaken: number;
   lastDamagePhysical: boolean;
   substitute: number;
+  /**
+   * Two-turn CHARGE moves (SOLAR BEAM, FLY, DIG, RAZOR WIND, SKULL BASH, SKY
+   * ATTACK): the move this Pokemon is locked into releasing next turn, or null
+   * / undefined when it is free to choose. Volatile on purpose — switching
+   * out, fainting and the end of the battle all clear it.
+   */
+  charging?: ChargeState | null;
 }
 
 export interface DisableState {
@@ -73,7 +81,7 @@ export function confusionSelfDamage(attacker: PokemonInstance): number {
   return Math.max(1, Math.floor(attacker.stats.attack / attacker.stats.defense * attacker.level * 2 / 5));
 }
 
-export type PreActionOutcome =
+type PreAction =
   | { action: 'recharge' }
   | { action: 'flinch' }
   | { action: 'confusion-snap' }        // snapped out of confusion; attacks
@@ -87,12 +95,28 @@ export type PreActionOutcome =
   | { action: 'attack' };
 
 /**
+ * The verdict, plus (only when the attacker was mid-charge) the note that this
+ * verdict threw the charge away. `chargeCancelled` is an intersection rather
+ * than an extra variant so every existing `switch (pre.action)` still narrows
+ * and still compiles: the charge is a side-channel on the SAME outcome, which
+ * is what the scene needs — it shows the ordinary "is fully paralyzed!" line
+ * and separately puts the user back on the field.
+ */
+export type PreActionOutcome = PreAction & { chargeCancelled?: boolean };
+
+/**
  * Resolves everything that can stop a Pokemon acting this turn, applying the
  * same state mutations the scene performed inline (waking, thawing, confusion
  * countdown, flinch clear, confusion self-damage).
  *
  * `isRecharging` is cleared by the CALLER when 'recharge' is returned, since
  * it lives on the scene (playerRecharging/opponentRecharging).
+ *
+ * `atkVolatile.charging` IS cleared here, because it lives on the volatile
+ * this function already owns: a verdict that `cancelsCharge` (asleep, frozen,
+ * fully paralysed, flinched, confusion self-hit) drops the stored move and
+ * says so via `chargeCancelled`, so the scene can bring a semi-invulnerable
+ * FLY/DIG user back onto the field.
  */
 export function resolvePreAction(
   attacker: PokemonInstance,
@@ -100,49 +124,75 @@ export function resolvePreAction(
   isRecharging: boolean,
   rng: Rng = Math.random,
 ): PreActionOutcome {
+  const wasCharging = !!atkVolatile.charging;
+  const verdict = (outcome: PreAction): PreActionOutcome => {
+    if (wasCharging && cancelsCharge(outcome.action)) {
+      atkVolatile.charging = null;
+      return { ...outcome, chargeCancelled: true };
+    }
+    return outcome;
+  };
+
   if (isRecharging) {
-    return { action: 'recharge' };
+    return verdict({ action: 'recharge' });
   }
 
   if (atkVolatile.flinched) {
     atkVolatile.flinched = false;
-    return { action: 'flinch' };
+    return verdict({ action: 'flinch' });
   }
 
   if (atkVolatile.confused > 0) {
     atkVolatile.confused--;
     if (atkVolatile.confused <= 0) {
-      return { action: 'confusion-snap' };
+      return verdict({ action: 'confusion-snap' });
     }
     if (rng() < 0.5) {
       const selfDamage = confusionSelfDamage(attacker);
       attacker.currentHp = Math.max(0, attacker.currentHp - selfDamage);
-      return { action: 'confusion-self-hit', selfDamage };
+      return verdict({ action: 'confusion-self-hit', selfDamage });
     }
-    return { action: 'confusion-attack' };
+    return verdict({ action: 'confusion-attack' });
   }
 
   if (attacker.status === StatusCondition.SLEEP) {
     if (rng() < 0.5) {
       attacker.status = StatusCondition.NONE;
-      return { action: 'sleep-wake' };
+      return verdict({ action: 'sleep-wake' });
     }
-    return { action: 'sleep' };
+    return verdict({ action: 'sleep' });
   }
 
   if (attacker.status === StatusCondition.PARALYSIS && rng() < 0.25) {
-    return { action: 'paralyzed' };
+    return verdict({ action: 'paralyzed' });
   }
 
   if (attacker.status === StatusCondition.FREEZE) {
     if (rng() < 0.2) {
       attacker.status = StatusCondition.NONE;
-      return { action: 'thaw' };
+      return verdict({ action: 'thaw' });
     }
-    return { action: 'frozen' };
+    return verdict({ action: 'frozen' });
   }
 
-  return { action: 'attack' };
+  return verdict({ action: 'attack' });
+}
+
+/**
+ * Gen I semi-invulnerability: while the defender is off the field charging FLY
+ * or DIG, every move aimed at it misses EXCEPT the always-hit ones — the moves
+ * that skip the accuracy check entirely, which in this data set means SWIFT
+ * (`accuracy: 0`, see `DamageCalculator.checkAccuracy`). Gen I also let
+ * TRANSFORM and BIDE through; neither deals damage here (TRANSFORM is a
+ * message, BIDE is a message) so routing them through the same always-hit rule
+ * would change nothing visible, and the accuracy field is the only signal the
+ * scene has at this point.
+ *
+ * Returns true when the move should be recorded as a MISS before the accuracy
+ * roll is even taken, so the ordinary "But it missed!" path shows.
+ */
+export function evadesSemiInvulnerable(moveAccuracy: number, defenderSemiInvulnerable: boolean): boolean {
+  return defenderSemiInvulnerable && moveAccuracy !== 0;
 }
 
 /** Multi-hit roll for TWO_HIT / MULTI_HIT moves; 1 for everything else. */
