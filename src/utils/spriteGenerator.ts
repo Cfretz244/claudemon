@@ -1103,48 +1103,11 @@ function drawPokemonShape(
   ctx.fillRect(20, 26, 4, 4);
 }
 
-// Species-specific body shape overrides (for Pokemon whose body doesn't match their type)
-const SHAPE_OVERRIDES: Record<number, 'round' | 'angular' | 'tall' | 'wide' | 'bird' | 'snake' | 'bug'> = {
-  23: 'snake',  // Ekans
-  24: 'snake',  // Arbok
-  95: 'snake',  // Onix
-  147: 'snake', // Dratini
-  148: 'snake', // Dragonair
-  138: 'round', // Omanyte
-  139: 'round', // Omastar
-  140: 'bug',   // Kabuto
-  141: 'bug',   // Kabutops
-  79: 'wide',   // Slowpoke
-  80: 'tall',   // Slowbro
-  143: 'wide',  // Snorlax
-  113: 'round', // Chansey
-};
-
-export type PokemonShape = 'round' | 'angular' | 'tall' | 'wide' | 'bird' | 'snake' | 'bug';
-
-export function getShapeForSpecies(speciesId: number, types: PokemonType[]): PokemonShape {
-  const override = SHAPE_OVERRIDES[speciesId];
-  if (override) return override;
-
-  const primary = types[0];
-  const secondary = types[1];
-
-  // FLYING secondary type (except Bug primary) → bird
-  if (secondary === PokemonType.FLYING && primary !== PokemonType.BUG) return 'bird';
-
-  switch (primary) {
-    case PokemonType.BUG: return 'bug';
-    case PokemonType.ROCK:
-    case PokemonType.GROUND:
-    case PokemonType.ICE: return 'angular';
-    case PokemonType.FIGHTING:
-    case PokemonType.PSYCHIC:
-    case PokemonType.FIRE: return 'tall';
-    case PokemonType.GRASS: return 'wide';
-    case PokemonType.DRAGON: return 'snake';
-    default: return 'round';
-  }
-}
+// The body-shape classifier moved to `logic/pokemonShape.ts` (Phaser-free, so
+// the entrance-animation resolver can import it without a canvas). Re-exported
+// here so existing callers keep importing it from spriteGenerator.
+export { getShapeForSpecies, SHAPE_OVERRIDES } from '../logic/pokemonShape';
+export type { PokemonShape } from '../logic/pokemonShape';
 
 export function generatePokemonSprite(
   scene: Phaser.Scene, key: string, color1: number,

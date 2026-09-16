@@ -1,0 +1,155 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`pokemonShape — full table snapshot > matches the recorded 151-row speciesId -> shape table 1`] = `
+"  1 BULBASAUR    GRASS/POISON      wide    -
+  2 IVYSAUR      GRASS/POISON      wide    -
+  3 VENUSAUR     GRASS/POISON      wide    -
+  4 CHARMANDER   FIRE              tall    -
+  5 CHARMELEON   FIRE              tall    -
+  6 CHARIZARD    FIRE/FLYING       bird    -
+  7 SQUIRTLE     WATER             round   -
+  8 WARTORTLE    WATER             round   -
+  9 BLASTOISE    WATER             round   -
+ 10 CATERPIE     BUG               bug     -
+ 11 METAPOD      BUG               bug     -
+ 12 BUTTERFREE   BUG/FLYING        bug     -
+ 13 WEEDLE       BUG/POISON        bug     -
+ 14 KAKUNA       BUG/POISON        bug     -
+ 15 BEEDRILL     BUG/POISON        bug     -
+ 16 PIDGEY       NORMAL/FLYING     bird    -
+ 17 PIDGEOTTO    NORMAL/FLYING     bird    -
+ 18 PIDGEOT      NORMAL/FLYING     bird    -
+ 19 RATTATA      NORMAL            round   -
+ 20 RATICATE     NORMAL            round   -
+ 21 SPEAROW      NORMAL/FLYING     bird    -
+ 22 FEAROW       NORMAL/FLYING     bird    -
+ 23 EKANS        POISON            snake   override
+ 24 ARBOK        POISON            snake   override
+ 25 PIKACHU      ELECTRIC          round   -
+ 26 RAICHU       ELECTRIC          round   -
+ 27 SANDSHREW    GROUND            angular -
+ 28 SANDSLASH    GROUND            angular -
+ 29 NIDORAN F    POISON            round   -
+ 30 NIDORINA     POISON            round   -
+ 31 NIDOQUEEN    POISON/GROUND     round   -
+ 32 NIDORAN M    POISON            round   -
+ 33 NIDORINO     POISON            round   -
+ 34 NIDOKING     POISON/GROUND     round   -
+ 35 CLEFAIRY     NORMAL            round   -
+ 36 CLEFABLE     NORMAL            round   -
+ 37 VULPIX       FIRE              tall    -
+ 38 NINETALES    FIRE              tall    -
+ 39 JIGGLYPUFF   NORMAL            round   -
+ 40 WIGGLYTUFF   NORMAL            round   -
+ 41 ZUBAT        POISON/FLYING     bird    -
+ 42 GOLBAT       POISON/FLYING     bird    -
+ 43 ODDISH       GRASS/POISON      wide    -
+ 44 GLOOM        GRASS/POISON      wide    -
+ 45 VILEPLUME    GRASS/POISON      wide    -
+ 46 PARAS        BUG/GRASS         bug     -
+ 47 PARASECT     BUG/GRASS         bug     -
+ 48 VENONAT      BUG/POISON        bug     -
+ 49 VENOMOTH     BUG/POISON        bug     -
+ 50 DIGLETT      GROUND            angular -
+ 51 DUGTRIO      GROUND            angular -
+ 52 MEOWTH       NORMAL            round   -
+ 53 PERSIAN      NORMAL            round   -
+ 54 PSYDUCK      WATER             round   -
+ 55 GOLDUCK      WATER             round   -
+ 56 MANKEY       FIGHTING          tall    -
+ 57 PRIMEAPE     FIGHTING          tall    -
+ 58 GROWLITHE    FIRE              tall    -
+ 59 ARCANINE     FIRE              tall    -
+ 60 POLIWAG      WATER             round   -
+ 61 POLIWHIRL    WATER             round   -
+ 62 POLIWRATH    WATER/FIGHTING    round   -
+ 63 ABRA         PSYCHIC           tall    -
+ 64 KADABRA      PSYCHIC           tall    -
+ 65 ALAKAZAM     PSYCHIC           tall    -
+ 66 MACHOP       FIGHTING          tall    -
+ 67 MACHOKE      FIGHTING          tall    -
+ 68 MACHAMP      FIGHTING          tall    -
+ 69 BELLSPROUT   GRASS/POISON      wide    -
+ 70 WEEPINBELL   GRASS/POISON      wide    -
+ 71 VICTREEBEL   GRASS/POISON      wide    -
+ 72 TENTACOOL    WATER/POISON      round   -
+ 73 TENTACRUEL   WATER/POISON      round   -
+ 74 GEODUDE      ROCK/GROUND       angular -
+ 75 GRAVELER     ROCK/GROUND       angular -
+ 76 GOLEM        ROCK/GROUND       angular -
+ 77 PONYTA       FIRE              tall    -
+ 78 RAPIDASH     FIRE              tall    -
+ 79 SLOWPOKE     WATER/PSYCHIC     wide    override
+ 80 SLOWBRO      WATER/PSYCHIC     tall    override
+ 81 MAGNEMITE    ELECTRIC          round   -
+ 82 MAGNETON     ELECTRIC          round   -
+ 83 FARFETCH'D   NORMAL/FLYING     bird    -
+ 84 DODUO        NORMAL/FLYING     bird    -
+ 85 DODRIO       NORMAL/FLYING     bird    -
+ 86 SEEL         WATER             round   -
+ 87 DEWGONG      WATER/ICE         round   -
+ 88 GRIMER       POISON            round   -
+ 89 MUK          POISON            round   -
+ 90 SHELLDER     WATER             round   -
+ 91 CLOYSTER     WATER/ICE         round   -
+ 92 GASTLY       GHOST/POISON      round   -
+ 93 HAUNTER      GHOST/POISON      round   -
+ 94 GENGAR       GHOST/POISON      round   -
+ 95 ONIX         ROCK/GROUND       snake   override
+ 96 DROWZEE      PSYCHIC           tall    -
+ 97 HYPNO        PSYCHIC           tall    -
+ 98 KRABBY       WATER             round   -
+ 99 KINGLER      WATER             round   -
+100 VOLTORB      ELECTRIC          round   -
+101 ELECTRODE    ELECTRIC          round   -
+102 EXEGGCUTE    GRASS/PSYCHIC     wide    -
+103 EXEGGUTOR    GRASS/PSYCHIC     wide    -
+104 CUBONE       GROUND            angular -
+105 MAROWAK      GROUND            angular -
+106 HITMONLEE    FIGHTING          tall    -
+107 HITMONCHAN   FIGHTING          tall    -
+108 LICKITUNG    NORMAL            round   -
+109 KOFFING      POISON            round   -
+110 WEEZING      POISON            round   -
+111 RHYHORN      GROUND/ROCK       angular -
+112 RHYDON       GROUND/ROCK       angular -
+113 CHANSEY      NORMAL            round   override
+114 TANGELA      GRASS             wide    -
+115 KANGASKHAN   NORMAL            round   -
+116 HORSEA       WATER             round   -
+117 SEADRA       WATER             round   -
+118 GOLDEEN      WATER             round   -
+119 SEAKING      WATER             round   -
+120 STARYU       WATER             round   -
+121 STARMIE      WATER/PSYCHIC     round   -
+122 MR. MIME     PSYCHIC           tall    -
+123 SCYTHER      BUG/FLYING        bug     -
+124 JYNX         ICE/PSYCHIC       angular -
+125 ELECTABUZZ   ELECTRIC          round   -
+126 MAGMAR       FIRE              tall    -
+127 PINSIR       BUG               bug     -
+128 TAUROS       NORMAL            round   -
+129 MAGIKARP     WATER             round   -
+130 GYARADOS     WATER/FLYING      bird    -
+131 LAPRAS       WATER/ICE         round   -
+132 DITTO        NORMAL            round   -
+133 EEVEE        NORMAL            round   -
+134 VAPOREON     WATER             round   -
+135 JOLTEON      ELECTRIC          round   -
+136 FLAREON      FIRE              tall    -
+137 PORYGON      NORMAL            round   -
+138 OMANYTE      ROCK/WATER        round   override
+139 OMASTAR      ROCK/WATER        round   override
+140 KABUTO       ROCK/WATER        bug     override
+141 KABUTOPS     ROCK/WATER        bug     override
+142 AERODACTYL   ROCK/FLYING       bird    -
+143 SNORLAX      NORMAL            wide    override
+144 ARTICUNO     ICE/FLYING        bird    -
+145 ZAPDOS       ELECTRIC/FLYING   bird    -
+146 MOLTRES      FIRE/FLYING       bird    -
+147 DRATINI      DRAGON            snake   override
+148 DRAGONAIR    DRAGON            snake   override
+149 DRAGONITE    DRAGON/FLYING     bird    -
+150 MEWTWO       PSYCHIC           tall    -
+151 MEW          PSYCHIC           tall    -"
+`;
