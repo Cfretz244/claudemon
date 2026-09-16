@@ -29,6 +29,8 @@ import { TRAINERS } from '../data/trainers';
 import { GYM_LEADERS } from '../data/gymLeaders';
 import { ELITE_FOUR, CHAMPION, HALL_OF_FAME_TEXT } from '../data/eliteFour';
 import { playMoveAnimation, AnimationContext } from '../systems/MoveAnimations';
+import { playEntrance } from '../systems/animations/entrances';
+import { resolveEntrance, resolveCry, EntranceKind } from '../logic/entranceSpec';
 import { outcomeFor } from '../logic/animationOutcome';
 import { reviveHp, isReviveItem } from '../logic/reviveItems';
 import { clearsForcedEncounter, WildBattleEnd } from '../logic/forcedEncounters';
@@ -224,9 +226,13 @@ export class BattleScene extends Phaser.Scene {
         this.opponentTrainerSprite.setDepth(5);
         this.opponentTrainerSprite.setScrollFactor(0);
       }
-    } else {
-      // Wild battle: show opponent Pokemon immediately
+    } else if (this.isGhost) {
+      // Ghost encounter: unchanged - a GHOST appears instantly, it is a ghost.
       this.opponentSprite.setAlpha(1);
+    } else {
+      // Wild battle: the mon is brought in by playEntrance during the intro,
+      // so it starts invisible instead of simply being there on frame 1.
+      this.opponentSprite.setAlpha(0);
     }
 
     // HUD
@@ -264,8 +270,6 @@ export class BattleScene extends Phaser.Scene {
       soundSystem.startMusic('wild_battle');
     }
 
-    soundSystem.pokemonCry(300 + this.opponentPokemon.speciesId * 3);
-
     // Re-sync mobile input so held buttons carry over after scene transition
     resyncMobileInput();
 
@@ -283,6 +287,17 @@ export class BattleScene extends Phaser.Scene {
       }
     });
 
+    if (import.meta.env.DEV) {
+      // The entrance renderer, reachable from the e2e runner the same way the
+      // move animations are (window.__claudemon IS the Phaser.Game).
+      (this.game as unknown as Record<string, unknown>).entrances = {
+        playEntrance,
+        resolveEntrance,
+        replayIntro: (speciesId: number, side: 'player' | 'opponent', kind: EntranceKind) =>
+          this.replayIntro(speciesId, side, kind),
+      };
+    }
+
     // Play the battle intro sequence with trainer sprite animations
     this.playBattleIntro();
   }
@@ -292,13 +307,20 @@ export class BattleScene extends Phaser.Scene {
     const playerName = this.getSpeciesName(this.playerPokemon.speciesId);
 
     if (this.isGhost) {
-      // Ghost encounter: player is too scared to send out Pokemon
+      // Ghost encounter: player is too scared to send out Pokemon. Unchanged,
+      // except that the cry now lives here rather than in create().
+      this.opponentCry();
       await this.showText(['A GHOST appeared!']);
       this.showBattleMenu();
       return;
     } else if (this.battleType === BattleType.WILD) {
-      // Wild: opponent Pokemon already visible, show text
+      // The one sequencing rule (design 3.2): an entrance is STARTED before
+      // its text and AWAITED after it. showText gates on the player, so this
+      // is what stops the menu opening over a mon that is still arriving -
+      // and stops a player mashing A from outrunning the animation.
+      const entrance = this.playOpponentEntrance();
       await this.showText([`Wild ${opponentName}\nappeared!`]);
+      await entrance;
       // "Go! Pokemon!" then slide player back sprite out, bring in player pokemon
       await this.showText([`Go! ${playerName}!`]);
       await this.slidePlayerIn();
@@ -314,6 +336,60 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.showBattleMenu();
+  }
+
+  /**
+   * The opponent's cry. Ghosts keep the old undifferentiated cry (they are not
+   * a species); everything else goes through the shape/type contour.
+   */
+  private opponentCry(): void {
+    const species = POKEMON_DATA[this.opponentPokemon.speciesId];
+    if (this.isGhost || !species) {
+      soundSystem.pokemonCry(300 + this.opponentPokemon.speciesId * 3);
+      return;
+    }
+    soundSystem.pokemonCryFor(resolveCry(species));
+  }
+
+  /** The wild arrival: shape-keyed motion, with the cry on the reveal. */
+  private playOpponentEntrance(): Promise<void> {
+    const species = POKEMON_DATA[this.opponentPokemon.speciesId];
+    if (!species) {
+      this.opponentSprite.setAlpha(1);
+      this.opponentCry();
+      return Promise.resolve();
+    }
+    return playEntrance(this, this.opponentSprite, resolveEntrance(species, 'wild'), {
+      side: 'opponent',
+      onMaterialise: () => this.opponentCry(),
+    });
+  }
+
+  /**
+   * DEV/e2e only: play any species' entrance on either side's sprite and put
+   * the sprite's own texture back afterwards, so one live battle can be used
+   * to review all seven shape rows.
+   */
+  async replayIntro(
+    speciesId: number,
+    side: 'player' | 'opponent',
+    kind: EntranceKind,
+  ): Promise<void> {
+    const species = POKEMON_DATA[speciesId];
+    if (!species) return;
+    const sprite = side === 'player' ? this.playerSprite : this.opponentSprite;
+    const prevKey = sprite.texture.key;
+    const prevFrame = sprite.frame.name;
+    this.ensurePokemonSprite(speciesId);
+    sprite.setTexture(`pokemon_${speciesId}`, side === 'player' ? 1 : 0);
+    try {
+      await playEntrance(this, sprite, resolveEntrance(species, kind), {
+        side,
+        onMaterialise: () => soundSystem.pokemonCryFor(resolveCry(species)),
+      });
+    } finally {
+      sprite.setTexture(prevKey, prevFrame);
+    }
   }
 
   private slideOpponentIn(): Promise<void> {
@@ -334,7 +410,12 @@ export class BattleScene extends Phaser.Scene {
         alpha: 1,
         duration: 400,
         ease: 'Linear',
-        onComplete: () => resolve(),
+        onComplete: () => {
+          // Trainer battles keep their slide-in (E3 gives them the ball throw);
+          // the cry moves here so it still lands when the mon appears.
+          this.opponentCry();
+          resolve();
+        },
       });
     });
   }
