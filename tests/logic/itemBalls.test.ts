@@ -31,15 +31,18 @@ const SHIPPED_BALLS = Object.entries(ALL_MAPS).flatMap(([mapId, m]) =>
   m.npcs.filter(n => n.isItemBall && !n.ambush).map(n => ({ mapId, npc: n })));
 
 /**
- * Seven Silph Co balls name items that are not in `ITEMS`, so picking them up
- * has always been a silent no-op (see the "the no-op cases" block). They are
- * excluded from the sweeps over "balls that actually give something".
+ * Every shipped ball is live. Seven Silph Co balls used to name items that
+ * `data/items.ts` did not define, so picking them up was a silent no-op; the
+ * seven items now exist and the balls give them, so there is nothing left to
+ * exclude from the sweeps below.
  */
-const DEAD_BALL_IDS = [
+const LIVE_BALLS = SHIPPED_BALLS;
+
+/** The seven balls that were duds before the items were added. */
+const ONCE_DEAD_BALL_IDS = [
   'silph_2f_protein', 'silph_4f_max_revive', 'silph_6f_hp_up', 'silph_6f_x_accuracy',
   'silph_7f_calcium', 'silph_9f_carbos', 'silph_10f_pp_up',
 ];
-const LIVE_BALLS = SHIPPED_BALLS.filter(b => !DEAD_BALL_IDS.includes(b.npc.id));
 
 describe('itemBallPickup — the no-op cases', () => {
   it('an unknown itemId is a no-op: no text, no flag, no sprite removal', () => {
@@ -52,27 +55,33 @@ describe('itemBallPickup — the no-op cases', () => {
     expect(itemBallPickup({ id: 'route1_empty', itemId: '' }, RED)).toBeNull();
   });
 
-  it('pins the seven shipped balls that ARE duds — a pre-existing Silph Co bug', () => {
-    // Not a regression from this refactor: `pickUpItemBall` has always bailed on
-    // `ITEMS[npc.itemId]` being undefined, so these seven balls sit on the floor
-    // for ever — no text, no item, no `picked_up_` flag, the sprite stays.
-    // `data/items.ts` simply has no protein/carbos/calcium/hp_up/pp_up/
-    // x_accuracy/max_revive entry (only plain `revive` exists).
+  it('no shipped item ball is a dud any more', () => {
+    // This USED to pin the seven Silph Co duds: `data/items.ts` had no
+    // protein/carbos/calcium/hp_up/pp_up/x_accuracy/max_revive entry, so
+    // `itemBallPickup` returned null for them and walking into the ball did
+    // nothing at all. The seven items now exist, which is what flipped this
+    // assertion — see `tests/data/items.data.test.ts`.
     const dud = SHIPPED_BALLS.filter(b => itemBallPickup(b.npc, RED) === null);
-    expect(dud.map(b => b.npc.id).sort()).toEqual([...DEAD_BALL_IDS].sort());
-    for (const { npc } of dud) {
-      expect(npc.itemId, npc.id).toBeTruthy();       // it names an item...
-      expect(ITEMS[npc.itemId!], npc.id).toBeUndefined();   // ...that does not exist
-      expect(npc.id.startsWith('silph_'), npc.id).toBe(true);
+    expect(dud.map(b => b.npc.id)).toEqual([]);
+  });
+
+  it('the seven once-dead Silph Co balls now give their items', () => {
+    for (const id of ONCE_DEAD_BALL_IDS) {
+      const found = SHIPPED_BALLS.find(b => b.npc.id === id);
+      expect(found, id).toBeDefined();
+      const pickup = itemBallPickup(found!.npc, RED);
+      expect(pickup, id).not.toBeNull();
+      expect(ITEMS[found!.npc.itemId!], id).toBeDefined();
+      expect(pickup!.flags, id).toEqual([pickedUpFlag(id)]);
     }
   });
 
-  it('every other shipped item ball names a real item', () => {
+  it('every shipped item ball names a real item', () => {
     for (const { mapId, npc } of LIVE_BALLS) {
       expect(itemBallPickup(npc, RED), `${mapId}/${npc.id}`).not.toBeNull();
     }
     expect(SHIPPED_BALLS.length).toBe(97);
-    expect(LIVE_BALLS.length).toBe(90);
+    expect(LIVE_BALLS.length).toBe(97);
   });
 });
 

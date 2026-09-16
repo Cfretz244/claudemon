@@ -30,6 +30,7 @@ import { GYM_LEADERS } from '../data/gymLeaders';
 import { ELITE_FOUR, CHAMPION, HALL_OF_FAME_TEXT } from '../data/eliteFour';
 import { playMoveAnimation, AnimationContext } from '../systems/MoveAnimations';
 import { outcomeFor } from '../logic/animationOutcome';
+import { reviveHp, isReviveItem } from '../logic/reviveItems';
 import { clearsForcedEncounter, WildBattleEnd } from '../logic/forcedEncounters';
 import '../systems/animations';
 import { getTrainerSpriteKey } from '../utils/trainerSpriteGenerator';
@@ -387,7 +388,7 @@ export class BattleScene extends Phaser.Scene {
     const usableIds = [
       'poke_ball', 'great_ball', 'ultra_ball', 'master_ball',
       'potion', 'super_potion', 'hyper_potion', 'max_potion', 'full_restore',
-      'revive',
+      'revive', 'max_revive',
     ];
     const items: BagItem[] = [];
     for (const id of usableIds) {
@@ -469,8 +470,8 @@ export class BattleScene extends Phaser.Scene {
 
     if (isBall) {
       this.useBall(itemId);
-    } else if (itemId === 'revive') {
-      this.useRevive(targetIndex ?? 0);
+    } else if (isReviveItem(itemId)) {
+      this.useRevive(itemId, targetIndex ?? 0);
     } else {
       this.usePotion(itemId, targetIndex);
     }
@@ -1305,7 +1306,7 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  private useRevive(targetIndex: number): void {
+  private useRevive(itemId: string, targetIndex: number): void {
     // Pre-select AI move before applying item
     const aiMoveIndex = selectAIMove(this.opponentPokemon, this.playerPokemon);
     const aiMove = this.opponentPokemon.moves[aiMoveIndex];
@@ -1317,12 +1318,13 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
-    if (!this.playerState.useItem('revive')) {
-      this.textBox.show(["No REVIVE left!"], () => this.showBattleMenu());
+    if (!this.playerState.useItem(itemId)) {
+      this.textBox.show([`No ${ITEMS[itemId]?.name || itemId} left!`], () => this.showBattleMenu());
       return;
     }
 
-    target.currentHp = Math.floor(target.stats.hp / 2);
+    // REVIVE -> half HP, MAX REVIVE -> full (logic/reviveItems.ts).
+    target.currentHp = reviveHp(itemId, target.stats.hp)!;
 
     const name = this.getSpeciesName(target.speciesId);
     soundSystem.heal();
