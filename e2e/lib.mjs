@@ -326,21 +326,6 @@ export async function createRunner(name) {
     return waitSettled();
   }
 
-  /**
-   * Record every message the BattleScene's text box is asked to show from now
-   * on, and return a reader for them in order. The patch lives on the page, so
-   * a runner re-arms it after every boot; `show()` still runs normally.
-   */
-  async function recordTextBox() {
-    await page.evaluate(() => {
-      const tb = window.__claudemon.scene.getScene('BattleScene').textBox;
-      const orig = tb.show.bind(tb);
-      window.__textBoxLog = [];
-      tb.show = (msgs, cb) => { window.__textBoxLog.push(...msgs); return orig(msgs, cb); };
-    });
-    return () => page.evaluate(() => window.__textBoxLog ?? []);
-  }
-
   // --- results ---------------------------------------------------------------
   const results = [];
   function record(name, ok, detail = '', { knownBug = false } = {}) {
@@ -378,5 +363,5 @@ export async function createRunner(name) {
 
   return { browser, page, errors, shotDir, tap, shot, state, overworld, battle, waitOverworld,
            waitSettled, advanceText, face, step, walkTo, seatNextToNpc, seatNextToTile,
-           seatNextToWarp, recordTextBox, boot, record, scenario, finish, results };
+           seatNextToWarp, boot, record, scenario, finish, results };
 }

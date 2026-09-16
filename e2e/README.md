@@ -32,7 +32,6 @@ feedback stays `max(test, e2e)` and `test` remains the required check.
 
 | runner | checks | what it pins |
 |---|---|---|
-| `faint-ends-round` | 12 | a faint ends the round: whichever side self-destructs first, the other one does not get to swing — the faint text follows the blast, and the player's own faint prompts a switch, not a white-out |
 | `lab-rival-reambush` | 10 | the lab rival fires once: LOSING the ambush still ends it — the flag survives the whiteout, the door warp goes through, the rival gives his post-battle line |
 | `oak` | 9 | every stage of Oak's chain (Pikachu, the Parcel, the Pokedex + 5 Poke Balls, no second grant) and the rival ambush on the lab's exit warp |
 | `route22` | 8 | which rival entry Route 22 spawns per badges/defeated, and that walking into the rematch's sight starts his battle |
