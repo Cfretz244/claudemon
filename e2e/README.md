@@ -28,6 +28,20 @@ assertion fails twice.
 In CI the `e2e` job runs in parallel with `test` (not `needs: test`), so PR
 feedback stays `max(test, e2e)` and `test` remains the required check.
 
+## The runners
+
+| runner | checks | what it pins |
+|---|---|---|
+| `lab-rival-reambush` | 10 | the lab rival fires once: LOSING the ambush still ends it — the flag survives the whiteout, the door warp goes through, the rival gives his post-battle line |
+| `oak` | 9 | every stage of Oak's chain (Pikachu, the Parcel, the Pokedex + 5 Poke Balls, no second grant) and the rival ambush on the lab's exit warp |
+| `route22` | 8 | which rival entry Route 22 spawns per badges/defeated, and that walking into the rematch's sight starts his battle |
+| `story` | 4 | the Viridian Parcel hand-out, Oak's Pokedex grant and its idempotence, and that the Pewter clerk hands out nothing |
+| `story-misc` | 11 | both sleeping Snorlax (POKe FLUTE), the Game Corner poster switch and the Rocket Hideout stairs it opens, and the Marowak ghost on the 7F stairs |
+
+Wall time for the whole suite: **~4 min 25 s** on the dev container (two runs
+back to back: 262 s and 263 s, 42 checks, no retries). Each runner boots the
+game once per scenario, so the suite is dominated by boots, not by assertions.
+
 ## The dev hook
 
 `window.__claudemon` (the Phaser `Game`) is exposed in dev builds only. Runners
@@ -55,8 +69,11 @@ await t.scenario('what it proves', { map: 'pokemart', x: 3, y: 2, bag: {} },
 await t.finish();                                      // exits 1 on any FAIL
 ```
 
-`lib.mjs` gives you `boot(seed)`, `overworld()`, `waitOverworld()`,
-`advanceText()`, `tap()`, `shot()`, `record()`, `scenario()` and `finish()`.
+`lib.mjs` gives you `boot(seed)`, `state()` (battle or overworld),
+`overworld()`, `battle()`, `waitOverworld()`, `waitSettled()`, `advanceText()`,
+`tap()`, `face(dir)`, `step(dir)`, `walkTo(x, y)` (BFS on the live map),
+`seatNextToNpc/Tile/Warp()` (pick a seat from the real map data instead of
+hard-coding one), `shot()`, `record()`, `scenario()` and `finish()`.
 Anything specific to one runner (extra scene readers, a walk into a trainer's
 sight) stays in that runner — see `e2e/smoke/route22.mjs`.
 
