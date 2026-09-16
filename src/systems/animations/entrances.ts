@@ -10,6 +10,12 @@ import {
   groundHeave, impactBurst, lunge, ring, screenFlash, screenShake, sparkle,
   spriteFlash, tweenPromise, warpArcs,
 } from '../MoveAnimations';
+import { soundSystem } from '../SoundSystem';
+import { CatchResult } from '../CatchSystem';
+import {
+  CATCH_BREAK_MS, CATCH_CAUGHT_MS, CATCH_DROP_MS, CATCH_OPEN_MS, CATCH_PULL_MS,
+  CATCH_ROCK_MS, CATCH_STILL_MS, CATCH_THROW_MS, catchTimeline,
+} from '../../logic/catchSequenceSpec';
 
 /**
  * Battle entrances: how a Pokemon arrives on the field.
@@ -948,3 +954,264 @@ export async function playEntrance(
 // puts it on `game.entrances` for the e2e runner without BattleScene.ts (owned
 // by another PR right now) needing a line about it.
 (playEntrance as unknown as { telemetry: EntranceTelemetry }).telemetry = entranceTelemetry;
+
+// ---------------------------------------------------------------------------
+// dematerialise: the E2 reveal, played backwards (E5)
+// ---------------------------------------------------------------------------
+
+/**
+ * The mon is pulled into the ball: `materialise` in reverse.
+ *
+ * Forwards, a pale silhouette pops out of nothing and cross-fades to colour.
+ * Backwards, the colours drain to the same pale `setTintFill` wash (150 ms, a
+ * pale ghost fading IN over the sprite - the mirror of `crossFade`), and then
+ * the silhouette shrinks to scale 0 toward `to`, which is where the ball is
+ * (250 ms). The sprite is left at alpha 0: it is inside the ball now.
+ *
+ * Geometry is NOT restored here. The caller owns the snapshot/restore contract,
+ * because on a catch the mon stays gone and on a break-out it comes back.
+ */
+export async function dematerialise(
+  scene: Phaser.Scene,
+  sprite: Phaser.GameObjects.Sprite,
+  palette: PokemonType,
+  ms: number,
+  to: { x: number; y: number },
+  run?: Run,
+): Promise<void> {
+  const vocab = TYPE_VOCAB[palette] ?? TYPE_VOCAB[PokemonType.NORMAL];
+  const pale = paleOf(vocab.color);
+  const drain = Math.round(ms * 0.38);
+  const shrink = Math.max(1, ms - drain);
+
+  // 1. Colour -> silhouette. Two images again, for the reason `crossFade`
+  // documents: `setTintFill` is all-or-nothing, so the wash has to arrive as a
+  // separate copy fading in on top of the real, still-coloured sprite.
+  const ghost = scene.add.image(sprite.x, sprite.y, sprite.texture.key, sprite.frame.name);
+  ghost.setDepth(sprite.depth + 1);
+  ghost.setScrollFactor(0);
+  ghost.setScale(sprite.scaleX, sprite.scaleY);
+  ghost.setAngle(sprite.angle);
+  ghost.setTintFill(pale);
+  ghost.setAlpha(0);
+  if (sprite.mask) ghost.setMask(sprite.mask);
+  if (run) run.junk.push(ghost);
+  await tweenPromise(scene, {
+    targets: ghost, alpha: 1,
+    duration: Math.max(1, drain), ease: 'Linear',
+  });
+  sprite.setTintFill(pale);
+  ghost.destroy();
+  if (run?.aborted) return;
+
+  // 2. The silhouette collapses into the ball.
+  const x0 = sprite.x;
+  const y0 = sprite.y;
+  const sx = sprite.scaleX;
+  const sy = sprite.scaleY;
+  await animateFrames(scene, Math.max(1, Math.round(shrink)), t => {
+    if (run?.aborted) return;
+    const e = Phaser.Math.Easing.Back.In(t);
+    sprite.setPosition(
+      Math.round(x0 + (to.x - x0) * e),
+      Math.round(y0 + (to.y - y0) * e),
+    );
+    sprite.setScale(sx * (1 - e), sy * (1 - e));
+  });
+  sprite.setScale(0, 0);
+  sprite.setAlpha(0);
+}
+
+// ---------------------------------------------------------------------------
+// catchSequence (E5, design section 8's catch row)
+// ---------------------------------------------------------------------------
+
+/** What the scene tells the catch sequence about the mon being thrown at. */
+export interface CatchContext {
+  /** The wild Pokemon's sprite. Snapshotted and restored by the sequence. */
+  sprite: Phaser.GameObjects.Sprite;
+  /** The mon's primary type: the palette the ball opens in. */
+  palette: PokemonType;
+  /** Where the ball is thrown from, in game pixels (the player's side). */
+  from: { x: number; y: number };
+}
+
+/**
+ * The ball outlives `catchSequence` on a successful catch: it sits on the
+ * ground under `Gotcha! X was caught!` and is destroyed once the text is gone.
+ * `done()` is that destruction, and is safe to call more than once (and after a
+ * break-out, where there is nothing left to destroy).
+ */
+export interface CatchHandle {
+  done(): void;
+}
+
+/** Depth for the thrown ball once it is a prop rather than a projectile. */
+export const CATCH_BALL_DEPTH = BALL_DEPTH;
+
+/** How far the ball rocks, in degrees, on each shake. */
+export const CATCH_ROCK_ANGLE = 20;
+
+/**
+ * Throw a ball at the wild Pokemon, suck it in, drop the ball, shake it, and
+ * play the outcome `result` already rolled.
+ *
+ * The sequence is the Gen I one (helper repo design doc section 8):
+ *
+ *   1. `ballThrow` from the player's side - the same exported helper the
+ *      send-out uses, so a throw is a throw whichever direction it goes; it
+ *      ends on the white flash + type-coloured burst of the ball opening.
+ *   2. `dematerialise`: the mon drains to a pale silhouette and collapses into
+ *      the ball.
+ *   3. The ball falls to the mon's ground line with one `Bounce.easeOut`
+ *      bounce and a low thud. NOT `catchShake()` - that SFX belongs to a shake.
+ *   4. One rock per shake the roll produced (`catchShake()`, angle -20/+20/0),
+ *      each followed by a dead-still pause. These replace `useBall`'s old
+ *      500 + 300 ms dead gaps and its wobble of the MON's own sprite.
+ *   5. Caught: the button flashes twice, sparkles go up, and the ball STAYS
+ *      (see `CatchHandle`). Broke free: the ball bursts open, is destroyed, and
+ *      the mon `materialise`s back at its spot.
+ *
+ * Contracts, the same three `playEntrance` holds: the sprite's geometry is
+ * snapshotted and restored whatever happens (alpha alone is decided by the
+ * outcome - 0 caught, 1 free), everything drawn is destroyed, and the whole
+ * thing races `catchTimeline().cap` = 2500 + 700 ms per shake.
+ */
+export async function catchSequence(
+  scene: Phaser.Scene,
+  ctx: CatchContext,
+  result: CatchResult,
+): Promise<CatchHandle> {
+  const sprite = ctx.sprite;
+  const plan = catchTimeline(result.shakes, result.caught);
+  const vocab = TYPE_VOCAB[ctx.palette] ?? TYPE_VOCAB[PokemonType.NORMAL];
+  const state = snapshot(sprite);
+  const homeX = Math.round(sprite.x);
+  const homeY = Math.round(sprite.y);
+  // The ball lands at the mon's feet, not at its middle.
+  const groundY = Math.round(homeY + sprite.displayHeight / 2);
+
+  // `ballThrow` and `materialise` take a `Run` purely as a junk/abort ledger;
+  // neither reads the spec, so this one is a placeholder that keeps the shared
+  // helpers' signature honest without inventing a species.
+  const spec: EntranceSpec = {
+    speciesId: 0,
+    shape: 'round',
+    kind: 'wild',
+    palette: ctx.palette,
+    mass: false,
+    rare: false,
+    flourish: 'hop',
+    duration: plan.budget,
+  };
+  const run: Run = {
+    scene, sprite, spec, ctx: {}, junk: [], masks: [], aborted: false,
+    homeX, homeY,
+    color: vocab.color,
+    accent: vocab.accentColor,
+    pale: paleOf(vocab.color),
+  };
+
+  // The prop ball, tracked separately from `run.junk`: on a catch it has to
+  // survive the finally and be destroyed by the handle instead.
+  let ball: Phaser.GameObjects.Image | null = null;
+  const killBall = (): void => {
+    if (!ball) return;
+    scene.tweens.killTweensOf(ball);
+    if (ball.active) ball.destroy();
+    ball = null;
+  };
+
+  const body = async (): Promise<void> => {
+    // 1. THROW. Ends with the ball opening: white flash + type-coloured burst.
+    await ballThrow(
+      scene, ctx.from, { x: homeX, y: homeY }, ctx.palette, CATCH_THROW_MS, run,
+    );
+    if (run.aborted) return;
+
+    // The open ball sits where the mon is while the mon is pulled into it.
+    if (scene.textures.exists(BALL_TEXTURE)) {
+      ball = scene.add.image(homeX, homeY, BALL_TEXTURE);
+      ball.setDepth(CATCH_BALL_DEPTH);
+      ball.setScrollFactor(0);
+    }
+
+    // 2. CAPTURE.
+    await dematerialise(scene, sprite, ctx.palette, CATCH_PULL_MS, { x: homeX, y: homeY }, run);
+    if (run.aborted) return;
+
+    // 3. DROP. Integer y, one visible bounce, a thud rather than a shake.
+    soundSystem.ballDrop();
+    await frames(run, CATCH_DROP_MS, t => {
+      if (!ball || !ball.active) return;
+      const e = Phaser.Math.Easing.Bounce.Out(t);
+      ball.setPosition(homeX, Math.round(homeY + (groundY - homeY) * e));
+      ball.setAngle(0);
+    });
+    if (run.aborted) return;
+    ball?.setPosition(homeX, groundY);
+
+    // 4. SHAKES. One rock per shake, then dead still - the stillness is what
+    // makes the next rock land as a beat rather than a wobble.
+    for (let i = 0; i < Math.max(0, Math.min(3, result.shakes)); i++) {
+      soundSystem.catchShake();
+      await frames(run, CATCH_ROCK_MS, t => {
+        if (!ball || !ball.active) return;
+        // 0 -> -20 -> 0 -> +20 -> 0 over the rock.
+        ball.setAngle(Math.round(Math.sin(t * Math.PI * 2) * -CATCH_ROCK_ANGLE));
+      });
+      if (run.aborted) return;
+      ball?.setAngle(0);
+      await delay(scene, CATCH_STILL_MS);
+      if (run.aborted) return;
+    }
+
+    // 5. OUTCOME.
+    if (result.caught) {
+      soundSystem.catchSuccess();
+      const flash = ball
+        ? spriteFlash(ball as unknown as Phaser.GameObjects.Sprite, scene, 0xFFFFFF, 2)
+        : Promise.resolve();
+      await Promise.all([
+        flash,
+        sparkle(scene, homeX, groundY, 0xFFFFFF, 4, CATCH_CAUGHT_MS),
+      ]);
+      ball?.setAngle(0);
+      return;
+    }
+
+    // Broke free: the ball bursts open and the mon comes back out of it.
+    void impactBurst(scene, homeX, groundY, 0xFFFFFF, vocab.accentColor, 14, 180);
+    killBall();
+    await delay(scene, CATCH_OPEN_MS);
+    if (run.aborted) return;
+    sprite.setPosition(homeX, homeY);
+    sprite.setScale(state.scaleX, state.scaleY);
+    await materialise(scene, sprite, ctx.palette, CATCH_BREAK_MS - CATCH_OPEN_MS, run);
+  };
+
+  try {
+    await Promise.race([
+      body().catch(() => undefined),
+      delay(scene, plan.cap).then(() => { run.aborted = true; }),
+    ]);
+  } finally {
+    run.aborted = true;
+    scene.tweens.killTweensOf(sprite);
+    for (const obj of run.junk) {
+      scene.tweens.killTweensOf(obj);
+      obj.destroy();
+    }
+    run.junk.length = 0;
+    restore(state);
+    for (const mask of run.masks) mask.destroy();
+    run.masks.length = 0;
+    // `restore` always ends visible, because an ENTRANCE always does. A catch
+    // is the one animation that can legitimately end with the mon gone.
+    sprite.setAlpha(result.caught ? 0 : 1);
+    // A sequence that ran out of clock leaves nothing on the field either way.
+    if (!result.caught) killBall();
+  }
+
+  return { done: killBall };
+}

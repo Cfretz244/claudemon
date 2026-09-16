@@ -11,6 +11,9 @@ import {
   resolveEntrance, resolveCry, MAX_WILD_MS, MAX_SENDOUT_MS, SHAPE_FLOURISH,
   CRY_CONTOURS, ENTRANCE_OVERRIDES,
 } from '../../src/logic/entranceSpec';
+import {
+  catchTimeline, MAX_CATCH_BASE_MS, MAX_CATCH_PER_SHAKE_MS,
+} from '../../src/logic/catchSequenceSpec';
 
 /**
  * The entrance renderer imports Phaser, which cannot be loaded in the node test
@@ -573,5 +576,157 @@ describe('SoundSystem.pokemonCryFor', () => {
     // Tremolo notes never reach playNotes: they are built one oscillator at a
     // time so the LFO can ride on them.
     expect(capture(() => soundSystem.pokemonCryFor(charmander))).toEqual([]);
+  });
+});
+
+describe('the catch sequence (E5)', () => {
+  const useBall = BATTLE_SCENE_SRC.split('private async useBall(')[1].split('\n  private usePotion')[0];
+  const seq = ENTRANCES_SRC.split('export async function catchSequence')[1] ?? '';
+
+  it('is what useBall plays, between "used BALL!" and the outcome text', () => {
+    const used = useBall.indexOf('used\\n${ballName}!');
+    const call = useBall.indexOf('await catchSequence(this, {');
+    const gotcha = useBall.indexOf('Gotcha! ${oppName}');
+    const free = useBall.indexOf('Oh no! The POKeMON');
+    expect(used).toBeGreaterThan(-1);
+    expect(call).toBeGreaterThan(used);
+    expect(call).toBeLessThan(gotcha);
+    expect(call).toBeLessThan(free);
+    // ...and the roll still happens before it: the animation PLAYS a result,
+    // it does not decide one.
+    expect(useBall.indexOf('attemptCatch(this.opponentPokemon, ballType)')).toBeLessThan(call);
+  });
+
+  it('throws from the player side, in the wild mon\'s palette, at its sprite', () => {
+    expect(useBall).toContain('sprite: this.opponentSprite');
+    expect(useBall).toContain('palette: this.catchPalette()');
+    expect(useBall).toContain("from: this.ballOrigin('player')");
+    const palette = BATTLE_SCENE_SRC.split('private catchPalette()')[1].split('\n  }')[0];
+    expect(palette).toContain('POKEMON_DATA[this.opponentPokemon.speciesId]?.types[0]');
+  });
+
+  it('no longer wobbles the Pokemon\'s own sprite, and no longer shrinks it', () => {
+    // Today's useBall tweened `opponentSprite.angle` once per shake and then
+    // tweened it to alpha 0 / scale 0 on a catch. The ball is what moves now;
+    // the mon is pulled into it by `dematerialise`.
+    expect(useBall).not.toContain('angle: 10');
+    expect(useBall).not.toContain('targets: this.opponentSprite');
+    expect(useBall).not.toContain('this.delay(500)');
+    expect(useBall).not.toContain('soundSystem.catchShake()');
+    expect(useBall).not.toContain('soundSystem.catchSuccess()');
+  });
+
+  it('keeps everything else about useBall: the item, the misses, the free move', () => {
+    expect(useBall).toContain('No balls left!');
+    expect(useBall).toContain('this.playerState.useItem(ballType)');
+    expect(useBall).toContain('this.playerState.addToParty(this.opponentPokemon)');
+    expect(useBall).toContain('was sent\\nto the PC!');
+    expect(useBall).toContain("this.finishForcedEncounter('caught')");
+    // The break-out still hands the AI a free swing, after the text.
+    expect(useBall.indexOf('Oh no! The POKeMON'))
+      .toBeLessThan(useBall.indexOf('this.executeMove(this.opponentPokemon'));
+  });
+
+  it('leaves the trainer short-circuit alone', () => {
+    const bag = BATTLE_SCENE_SRC.split('private handleBagSelection(')[1].split('\n  private ')[0];
+    const shortCircuit = bag.split('The TRAINER blocked')[1].split('return;')[0];
+    // Still the same two lines, the same free AI swing, and no ball animation:
+    // nothing is thrown, so there is nothing to animate.
+    expect(bag).toContain('The TRAINER blocked\\nthe BALL!');
+    expect(bag).toContain("Don't be a thief!");
+    expect(shortCircuit).toContain('this.executeMove(this.opponentPokemon');
+    expect(shortCircuit).not.toContain('catchSequence');
+    expect(shortCircuit).not.toContain('useBall');
+  });
+
+  it('is the only ball path: every attemptCatch caller goes through it', () => {
+    const callers = [...BATTLE_SCENE_SRC.matchAll(/attemptCatch\(/g)];
+    expect(callers).toHaveLength(1);
+    expect([...BATTLE_SCENE_SRC.matchAll(/catchSequence\(/g)]).toHaveLength(1);
+  });
+
+  it('plays throw -> capture -> drop -> shakes -> outcome, in that order', () => {
+    const order = ['await ballThrow(', 'await dematerialise(', 'soundSystem.ballDrop()',
+      'CATCH_DROP_MS', 'soundSystem.catchShake()', 'CATCH_ROCK_MS', 'CATCH_STILL_MS'];
+    let at = -1;
+    for (const needle of order) {
+      const i = seq.indexOf(needle);
+      expect(needle && i).toBeGreaterThan(at);
+      at = i;
+    }
+    // The drop is a thud, not a shake: playing catchShake there would make a
+    // zero-shake break-out sound like a one-shake one.
+    expect(seq.indexOf('soundSystem.ballDrop()')).toBeLessThan(seq.indexOf('soundSystem.catchShake()'));
+    expect(typeof soundSystem.ballDrop).toBe('function');
+  });
+
+  it('renders BOTH outcomes', () => {
+    // Caught: the success SFX, the button flashing twice, four sparkles, and a
+    // ball that is still there when the promise resolves.
+    expect(seq).toContain('soundSystem.catchSuccess()');
+    expect(seq).toContain('spriteFlash(ball as unknown as Phaser.GameObjects.Sprite, scene, 0xFFFFFF, 2)');
+    expect(seq).toContain('sparkle(scene, homeX, groundY, 0xFFFFFF, 4, CATCH_CAUGHT_MS)');
+    // Broke free: the ball bursts open, is destroyed, and the mon comes back.
+    expect(seq).toContain('void impactBurst(scene, homeX, groundY, 0xFFFFFF');
+    expect(seq).toContain('await materialise(scene, sprite, ctx.palette, CATCH_BREAK_MS - CATCH_OPEN_MS, run)');
+  });
+
+  it('rocks the BALL, by 20 degrees, once per shake', () => {
+    expect(ENTRANCES_SRC).toContain('export const CATCH_ROCK_ANGLE = 20');
+    expect(seq).toContain('for (let i = 0; i < Math.max(0, Math.min(3, result.shakes)); i++)');
+    expect(seq).toContain('ball.setAngle(Math.round(Math.sin(t * Math.PI * 2) * -CATCH_ROCK_ANGLE))');
+  });
+
+  it('drops the ball to the mon\'s ground line, on integer pixels, with a bounce', () => {
+    expect(seq).toContain('Phaser.Math.Easing.Bounce.Out(t)');
+    expect(seq).toContain('ball.setPosition(homeX, Math.round(homeY + (groundY - homeY) * e))');
+    expect(seq).toContain('const groundY = Math.round(homeY + sprite.displayHeight / 2)');
+  });
+
+  it('reverses materialise to pull the mon in, and restores nothing itself', () => {
+    const demat = ENTRANCES_SRC.split('export async function dematerialise')[1].split('\n}')[0];
+    // Pale silhouette first (a ghost fading IN, the mirror of crossFade), then
+    // the collapse toward the ball, ending invisible.
+    expect(demat).toContain('ghost.setTintFill(pale)');
+    expect(demat).toContain('ghost.setAlpha(0)');
+    expect(demat).toContain('targets: ghost, alpha: 1');
+    expect(demat).toContain('sprite.setTintFill(pale)');
+    expect(demat).toContain('sprite.setScale(sx * (1 - e), sy * (1 - e))');
+    expect(demat).toContain('sprite.setAlpha(0)');
+    expect(demat).not.toContain('restore(');
+  });
+
+  it('holds the same restore/cleanup/cap contract, with the alpha decided by the outcome', () => {
+    expect(seq).toContain('const state = snapshot(sprite)');
+    expect(seq).toContain('} finally {');
+    const fin = seq.split('} finally {')[1];
+    expect(fin).toContain('killTweensOf(sprite)');
+    expect(fin).toContain('obj.destroy()');
+    expect(fin).toContain('restore(state)');
+    // An entrance always ends visible. A catch is the one animation that can
+    // legitimately end with the mon gone.
+    expect(fin).toContain('sprite.setAlpha(result.caught ? 0 : 1)');
+    expect(fin).toContain('if (!result.caught) killBall()');
+    expect(seq).toContain('delay(scene, plan.cap).then(() => { run.aborted = true; })');
+  });
+
+  it('races the 2500 + 700 x shakes cap the spec module owns', () => {
+    expect(seq).toContain('const plan = catchTimeline(result.shakes, result.caught)');
+    expect(MAX_CATCH_BASE_MS).toBe(2500);
+    expect(MAX_CATCH_PER_SHAKE_MS).toBe(700);
+    for (const shakes of [0, 1, 2, 3]) {
+      const t = catchTimeline(shakes, shakes === 3);
+      expect(t.cap).toBe(2500 + 700 * shakes);
+      expect(t.total).toBeLessThanOrEqual(t.budget);
+    }
+  });
+
+  it('hands the scene a handle so the ball outlives "Gotcha!" and no longer', () => {
+    expect(seq).toContain('return { done: killBall }');
+    // Caught: destroyed AFTER the text. Broke free: destroyed before it, by
+    // the burst, and `done()` is the idempotent belt-and-braces call.
+    expect(useBall.indexOf('Gotcha! ${oppName}')).toBeLessThan(useBall.indexOf('catchAnim.done();'));
+    const broke = useBall.split('} else {')[1];
+    expect(broke.indexOf('catchAnim.done();')).toBeLessThan(broke.indexOf('Oh no! The POKeMON'));
   });
 });

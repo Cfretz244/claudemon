@@ -29,7 +29,7 @@ import { TRAINERS } from '../data/trainers';
 import { GYM_LEADERS } from '../data/gymLeaders';
 import { ELITE_FOUR, CHAMPION, HALL_OF_FAME_TEXT } from '../data/eliteFour';
 import { playMoveAnimation, AnimationContext } from '../systems/MoveAnimations';
-import { playEntrance } from '../systems/animations/entrances';
+import { playEntrance, catchSequence } from '../systems/animations/entrances';
 import { resolveEntrance, resolveCry, EntranceKind } from '../logic/entranceSpec';
 import { outcomeFor } from '../logic/animationOutcome';
 import { reviveHp, isReviveItem } from '../logic/reviveItems';
@@ -429,6 +429,15 @@ export class BattleScene extends Phaser.Scene {
       return { x: Math.round(trainer.x), y: Math.round(trainer.y) };
     }
     return { x: side === 'player' ? -8 : GAME_WIDTH + 8, y: Math.round(sprite.y) };
+  }
+
+  /**
+   * The type palette the catch sequence opens the ball in: the wild mon's
+   * primary type, exactly as an entrance resolves it. NORMAL is the fallback
+   * for the ghost, which has no species row.
+   */
+  private catchPalette(): PokemonType {
+    return POKEMON_DATA[this.opponentPokemon.speciesId]?.types[0] ?? PokemonType.NORMAL;
   }
 
   /**
@@ -1458,34 +1467,22 @@ export class BattleScene extends Phaser.Scene {
 
     const result = attemptCatch(this.opponentPokemon, ballType);
 
-    // Shake animation
-    for (let i = 0; i < result.shakes; i++) {
-      soundSystem.catchShake();
-      await this.delay(500);
-
-      this.tweens.add({
-        targets: this.opponentSprite,
-        angle: 10,
-        duration: 100,
-        yoyo: true,
-        repeat: 1,
-      });
-      await this.delay(300);
-    }
+    // The ball: thrown, the mon pulled into it, dropped, shaken once per shake
+    // the roll produced, and opened or sparkled on the outcome (design
+    // section 8's catch row). This replaces the old 500 + 300 ms dead gaps and
+    // the angle wobble of the MON's own sprite - the ball is what wobbles now.
+    const catchAnim = await catchSequence(this, {
+      sprite: this.opponentSprite,
+      palette: this.catchPalette(),
+      from: this.ballOrigin('player'),
+    }, result);
 
     if (result.caught) {
-      soundSystem.catchSuccess();
       this.battleOver = true;
 
-      this.tweens.add({
-        targets: this.opponentSprite,
-        alpha: 0,
-        scaleX: 0,
-        scaleY: 0,
-        duration: 500,
-      });
-
+      // The ball stays on the ground under the line, then goes with it.
       await this.showText([`Gotcha! ${oppName}\nwas caught!`]);
+      catchAnim.done();
 
       // Add to party/PC
       const addedToParty = this.playerState.addToParty(this.opponentPokemon);
@@ -1496,6 +1493,7 @@ export class BattleScene extends Phaser.Scene {
       this.finishForcedEncounter('caught');
       this.endBattle();
     } else {
+      catchAnim.done();
       await this.showText(["Oh no! The POKeMON\nbroke free!"]);
 
       // Opponent attacks

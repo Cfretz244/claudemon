@@ -337,6 +337,17 @@ export class SoundSystem {
     ], 'square', 0.06);
   }
 
+  /**
+   * The ball hitting the ground. One low note, deliberately NOT `catchShake()`:
+   * the drop is not a shake, and playing the shake SFX there would make a
+   * zero-shake break-out sound like a one-shake one.
+   */
+  ballDrop(): void {
+    this.playNotes([
+      { freq: 120, dur: 0.09, delay: 0 },
+    ], 'triangle', 0.09);
+  }
+
   catchShake(): void {
     this.playNotes([
       { freq: 500, dur: 0.1, delay: 0 },
