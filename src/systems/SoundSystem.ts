@@ -1,4 +1,8 @@
 import { MUSIC_TRACKS, MusicTrack } from '../data/musicTracks';
+import { CRY_CONTOURS, CrySpec } from '../logic/entranceSpec';
+
+/** The cry volume today's `pokemonCry` uses; shared so both paths match. */
+const CRY_VOLUME = 0.08;
 
 type NoteEntry = [number, number]; // [frequency, duration in beats]
 
@@ -414,6 +418,76 @@ export class SoundSystem {
       { freq: baseFreq * 1.2, dur: 0.1, delay: 0.1 },
       { freq: baseFreq * 0.8, dur: 0.15, delay: 0.2 },
     ], 'sawtooth', 0.08);
+  }
+
+  /**
+   * The per-species cry. `resolveCry` (logic/entranceSpec.ts) picks the note
+   * contour from the mon's body shape and the wave from its primary type; this
+   * only has to play what it is handed.
+   *
+   * `pokemonCry(baseFreq)` above is kept as-is for its other callers, and the
+   * `triad` contour is byte-for-byte its note table - so a round mon routed
+   * through here sounds exactly like it did before this change.
+   */
+  pokemonCryFor(spec: CrySpec): void {
+    const contour = CRY_CONTOURS[spec.contour] ?? CRY_CONTOURS.triad;
+    const notes = contour.map(n => ({
+      freq: spec.baseFreq * n.freqMul,
+      dur: n.dur,
+      delay: n.delay,
+    }));
+    if (spec.tremolo || spec.vibrato) {
+      this.playModulatedNotes(notes, spec.wave, CRY_VOLUME, !!spec.tremolo, !!spec.vibrato);
+      return;
+    }
+    this.playNotes(notes, spec.wave, CRY_VOLUME);
+  }
+
+  /**
+   * `playNotes` with a low-frequency oscillator on top: FIRE mons waver in
+   * volume (tremolo), GHOST mons waver in pitch (vibrato). Both are one extra
+   * oscillator per note patched into the same graph `playTone` builds, so a
+   * browser without Web Audio still falls through the same try/catch.
+   */
+  private playModulatedNotes(
+    notes: Array<{ freq: number; dur: number; delay: number }>,
+    type: OscillatorType,
+    volume: number,
+    tremolo: boolean,
+    vibrato: boolean,
+  ): void {
+    if (!this.enabled) return;
+    for (const note of notes) {
+      setTimeout(() => {
+        if (!this.enabled) return;
+        try {
+          const ctx = this.getCtx();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = type;
+          osc.frequency.value = note.freq;
+          gain.gain.value = volume;
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + note.dur);
+
+          const lfo = ctx.createOscillator();
+          const lfoGain = ctx.createGain();
+          lfo.type = 'sine';
+          lfo.frequency.value = tremolo ? 14 : 9;
+          lfoGain.gain.value = tremolo ? volume * 0.6 : note.freq * 0.04;
+          lfo.connect(lfoGain);
+          lfoGain.connect(tremolo ? gain.gain : osc.frequency);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime);
+          lfo.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + note.dur);
+          lfo.stop(ctx.currentTime + note.dur);
+        } catch {
+          // Audio context not available
+        }
+      }, note.delay * 1000);
+    }
   }
 
   doorOpen(): void {
