@@ -1728,7 +1728,7 @@ export class BattleScene extends Phaser.Scene {
       // the next level-up, which falls out of `checkEvolution` re-running.
       if (outcome === 'cancelled') continue;
 
-      evolvePokemon(pokemon, entry.toSpecies);
+      evolvePokemon(pokemon, entry.toSpecies, this.playerState);
 
       // The new species' own level-<level> moves, through the level-up prompt.
       // Under its NEW name: the evolution lines are the only ones that still
