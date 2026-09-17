@@ -1,69 +1,98 @@
 import { CustomSpriteDrawFn } from '../types';
 
+/**
+ * Magikarp — full redo. The old one's paired pectoral rects read as arms; it
+ * is now an unmistakable fish: one body oval seen side-on, the gaping
+ * white-lipped mouth at the front, two long drooping gold whiskers, a tall
+ * gold dorsal fin, a single low pectoral fin and a big fan tail.
+ */
 export const magikarp: CustomSpriteDrawFn = (ctx, isBack) => {
-  // Magikarp - red/gold fish, big dumb round eyes, whiskers, simple
+  const RED = '#f09838';        // species spriteColor
+  const RED_DARK = '#b85c1c';
+  const GOLD = '#f0c870';       // species spriteColor2
+  const GOLD_DARK = '#b8903c';
+  const LIP = '#f8f0e0';
 
-  // Body - round fish
-  ctx.fillStyle = '#d06830';
-  ctx.fillRect(8, 10, 14, 12);
-  ctx.fillRect(6, 12, 18, 8);
-  ctx.fillRect(10, 8, 10, 2);
+  // Tail fan
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(26, 3, 6, 10);
+  ctx.fillRect(26, 19, 6, 10);
+  ctx.fillStyle = GOLD_DARK;
+  ctx.fillRect(28, 5, 1, 7);
+  ctx.fillRect(28, 20, 1, 7);
+  ctx.fillStyle = RED;
+  ctx.fillRect(23, 11, 5, 10);
 
-  // Yellow/gold belly
-  ctx.fillStyle = '#d8b048';
-  ctx.fillRect(8, 18, 14, 4);
-  ctx.fillRect(10, 16, 10, 2);
+  // Dorsal fin
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(13, 3, 9, 6);
+  ctx.fillRect(15, 1, 5, 3);
+  ctx.fillStyle = GOLD_DARK;
+  ctx.fillRect(16, 2, 1, 6);
+  ctx.fillRect(19, 3, 1, 5);
 
-  // Tail fin
-  ctx.fillStyle = '#d06830';
-  ctx.fillRect(22, 10, 4, 3);
-  ctx.fillRect(24, 8, 4, 4);
-  ctx.fillRect(24, 16, 4, 4);
-  ctx.fillRect(22, 18, 4, 3);
-  ctx.fillRect(26, 6, 4, 6);
-  ctx.fillRect(26, 17, 4, 6);
+  // Body oval
+  ctx.fillStyle = RED;
+  ctx.fillRect(8, 11, 17, 11);
+  ctx.fillRect(6, 13, 21, 7);
+  ctx.fillRect(10, 9, 13, 3);
+  ctx.fillRect(10, 22, 13, 2);
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(9, 19, 14, 4);
+  ctx.fillRect(11, 23, 10, 1);
 
-  // Dorsal fin (top)
-  ctx.fillStyle = '#d8b048';
-  ctx.fillRect(12, 6, 4, 4);
-  ctx.fillRect(14, 4, 3, 4);
+  // Scale rows
+  ctx.fillStyle = RED_DARK;
+  ctx.fillRect(12, 12, 2, 2);
+  ctx.fillRect(16, 12, 2, 2);
+  ctx.fillRect(20, 12, 2, 2);
+  ctx.fillRect(14, 15, 2, 2);
+  ctx.fillRect(18, 15, 2, 2);
+  ctx.fillRect(22, 15, 2, 2);
 
-  // Pectoral fin
-  ctx.fillStyle = '#d8b048';
-  ctx.fillRect(6, 16, 4, 3);
-  ctx.fillRect(4, 17, 3, 3);
-
-  // Scales pattern
-  ctx.fillStyle = '#c05828';
-  ctx.fillRect(10, 12, 2, 2);
-  ctx.fillRect(14, 12, 2, 2);
-  ctx.fillRect(18, 12, 2, 2);
-  ctx.fillRect(12, 14, 2, 2);
-  ctx.fillRect(16, 14, 2, 2);
-
-  // Whiskers
-  ctx.fillStyle = '#d8b048';
-  ctx.fillRect(4, 12, 4, 1);
-  ctx.fillRect(2, 13, 3, 1);
-  ctx.fillRect(4, 16, 4, 1);
-  ctx.fillRect(2, 15, 3, 1);
+  // One low pectoral fin (not a pair of arms)
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(11, 21, 7, 5);
+  ctx.fillStyle = GOLD_DARK;
+  ctx.fillRect(13, 22, 1, 4);
+  ctx.fillRect(15, 22, 1, 4);
 
   if (!isBack) {
-    // Big dumb eyes
+    // Gaping mouth with white lips
+    ctx.fillStyle = LIP;
+    ctx.fillRect(2, 9, 8, 4);
+    ctx.fillRect(2, 18, 8, 4);
+    ctx.fillRect(1, 11, 3, 9);
+    ctx.fillStyle = '#7c2230';
+    ctx.fillRect(4, 13, 6, 5);
+    ctx.fillStyle = RED_DARK;
+    ctx.fillRect(9, 13, 2, 5);
+    // Big dumb eye
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(8, 10, 4, 4);
-    ctx.fillStyle = '#302020';
-    ctx.fillRect(10, 11, 2, 3);
+    ctx.fillRect(9, 10, 6, 6);
+    ctx.fillStyle = '#281820';
+    ctx.fillRect(11, 11, 3, 4);
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(10, 11, 1, 1);
-    // Mouth - open and dumb
-    ctx.fillStyle = '#302020';
-    ctx.fillRect(6, 14, 3, 2);
+    ctx.fillRect(11, 11, 1, 1);
+    // Two long whiskers drooping off the jaw
+    ctx.fillStyle = GOLD;
+    ctx.fillRect(3, 21, 5, 2);
+    ctx.fillRect(1, 22, 3, 2);
+    ctx.fillRect(0, 23, 2, 5);
+    ctx.fillRect(6, 22, 2, 4);
+    ctx.fillRect(7, 25, 3, 2);
+    ctx.fillRect(9, 26, 3, 2);
+    ctx.fillStyle = GOLD_DARK;
+    ctx.fillRect(0, 26, 2, 2);
+    ctx.fillRect(10, 26, 2, 2);
   } else {
-    // Back scales
-    ctx.fillStyle = '#c05828';
-    ctx.fillRect(10, 12, 10, 6);
-    ctx.fillStyle = '#d06830';
-    ctx.fillRect(12, 13, 6, 4);
+    // Back: the same fish from behind — darker back, no face
+    ctx.fillStyle = RED_DARK;
+    ctx.fillRect(7, 12, 19, 6);
+    ctx.fillRect(9, 10, 15, 3);
+    ctx.fillStyle = RED;
+    ctx.fillRect(9, 13, 15, 3);
+    ctx.fillStyle = GOLD_DARK;
+    ctx.fillRect(4, 14, 5, 5);
   }
 };

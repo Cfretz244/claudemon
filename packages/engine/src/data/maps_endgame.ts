@@ -957,7 +957,9 @@ export const ROUTE21: MapData = (() => {
     collision,
     warps: [
       // North exit → Pallet Town
-      { x: 7, y: 0, targetMap: 'pallet_town', targetX: 9, targetY: 17 },
+      // Onto Pallet's pier: (10,15) is where the fisherman stands, so the
+      // crossing lands on the plank beside him at (11,15).
+      { x: 7, y: 0, targetMap: 'pallet_town', targetX: 11, targetY: 15 },
       // South entrance → Cinnabar Island
       { x: 7, y: 24, targetMap: 'cinnabar_island', targetX: 9, targetY: 1 },
     ],

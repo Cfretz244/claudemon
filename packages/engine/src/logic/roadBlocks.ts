@@ -177,3 +177,98 @@ export function badgeCheckOutcome(npcId: string, state: RoadBlockState): BadgeCh
     clearFlag: pass ? badgeCheckClearedFlag(npcId) : null,
   };
 }
+
+// ── Oak's escort walk ────────────────────────────────────────────────────────
+//
+// Oak comes out of his lab, walks to the player, says his piece and leads them
+// back. `OverworldScene` used to build both legs with two hand-written corridor
+// heuristics that hard-coded Pallet's old geometry — the lab door at (10,16),
+// "go west to x=6 to clear the lab", "x=6 is blocked by the house above y=7".
+// Re-drawing the town moved every one of those numbers, so the walk is a
+// shortest path over the map's own collision grid instead: it cannot be made
+// wrong by a map edit, and it is unit-testable without Phaser.
+
+/** The read-only slice of a map the escort walk needs. */
+export interface WalkableMap {
+  width: number;
+  height: number;
+  collision: boolean[][];
+  warps: ReadonlyArray<{ x: number; y: number; targetMap: string }>;
+}
+
+export interface Tile { x: number; y: number }
+
+const STEPS: ReadonlyArray<Tile> = [
+  { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 },
+];
+
+/**
+ * Shortest four-directional walk from `from` to `to`, as the tiles to step
+ * onto (the start tile is not included). `null` when `to` cannot be reached —
+ * or is not standable. Tiles in `blocked` (other NPCs, say) are walls.
+ */
+export function walkPath(
+  map: WalkableMap,
+  from: Tile,
+  to: Tile,
+  blocked: ReadonlySet<string> = new Set(),
+): Tile[] | null {
+  const key = (t: Tile) => `${t.x},${t.y}`;
+  const standable = (t: Tile) =>
+    t.x >= 0 && t.y >= 0 && t.x < map.width && t.y < map.height &&
+    !map.collision[t.y][t.x] && !blocked.has(key(t));
+  if (!standable(to)) return null;
+  if (from.x === to.x && from.y === to.y) return [];
+
+  const prev = new Map<string, Tile | null>([[key(from), null]]);
+  const queue: Tile[] = [from];
+  for (let head = 0; head < queue.length; head++) {
+    const at = queue[head];
+    for (const d of STEPS) {
+      const next = { x: at.x + d.x, y: at.y + d.y };
+      const k = key(next);
+      if (prev.has(k) || !standable(next)) continue;
+      prev.set(k, at);
+      if (next.x === to.x && next.y === to.y) {
+        const path: Tile[] = [];
+        for (let t: Tile | null = next; t && !(t.x === from.x && t.y === from.y); t = prev.get(key(t)) ?? null) {
+          path.unshift(t);
+        }
+        return path;
+      }
+      queue.push(next);
+    }
+  }
+  return null;
+}
+
+/**
+ * The doorstep Oak steps out onto: the tile below this map's warp into his
+ * lab. The door tile itself is the facade — you walk INTO it — so the mat
+ * below it is where an NPC coming out of the building actually stands.
+ */
+export function oakLabDoorstep(map: WalkableMap): Tile | null {
+  const door = map.warps.find(w => w.targetMap === OAK_ESCORT_DESTINATION.mapId);
+  return door ? { x: door.x, y: door.y + 1 } : null;
+}
+
+/**
+ * Where Oak stops to talk. He prefers the tile directly south of the player
+ * (he has come up the path and turns to face them); if that one is a wall, the
+ * sea or another NPC, he takes whichever neighbouring tile he can actually
+ * reach. `null` when the player is somewhere Oak cannot walk to at all.
+ */
+export function oakGreetingSpot(
+  map: WalkableMap,
+  from: Tile,
+  player: Tile,
+  blocked: ReadonlySet<string> = new Set(),
+): { spot: Tile; path: Tile[] } | null {
+  const south = { x: player.x, y: player.y + 1 };
+  const candidates = [south, ...STEPS.map(d => ({ x: player.x + d.x, y: player.y + d.y }))];
+  for (const spot of candidates) {
+    const path = walkPath(map, from, spot, blocked);
+    if (path) return { spot, path };
+  }
+  return null;
+}

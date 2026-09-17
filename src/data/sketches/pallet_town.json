@@ -1,0 +1,122 @@
+{
+ "id": "pallet_town",
+ "legend": {
+  "T": "TREE",
+  ".": "PATH",
+  ",": "COBBLESTONE",
+  "'": "GRASS",
+  "\"": "TALL_GRASS",
+  "*": "FLOWER",
+  "=": "FENCE",
+  "~": "WATER",
+  "P": "PLANK",
+  "h": "BUILDING",
+  "L": "BUILDING",
+  "D": "DOOR",
+  "d": "DOORMAT",
+  "s": "SIGN",
+  "W": "PATH"
+ },
+ "rows": [
+  "TTTTTTTTTWWTTTTTTTTT",
+  "TTTTTTTTs...TTTTTTTT",
+  "T''''''''....''''''T",
+  "T'hhhhh''....'hhhhhT",
+  "T'hhhhh''....'hhhhhT",
+  "T'hhDhh''....'hhDhhT",
+  "T''=d='''....''=d='T",
+  "T'''.............''T",
+  "T'\"\"\"''''....'''**'T",
+  "T'\"\"\"'''.....'=====T",
+  "T'''''''.LLLLLLL''*T",
+  "T''''''s.LLLLLLL''*T",
+  "T'''''''.LLLDLLL'''T",
+  "T'''''''....d,,....T",
+  "T''''''''...''''''.T",
+  "T~~~~~~~~PPP~~~~~~~T",
+  "T~~~~~~~~PWW~~~~~~~T"
+ ],
+ "buildings": [
+  {
+   "kind": "house",
+   "x": 2,
+   "y": 3,
+   "w": 5,
+   "h": 3,
+   "door": [
+    4,
+    5
+   ],
+   "warp": "player_house"
+  },
+  {
+   "kind": "house",
+   "x": 14,
+   "y": 3,
+   "w": 5,
+   "h": 3,
+   "door": [
+    16,
+    5
+   ],
+   "warp": "rival_house"
+  },
+  {
+   "kind": "landmark",
+   "x": 9,
+   "y": 10,
+   "w": 7,
+   "h": 3,
+   "door": [
+    12,
+    12
+   ],
+   "warp": "oaks_lab"
+  }
+ ],
+ "npcs": [
+  {
+   "id": "pallet_npc1",
+   "x": 9,
+   "y": 7
+  },
+  {
+   "id": "pallet_npc2",
+   "x": 17,
+   "y": 12
+  },
+  {
+   "id": "pallet_fisher",
+   "x": 10,
+   "y": 15
+  }
+ ],
+ "edgeWarps": [
+  [
+   9,
+   0,
+   "route1"
+  ],
+  [
+   10,
+   0,
+   "route1"
+  ],
+  [
+   10,
+   16,
+   "route21"
+  ],
+  [
+   11,
+   16,
+   "route21"
+  ]
+ ],
+ "lookouts": [
+  [
+   18,
+   14
+  ]
+ ]
+}
