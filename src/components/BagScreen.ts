@@ -7,6 +7,7 @@ import { ITEMS, HM_COMPATIBILITY, TM_COMPATIBILITY } from '../data/items';
 import { soundSystem } from '../systems/SoundSystem';
 import { PlayerState } from '../entities/Player';
 import { addExperience, learnMove } from '../systems/ExperienceSystem';
+import { checkEvolution } from '../systems/EvolutionSystem';
 import { MoveForgetUI } from './MoveForgetUI';
 import { bindMenuKeys, clampIndex } from './MenuInput';
 import { reviveHp } from '../logic/reviveItems';
@@ -20,6 +21,18 @@ export class BagScreen {
   private onEscapeRope: (() => void) | null = null;
   private onBicycle: (() => void) | null = null;
   private onFishing: ((rodId: string) => void) | null = null;
+  /**
+   * How the bag plays an evolution.
+   *
+   * A Rare Candy can push a mon over its evolution level, and Gen I runs the
+   * full sequence right there in the overworld. The bag is a component: it
+   * cannot draw a sequence or apply the evolution itself, so the scene hands it
+   * a callback that does both and reports back the moves the NEW species learns
+   * at its new level, which the bag then feeds through its own move-forget
+   * queue. An empty array means nothing was learned - or that the player
+   * pressed B and cancelled.
+   */
+  private onEvolve: ((pokemon: PokemonInstance, toSpecies: number) => Promise<number[]>) | null = null;
 
   // State
   private playerState!: PlayerState;
@@ -65,6 +78,8 @@ export class BagScreen {
   // Move forget UI
   private moveForgetUI!: MoveForgetUI;
   private pendingMoves: { pokemon: PokemonInstance; moveId: number }[] = [];
+  /** Set by a Rare Candy level-up; played once its message is dismissed. */
+  private pendingEvolution: { pokemon: PokemonInstance; toSpecies: number } | null = null;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -189,12 +204,14 @@ export class BagScreen {
     this.container.setVisible(false);
   }
 
-  show(playerState: PlayerState, onClose: () => void, onEscapeRope?: () => void, onBicycle?: () => void, onFishing?: (rodId: string) => void): void {
+  show(playerState: PlayerState, onClose: () => void, onEscapeRope?: () => void, onBicycle?: () => void, onFishing?: (rodId: string) => void, onEvolve?: (pokemon: PokemonInstance, toSpecies: number) => Promise<number[]>): void {
     this.playerState = playerState;
     this.onClose = onClose;
     this.onEscapeRope = onEscapeRope || null;
     this.onBicycle = onBicycle || null;
     this.onFishing = onFishing || null;
+    this.onEvolve = onEvolve || null;
+    this.pendingEvolution = null;
     this.mode = 'list';
     this.cursorIndex = 0;
     this.scrollOffset = 0;
@@ -271,11 +288,7 @@ export class BagScreen {
     if (this.messageVisible) {
       this.messageVisible = false;
       this.messageContainer.setVisible(false);
-      // After dismissing a message, check if there are pending moves to process
-      if (this.pendingMoves.length > 0) {
-        this.processNextPendingMove();
-        return;
-      }
+      this.afterMessageDismissed();
       return;
     }
 
@@ -310,11 +323,7 @@ export class BagScreen {
     if (this.messageVisible) {
       this.messageVisible = false;
       this.messageContainer.setVisible(false);
-      // After dismissing a message, check if there are pending moves to process
-      if (this.pendingMoves.length > 0) {
-        this.processNextPendingMove();
-        return;
-      }
+      this.afterMessageDismissed();
       return;
     }
 
@@ -557,6 +566,13 @@ export class BagScreen {
         }
       }
 
+      // Gen I: a Rare Candy that crosses an evolution level evolves the mon
+      // right here, with the same sequence a battle plays - after the level-up
+      // line and its move learning, which is the order `afterMessageDismissed`
+      // walks.
+      const evo = this.onEvolve ? checkEvolution(pokemon) : null;
+      this.pendingEvolution = evo ? { pokemon, toSpecies: evo.toSpecies } : null;
+
       this.showMessage(`${this.getPokemonName(pokemon)} grew to\nLv${pokemon.level}!`);
       this.afterItemUse();
       return;
@@ -705,6 +721,49 @@ export class BagScreen {
     } else {
       this.descText.setText('No items.');
     }
+  }
+
+  /**
+   * What follows a dismissed message: the level-up moves first, then the
+   * evolution. Gen I's order for a Rare Candy, and the reason the evolution is
+   * queued rather than played from `useItemOnPokemon`.
+   */
+  private afterMessageDismissed(): void {
+    if (this.pendingMoves.length > 0) {
+      this.processNextPendingMove();
+      return;
+    }
+    if (this.pendingEvolution) void this.runPendingEvolution();
+  }
+
+  /**
+   * Step out of the way, let the scene play the evolution, step back.
+   *
+   * The bag sits at depth 950 and the sequence's field at 200, so the bag has
+   * to hide or it would cover the whole thing; and B is the sequence's cancel
+   * key as well as the bag's, so it has to stop taking input too. The moves the
+   * new species brings with it come back through the bag's own forget queue,
+   * exactly as a level-up's would.
+   */
+  private async runPendingEvolution(): Promise<void> {
+    const pending = this.pendingEvolution;
+    this.pendingEvolution = null;
+    if (!pending || !this.onEvolve) return;
+
+    const wasVisible = this.visible;
+    this.visible = false;
+    this.container.setVisible(false);
+
+    const learned = await this.onEvolve(pending.pokemon, pending.toSpecies);
+
+    this.container.setVisible(true);
+    for (const moveId of learned) {
+      this.pendingMoves.push({ pokemon: pending.pokemon, moveId });
+    }
+    // The same one-frame gate `show` uses: the key that dismissed the last line
+    // of the sequence must not also confirm in the bag underneath it.
+    this.scene.time.delayedCall(0, () => { this.visible = wasVisible; });
+    if (this.pendingMoves.length > 0) this.processNextPendingMove();
   }
 
   private processNextPendingMove(): void {

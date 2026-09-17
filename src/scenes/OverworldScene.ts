@@ -43,6 +43,10 @@ import {
 } from '../logic/roadBlocks';
 import { elevatorAccess, elevatorTarget, visitedFlag } from '../logic/elevator';
 import { newGameState } from '../logic/newGame';
+import { POKEMON_DATA } from '../data/pokemon';
+import { evolvePokemon } from '../systems/EvolutionSystem';
+import { learnsetAtLevel } from '../logic/evolutionSequence';
+import { playEvolution } from '../systems/animations/evolution';
 import { computeCurrentSlide, computeSlide, Slide } from '../logic/spinTiles';
 import { snorlaxEncounter, marowakAmbush } from '../logic/forcedEncounters';
 import { isPosterSign, posterOutcome } from '../logic/gameCornerPoster';
@@ -2419,7 +2423,40 @@ export class OverworldScene extends Phaser.Scene {
     } : undefined;
     this.bagScreen.show(this.playerState, () => {
       this.screenOpen = false;
-    }, escapeRopeCb, bicycleCb, fishingCb);
+    }, escapeRopeCb, bicycleCb, fishingCb, (pokemon, toSpecies) => this.runEvolution(pokemon, toSpecies));
+  }
+
+  /**
+   * Play an evolution over the overworld and apply it.
+   *
+   * The same `playEvolution` the battle plays, so a Rare Candy evolution looks
+   * exactly like the one that follows a level-up in a fight. The bag calls this
+   * and waits; what comes back is the list of moves the NEW species learns at
+   * this level, which the bag runs through its own move-forget queue.
+   *
+   * The one thing the overworld has that a battle does not is the cave darkness
+   * overlay at depth 850, which would sit on top of the sequence's field (200).
+   * It is hidden for the duration and put back exactly as it was.
+   */
+  private async runEvolution(pokemon: PokemonInstance, toSpecies: number): Promise<number[]> {
+    const darkWasVisible = this.darkOverlay?.visible ?? false;
+    if (darkWasVisible) this.darkOverlay!.setVisible(false);
+
+    try {
+      const level = pokemon.level;
+      const outcome = await playEvolution(this, {
+        fromSpecies: pokemon.speciesId,
+        toSpecies,
+        name: pokemon.nickname || POKEMON_DATA[pokemon.speciesId]?.name || '???',
+      });
+      // Cancelled (B): nothing is applied. `checkEvolution` offers it again the
+      // next time this mon levels up, which is Gen I's behaviour.
+      if (outcome === 'cancelled') return [];
+      evolvePokemon(pokemon, toSpecies);
+      return learnsetAtLevel(toSpecies, level);
+    } finally {
+      if (darkWasVisible) this.darkOverlay!.setVisible(true);
+    }
   }
 
   private isFacingWater(): boolean {
