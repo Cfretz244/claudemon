@@ -5,6 +5,7 @@ import { POKEMON_DATA } from '../data/pokemon';
 import { MOVES_DATA } from '../data/moves';
 import { soundSystem } from '../systems/SoundSystem';
 import { bindMenuKeys, clampIndex } from './MenuInput';
+import { expToNextLevel, MAX_LEVEL } from '../logic/expBar';
 
 // Field move IDs
 const FIELD_MOVES: Record<number, { name: string; fieldName: string }> = {
@@ -316,7 +317,10 @@ export class PartyScreen {
       `ATK: ${p.stats.attack}  DEF: ${p.stats.defense}`,
       `SPC: ${p.stats.special}  SPD: ${p.stats.speed}`,
       `Status: ${statusStr}`,
-      '',
+      // Same helper the battle EXP bar reads, so the two can never disagree.
+      // Replaces the blank separator rather than adding a line: the summary
+      // already fills the 144px screen.
+      `EXP to next Lv: ${p.level >= MAX_LEVEL ? '--' : expToNextLevel(p)}`,
       'Moves:',
       moveLines,
     ];
