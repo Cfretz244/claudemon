@@ -17,6 +17,14 @@ const SOLID_TILES = new Set([
   TileType.SHUTTLE_DISPLAY,
   TileType.TOMBSTONE,
   TileType.GATE,
+  // Town building kit
+  TileType.WINDOW,
+  TileType.ROOF_EDGE_L,
+  TileType.ROOF_EDGE_R,
+  TileType.ROOF_RIDGE,
+  TileType.SIGNBOARD,
+  TileType.CHIMNEY,
+  TileType.ROCK,
 ]);
 
 describe('ALL_MAPS', () => {
@@ -301,8 +309,10 @@ describe('warp landings', () => {
     for (const w of exits) {
       expect({ x: w.targetX, y: w.targetY }, `oaks_lab warp at (${w.x},${w.y})`).toEqual(landing);
     }
-    // ...which is standable, and NOT the door facade the player used to land on
-    expect(town.tiles[landing.y][landing.x]).toBe(TileType.PATH);
+    // ...which is standable, and NOT the door facade the player used to land on.
+    // It became a DOORMAT when Pallet was re-stamped with `stampBuilding`: the
+    // kit writes a doorstep below every door (it was PATH before).
+    expect(town.tiles[landing.y][landing.x]).toBe(TileType.DOORMAT);
     expect(town.collision[landing.y][landing.x]).toBe(false);
     expect(town.npcs?.some(n => n.x === landing.x && n.y === landing.y)).toBeFalsy();
     expect(town.warps.some(w => w.x === landing.x && w.y === landing.y)).toBe(false);

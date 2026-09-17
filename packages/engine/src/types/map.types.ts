@@ -46,7 +46,32 @@ export enum TileType {
   CURRENT = 38,
   /** Walkable floor that fully heals the party when stepped on (Pokemon Tower 5F). */
   HEAL_TILE = 39,
+  // ── Town building kit (see `stampBuilding` in src/data/mapBuilder.ts) ──
+  /** Solid: a wall tile with a window in it. */
+  WINDOW = 40,
+  /** Solid: the left end of a roof row (gable board on the left edge). */
+  ROOF_EDGE_L = 41,
+  /** Solid: the right end of a roof row (gable board on the right edge). */
+  ROOF_EDGE_R = 42,
+  /** Solid: the top row of a roof (ridge line + light stripe). */
+  ROOF_RIDGE = 43,
+  /** Solid: a board on the wall beside a door - P / MART / GYM / blank. */
+  SIGNBOARD = 44,
+  /** Solid: a brick chimney stub, replacing one ridge tile. */
+  CHIMNEY = 45,
+  /** Walkable: wooden pier planks laid over water. */
+  PLANK = 46,
+  /** Solid: dark volcanic rock (Cinnabar's ring instead of trees). */
+  ROCK = 47,
+  /** Walkable: grey stone chips - the ground of a stone town (Pewter, Indigo). */
+  GRAVEL = 48,
 }
+
+/**
+ * What a building is, for `stampBuilding` and for the per-kind palettes and
+ * textures (`TownPalette.buildings`, `tile_<theme>_<kind>_<tileId>`).
+ */
+export type BuildingKind = 'house' | 'center' | 'mart' | 'gym' | 'landmark';
 
 export interface WarpPoint {
   x: number;
@@ -194,6 +219,12 @@ export interface MapData {
   surfEncounters?: WildEncounterTable;
   /** The elevator reachable from this floor's `elevator_` NPC; see `src/logic/elevator.ts`. */
   elevator?: ElevatorData;
+  /**
+   * Which building each stamped tile belongs to, keyed `"x,y"`. Written by
+   * `stampBuilding`; the scene picks the per-kind texture variant from it, and
+   * building tiles with no entry are drawn as `house`.
+   */
+  tileKinds?: Record<string, BuildingKind>;
   /**
    * Tile types that roll `wildEncounters` on foot (default TALL_GRASS and
    * CAVE_FLOOR). Lets indoor dungeons such as the Mansion roll on INDOOR_FLOOR.

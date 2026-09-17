@@ -9,7 +9,7 @@ import { SILPH_MAPS } from './maps_silph';
 import { HIDEOUT_MAPS } from './maps_hideout';
 import { TOWER_MAPS } from './maps_tower';
 import { CAVE_MAPS } from './maps_cave';
-import { createMapShape, SOLID_TILES } from './mapBuilder';
+import { createMapShape, SOLID_TILES, stampBuilding } from './mapBuilder';
 
 const T = TileType;
 
@@ -17,26 +17,22 @@ const MUSEUM_SOLID = new Set([...SOLID_TILES, T.EXHIBIT_CASE, T.FOSSIL_DISPLAY, 
 
 export const PALLET_TOWN: MapData = (() => {
   const W = 20, H = 20;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
+  const shape = createMapShape(W, H, T.GRASS);
+  const { tiles, collision, tileKinds, setTile, fillRect } = shape;
 
   // Paths
   fillRect(8, 4, 4, 14, T.PATH);
   fillRect(2, 8, 16, 2, T.PATH);
 
+  // The three buildings come from the kit (`stampBuilding`), at the same
+  // footprints and the same door tiles they have always had — (4,6), (14,6)
+  // and (10,15) — so no warp, interior or story coordinate moves.
   // Player's house (top-left area)
-  fillRect(2, 3, 5, 1, T.ROOF);
-  fillRect(2, 4, 5, 3, T.BUILDING);
-  setTile(4, 6, T.DOOR);
-
+  stampBuilding(shape, 'house', 2, 3, { w: 5, h: 4, chimney: true });
   // Rival's house (top-right area)
-  fillRect(12, 3, 5, 1, T.ROOF);
-  fillRect(12, 4, 5, 3, T.BUILDING);
-  setTile(14, 6, T.DOOR);
-
-  // Oak's Lab (bottom center)
-  fillRect(7, 12, 6, 1, T.ROOF);
-  fillRect(7, 13, 6, 3, T.BUILDING);
-  setTile(10, 15, T.DOOR);
+  stampBuilding(shape, 'house', 12, 3, { w: 5, h: 4, chimney: true });
+  // Oak's Lab (bottom center): a landmark, and its name is on the SIGN below.
+  stampBuilding(shape, 'landmark', 7, 12, { w: 6, h: 4, sign: 'none' });
   // Sign
   setTile(11, 16, T.SIGN);
 
@@ -86,6 +82,7 @@ export const PALLET_TOWN: MapData = (() => {
     height: H,
     tiles,
     collision,
+    tileKinds,
     warps: [
       // Player's house door
       { x: 4, y: 6, targetMap: 'player_house', targetX: 3, targetY: 7 },
