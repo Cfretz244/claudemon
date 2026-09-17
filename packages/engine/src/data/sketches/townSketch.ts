@@ -30,6 +30,15 @@ export interface TownSketch {
     warp: string;
     /** Free-text design note; ignored by the builder. */
     note?: string;
+    /**
+     * Extra DOOR tiles into the same interior, stamped over the footprint
+     * after `stampBuilding` has drawn it (the kit only knows about one door).
+     * `land` is where that interior's matching exit warp puts the player —
+     * a back door has no doorstep below it, so it cannot be derived.
+     * Cerulean's burgled house is the only user: its back door opens into the
+     * walled garden the Rocket grunt is hiding in.
+     */
+    extraDoors?: Array<{ door: [number, number]; land: [number, number]; note?: string }>;
   }>;
   /** Where each NPC stands (dialogue, colours and behaviour stay in `maps.ts`). */
   npcs: Array<{ id: string; x: number; y: number }>;

@@ -11,9 +11,13 @@ import { describe, it, expect } from 'vitest';
 import palletJson from '../../src/data/sketches/pallet_town.json';
 import viridianJson from '../../src/data/sketches/viridian_city.json';
 import pewterJson from '../../src/data/sketches/pewter_city.json';
+import ceruleanJson from '../../src/data/sketches/cerulean_city.json';
+import vermilionJson from '../../src/data/sketches/vermilion_city.json';
 import { PALLET_TOWN_SKETCH, TownSketch } from '../../packages/engine/src/data/sketches/palletTown';
 import { VIRIDIAN_CITY_SKETCH } from '../../packages/engine/src/data/sketches/viridianCity';
 import { PEWTER_CITY_SKETCH } from '../../packages/engine/src/data/sketches/pewterCity';
+import { CERULEAN_CITY_SKETCH } from '../../packages/engine/src/data/sketches/ceruleanCity';
+import { VERMILION_CITY_SKETCH } from '../../packages/engine/src/data/sketches/vermilionCity';
 import { ALL_MAPS } from '../../src/data/maps';
 import { MapData, TileType } from '../../src/types/map.types';
 import { SIGNS } from '../../src/data/signs';
@@ -47,6 +51,8 @@ const TOWNS: Array<{ sketch: TownSketch; json: SketchJson }> = [
   { sketch: PALLET_TOWN_SKETCH, json: palletJson as SketchJson },
   { sketch: VIRIDIAN_CITY_SKETCH, json: viridianJson as SketchJson },
   { sketch: PEWTER_CITY_SKETCH, json: pewterJson as SketchJson },
+  { sketch: CERULEAN_CITY_SKETCH, json: ceruleanJson as SketchJson },
+  { sketch: VERMILION_CITY_SKETCH, json: vermilionJson as SketchJson },
 ];
 
 describe.each(TOWNS)('$sketch.id is built from its sketch', ({ sketch, json }) => {
@@ -125,9 +131,37 @@ describe.each(TOWNS)('$sketch.id is built from its sketch', ({ sketch, json }) =
       expect(interior, `${b.warp} exists`).toBeDefined();
       const backs = interior!.warps.filter(w => w.targetMap === sketch.id);
       expect(backs.length, `${b.warp} exits`).toBeGreaterThan(0);
+      // The doorstep, plus one landing per extra door. A back door has no mat
+      // below it (Cerulean's burgled house opens into a walled garden), so the
+      // sketch states where its exit puts you instead of deriving it.
+      const landings = [
+        { x: dx, y: dy + 1 },
+        ...(b.extraDoors ?? []).map(e => ({ x: e.land[0], y: e.land[1] })),
+      ];
       for (const back of backs) {
-        expect({ x: back.targetX, y: back.targetY }, `${b.warp} exit at (${back.x},${back.y})`)
-          .toEqual({ x: dx, y: dy + 1 });
+        expect(landings, `${b.warp} exit at (${back.x},${back.y})`)
+          .toContainEqual({ x: back.targetX, y: back.targetY });
+      }
+      // ...and every landing is actually used, so a door cannot go one-way.
+      for (const land of landings) {
+        expect(backs.some(w => w.targetX === land.x && w.targetY === land.y),
+          `${b.warp} has no exit landing on (${land.x},${land.y})`).toBe(true);
+      }
+    }
+  });
+
+  it('every extra door is a DOOR tile warping into the same interior', () => {
+    for (const b of sketch.buildings) {
+      for (const e of b.extraDoors ?? []) {
+        const [ex, ey] = e.door;
+        expect(ex >= b.x && ex < b.x + b.w && ey >= b.y && ey < b.y + b.h,
+          `${b.warp} extra door (${ex},${ey}) is on its own footprint`).toBe(true);
+        expect(town.tiles[ey][ex], `${b.warp} extra door`).toBe(TileType.DOOR);
+        expect(town.warps.find(w => w.x === ex && w.y === ey)?.targetMap).toBe(b.warp);
+        const [lx, ly] = e.land;
+        expect(town.collision[ly][lx], `${b.warp} extra door landing`).toBe(false);
+        expect(town.warps.some(w => w.x === lx && w.y === ly)).toBe(false);
+        expect(town.npcs.some(n => n.x === lx && n.y === ly)).toBe(false);
       }
     }
   });

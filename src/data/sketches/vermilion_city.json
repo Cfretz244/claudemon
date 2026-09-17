@@ -1,0 +1,175 @@
+{
+ "id": "vermilion_city",
+ "legend": {
+  "T": "TREE",
+  ".": "PATH",
+  ",": "COBBLESTONE",
+  "'": "GRASS",
+  "\"": "TALL_GRASS",
+  "*": "FLOWER",
+  "=": "FENCE",
+  "~": "WATER",
+  "P": "PLANK",
+  "F": "FOUNTAIN",
+  "t": "CUT_TREE",
+  "C": "CAVE_ENTRANCE",
+  ":": "SAND",
+  "_": "LEDGE",
+  "O": "BOULDER",
+  "B": "BUILDING",
+  "D": "DOOR",
+  "d": "DOORMAT",
+  "s": "SIGN",
+  "W": "PATH"
+ },
+ "rows": [
+  "TTTTTTTTTTTWWTTTTTTTTTTTTTTTTT",
+  "T'''''''''....'''''''''''''''T",
+  "T''''''''s....'''''''''''''''T",
+  "T''''''''''..''''''''''''''''T",
+  "T''BBBBB'''..''BBBBBB''BBBBB'T",
+  "T''BBBBB'''..''BBBBBB''BBBBB'T",
+  "T''BBBBB'''..''BBBBBB''BBBBB'T",
+  "T''BBDBB'''..''BBDBBB''BBDBB'T",
+  "T''''d'''''..s'''d'''''''d'''T",
+  "T''''.....................'''T",
+  "T''''''''''..''''''''''''''''T",
+  "Ts'''''''''..'''''''''''''s''T",
+  "T............................W",
+  "T............................W",
+  "T====tt====..''''''''''''''''T",
+  "T'.....'''=s.''''''''''''''''T",
+  "T'.BBBBBBB=..*****''''''***''T",
+  "T'.BBBBBBB=..*****''''''***''T",
+  "T'.BBBBBBB=..''''''''''''''''T",
+  "T'.BBBBBBB=..''''''''''''''''T",
+  "T'.BBBDBBB=..\"\"\"'''''''''''''T",
+  "T'....d'''=..\"\"\"'''''''''''''T",
+  "T==========..'''''''sPPP'''''T",
+  "T::::::::::..........PPP:::::T",
+  "T~~~~~~~~~~~~~~~~~~~~PWW~~~~~T"
+ ],
+ "buildings": [
+  {
+   "kind": "mart",
+   "x": 3,
+   "y": 4,
+   "w": 5,
+   "h": 4,
+   "door": [
+    5,
+    7
+   ],
+   "warp": "pokemart_vermilion"
+  },
+  {
+   "kind": "center",
+   "x": 15,
+   "y": 4,
+   "w": 6,
+   "h": 4,
+   "door": [
+    17,
+    7
+   ],
+   "warp": "pokemon_center_vermilion"
+  },
+  {
+   "kind": "landmark",
+   "x": 23,
+   "y": 4,
+   "w": 5,
+   "h": 4,
+   "door": [
+    25,
+    7
+   ],
+   "warp": "pokemon_fan_club",
+   "note": "fan club: a Pokeball signboard"
+  },
+  {
+   "kind": "gym",
+   "x": 3,
+   "y": 16,
+   "w": 7,
+   "h": 5,
+   "door": [
+    6,
+    20
+   ],
+   "warp": "vermilion_gym",
+   "note": "gym inside a fenced yard whose only gate is the two cut trees at (5,14),(6,14) (coords unchanged); the yard path runs down the west side to the door"
+  }
+ ],
+ "npcs": [
+  {
+   "id": "vermilion_npc1",
+   "x": 14,
+   "y": 14
+  },
+  {
+   "id": "vermilion_npc3",
+   "x": 9,
+   "y": 11
+  },
+  {
+   "id": "vermilion_sailor",
+   "x": 22,
+   "y": 22
+  },
+  {
+   "id": "fishing_guru_vermilion",
+   "x": 24,
+   "y": 22
+  },
+  {
+   "id": "vermilion_officer_jenny",
+   "x": 3,
+   "y": 10
+  },
+  {
+   "id": "vermilion_fan_club_sign",
+   "x": 27,
+   "y": 10
+  }
+ ],
+ "edgeWarps": [
+  [
+   11,
+   0,
+   "route6"
+  ],
+  [
+   12,
+   0,
+   "route6"
+  ],
+  [
+   29,
+   12,
+   "route11"
+  ],
+  [
+   29,
+   13,
+   "route11"
+  ],
+  [
+   22,
+   24,
+   "ss_anne"
+  ],
+  [
+   23,
+   24,
+   "ss_anne"
+  ]
+ ],
+ "lookouts": [
+  [
+   6,
+   15
+  ]
+ ],
+ "notes": "Harbour front: sand row 23 with the quay path, sea row 24 (map edge), pier planks x21-23 rows 22-24, S.S. Anne gangway warps at (22-23,24). Route landings (10-13,2), (27,12-13), (22,23) walkable. The fan-club sign NPC moves off its SIGN tile to (27,10). Interiors exit to door+1. DEVIATIONS (town-t3): the yard fence is closed at (1,14) and (1,22) — column x1 was open, so the yard leaked around both ends of the fence and the cut trees at (5,14),(6,14) were not the only gate; the NPC placeholders are the six shipped ids."
+}
