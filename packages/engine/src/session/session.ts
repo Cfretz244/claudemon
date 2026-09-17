@@ -1,3 +1,6 @@
+import { checkEntryGates } from '../logic/warpGate';
+import { computeTrainerSight } from '../logic/trainerSight';
+import { pewterGuideBlocks } from '../logic/roadBlocks';
 import { OAK_INTERCEPT_MESSAGES, OAK_ESCORT_DESTINATION } from '../logic/roadBlocks';
 import { createOakEscortScript, StoryScript } from '../story/opening';
 import { applyMedicine } from '../inventory/medicine';
@@ -83,7 +86,7 @@ export interface Objective {
   title: string;
   body: string;
 }
-export function currentObjective(p: Pick<PlayerState, 'storyFlags' | 'bag'>): Objective {
+export function currentObjective(p: Pick<PlayerState, 'storyFlags' | 'bag'> & Partial<Pick<PlayerState, 'badges'>>): Objective {
   const f = p.storyFlags;
   const [stage, title, body] = !f.has_pikachu
     ? ['01', 'A friend for the journey', 'Explore Pallet Town and meet Professor Oak.']
@@ -93,7 +96,9 @@ export function currentObjective(p: Pick<PlayerState, 'storyFlags' | 'bag'>): Ob
         ? ['03', 'A delivery for the professor', 'Visit the Poké Mart in Viridian City.']
         : !f.delivered_parcel
           ? ['04', 'Back to where it began', 'Deliver Oak’s Parcel to his laboratory.']
-          : ['✓', 'A world of discoveries', 'Explore Route 1 and catch your first Pokémon.'];
+          : !p.badges?.includes('BOULDER')
+            ? ['05', 'Through the ancient green', 'Head north through Route 2 and Viridian Forest. Challenge Brock in Pewter City.']
+            : ['✓', 'A rock-solid beginning', 'The Boulder Badge is yours. Explore Pewter’s museum and prepare for the road ahead.'];
   return { stage, title, body };
 }
 export type Effect =
@@ -132,6 +137,7 @@ type Job =
   | { kind: 'pickup'; npcId: string }
   | { kind: 'gift'; npcId: string }
   | { kind: 'rival' }
+  | { kind: 'trainer'; npcId: string; position?: { x: number; y: number } }
   | { kind: 'attack'; side: 0 | 1; index: number }
   | { kind: 'status'; side: 0 | 1 }
   | { kind: 'faint' }
@@ -248,7 +254,7 @@ export class GameSession {
         ? f.npc.isItemBall
           ? 'Pick up'
           : 'Talk'
-        : [TileType.PC, TileType.SIGN].includes(tile)
+        : [TileType.PC, TileType.SIGN, TileType.MUSEUM_PLAQUE].includes(tile)
           ? 'Read'
           : null,
     });
@@ -462,7 +468,7 @@ export class GameSession {
       if (this.map.tiles[ny]?.[nx] === TileType.PC) {
         this.storage = true;
         this.effect({ kind: 'menu', menu: 'storage' });
-      } else if (this.map.tiles[ny]?.[nx] === TileType.SIGN)
+      } else if ([TileType.SIGN, TileType.MUSEUM_PLAQUE].includes(this.map.tiles[ny]?.[nx]))
         this.say(SIGNS[`${this.map.id}:${nx},${ny}`] ?? ['A new adventure awaits.'], 'SIGNPOST');
       return;
     }
@@ -515,7 +521,31 @@ export class GameSession {
       this.jobs.push({ kind: 'gift', npcId: n.id });
       return;
     }
+    if (n.isTrainer && (GYM_LEADERS[n.id] || TRAINERS[n.trainerTeam ?? n.id])) {
+      if (!this.player.defeatedTrainers.includes(n.id)) this.challenge(n);
+      else this.say(GYM_LEADERS[n.id]?.dialogue.after ?? ['I already lost to you...']);
+      return;
+    }
     this.say(n.dialogue.length ? n.dialogue : ['What a lovely day to explore.']);
+  }
+  private challenge(n: NPCData, approach = false) {
+    if (!this.player.party.some(p => p.currentHp > 0)) return;
+    let position: { x: number; y: number } | undefined;
+    if (approach) {
+      const vector = DIR_VECTORS[n.direction];
+      const distance = Math.abs(this.x - n.x) + Math.abs(this.y - n.y);
+      const path = Array.from({length: Math.max(0, distance - 1)}, (_, i) => ({x: n.x + vector.x * (i + 1), y: n.y + vector.y * (i + 1)}));
+      if (path.length) {
+        position = path[path.length - 1];
+        this.effect({kind: 'cutscene', script: {
+          id: `trainer-approach:${n.id}`,
+          steps: [{kind: 'walk', tracks: [{actor: n.id, path}], msPerTile: 220}],
+          destination: {mapId: this.map.id, x: this.x, y: this.y},
+        }});
+      }
+    }
+    this.say(GYM_LEADERS[n.id]?.dialogue.before ?? n.dialogue);
+    this.jobs.push({ kind: 'trainer', npcId: n.id, position });
   }
   private ai() {
     const b = this.battle!,
@@ -618,6 +648,14 @@ export class GameSession {
             break;
           }
           this.steps++;
+          const visible = this.npcs();
+          const trainer = visible.find(n => n.isTrainer && !this.player.defeatedTrainers.includes(n.id)
+            && (GYM_LEADERS[n.id] || TRAINERS[n.trainerTeam ?? n.id])
+            && computeTrainerSight(n, this.x, this.y, { ...this.map, npcs: visible }, false).spotted);
+          if (trainer && this.player.party.some(p => p.currentHp > 0)) {
+            this.challenge(trainer, true);
+            break;
+          }
           if (this.map.tiles[this.y][this.x] !== TileType.TALL_GRASS) break;
           if (!this.player.party.length) {
             this.queueOakEscort();
@@ -644,21 +682,21 @@ export class GameSession {
             this.jobs.push({ kind: 'rival' });
           } else if (job.warp.targetMap === 'route1' && !this.player.party.length) {
             this.queueOakEscort();
+          } else if (pewterGuideBlocks(this.map.id, job.warp.targetMap, this.player)) {
+            this.say(this.map.npcs.find(n => n.id === 'pewter_guide')?.dialogue ?? ['Challenge BROCK first!']);
           } else if (!this.supported.has(job.warp.targetMap))
             this.say(
               [
                 'The next chapter of Kanto is still taking shape.',
-                'For now, explore Pallet Town, Route 1, and Viridian City.',
+                'There is still more to discover in the places you can visit.',
               ],
               'BEYOND THE HORIZON',
             );
-          else
-            this.jobs.push({
-              kind: 'enter',
-              map: job.warp.targetMap,
-              x: job.warp.targetX,
-              y: job.warp.targetY,
-            });
+          else {
+            const gate = checkEntryGates(ALL_MAPS[job.warp.targetMap], this.map.id, this.player);
+            if (!gate.ok) this.say(gate.message);
+            else this.jobs.push({ kind: 'enter', map: job.warp.targetMap, x: job.warp.targetX, y: job.warp.targetY });
+          }
           break;
         case 'enter':
           this.map = clone(ALL_MAPS[job.map]);
@@ -711,6 +749,14 @@ export class GameSession {
               ),
             );
           gift?.onComplete?.(this.player);
+          break;
+        }
+        case 'trainer': {
+          const npc = this.map.npcs.find(n => n.id === job.npcId);
+          if (npc && job.position) { npc.x = job.position.x; npc.y = job.position.y; }
+          const data = GYM_LEADERS[job.npcId] ?? TRAINERS[npc?.trainerTeam ?? job.npcId];
+          if (data && !this.player.defeatedTrainers.includes(job.npcId))
+            this.beginBattle(data.team.map(p => createPokemon(p.speciesId, p.level, data.name, this.rng)), job.npcId);
           break;
         }
         case 'rival':
@@ -860,6 +906,7 @@ export class GameSession {
               if (gym && !this.player.badges.includes(gym.badge)) {
                 this.player.badges.push(gym.badge);
                 if (gym.tmReward) this.player.addItem(gym.tmReward);
+                this.say(gym.dialogue.after, gym.name);
               }
               this.say([`You received ₽${prize}.`]);
             }
