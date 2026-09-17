@@ -16,6 +16,7 @@ import Phaser from 'phaser';
 
 import { AnimationSpec } from '../../logic/moveAnimationSpec';
 import { soundSystem } from '../SoundSystem';
+import { baseScaleOf } from './baseScale';
 import {
   AnimationContext,
   afterimage,
@@ -339,13 +340,16 @@ async function renderFly(spec: AnimationSpec, ctx: AnimationContext): Promise<vo
     soundSystem.whoosh();
 
     // 1. Crouch, then straight up and out through the top edge (0 -> 20 %).
+    // The crouch and the launch are relative to the flier's size class: a flat
+    // `scaleY: 1` on the way up would leave an XL mon M-sized in the air.
+    const flyBase = baseScaleOf(attackerSprite);
     await tweenPromise(scene, {
-      targets: attackerSprite, y: homeY + 3, scaleY: 0.84,
+      targets: attackerSprite, y: homeY + 3, scaleY: flyBase * 0.84,
       duration: Math.round(d * 0.04 * up), ease: 'Sine.easeOut',
     });
     await Promise.all([
       tweenPromise(scene, {
-        targets: attackerSprite, y: -26, scaleY: 1,
+        targets: attackerSprite, y: -26, scaleY: flyBase,
         duration: Math.round(d * 0.11 * up), ease: 'Quad.easeIn',
       }),
       directionalParticles(scene, homeX, homeY + 8, FLYING, 10, {
@@ -1633,7 +1637,9 @@ async function renderPsychic(spec: AnimationSpec, ctx: AnimationContext): Promis
     }),
     // The distortion: squeezed, stretched, squeezed again.
     tweenPromise(scene, {
-      targets: defenderSprite, scaleX: 1.4, scaleY: 0.72,
+      // Squeeze/stretch around the defender's base scale, not around 1.
+      targets: defenderSprite,
+      scaleX: baseScaleOf(defenderSprite) * 1.4, scaleY: baseScaleOf(defenderSprite) * 0.72,
       duration: Math.round(d * 0.14), yoyo: true, repeat: 1, ease: 'Sine.easeInOut',
     }),
     spriteFlash(defenderSprite, scene, PSY, 4),
@@ -1646,7 +1652,8 @@ async function renderPsychic(spec: AnimationSpec, ctx: AnimationContext): Promis
     screenFlash(scene, PSY, Math.round(d * 0.2)),
     screenShake(scene, 6, Math.round(d * 0.16)),
     tweenPromise(scene, {
-      targets: defenderSprite, scaleX: 0.62, scaleY: 1.32,
+      targets: defenderSprite,
+      scaleX: baseScaleOf(defenderSprite) * 0.62, scaleY: baseScaleOf(defenderSprite) * 1.32,
       duration: Math.round(d * 0.1), yoyo: true, ease: 'Quad.easeOut',
     }),
   ]);
@@ -2200,7 +2207,8 @@ async function renderLeechSeed(spec: AnimationSpec, ctx: AnimationContext): Prom
       await delay(scene, Math.round(grow * 0.4));
       impactTint(defenderSprite, GRASS);
       await tweenPromise(scene, {
-        targets: defenderSprite, scaleX: 0.86, scaleY: 1.08,
+        targets: defenderSprite,
+        scaleX: baseScaleOf(defenderSprite) * 0.86, scaleY: baseScaleOf(defenderSprite) * 1.08,
         duration: Math.round(grow * 0.3), yoyo: true, ease: 'Sine.easeInOut',
       });
     })(),
@@ -2231,8 +2239,9 @@ async function renderLeechSeed(spec: AnimationSpec, ctx: AnimationContext): Prom
     }),
     (async () => {
       await delay(scene, Math.round(back * 0.5));
+      const drainBase = baseScaleOf(attackerSprite);
       await tweenPromise(scene, {
-        targets: attackerSprite, scaleX: 1.12, scaleY: 1.12,
+        targets: attackerSprite, scaleX: drainBase * 1.12, scaleY: drainBase * 1.12,
         duration: Math.round(back * 0.22), yoyo: true, ease: 'Sine.easeOut',
       });
     })(),
@@ -2380,7 +2389,8 @@ async function renderWrap(spec: AnimationSpec, ctx: AnimationContext): Promise<v
       coil(1, 1 - 0.3 * Math.sin(t * Math.PI * 2) ** 2 - t * 0.12);
     }),
     tweenPromise(scene, {
-      targets: defenderSprite, scaleX: 0.68, scaleY: 1.12,
+      targets: defenderSprite,
+      scaleX: baseScaleOf(defenderSprite) * 0.68, scaleY: baseScaleOf(defenderSprite) * 1.12,
       duration: Math.round(tight * 0.28), yoyo: true, repeat: 1, ease: 'Sine.easeInOut',
     }),
   ]);
@@ -2439,7 +2449,8 @@ async function renderBind(spec: AnimationSpec, ctx: AnimationContext): Promise<v
       bands(16 - Math.round(Math.abs(Math.sin(t * Math.PI * 3)) * 8));
     }),
     tweenPromise(scene, {
-      targets: defenderSprite, scaleY: 0.68, scaleX: 1.14,
+      targets: defenderSprite,
+      scaleY: baseScaleOf(defenderSprite) * 0.68, scaleX: baseScaleOf(defenderSprite) * 1.14,
       duration: Math.round(pulse / 6), yoyo: true, repeat: 2, ease: 'Sine.easeInOut',
     }),
   ]);
@@ -3039,12 +3050,16 @@ async function renderSubstitute(spec: AnimationSpec, ctx: AnimationContext): Pro
   // 4. The doll, revealed by the clearing smoke, and it stays.
   const doll = newG(scene, 869);
   drawDoll(doll);
+  // The doll is drawn at M size, so an XL mon's substitute is scaled up with
+  // it: it is standing in for that mon, and a doll half its height reads as a
+  // different Pokemon rather than a decoy.
+  const dollBase = baseScaleOf(attackerSprite);
   doll.setPosition(dollX, dollY);
-  doll.setScale(0.2, 0.2);
+  doll.setScale(0.2 * dollBase, 0.2 * dollBase);
   doll.setAlpha(0);
   await Promise.all([
     tweenPromise(scene, {
-      targets: doll, scaleX: 1, scaleY: 1, alpha: 1,
+      targets: doll, scaleX: dollBase, scaleY: dollBase, alpha: 1,
       duration: Math.round(d * 0.14), ease: 'Back.easeOut',
     }),
     frames(scene, Math.round(d * 0.14), t => {
