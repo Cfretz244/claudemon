@@ -11,6 +11,8 @@ import { TOWER_MAPS } from './maps_tower';
 import { CAVE_MAPS } from './maps_cave';
 import { createMapFromSketch, createMapShape, SOLID_TILES, stampBuilding } from './mapBuilder';
 import { PALLET_TOWN_SKETCH } from './sketches/palletTown';
+import { PEWTER_CITY_SKETCH } from './sketches/pewterCity';
+import { VIRIDIAN_CITY_SKETCH } from './sketches/viridianCity';
 
 const T = TileType;
 
@@ -369,10 +371,10 @@ export const ROUTE1: MapData = (() => {
       { x: 10, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 1 },
       { x: 11, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 1 },
       // North to Viridian City
-      { x: 8, y: 0, targetMap: 'viridian_city', targetX: 8, targetY: 27 },
-      { x: 9, y: 0, targetMap: 'viridian_city', targetX: 9, targetY: 27 },
-      { x: 10, y: 0, targetMap: 'viridian_city', targetX: 10, targetY: 27 },
-      { x: 11, y: 0, targetMap: 'viridian_city', targetX: 11, targetY: 27 },
+      { x: 8, y: 0, targetMap: 'viridian_city', targetX: 8, targetY: 26 },
+      { x: 9, y: 0, targetMap: 'viridian_city', targetX: 9, targetY: 26 },
+      { x: 10, y: 0, targetMap: 'viridian_city', targetX: 10, targetY: 26 },
+      { x: 11, y: 0, targetMap: 'viridian_city', targetX: 11, targetY: 26 },
     ],
     npcs: [
       {
@@ -405,61 +407,77 @@ export const ROUTE1: MapData = (() => {
   };
 })();
 
+// ─── Viridian City ───────────────────────────────────────────────────────────
+//
+// Built FROM its sketch (`sketches/viridianCity.ts`), the same way Pallet is:
+// the rows draw the ground, the four buildings are stamped over their
+// footprints with the kit, and every door warp, edge warp and NPC spot is read
+// back out of the sketch. Dialogue, sprite colours and the wild table stay
+// here — only *where* things are lives in the sketch.
+
+/** Where each door warp drops the player inside the interior. */
+const VIRIDIAN_DOOR_TARGETS: Record<string, { x: number; y: number }> = {
+  viridian_gym: { x: 4, y: 13 },
+  pokemon_center: { x: 4, y: 7 },
+  pokemart: { x: 3, y: 7 },
+  viridian_house: { x: 3, y: 7 },
+};
+
+/** Where each edge warp lands on the route, keyed by the town tile it sits on. */
+const VIRIDIAN_EDGE_TARGETS: Record<string, { x: number; y: number }> = {
+  // Route 2's four-wide road comes down to its south edge, one column each.
+  '8,0': { x: 8, y: 28 },
+  '9,0': { x: 9, y: 28 },
+  '10,0': { x: 10, y: 28 },
+  '11,0': { x: 11, y: 28 },
+  // Route 22 runs west from the middle of the town; its two lanes come back
+  // onto the two tiles east of its own edge.
+  '0,14': { x: 23, y: 4 },
+  '0,15': { x: 23, y: 5 },
+  // Route 1 leaves south, again column for column.
+  '8,27': { x: 8, y: 1 },
+  '9,27': { x: 9, y: 1 },
+  '10,27': { x: 10, y: 1 },
+  '11,27': { x: 11, y: 1 },
+};
+
+/** Everything about a Viridian NPC except where they stand (that is the sketch's). */
+const VIRIDIAN_NPC_DETAILS: Record<string, Omit<NPCData, 'id' | 'x' | 'y'>> = {
+  viridian_npc1: {
+    spriteColor: 0xc0c060,
+    // Facing up the gym path, at the gate he is never going through.
+    direction: Direction.UP,
+    dialogue: [
+      'VIRIDIAN CITY',
+      'The Eternally Green\nParadise!',
+    ],
+  },
+  viridian_npc2: {
+    spriteColor: 0x60c0c0,
+    direction: Direction.LEFT,
+    dialogue: [
+      "The POKEMON CENTER\nheals your POKeMON",
+      "for free! Just talk\nto the nurse!",
+    ],
+  },
+};
+
 export const VIRIDIAN_CITY: MapData = (() => {
-  const W = 30, H = 28;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
+  const sketch = VIRIDIAN_CITY_SKETCH;
+  const shape = createMapFromSketch(sketch.rows, sketch.legend);
+  const { tiles, collision, tileKinds, width: W, height: H } = shape;
 
-  // Border trees
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.TREE);
-    setTile(x, 1, T.TREE);
+  // The Gym, the Center, the Mart and the house, stamped over the footprints
+  // the sketch reserves for them. The public three keep their kind's board
+  // (GYM / P / MART); only the house gets a chimney.
+  for (const b of sketch.buildings) {
+    stampBuilding(shape, b.kind, b.x, b.y, {
+      w: b.w,
+      h: b.h,
+      door: b.door[0] - b.x,
+      chimney: b.kind === 'house',
+    });
   }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.TREE);
-    setTile(1, y, T.TREE);
-    setTile(W - 1, y, T.TREE);
-    setTile(W - 2, y, T.TREE);
-  }
-
-  // Main roads
-  fillRect(8, 2, 4, 26, T.PATH);
-  fillRect(2, 14, 26, 2, T.PATH);
-
-  // Pokemon Center (left side)
-  fillRect(3, 8, 5, 1, T.ROOF);
-  fillRect(3, 9, 5, 3, T.BUILDING);
-  setTile(5, 11, T.DOOR);
-
-  // Pokemart (right side)
-  fillRect(18, 8, 5, 1, T.ROOF);
-  fillRect(18, 9, 5, 3, T.BUILDING);
-  setTile(20, 11, T.DOOR);
-
-  // Viridian Gym (locked initially)
-  fillRect(4, 18, 6, 1, T.ROOF);
-  fillRect(4, 19, 6, 4, T.BUILDING);
-  setTile(7, 22, T.DOOR);
-
-  // Houses
-  fillRect(18, 18, 5, 1, T.ROOF);
-  fillRect(18, 19, 5, 3, T.BUILDING);
-  setTile(20, 21, T.DOOR);
-
-  // Water pond
-  fillRect(14, 20, 3, 3, T.WATER);
-
-  // Trees and flowers
-  setTile(12, 6, T.FLOWER);
-  setTile(13, 6, T.FLOWER);
-  setTile(14, 6, T.FLOWER);
-  setTile(16, 20, T.TREE);
-
-  // Tall grass (west side)
-  fillRect(3, 3, 4, 4, T.TALL_GRASS);
-
-  // Signs
-  setTile(7, 13, T.SIGN);
-  setTile(12, 13, T.SIGN);
 
   return {
     id: 'viridian_city',
@@ -468,51 +486,24 @@ export const VIRIDIAN_CITY: MapData = (() => {
     height: H,
     tiles,
     collision,
+    tileKinds,
     warps: [
-      // South to Route 1
-      { x: 8, y: H - 1, targetMap: 'route1', targetX: 8, targetY: 1 },
-      { x: 9, y: H - 1, targetMap: 'route1', targetX: 9, targetY: 1 },
-      { x: 10, y: H - 1, targetMap: 'route1', targetX: 10, targetY: 1 },
-      { x: 11, y: H - 1, targetMap: 'route1', targetX: 11, targetY: 1 },
-      // Pokemon Center door
-      { x: 5, y: 11, targetMap: 'pokemon_center', targetX: 4, targetY: 7 },
-      // Pokemart door
-      { x: 20, y: 11, targetMap: 'pokemart', targetX: 3, targetY: 7 },
-      // North to Route 2
-      { x: 8, y: 1, targetMap: 'route2', targetX: 8, targetY: 28 },
-      { x: 9, y: 1, targetMap: 'route2', targetX: 9, targetY: 28 },
-      { x: 10, y: 1, targetMap: 'route2', targetX: 10, targetY: 28 },
-      { x: 11, y: 1, targetMap: 'route2', targetX: 11, targetY: 28 },
-      // Viridian Gym door
-      { x: 7, y: 22, targetMap: 'viridian_gym', targetX: 4, targetY: 13 },
-      // House door
-      { x: 20, y: 21, targetMap: 'viridian_house', targetX: 3, targetY: 7 },
-      // West to Route 22
-      { x: 1, y: 14, targetMap: 'route22', targetX: 23, targetY: 4 },
-      { x: 1, y: 15, targetMap: 'route22', targetX: 23, targetY: 5 },
+      ...sketch.buildings.map(b => ({
+        x: b.door[0],
+        y: b.door[1],
+        targetMap: b.warp,
+        targetX: VIRIDIAN_DOOR_TARGETS[b.warp].x,
+        targetY: VIRIDIAN_DOOR_TARGETS[b.warp].y,
+      })),
+      ...sketch.edgeWarps.map(([x, y, targetMap]) => ({
+        x,
+        y,
+        targetMap,
+        targetX: VIRIDIAN_EDGE_TARGETS[`${x},${y}`].x,
+        targetY: VIRIDIAN_EDGE_TARGETS[`${x},${y}`].y,
+      })),
     ],
-    npcs: [
-      {
-        id: 'viridian_npc1',
-        x: 13, y: 15,
-        spriteColor: 0xc0c060,
-        direction: Direction.DOWN,
-        dialogue: [
-          'VIRIDIAN CITY',
-          'The Eternally Green\nParadise!',
-        ],
-      },
-      {
-        id: 'viridian_npc2',
-        x: 15, y: 10,
-        spriteColor: 0x60c0c0,
-        direction: Direction.LEFT,
-        dialogue: [
-          "The POKEMON CENTER\nheals your POKeMON",
-          "for free! Just talk\nto the nurse!",
-        ],
-      },
-    ],
+    npcs: sketch.npcs.map(n => ({ id: n.id, x: n.x, y: n.y, ...VIRIDIAN_NPC_DETAILS[n.id] })),
     wildEncounters: {
       grassRate: 0.15,
       encounters: [
@@ -565,8 +556,8 @@ export const POKEMON_CENTER: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: H - 1, targetMap: 'viridian_city', targetX: 5, targetY: 12 },
-      { x: 5, y: H - 1, targetMap: 'viridian_city', targetX: 5, targetY: 12 },
+      { x: 4, y: H - 1, targetMap: 'viridian_city', targetX: 15, targetY: 9 },
+      { x: 5, y: H - 1, targetMap: 'viridian_city', targetX: 15, targetY: 9 },
     ],
     npcs: [
       {
@@ -618,7 +609,7 @@ export const POKEMART: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'viridian_city', targetX: 20, targetY: 12 },
+      { x: 3, y: H - 1, targetMap: 'viridian_city', targetX: 15, targetY: 21 },
     ],
     npcs: [
       {
@@ -970,59 +961,81 @@ export const VIRIDIAN_FOREST: MapData = (() => {
   };
 })();
 
+// ─── Pewter City ─────────────────────────────────────────────────────────────
+//
+// Built FROM its sketch (`sketches/pewterCity.ts`). Gravel ground, the Museum
+// up on its terrace behind a one-way ledge, Brock's Gym behind a fenced
+// forecourt with a rock garden beside it.
+
+/** Where each door warp drops the player inside the interior. */
+const PEWTER_DOOR_TARGETS: Record<string, { x: number; y: number }> = {
+  pewter_gym: { x: 4, y: 13 },
+  pewter_museum_1f: { x: 8, y: 12 },
+  pokemon_center_pewter: { x: 4, y: 7 },
+  pokemart_pewter: { x: 3, y: 7 },
+  pewter_house: { x: 3, y: 7 },
+};
+
+/** Where each edge warp lands on the next map, keyed by the town tile it sits on. */
+const PEWTER_EDGE_TARGETS: Record<string, { x: number; y: number }> = {
+  // Route 3 leaves east through the trees, two lanes onto its two west tiles.
+  '24,12': { x: 1, y: 3 },
+  '24,13': { x: 1, y: 4 },
+  // South is Viridian Forest's north exit: two tiles, so the four town lanes
+  // pair up onto them.
+  '8,25': { x: 5, y: 2 },
+  '9,25': { x: 5, y: 2 },
+  '10,25': { x: 6, y: 2 },
+  '11,25': { x: 6, y: 2 },
+};
+
+/** Everything about a Pewter NPC except where they stand (that is the sketch's). */
+const PEWTER_NPC_DETAILS: Record<string, Omit<NPCData, 'id' | 'x' | 'y'>> = {
+  pewter_npc1: {
+    spriteColor: 0xb0a090,
+    direction: Direction.DOWN,
+    dialogue: [
+      'PEWTER CITY',
+      'A Stone Gray City!',
+    ],
+  },
+  pewter_npc2: {
+    spriteColor: 0x80c080,
+    // On the terrace approach, facing the museum stairs.
+    direction: Direction.LEFT,
+    dialogue: [
+      "BROCK is PEWTER GYM's\nleader!",
+      "He uses ROCK-type\nPOKeMON!",
+    ],
+  },
+  pewter_guide: {
+    spriteColor: 0xe0c060,
+    // At the east end of the main street, facing the road to Route 3.
+    direction: Direction.UP,
+    dialogue: [
+      "Hey! You're not going\nto ROUTE 3 without",
+      "going to the GYM,\nare you?",
+      "You should challenge\nBROCK first!",
+    ],
+  },
+};
+
 export const PEWTER_CITY: MapData = (() => {
-  const W = 25, H = 26;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
+  const sketch = PEWTER_CITY_SKETCH;
+  const shape = createMapFromSketch(sketch.rows, sketch.legend);
+  const { tiles, collision, tileKinds, width: W, height: H } = shape;
 
-  // Border trees
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.TREE);
-    setTile(x, 1, T.TREE);
+  // Gym, Museum, Center, Mart and a house. The Museum is a landmark: no board
+  // (its name is on the SIGN beside it) and two wall rows of windows, which is
+  // what makes it read as the two-storey stone building on the terrace.
+  for (const b of sketch.buildings) {
+    stampBuilding(shape, b.kind, b.x, b.y, {
+      w: b.w,
+      h: b.h,
+      door: b.door[0] - b.x,
+      chimney: b.kind === 'house',
+    });
   }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.TREE);
-    setTile(1, y, T.TREE);
-    setTile(W - 1, y, T.TREE);
-    setTile(W - 2, y, T.TREE);
-  }
-
-  // Main roads
-  fillRect(8, 2, 4, 24, T.PATH);
-  fillRect(2, 12, 21, 2, T.PATH);
-
-  // Pewter Gym
-  fillRect(4, 4, 6, 1, T.ROOF);
-  fillRect(4, 5, 6, 4, T.BUILDING);
-  setTile(7, 8, T.DOOR);
-
-  // Pokemon Center
-  fillRect(14, 4, 5, 1, T.ROOF);
-  fillRect(14, 5, 5, 3, T.BUILDING);
-  setTile(16, 7, T.DOOR);
-
-  // Museum (top)
-  fillRect(14, 10, 7, 1, T.ROOF);
-  fillRect(14, 11, 7, 2, T.BUILDING);
-  setTile(17, 12, T.DOOR);
-
-  // Pokemart
-  fillRect(14, 16, 5, 1, T.ROOF);
-  fillRect(14, 17, 5, 3, T.BUILDING);
-  setTile(16, 19, T.DOOR);
-
-  // Houses
-  fillRect(3, 16, 5, 1, T.ROOF);
-  fillRect(3, 17, 5, 3, T.BUILDING);
-  setTile(5, 19, T.DOOR);
-
-  // Flowers
-  setTile(12, 6, T.FLOWER);
-  setTile(13, 6, T.FLOWER);
-  setTile(12, 7, T.FLOWER);
-
-  // Signs
-  setTile(7, 12, T.SIGN);
-  setTile(3, 9, T.SIGN);
 
   return {
     id: 'pewter_city',
@@ -1031,59 +1044,24 @@ export const PEWTER_CITY: MapData = (() => {
     height: H,
     tiles,
     collision,
+    tileKinds,
     warps: [
-      // South to Viridian Forest
-      { x: 8, y: H - 1, targetMap: 'viridian_forest', targetX: 5, targetY: 2 },
-      { x: 9, y: H - 1, targetMap: 'viridian_forest', targetX: 5, targetY: 2 },
-      { x: 10, y: H - 1, targetMap: 'viridian_forest', targetX: 6, targetY: 2 },
-      { x: 11, y: H - 1, targetMap: 'viridian_forest', targetX: 6, targetY: 2 },
-      // Gym
-      { x: 7, y: 8, targetMap: 'pewter_gym', targetX: 4, targetY: 13 },
-      // Pokemon Center
-      { x: 16, y: 7, targetMap: 'pokemon_center_pewter', targetX: 4, targetY: 7 },
-      // Pokemart
-      { x: 16, y: 19, targetMap: 'pokemart_pewter', targetX: 3, targetY: 7 },
-      // House
-      { x: 5, y: 19, targetMap: 'pewter_house', targetX: 3, targetY: 7 },
-      // Museum
-      { x: 17, y: 12, targetMap: 'pewter_museum_1f', targetX: 8, targetY: 12 },
-      // East to Route 3 (upper lane entry)
-      { x: W - 2, y: 12, targetMap: 'route3', targetX: 1, targetY: 3 },
-      { x: W - 2, y: 13, targetMap: 'route3', targetX: 1, targetY: 4 },
+      ...sketch.buildings.map(b => ({
+        x: b.door[0],
+        y: b.door[1],
+        targetMap: b.warp,
+        targetX: PEWTER_DOOR_TARGETS[b.warp].x,
+        targetY: PEWTER_DOOR_TARGETS[b.warp].y,
+      })),
+      ...sketch.edgeWarps.map(([x, y, targetMap]) => ({
+        x,
+        y,
+        targetMap,
+        targetX: PEWTER_EDGE_TARGETS[`${x},${y}`].x,
+        targetY: PEWTER_EDGE_TARGETS[`${x},${y}`].y,
+      })),
     ],
-    npcs: [
-      {
-        id: 'pewter_npc1',
-        x: 12, y: 13,
-        spriteColor: 0xb0a090,
-        direction: Direction.DOWN,
-        dialogue: [
-          'PEWTER CITY',
-          'A Stone Gray City!',
-        ],
-      },
-      {
-        id: 'pewter_npc2',
-        x: 5, y: 12,
-        spriteColor: 0x80c080,
-        direction: Direction.RIGHT,
-        dialogue: [
-          "BROCK is PEWTER GYM's\nleader!",
-          "He uses ROCK-type\nPOKeMON!",
-        ],
-      },
-      {
-        id: 'pewter_guide',
-        x: 21, y: 12,
-        spriteColor: 0xe0c060,
-        direction: Direction.LEFT,
-        dialogue: [
-          "Hey! You're not going\nto ROUTE 3 without",
-          "going to the GYM,\nare you?",
-          "You should challenge\nBROCK first!",
-        ],
-      },
-    ],
+    npcs: sketch.npcs.map(n => ({ id: n.id, x: n.x, y: n.y, ...PEWTER_NPC_DETAILS[n.id] })),
   };
 })();
 
@@ -1124,8 +1102,8 @@ export const PEWTER_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: H - 1, targetMap: 'pewter_city', targetX: 7, targetY: 9 },
-      { x: 5, y: H - 1, targetMap: 'pewter_city', targetX: 7, targetY: 9 },
+      { x: 4, y: H - 1, targetMap: 'pewter_city', targetX: 5, targetY: 8 },
+      { x: 5, y: H - 1, targetMap: 'pewter_city', targetX: 5, targetY: 8 },
     ],
     npcs: [
       {
@@ -1163,8 +1141,8 @@ export const POKEMON_CENTER_PEWTER: MapData = (() => {
   const base = JSON.parse(JSON.stringify(POKEMON_CENTER)) as MapData;
   base.id = 'pokemon_center_pewter';
   base.warps = [
-    { x: 4, y: base.height - 1, targetMap: 'pewter_city', targetX: 16, targetY: 8 },
-    { x: 5, y: base.height - 1, targetMap: 'pewter_city', targetX: 16, targetY: 8 },
+    { x: 4, y: base.height - 1, targetMap: 'pewter_city', targetX: 14, targetY: 20 },
+    { x: 5, y: base.height - 1, targetMap: 'pewter_city', targetX: 14, targetY: 20 },
   ];
   return base;
 })();
@@ -1486,8 +1464,8 @@ export const VIRIDIAN_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: H - 1, targetMap: 'viridian_city', targetX: 7, targetY: 23 },
-      { x: 5, y: H - 1, targetMap: 'viridian_city', targetX: 7, targetY: 23 },
+      { x: 4, y: H - 1, targetMap: 'viridian_city', targetX: 5, targetY: 8 },
+      { x: 5, y: H - 1, targetMap: 'viridian_city', targetX: 5, targetY: 8 },
     ],
     npcs: [
       {
@@ -1544,7 +1522,7 @@ export const VIRIDIAN_HOUSE: MapData = (() => {
   setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'viridian_house', name: 'VIRIDIAN HOUSE', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'viridian_city', targetX: 20, targetY: 22 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'viridian_city', targetX: 22, targetY: 21 }],
     npcs: [{
       id: 'viridian_house_npc', x: 4, y: 3, spriteColor: 0xc0a060, direction: Direction.DOWN,
       dialogue: ['Did you know that you\ncan use CUT outside', 'of battle to chop\ndown small trees?'],
@@ -1565,7 +1543,7 @@ export const POKEMART_PEWTER: MapData = (() => {
   setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'pokemart_pewter', name: 'POKeMON MART', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'pewter_city', targetX: 16, targetY: 20 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'pewter_city', targetX: 4, targetY: 20 }],
     npcs: [{
       id: 'mart_clerk_pewter', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
       dialogue: ['Welcome! How may I\nserve you?'],
@@ -1588,7 +1566,7 @@ export const PEWTER_HOUSE: MapData = (() => {
   setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'pewter_house', name: 'PEWTER HOUSE', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'pewter_city', targetX: 5, targetY: 20 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'pewter_city', targetX: 20, targetY: 21 }],
     npcs: [{
       id: 'pewter_house_npc', x: 4, y: 3, spriteColor: 0xa080c0, direction: Direction.DOWN,
       dialogue: ["BROCK's POKeMON are\nall ROCK-type.", 'Use WATER or GRASS\ntype moves to win!'],
@@ -1626,8 +1604,8 @@ export const PEWTER_MUSEUM_1F: MapData = (() => {
   return {
     id: 'pewter_museum_1f', name: 'PEWTER MUSEUM 1F', width: W, height: H, tiles, collision,
     warps: [
-      { x: 8, y: H - 1, targetMap: 'pewter_city', targetX: 17, targetY: 13 },
-      { x: 9, y: H - 1, targetMap: 'pewter_city', targetX: 17, targetY: 13 },
+      { x: 8, y: H - 1, targetMap: 'pewter_city', targetX: 16, targetY: 7 },
+      { x: 9, y: H - 1, targetMap: 'pewter_city', targetX: 16, targetY: 7 },
       // Stairs to 2F
       { x: 16, y: 7, targetMap: 'pewter_museum_2f', targetX: 16, targetY: 11 },
     ],

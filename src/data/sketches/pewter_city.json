@@ -1,0 +1,165 @@
+{
+ "id": "pewter_city",
+ "legend": {
+  "T": "TREE",
+  ".": "PATH",
+  "'": "GRASS",
+  "*": "FLOWER",
+  "=": "FENCE",
+  "_": "LEDGE",
+  "O": "ROCK",
+  "M": "BUILDING",
+  "g": "BUILDING",
+  "c": "BUILDING",
+  "m": "BUILDING",
+  "h": "BUILDING",
+  "D": "DOOR",
+  "d": "DOORMAT",
+  "s": "SIGN",
+  "W": "PATH",
+  "G": "GRAVEL"
+ },
+ "rows": [
+  "TTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TGGGGGGGGGG''''''''''''GT",
+  "TGGGGGGGG..'**********'GT",
+  "TGggggggg..'sMMMMMMMM''GT",
+  "TGggggggg..GGMMMMMMMMGGGT",
+  "TGggggggg..GGMMMMMMMMGGGT",
+  "TGggggggg..GGMMMDMMMMGGGT",
+  "TGgggDggg..GGGGGdGGGGGGGT",
+  "TGGGGdGGG..G____._____GGT",
+  "TG===.===..sGGGG.GGGGGGGT",
+  "TGOGG............GGGGGGGT",
+  "TGOOGGGOG..GGGGG.GGGGGGGT",
+  "TGGsGGGGG..GGGGG.GGGGsG.W",
+  "T.......................W",
+  "T.......................T",
+  "TGGGGGGGG..GGGGGGGGGGGTTT",
+  "TGmmmmmGG..GccccccGGGGGGT",
+  "TGmmmmmGG..GccccccGhhhhGT",
+  "TGmmmmmGG..GccccccGhhhhGT",
+  "TGmmDmmGG..GccDcccGhhhhGT",
+  "TGGGdGGGG..GGGdGGGGhDhhGT",
+  "T'''............GGGGdGGGT",
+  "T'**'GGGG..GGGG......'''T",
+  "T'**'GGG....sGGGGG'****'T",
+  "T''''GGG....GGGGGG''''''T",
+  "TTTTTTTTWWWWTTTTTTTTTTTTT"
+ ],
+ "buildings": [
+  {
+   "kind": "landmark",
+   "x": 13,
+   "y": 3,
+   "w": 8,
+   "h": 4,
+   "door": [
+    16,
+    6
+   ],
+   "warp": "pewter_museum_1f",
+   "note": "two-storey stone museum on a terrace; ledge row 8 with the stairs gap at x=16"
+  },
+  {
+   "kind": "gym",
+   "x": 2,
+   "y": 3,
+   "w": 7,
+   "h": 5,
+   "door": [
+    5,
+    7
+   ],
+   "warp": "pewter_gym",
+   "note": "rock garden boulders (decor, not pushable) west of the forecourt"
+  },
+  {
+   "kind": "center",
+   "x": 12,
+   "y": 16,
+   "w": 6,
+   "h": 4,
+   "door": [
+    14,
+    19
+   ],
+   "warp": "pokemon_center_pewter"
+  },
+  {
+   "kind": "mart",
+   "x": 2,
+   "y": 16,
+   "w": 5,
+   "h": 4,
+   "door": [
+    4,
+    19
+   ],
+   "warp": "pokemart_pewter"
+  },
+  {
+   "kind": "house",
+   "x": 19,
+   "y": 17,
+   "w": 4,
+   "h": 4,
+   "door": [
+    20,
+    20
+   ],
+   "warp": "pewter_house"
+  }
+ ],
+ "npcs": [
+  {
+   "id": "pewter_npc1",
+   "x": 6,
+   "y": 12
+  },
+  {
+   "id": "pewter_npc2",
+   "x": 17,
+   "y": 11
+  },
+  {
+   "id": "pewter_guide",
+   "x": 21,
+   "y": 15
+  }
+ ],
+ "edgeWarps": [
+  [
+   24,
+   12,
+   "route3"
+  ],
+  [
+   24,
+   13,
+   "route3"
+  ],
+  [
+   8,
+   25,
+   "viridian_forest"
+  ],
+  [
+   9,
+   25,
+   "viridian_forest"
+  ],
+  [
+   10,
+   25,
+   "viridian_forest"
+  ],
+  [
+   11,
+   25,
+   "viridian_forest"
+  ]
+ ],
+ "lookouts": [],
+ "notes": "Route landings kept walkable: route3 -> (22,12)/(22,13), viridian_forest -> (9-10,24). Interiors exit to door+1. The museum terrace ledge is one-way south: the stairs gap at (16,8) is the way up. Ground = GRAVEL (operator: not every town on grass); grass only as lawns around flower beds. Deviations from docs/towns/pewter_city.json: O is ROCK not BOULDER (BOULDER is pushable with STRENGTH anywhere, decor is not), the third NPC keeps its shipped id pewter_guide, and the south gap leads to viridian_forest (the map south of Pewter in this game), not route2."
+}

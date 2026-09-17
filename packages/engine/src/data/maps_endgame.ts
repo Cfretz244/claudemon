@@ -1041,8 +1041,8 @@ export const ROUTE22: MapData = (() => {
     collision,
     warps: [
       // East entrance → Viridian City
-      { x: 24, y: 4, targetMap: 'viridian_city', targetX: 3, targetY: 14 },
-      { x: 24, y: 5, targetMap: 'viridian_city', targetX: 3, targetY: 14 },
+      { x: 24, y: 4, targetMap: 'viridian_city', targetX: 1, targetY: 14 },
+      { x: 24, y: 5, targetMap: 'viridian_city', targetX: 1, targetY: 15 },
       // West exit → Route 23
       { x: 0, y: 4, targetMap: 'route23', targetX: 7, targetY: 24 },
       { x: 0, y: 5, targetMap: 'route23', targetX: 7, targetY: 24 },

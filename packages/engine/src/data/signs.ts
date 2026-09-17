@@ -6,10 +6,21 @@ export const SIGNS: Record<string, string[]> = {
   'pallet_town:8,1': ['PALLET TOWN', 'Shades of your journey\nawait!'],
   // On the path outside Oak's fenced plot, facing the lab door.
   'pallet_town:7,11': ['OAK POKeMON\nRESEARCH LAB'],
-  'viridian_city:7,13': ['VIRIDIAN CITY', 'The Eternally Green\nParadise!'],
-  'viridian_city:12,13': ['TRAINER TIPS', "If your POKeMON's HP\nreaches 0, it faints!"],
+  // Viridian City, rebuilt from its sketch: one sign at each arrival road, one
+  // at the gym gate, one on the main street and one by the tall grass.
+  'viridian_city:12,2': ['VIRIDIAN CITY', 'The Eternally Green\nParadise!'],
+  'viridian_city:4,10': ['VIRIDIAN CITY GYM', 'The GYM LEADER is\naway.'],
+  'viridian_city:16,10': ['TRAINER TIPS', "If your POKeMON's HP\nreaches 0, it faints!"],
+  'viridian_city:2,13': ['TRAINER TIPS', 'Wild POKeMON hide in\ntall grass. Walk in\nto find them!'],
+  'viridian_city:12,23': ['ROUTE 1 AHEAD', 'VIRIDIAN CITY -\nPALLET TOWN'],
   'route1:7,10': ['ROUTE 1', 'PALLET TOWN -\nVIRIDIAN CITY'],
-  'pewter_city:3,9': ['PEWTER CITY GYM\nLEADER: BROCK', 'The Rock-Solid\nPOKeMON Trainer!'],
+  // Pewter City, rebuilt from its sketch: the museum on its terrace, the gym
+  // gate, the road east to Route 3, the rock garden and the south arrival.
+  'pewter_city:12,3': ['PEWTER MUSEUM OF\nSCIENCE', 'Fossils upstairs and\ndown. Please enjoy!'],
+  'pewter_city:11,9': ['PEWTER CITY GYM\nLEADER: BROCK', 'The Rock-Solid\nPOKeMON Trainer!'],
+  'pewter_city:21,12': ['ROUTE 3 AHEAD', 'MT. MOON is beyond\nthe hills.'],
+  'pewter_city:3,12': ['ROCK GARDEN', 'Every stone here was\ndug out of MT. MOON.'],
+  'pewter_city:12,23': ['PEWTER CITY', 'A Stone Gray City!'],
   'route3:41,6': ['ROUTE 3', 'MT. MOON ahead'],
   'celadon_city:12,12': ['CELADON CITY GYM\nLEADER: ERIKA', 'The Nature-Loving\nPrincess!'],
   'celadon_city:9,10': ['CELADON CITY', 'The City of Rainbow\nDreams!'],
