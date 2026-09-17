@@ -21,6 +21,24 @@ export const SIGNS: Record<string, string[]> = {
   'pewter_city:21,12': ['ROUTE 3 AHEAD', 'MT. MOON is beyond\nthe hills.'],
   'pewter_city:3,12': ['ROCK GARDEN', 'Every stone here was\ndug out of MT. MOON.'],
   'pewter_city:12,23': ['PEWTER CITY', 'A Stone Gray City!'],
+  // Cerulean City, rebuilt from its sketch: the town name where the Nugget
+  // Bridge road comes in, the gym, the main street, the road east to Route 9,
+  // the mart and the road south to Route 5.
+  'cerulean_city:10,4': ['CERULEAN CITY', 'A Mysterious, Blue\nAura Surrounds It!'],
+  'cerulean_city:3,11': ['CERULEAN CITY GYM\nLEADER: MISTY', 'The Tomboyish\nMermaid!'],
+  'cerulean_city:13,11': ['TRAINER TIPS', 'The POKeMON CENTER\nheals your POKeMON\nfor free!'],
+  'cerulean_city:23,11': ['ROUTE 9 AHEAD', 'ROCK TUNNEL lies\nbeyond the hills.'],
+  'cerulean_city:13,20': ['CERULEAN CITY\nPOKeMART', 'Stock up before you\nenter ROCK TUNNEL!'],
+  'cerulean_city:9,23': ['ROUTE 5 AHEAD', 'CERULEAN CITY -\nSAFFRON CITY'],
+  // Vermilion City, rebuilt from its sketch: the town name at the Route 6
+  // road, the north street, the west lawn, the road east to Route 11, the gym
+  // gate behind its cut trees and the quay.
+  'vermilion_city:9,2': ['VERMILION CITY', 'The Port of Exquisite\nSunsets!'],
+  'vermilion_city:13,8': ['POKeMON CENTER', 'Rest your POKeMON\nhere before the\nS.S. ANNE sails!'],
+  'vermilion_city:1,11': ['TRAINER TIPS', 'Weakened POKeMON are\neasier to catch!'],
+  'vermilion_city:26,11': ['ROUTE 11 AHEAD', "DIGLETT's CAVE opens\noff ROUTE 11."],
+  'vermilion_city:11,15': ['VERMILION CITY GYM\nLEADER: LT. SURGE', 'The Lightning\nAmerican!'],
+  'vermilion_city:20,22': ['S.S. ANNE DOCK', 'The luxury liner is\nin port. A ticket is\nrequired to board.'],
   'route3:41,6': ['ROUTE 3', 'MT. MOON ahead'],
   'celadon_city:12,12': ['CELADON CITY GYM\nLEADER: ERIKA', 'The Nature-Loving\nPrincess!'],
   'celadon_city:9,10': ['CELADON CITY', 'The City of Rainbow\nDreams!'],

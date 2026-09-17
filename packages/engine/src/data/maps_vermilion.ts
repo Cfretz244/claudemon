@@ -1,6 +1,7 @@
 import { MapData, NPCData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
-import { createMapFromSketch, createMapShape, SketchShape } from './mapBuilder';
+import { createMapFromSketch, createMapShape, SketchShape, stampBuilding } from './mapBuilder';
+import { VERMILION_CITY_SKETCH } from './sketches/vermilionCity';
 
 const T = TileType;
 
@@ -199,72 +200,104 @@ export const ROUTE6: MapData = (() => {
 // ---------------------------------------------------------------------------
 // VERMILION CITY -- port city, home of Lt. Surge
 // ---------------------------------------------------------------------------
+//
+// Built FROM its sketch (`sketches/vermilionCity.ts`), the way Pallet,
+// Viridian, Pewter and Cerulean are: the rows draw the ground, the four
+// buildings are stamped over their footprints with the kit, and every door
+// warp, edge warp and NPC spot is read back out of the sketch. Dialogue and
+// sprite colours stay here -- only *where* things are lives in the sketch.
+
+/** Where each door warp drops the player inside the interior. */
+const VERMILION_DOOR_TARGETS: Record<string, { x: number; y: number }> = {
+  pokemart_vermilion: { x: 3, y: 7 },
+  pokemon_center_vermilion: { x: 4, y: 7 },
+  pokemon_fan_club: { x: 3, y: 7 },
+  vermilion_gym: { x: 4, y: 13 },
+};
+
+/** Where each edge warp lands on the route, keyed by the town tile it sits on. */
+const VERMILION_EDGE_TARGETS: Record<string, { x: number; y: number }> = {
+  // Route 6 comes down from the north, onto the row above its own warp row.
+  '11,0': { x: 9, y: 18 },
+  '12,0': { x: 10, y: 18 },
+  // Route 11 leaves east off the main street, one landing per lane.
+  '29,12': { x: 2, y: 4 },
+  '29,13': { x: 2, y: 5 },
+  // The S.S. ANNE's gangway, at the end of the pier.
+  '22,24': { x: 10, y: 12 },
+  '23,24': { x: 10, y: 12 },
+};
+
+/** Everything about a Vermilion NPC except where they stand (that is the sketch's). */
+const VERMILION_NPC_DETAILS: Record<string, Omit<NPCData, 'id' | 'x' | 'y'>> = {
+  vermilion_npc1: {
+    spriteColor: 0x6080c0,
+    direction: Direction.DOWN,
+    dialogue: [
+      'VERMILION CITY',
+      'The Port of Exquisite\nSunsets!',
+    ],
+  },
+  vermilion_npc3: {
+    spriteColor: 0xc0a060,
+    direction: Direction.DOWN,
+    dialogue: [
+      'LT. SURGE is the GYM\nLEADER here!',
+      "He's an expert on\nELECTRIC-type POKeMON!",
+      'Watch out for his\nRAICHU!',
+    ],
+  },
+  vermilion_sailor: {
+    spriteColor: 0x4060b0,
+    direction: Direction.DOWN,
+    dialogue: [
+      'SAILOR: The S.S. ANNE\nis docked at the port!',
+      'You need a ticket to\nget on board, though.',
+    ],
+  },
+  // Fishing Guru - gives Old Rod
+  fishing_guru_vermilion: {
+    spriteColor: 0x8080c0,
+    direction: Direction.DOWN,
+    dialogue: [
+      'FISHING GURU: Hello\nthere! I love fishing!',
+    ],
+  },
+  // Officer Jenny - gives Squirtle after Thunder Badge
+  vermilion_officer_jenny: {
+    spriteColor: 0x4060c0,
+    direction: Direction.DOWN,
+    dialogue: [
+      "OFFICER JENNY: I'm\npatrolling the city!",
+    ],
+  },
+  // The Fan Club's board. It is an NPC rather than a SIGN tile so that it can
+  // stand on the lawn below the building, and it now does: on the sketch it is
+  // at (27,10), off the SIGN tiles, instead of on top of one. (It used to
+  // carry a dead `isSign: true` that nothing in the game ever read, and that
+  // only typechecked because it sat in an un-contextually-typed IIFE.)
+  vermilion_fan_club_sign: {
+    spriteColor: 0x000000,
+    direction: Direction.DOWN,
+    dialogue: [
+      'POKeMON FAN CLUB',
+    ],
+  },
+};
+
 export const VERMILION_CITY: MapData = (() => {
-  const W = 30, H = 25;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
+  const sketch = VERMILION_CITY_SKETCH;
+  const shape = createMapFromSketch(sketch.rows, sketch.legend);
+  const { tiles, collision, tileKinds, width: W, height: H } = shape;
 
-  // Tree borders (2 tiles thick)
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.TREE);
-    setTile(x, 1, T.TREE);
+  for (const b of sketch.buildings) {
+    stampBuilding(shape, b.kind, b.x, b.y, {
+      w: b.w,
+      h: b.h,
+      door: b.door[0] - b.x,
+      chimney: b.kind === 'house',
+    });
   }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.TREE);
-    setTile(1, y, T.TREE);
-    setTile(W - 1, y, T.TREE);
-    setTile(W - 2, y, T.TREE);
-  }
-
-  // Main roads: vertical path
-  fillRect(10, 2, 4, 21, T.PATH);
-  // Horizontal path
-  fillRect(2, 12, 26, 2, T.PATH);
-
-  // Vermilion Gym (left side, lower)
-  fillRect(4, 15, 6, 1, T.ROOF);
-  fillRect(4, 16, 6, 4, T.BUILDING);
-  setTile(7, 19, T.DOOR);
-
-  // Pokemon Center (right side, upper)
-  fillRect(16, 5, 5, 1, T.ROOF);
-  fillRect(16, 6, 5, 3, T.BUILDING);
-  setTile(18, 8, T.DOOR);
-
-  // Pokemart (left side, upper)
-  fillRect(4, 5, 5, 1, T.ROOF);
-  fillRect(4, 6, 5, 3, T.BUILDING);
-  setTile(6, 8, T.DOOR);
-
-  // SS Anne pier - path from road south to dock
-  fillRect(22, 14, 2, 8, T.PATH);
-
-  // Harbor water along southern edge
-  fillRect(2, 22, 26, 3, T.WATER);
-  // SS Anne pier extends over water
-  fillRect(22, 22, 2, 2, T.PATH);
-  // SS Anne boarding point at end of pier
-  setTile(22, 24, T.DOOR);
-  setTile(23, 24, T.DOOR);
-
-  // CUT trees blocking path to gym
-  setTile(5, 14, T.CUT_TREE);
-  setTile(6, 14, T.CUT_TREE);
-
-  // Pokemon Fan Club (east side, upper)
-  fillRect(22, 5, 5, 1, T.ROOF);
-  fillRect(22, 6, 5, 3, T.BUILDING);
-  setTile(24, 8, T.DOOR);
-
-  // Flowers
-  setTile(14, 6, T.FLOWER);
-  setTile(15, 6, T.FLOWER);
-  setTile(14, 7, T.FLOWER);
-  setTile(8, 11, T.FLOWER);
-  setTile(9, 11, T.FLOWER);
-
-  // Signs
-  setTile(9, 12, T.SIGN);
-  setTile(23, 9, T.SIGN); // Fan Club sign
 
   return {
     id: 'vermilion_city',
@@ -273,88 +306,24 @@ export const VERMILION_CITY: MapData = (() => {
     height: H,
     tiles,
     collision,
+    tileKinds,
     warps: [
-      // North exit -> Route 6
-      { x: 11, y: 1, targetMap: 'route6', targetX: 9, targetY: 18 },
-      { x: 12, y: 1, targetMap: 'route6', targetX: 9, targetY: 18 },
-      // East exit -> Route 11
-      { x: 28, y: 12, targetMap: 'route11', targetX: 2, targetY: 5 },
-      { x: 28, y: 13, targetMap: 'route11', targetX: 2, targetY: 5 },
-      // Gym door
-      { x: 7, y: 19, targetMap: 'vermilion_gym', targetX: 4, targetY: 13 },
-      // Pokemon Center
-      { x: 18, y: 8, targetMap: 'pokemon_center_vermilion', targetX: 4, targetY: 7 },
-      // Pokemart door
-      { x: 6, y: 8, targetMap: 'pokemart_vermilion', targetX: 3, targetY: 7 },
-      // Pokemon Fan Club
-      { x: 24, y: 8, targetMap: 'pokemon_fan_club', targetX: 3, targetY: 7 },
-      // SS Anne pier
-      { x: 22, y: 24, targetMap: 'ss_anne', targetX: 10, targetY: 12 },
-      { x: 23, y: 24, targetMap: 'ss_anne', targetX: 10, targetY: 12 },
+      ...sketch.buildings.map(b => ({
+        x: b.door[0],
+        y: b.door[1],
+        targetMap: b.warp,
+        targetX: VERMILION_DOOR_TARGETS[b.warp].x,
+        targetY: VERMILION_DOOR_TARGETS[b.warp].y,
+      })),
+      ...sketch.edgeWarps.map(([x, y, targetMap]) => ({
+        x,
+        y,
+        targetMap,
+        targetX: VERMILION_EDGE_TARGETS[`${x},${y}`].x,
+        targetY: VERMILION_EDGE_TARGETS[`${x},${y}`].y,
+      })),
     ],
-    npcs: [
-      {
-        id: 'vermilion_npc1',
-        x: 15, y: 13,
-        spriteColor: 0x6080c0,
-        direction: Direction.DOWN,
-        dialogue: [
-          'VERMILION CITY',
-          'The Port of Exquisite\nSunsets!',
-        ],
-      },
-      {
-        id: 'vermilion_sailor',
-        x: 21, y: 14,
-        spriteColor: 0x4060b0,
-        direction: Direction.RIGHT,
-        dialogue: [
-          "SAILOR: The S.S. ANNE\nis docked at the port!",
-          "You need a ticket to\nget on board, though.",
-        ],
-      },
-      {
-        id: 'vermilion_npc3',
-        x: 8, y: 14,
-        spriteColor: 0xc0a060,
-        direction: Direction.UP,
-        dialogue: [
-          "LT. SURGE is the GYM\nLEADER here!",
-          "He's an expert on\nELECTRIC-type POKeMON!",
-          "Watch out for his\nRAICHU!",
-        ],
-      },
-      {
-        id: 'vermilion_fan_club_sign',
-        x: 23, y: 9,
-        spriteColor: 0x000000,
-        direction: Direction.DOWN,
-        dialogue: [
-          'POKeMON FAN CLUB',
-        ],
-        isSign: true,
-      },
-      // Officer Jenny - gives Squirtle after Thunder Badge
-      {
-        id: 'vermilion_officer_jenny',
-        x: 16, y: 13,
-        spriteColor: 0x4060c0,
-        direction: Direction.DOWN,
-        dialogue: [
-          "OFFICER JENNY: I'm\npatrolling the city!",
-        ],
-      },
-      // Fishing Guru - gives Old Rod
-      {
-        id: 'fishing_guru_vermilion',
-        x: 14, y: 21,
-        spriteColor: 0x8080c0,
-        direction: Direction.DOWN,
-        dialogue: [
-          "FISHING GURU: Hello\nthere! I love fishing!",
-        ],
-      },
-    ],
+    npcs: sketch.npcs.map(n => ({ id: n.id, x: n.x, y: n.y, ...VERMILION_NPC_DETAILS[n.id] })),
   };
 })();
 
@@ -403,8 +372,8 @@ export const VERMILION_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 15, targetMap: 'vermilion_city', targetX: 7, targetY: 20 },
-      { x: 5, y: 15, targetMap: 'vermilion_city', targetX: 7, targetY: 20 },
+      { x: 4, y: 15, targetMap: 'vermilion_city', targetX: 6, targetY: 21 },
+      { x: 5, y: 15, targetMap: 'vermilion_city', targetX: 6, targetY: 21 },
     ],
     npcs: [
       {
@@ -504,8 +473,8 @@ export const POKEMON_CENTER_VERMILION: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'vermilion_city', targetX: 18, targetY: 9 },
-      { x: 5, y: 7, targetMap: 'vermilion_city', targetX: 18, targetY: 9 },
+      { x: 4, y: 7, targetMap: 'vermilion_city', targetX: 17, targetY: 8 },
+      { x: 5, y: 7, targetMap: 'vermilion_city', targetX: 17, targetY: 8 },
     ],
     npcs: [
       {
@@ -564,7 +533,7 @@ export const ROUTE9: MapData = (() => {
     warps: [
       // West entrance -> Cerulean City
       { x: 0, y: 5, targetMap: 'cerulean_city', targetX: 23, targetY: 12 },
-      { x: 0, y: 6, targetMap: 'cerulean_city', targetX: 23, targetY: 12 },
+      { x: 0, y: 6, targetMap: 'cerulean_city', targetX: 23, targetY: 13 },
       // East exit -> Route 10
       { x: 24, y: 5, targetMap: 'route10', targetX: 9, targetY: 1 },
       { x: 24, y: 6, targetMap: 'route10', targetX: 9, targetY: 1 },
@@ -1002,7 +971,7 @@ export const POKEMART_VERMILION: MapData = (() => {
     width: W, height: H,
     tiles, collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'vermilion_city', targetX: 6, targetY: 9 },
+      { x: 3, y: H - 1, targetMap: 'vermilion_city', targetX: 5, targetY: 8 },
     ],
     npcs: [
       {
@@ -1483,7 +1452,7 @@ export const POKEMON_FAN_CLUB: MapData = (() => {
     width: W, height: H,
     tiles, collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'vermilion_city', targetX: 24, targetY: 9 },
+      { x: 3, y: H - 1, targetMap: 'vermilion_city', targetX: 25, targetY: 8 },
     ],
     npcs: [
       {

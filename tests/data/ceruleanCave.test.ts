@@ -125,7 +125,10 @@ describe('Cerulean Cave', () => {
     expect(checkEntryGates(F1, F2.id, st({})).ok, 'ladders are not gated').toBe(true);
     const mouth = pos(warpsTo(CITY, F1.id)[0]);
     const fromRoute24 = pos(CITY.warps.find(w => w.targetMap === 'route24')!);
-    expect(CITY.tiles[doorOut.y][doorOut.x]).toBe(TileType.GRASS);
+    // town-t3: the rebuilt Cerulean draws the bank in front of the cave mouth
+    // as SAND (the sketch's `:` tiles at (3-4,2)), not GRASS. Still walkable,
+    // still only reachable by surfing the pool.
+    expect(CITY.tiles[doorOut.y][doorOut.x]).toBe(TileType.SAND);
     expect(reach(CITY, fromRoute24, mouth, { surf: false })).toBe(false);
     expect(reach(CITY, fromRoute24, mouth, { surf: true })).toBe(true);
     expect(reach(CITY, doorOut, fromRoute24, { surf: true }), 'and back out').toBe(true);
