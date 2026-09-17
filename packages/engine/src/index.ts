@@ -34,6 +34,7 @@ export * from './logic/npcVisibility';
 export * from './logic/oakLab';
 export * from './logic/oaksParcel';
 export * from './logic/pokemonShape';
+export * from './logic/rareCandy';
 export * from './logic/reviveItems';
 export * from './logic/roadBlocks';
 export * from './logic/saveMigration';

@@ -2496,7 +2496,7 @@ export class OverworldScene extends Phaser.Scene {
       // Cancelled (B): nothing is applied. `checkEvolution` offers it again the
       // next time this mon levels up, which is Gen I's behaviour.
       if (outcome === 'cancelled') return [];
-      evolvePokemon(pokemon, toSpecies);
+      evolvePokemon(pokemon, toSpecies, this.playerState);
       return learnsetAtLevel(toSpecies, level);
     } finally {
       if (darkWasVisible) this.darkOverlay!.setVisible(true);
