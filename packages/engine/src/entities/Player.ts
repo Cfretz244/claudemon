@@ -99,15 +99,25 @@ export class PlayerState {
     }
     this.party.push(pokemon);
 
-    // Update Pokedex
-    if (!this.pokedexCaught.includes(pokemon.speciesId)) {
-      this.pokedexCaught.push(pokemon.speciesId);
-    }
-    if (!this.pokedexSeen.includes(pokemon.speciesId)) {
-      this.pokedexSeen.push(pokemon.speciesId);
-    }
+    this.markCaught(pokemon.speciesId);
 
     return true; // Added to party
+  }
+
+  /**
+   * Register a species as OWNED. Owning implies having seen it, so this marks
+   * both - the Pokedex screen reads the two lists separately.
+   *
+   * Every way a species joins the party goes through here: a catch and a gift
+   * via `addToParty`, and an evolution via `EvolutionSystem.evolvePokemon`,
+   * which changes the species of a mon that is already in the party and so
+   * never touches `addToParty`.
+   */
+  markCaught(speciesId: number): void {
+    if (!this.pokedexCaught.includes(speciesId)) {
+      this.pokedexCaught.push(speciesId);
+    }
+    this.markSeen(speciesId);
   }
 
   markSeen(speciesId: number): void {

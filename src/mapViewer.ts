@@ -43,6 +43,15 @@ const TILE_COLORS: Record<number, string> = {
   [TileType.SWITCH_PLATE]: '#a0a8b8',
   [TileType.GATE]: '#c89040',
   [TileType.HEAL_TILE]: '#d8d0e8',
+  [TileType.WINDOW]: '#a8d8f0',
+  [TileType.ROOF_EDGE_L]: '#a04040',
+  [TileType.ROOF_EDGE_R]: '#a04040',
+  [TileType.ROOF_RIDGE]: '#b04848',
+  [TileType.SIGNBOARD]: '#f8f8f8',
+  [TileType.CHIMNEY]: '#8c5440',
+  [TileType.PLANK]: '#a8814c',
+  [TileType.ROCK]: '#4c4440',
+  [TileType.GRAVEL]: '#a8a8a0',
 };
 
 // ─── Map region grouping ───
