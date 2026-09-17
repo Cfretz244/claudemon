@@ -2,7 +2,10 @@ import { TILE_SIZE } from './constants';
 import { TileType } from '../types/map.types';
 import { PokemonType } from '../types/pokemon.types';
 import { CUSTOM_POKEMON_SPRITES } from '../sprites/index';
-import { TOWN_THEMES, TownPalette } from '../data/townThemes';
+import {
+  BUILDING_KINDS, BuildingPalette, DEFAULT_BUILDINGS, TOWN_THEMES, TownPalette,
+  resolveBuildingPalette, shade,
+} from '../data/townThemes';
 
 // Helper: create a canvas texture with frames for use as a spritesheet
 function addCanvasSpriteSheet(
@@ -25,508 +28,882 @@ function addCanvasSpriteSheet(
   }
 }
 
+// ─── Town building kit art ───────────────────────────────────────────────────
+//
+// Every facade tile is drawn from a `BuildingPalette`, so one drawer produces
+// a house in Pallet, a Pokemon Center and Silph Co. The scene picks the
+// variant by the tile's building kind (`MapData.tileKinds`); see
+// `stampBuilding` in src/data/mapBuilder.ts.
+
+/** 3x5 pixel letters for the signboard glyphs. */
+const SIGN_FONT: Record<string, string[]> = {
+  P: ['110', '101', '110', '100', '100'],
+  M: ['101', '111', '111', '101', '101'],
+  A: ['010', '101', '111', '101', '101'],
+  R: ['110', '101', '110', '101', '101'],
+  T: ['111', '010', '010', '010', '010'],
+  G: ['011', '100', '101', '101', '011'],
+  Y: ['101', '101', '010', '010', '010'],
+};
+
+function drawGlyph(ctx: CanvasRenderingContext2D, ch: string, x: number, y: number): void {
+  const rows = SIGN_FONT[ch];
+  if (!rows) return;
+  rows.forEach((row, ry) => {
+    [...row].forEach((bit, cx) => {
+      if (bit === '1') ctx.fillRect(x + cx, y + ry, 1, 1);
+    });
+  });
+}
+
+/** What each kind's signboard says: P (Center), MART, GYM, or a blank board. */
+const SIGN_TEXT: Record<string, { word: string; color: string; xs: number[] }> = {
+  center: { word: 'P', color: '#d02020', xs: [7] },
+  mart: { word: 'MART', color: '#2040c0', xs: [2, 5, 8, 11] },
+  gym: { word: 'GYM', color: '#303038', xs: [3, 7, 11] },
+};
+
+function drawWall(ctx: CanvasRenderingContext2D, b: BuildingPalette): void {
+  ctx.fillStyle = b.wall;
+  ctx.fillRect(0, 0, 16, 16);
+  ctx.fillStyle = b.wallBorder;
+  ctx.fillRect(0, 0, 16, 1);
+  ctx.fillRect(0, 0, 1, 16);
+  ctx.fillRect(15, 0, 1, 16);
+}
+
+/**
+ * Art for the nine tile types whose look depends on the building's kind.
+ * Generated per (town theme, kind) as `tile_<theme>_<kind>_<tileId>`.
+ */
+export const BUILDING_TILE_DRAWERS: Record<number, (ctx: CanvasRenderingContext2D, b: BuildingPalette, kind: string) => void> = {
+  // The top roof row: a dark ridge line along the top, then a light stripe.
+  [TileType.ROOF_RIDGE]: (ctx, b) => {
+    ctx.fillStyle = b.roof;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = b.roofDark;
+    ctx.fillRect(0, 0, 16, 3);
+    ctx.fillStyle = b.roofLight;
+    ctx.fillRect(0, 5, 16, 3);
+    ctx.fillStyle = shade(b.roof, -40);
+    ctx.fillRect(0, 15, 16, 1);
+  },
+  // The eave row: overhangs the wall below by one darker pixel.
+  [TileType.ROOF]: (ctx, b) => {
+    ctx.fillStyle = b.roof;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = b.roofLight;
+    ctx.fillRect(0, 4, 16, 3);
+    ctx.fillStyle = b.roofDark;
+    ctx.fillRect(0, 13, 16, 2);
+    ctx.fillStyle = shade(b.roof, -56);
+    ctx.fillRect(0, 15, 16, 1);
+  },
+  // Roof ends: a barge board down the outer edge so the roof reads as a roof.
+  [TileType.ROOF_EDGE_L]: (ctx, b) => {
+    ctx.fillStyle = b.roof;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = b.roofDark;
+    ctx.fillRect(0, 0, 16, 3);
+    ctx.fillStyle = b.roofLight;
+    ctx.fillRect(3, 5, 13, 3);
+    ctx.fillStyle = b.roofDark;
+    ctx.fillRect(0, 0, 3, 16);
+    ctx.fillStyle = shade(b.roof, -56);
+    ctx.fillRect(0, 0, 1, 16);
+    ctx.fillRect(3, 15, 13, 1);
+  },
+  [TileType.ROOF_EDGE_R]: (ctx, b) => {
+    ctx.fillStyle = b.roof;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = b.roofDark;
+    ctx.fillRect(0, 0, 16, 3);
+    ctx.fillStyle = b.roofLight;
+    ctx.fillRect(0, 5, 13, 3);
+    ctx.fillStyle = b.roofDark;
+    ctx.fillRect(13, 0, 3, 16);
+    ctx.fillStyle = shade(b.roof, -56);
+    ctx.fillRect(15, 0, 1, 16);
+    ctx.fillRect(0, 15, 13, 1);
+  },
+  [TileType.BUILDING]: (ctx, b) => drawWall(ctx, b),
+  // A 6x6 pale pane in a dark frame, with a 2px highlight and a sill.
+  [TileType.WINDOW]: (ctx, b) => {
+    drawWall(ctx, b);
+    ctx.fillStyle = '#38404c';
+    ctx.fillRect(4, 4, 8, 8);
+    ctx.fillStyle = b.window;
+    ctx.fillRect(5, 5, 6, 6);
+    ctx.fillStyle = '#f8f8f8';
+    ctx.fillRect(6, 6, 2, 2);
+    ctx.fillStyle = shade(b.wallBorder, -24);
+    ctx.fillRect(3, 12, 10, 1);
+  },
+  // Today's door art on the kind's wall, plus a one-pixel step at the threshold.
+  [TileType.DOOR]: (ctx, b) => {
+    ctx.fillStyle = b.wall;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#805028';
+    ctx.fillRect(3, 2, 10, 14);
+    ctx.fillStyle = '#604018';
+    ctx.fillRect(4, 3, 8, 12);
+    ctx.fillStyle = '#c0a030';
+    ctx.fillRect(10, 9, 2, 2);
+    ctx.fillStyle = shade(b.wall, -32);
+    ctx.fillRect(2, 15, 12, 1);
+  },
+  // A 12x8 board on the wall; the glyph comes from the kind.
+  [TileType.SIGNBOARD]: (ctx, b, kind) => {
+    drawWall(ctx, b);
+    ctx.fillStyle = '#4c4c54';
+    ctx.fillRect(1, 3, 14, 10);
+    ctx.fillStyle = b.sign;
+    ctx.fillRect(2, 4, 12, 8);
+    const text = SIGN_TEXT[kind];
+    if (text) {
+      ctx.fillStyle = text.color;
+      [...text.word].forEach((ch, i) => drawGlyph(ctx, ch, text.xs[i], 6));
+    }
+    ctx.fillStyle = shade(b.wall, -40);
+    ctx.fillRect(2, 13, 12, 1);
+  },
+  // A brick stack rising off the ridge into a wider dark cap, with a wisp of
+  // smoke: it has to read as a chimney at 1x, not as a smudge on the roof.
+  [TileType.CHIMNEY]: (ctx, b) => {
+    ctx.fillStyle = b.roof;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = b.roofDark;
+    ctx.fillRect(0, 0, 16, 3);
+    ctx.fillStyle = b.roofLight;
+    ctx.fillRect(0, 5, 16, 3);
+    ctx.fillStyle = shade(b.roof, -40);
+    ctx.fillRect(0, 15, 16, 1);
+    // Smoke, above and to the right of the stack.
+    ctx.fillStyle = '#d0d0d0';
+    ctx.fillRect(12, 1, 2, 1);
+    ctx.fillRect(13, 0, 2, 1);
+    ctx.fillStyle = '#b0b0b0';
+    ctx.fillRect(11, 3, 1, 1);
+    // Stack: 6px of brick from the ridge up to the cap.
+    ctx.fillStyle = '#9c4c38';
+    ctx.fillRect(5, 6, 6, 10);
+    ctx.fillStyle = '#c07458';
+    ctx.fillRect(5, 6, 1, 10);
+    ctx.fillStyle = '#7c3828';
+    ctx.fillRect(10, 6, 1, 10);
+    // Mortar every 3px.
+    ctx.fillStyle = '#6c3020';
+    ctx.fillRect(5, 8, 6, 1);
+    ctx.fillRect(5, 11, 6, 1);
+    ctx.fillRect(5, 14, 6, 1);
+    // Cap: wider than the stack, dark, with a lighter top edge.
+    ctx.fillStyle = '#3c3238';
+    ctx.fillRect(3, 3, 10, 3);
+    ctx.fillStyle = '#9c98a0';
+    ctx.fillRect(3, 3, 10, 1);
+  },
+};
+
+/** The kit tiles as unthemed drawers, using the default town's house colours. */
+function buildingKitDrawers(): Record<number, (ctx: CanvasRenderingContext2D) => void> {
+  const out: Record<number, (ctx: CanvasRenderingContext2D) => void> = {};
+  for (const [tileId, draw] of Object.entries(BUILDING_TILE_DRAWERS)) {
+    out[Number(tileId)] = (ctx) => draw(ctx, DEFAULT_BUILDINGS.house, 'house');
+  }
+  return out;
+}
+
+/**
+ * The ground of a stone town (Pewter, Indigo): grey chips over a flat base.
+ * Deliberately subtle - a few darker chips and a few lighter specks, so a
+ * field of it reads as stone without dithering into noise.
+ */
+function drawGravel(ctx: CanvasRenderingContext2D, base: string, accent: string, light: string): void {
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, 16, 16);
+  ctx.fillStyle = accent;
+  ctx.fillRect(2, 3, 3, 2);
+  ctx.fillRect(9, 1, 2, 2);
+  ctx.fillRect(12, 7, 3, 2);
+  ctx.fillRect(4, 10, 2, 2);
+  ctx.fillRect(8, 13, 3, 2);
+  ctx.fillStyle = light;
+  ctx.fillRect(6, 5, 2, 1);
+  ctx.fillRect(1, 8, 2, 1);
+  ctx.fillRect(13, 12, 2, 1);
+  ctx.fillRect(10, 9, 1, 1);
+  ctx.fillRect(5, 1, 1, 1);
+}
+
+/** Pier planks laid over the town's water. */
+function drawPlank(ctx: CanvasRenderingContext2D, water: string): void {
+  ctx.fillStyle = water;
+  ctx.fillRect(0, 0, 16, 16);
+  ctx.fillStyle = '#a8814c';
+  ctx.fillRect(0, 1, 16, 14);
+  ctx.fillStyle = '#8c6838';
+  ctx.fillRect(0, 1, 16, 1);
+  ctx.fillRect(0, 7, 16, 1);
+  ctx.fillRect(0, 14, 16, 1);
+  ctx.fillStyle = '#c09c64';
+  ctx.fillRect(0, 3, 16, 1);
+  ctx.fillRect(0, 9, 16, 1);
+  ctx.fillStyle = '#5c4830';
+  ctx.fillRect(2, 4, 1, 1);
+  ctx.fillRect(13, 4, 1, 1);
+  ctx.fillRect(2, 11, 1, 1);
+  ctx.fillRect(13, 11, 1, 1);
+}
+
+/**
+ * Art for every TileType, drawn on a 16x16 canvas. Exported so a test can
+ * prove no tile type ships without a picture (`tests/data/tileKit.test.ts`).
+ */
+export const TILE_DRAWERS: Record<number, (ctx: CanvasRenderingContext2D) => void> = {
+  [TileType.GRASS]: (ctx) => {
+    ctx.fillStyle = '#88c070';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#78b060';
+    for (let i = 0; i < 4; i++) {
+      const x = (i % 2) * 8 + 2;
+      const y = Math.floor(i / 2) * 8 + 2;
+      ctx.fillRect(x, y, 2, 3);
+    }
+  },
+  [TileType.PATH]: (ctx) => {
+    ctx.fillStyle = '#d8c078';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#c8b068';
+    ctx.fillRect(0, 0, 1, 16);
+    ctx.fillRect(0, 0, 16, 1);
+  },
+  [TileType.WALL]: (ctx) => {
+    ctx.fillStyle = '#a08858';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#907848';
+    ctx.fillRect(0, 8, 16, 1);
+    ctx.fillRect(8, 0, 1, 16);
+  },
+  [TileType.WATER]: (ctx) => {
+    ctx.fillStyle = '#3890f8';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#58a8f8';
+    ctx.fillRect(2, 4, 6, 2);
+    ctx.fillRect(10, 10, 4, 2);
+  },
+  [TileType.TREE]: (ctx) => {
+    ctx.fillStyle = '#805028';
+    ctx.fillRect(5, 10, 6, 6);
+    ctx.fillStyle = '#408040';
+    ctx.fillRect(1, 1, 14, 10);
+    ctx.fillStyle = '#509050';
+    ctx.fillRect(3, 2, 10, 7);
+  },
+  [TileType.TALL_GRASS]: (ctx) => {
+    ctx.fillStyle = '#88c070';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#409030';
+    for (let i = 0; i < 6; i++) {
+      ctx.fillRect(i * 3 + 1, 2, 2, 12);
+    }
+    ctx.fillStyle = '#58a848';
+    for (let i = 0; i < 5; i++) {
+      ctx.fillRect(i * 3 + 2, 4, 2, 8);
+    }
+  },
+  // The building-kit tiles all come from BUILDING_TILE_DRAWERS; the unthemed
+  // textures use the default town's house colours (indoor/utility maps).
+  ...buildingKitDrawers(),
+  [TileType.PLANK]: (ctx) => drawPlank(ctx, '#3890f8'),
+  [TileType.GRAVEL]: (ctx) => drawGravel(ctx, '#a8a8a0', '#888880', '#c8c8c0'),
+  // Dark basalt with a lighter crack (Cinnabar's volcanic ground).
+  [TileType.ROCK]: (ctx) => {
+    ctx.fillStyle = '#4c4440';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#605850';
+    ctx.fillRect(1, 1, 14, 3);
+    ctx.fillStyle = '#5c544c';
+    ctx.fillRect(2, 6, 3, 3);
+    ctx.fillRect(12, 4, 3, 3);
+    ctx.fillRect(3, 11, 3, 2);
+    ctx.fillStyle = '#38322e';
+    ctx.fillRect(0, 13, 16, 3);
+    ctx.fillStyle = '#8c8078';
+    ctx.fillRect(7, 2, 1, 4);
+    ctx.fillRect(8, 6, 1, 3);
+    ctx.fillRect(9, 9, 1, 4);
+    ctx.fillRect(5, 8, 2, 1);
+    ctx.fillRect(10, 11, 2, 1);
+  },
+  [TileType.SIGN]: (ctx) => {
+    ctx.fillStyle = '#88c070';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#805028';
+    ctx.fillRect(6, 10, 4, 6);
+    ctx.fillStyle = '#d0c080';
+    ctx.fillRect(2, 4, 12, 8);
+    ctx.fillStyle = '#a09060';
+    ctx.fillRect(3, 5, 10, 6);
+  },
+  [TileType.LEDGE]: (ctx) => {
+    ctx.fillStyle = '#88c070';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#507850';
+    ctx.fillRect(0, 12, 16, 4);
+    ctx.fillStyle = '#608860';
+    ctx.fillRect(0, 12, 16, 2);
+  },
+  [TileType.FENCE]: (ctx) => {
+    ctx.fillStyle = '#88c070';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#d0b880';
+    ctx.fillRect(0, 4, 16, 8);
+    ctx.fillStyle = '#c0a870';
+    ctx.fillRect(2, 4, 2, 8);
+    ctx.fillRect(12, 4, 2, 8);
+    ctx.fillRect(0, 7, 16, 2);
+  },
+  [TileType.FLOWER]: (ctx) => {
+    ctx.fillStyle = '#88c070';
+    ctx.fillRect(0, 0, 16, 16);
+    const colors = ['#f05050', '#f0f050', '#f050f0'];
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = colors[i];
+      ctx.fillRect(i * 5 + 2, 5, 3, 3);
+      ctx.fillStyle = '#50a038';
+      ctx.fillRect(i * 5 + 3, 8, 1, 4);
+    }
+  },
+  [TileType.INDOOR_FLOOR]: (ctx) => {
+    ctx.fillStyle = '#f8f0d0';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#e8e0c0';
+    ctx.fillRect(0, 0, 16, 1);
+    ctx.fillRect(0, 0, 1, 16);
+  },
+  [TileType.COUNTER]: (ctx) => {
+    ctx.fillStyle = '#b08840';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#c09850';
+    ctx.fillRect(1, 1, 14, 6);
+    ctx.fillStyle = '#a07830';
+    ctx.fillRect(0, 14, 16, 2);
+  },
+  [TileType.PC]: (ctx) => {
+    ctx.fillStyle = '#f8f0d0';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#606060';
+    ctx.fillRect(3, 2, 10, 12);
+    ctx.fillStyle = '#80c0e0';
+    ctx.fillRect(4, 3, 8, 8);
+    ctx.fillStyle = '#404040';
+    ctx.fillRect(5, 12, 6, 1);
+  },
+  [TileType.MART_SHELF]: (ctx) => {
+    ctx.fillStyle = '#f8f0d0';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#a08040';
+    ctx.fillRect(1, 2, 14, 12);
+    ctx.fillStyle = '#c09850';
+    ctx.fillRect(2, 4, 12, 3);
+    ctx.fillRect(2, 9, 12, 3);
+  },
+  [TileType.CARPET]: (ctx) => {
+    ctx.fillStyle = '#c04040';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#d05050';
+    ctx.fillRect(1, 1, 14, 14);
+  },
+  [TileType.SAND]: (ctx) => {
+    ctx.fillStyle = '#e8d898';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#d8c888';
+    ctx.fillRect(3, 5, 2, 2);
+    ctx.fillRect(10, 10, 2, 2);
+  },
+  [TileType.CAVE_FLOOR]: (ctx) => {
+    ctx.fillStyle = '#a09080';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#908070';
+    ctx.fillRect(4, 4, 3, 3);
+    ctx.fillRect(10, 9, 2, 2);
+  },
+  [TileType.CAVE_WALL]: (ctx) => {
+    ctx.fillStyle = '#706050';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#605040';
+    ctx.fillRect(0, 0, 16, 2);
+    ctx.fillRect(0, 8, 16, 2);
+    ctx.fillStyle = '#807060';
+    ctx.fillRect(4, 4, 4, 4);
+  },
+  [TileType.CUT_TREE]: (ctx) => {
+    // Small cuttable tree - lighter green, smaller
+    ctx.fillStyle = '#88c070';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#805028';
+    ctx.fillRect(6, 10, 4, 6);
+    ctx.fillStyle = '#60a050';
+    ctx.fillRect(3, 3, 10, 8);
+    ctx.fillStyle = '#70b060';
+    ctx.fillRect(4, 4, 8, 6);
+    // X mark to show it's cuttable
+    ctx.fillStyle = '#c0a040';
+    ctx.fillRect(6, 5, 4, 1);
+    ctx.fillRect(7, 4, 2, 3);
+  },
+  [TileType.BOULDER]: (ctx) => {
+    // Pushable boulder
+    ctx.fillStyle = '#a09080';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#808070';
+    ctx.fillRect(2, 3, 12, 10);
+    ctx.fillStyle = '#909080';
+    ctx.fillRect(3, 4, 10, 8);
+    // Shading
+    ctx.fillStyle = '#707060';
+    ctx.fillRect(2, 12, 12, 1);
+    ctx.fillRect(13, 3, 1, 10);
+  },
+  [TileType.STOP_TILE]: (ctx) => {
+    // Stop tile — indoor floor with a distinctive circle/dot pattern
+    ctx.fillStyle = '#f8f0d0';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#e8e0c0';
+    ctx.fillRect(0, 0, 16, 1);
+    ctx.fillRect(0, 0, 1, 16);
+    // Circle pattern to indicate stopping point
+    ctx.fillStyle = '#b0a888';
+    ctx.fillRect(5, 5, 6, 6);
+    ctx.fillStyle = '#f8f0d0';
+    ctx.fillRect(6, 6, 4, 4);
+    ctx.fillStyle = '#b0a888';
+    ctx.fillRect(7, 7, 2, 2);
+  },
+  [TileType.SWITCH_PLATE]: (ctx) => {
+    // Pressure plate set into cave floor: a raised square with a dark rim
+    ctx.fillStyle = '#a09080';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#585048';
+    ctx.fillRect(3, 3, 10, 10);
+    ctx.fillStyle = '#c0b0a0';
+    ctx.fillRect(4, 4, 8, 8);
+    ctx.fillStyle = '#887868';
+    ctx.fillRect(6, 6, 4, 4);
+  },
+  [TileType.GATE]: (ctx) => {
+    // Iron bars across a cave passage
+    ctx.fillStyle = '#a09080';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#403830';
+    ctx.fillRect(0, 1, 16, 2);
+    ctx.fillRect(0, 13, 16, 2);
+    for (let x = 1; x < 16; x += 4) ctx.fillRect(x, 1, 2, 14);
+    ctx.fillStyle = '#686058';
+    for (let x = 1; x < 16; x += 4) ctx.fillRect(x, 2, 1, 12);
+  },
+  [TileType.BOULDER_HOLE]: (ctx) => {
+    // A hole in the cave floor, big enough for a boulder
+    ctx.fillStyle = '#a09080';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#585048';
+    ctx.fillRect(2, 3, 12, 11);
+    ctx.fillStyle = '#201810';
+    ctx.fillRect(3, 4, 10, 9);
+    ctx.fillStyle = '#383028';
+    ctx.fillRect(4, 5, 8, 2);
+  },
+  [TileType.CURRENT]: (ctx) => {
+    // Flowing water (up arrow) - directional variants generated below
+    ctx.fillStyle = '#3890f8';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#58a8f8';
+    ctx.fillRect(2, 4, 6, 2);
+    ctx.fillRect(10, 10, 4, 2);
+    ctx.fillStyle = '#d8f0ff';
+    ctx.fillRect(7, 3, 2, 10);
+    ctx.fillRect(5, 5, 6, 2);
+    ctx.fillRect(6, 4, 4, 2);
+  },
+  [TileType.HEAL_TILE]: (ctx) => {
+    // Purifying square: pale floor with a soft glowing diamond
+    ctx.fillStyle = '#d8d0e8';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#f0ecf8';
+    ctx.fillRect(4, 7, 8, 2);
+    ctx.fillRect(7, 4, 2, 8);
+    ctx.fillRect(5, 6, 6, 4);
+    ctx.fillRect(6, 5, 4, 6);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(7, 7, 2, 2);
+    ctx.fillStyle = '#b8b0d0';
+    ctx.fillRect(0, 0, 16, 1);
+    ctx.fillRect(0, 0, 1, 16);
+  },
+  [TileType.SPIN_TILE]: (ctx) => {
+    // Default spin tile (up arrow) - directional variants generated below
+    ctx.fillStyle = '#f8f0d0';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#e8e0c0';
+    ctx.fillRect(0, 0, 16, 1);
+    ctx.fillRect(0, 0, 1, 16);
+    // Up arrow
+    ctx.fillStyle = '#c04040';
+    ctx.fillRect(7, 3, 2, 10);
+    ctx.fillRect(5, 5, 6, 2);
+    ctx.fillRect(6, 4, 4, 2);
+  },
+  [TileType.TELEPORT_PAD]: (ctx) => {
+    // Cyan/blue glowing teleport pad on indoor floor
+    ctx.fillStyle = '#f8f0d0';
+    ctx.fillRect(0, 0, 16, 16);
+    // Outer pad ring
+    ctx.fillStyle = '#2080b0';
+    ctx.fillRect(2, 2, 12, 12);
+    // Inner pad
+    ctx.fillStyle = '#40c0e0';
+    ctx.fillRect(4, 4, 8, 8);
+    // Bright center glow
+    ctx.fillStyle = '#80e0ff';
+    ctx.fillRect(6, 6, 4, 4);
+    // Corner accents
+    ctx.fillStyle = '#106090';
+    ctx.fillRect(2, 2, 2, 2);
+    ctx.fillRect(12, 2, 2, 2);
+    ctx.fillRect(2, 12, 2, 2);
+    ctx.fillRect(12, 12, 2, 2);
+  },
+  [TileType.FOUNTAIN]: (ctx) => {
+    // Stone basin on grass
+    ctx.fillStyle = '#88c070';
+    ctx.fillRect(0, 0, 16, 16);
+    // Outer stone basin
+    ctx.fillStyle = '#a0a0a0';
+    ctx.fillRect(2, 2, 12, 12);
+    // Inner basin
+    ctx.fillStyle = '#888888';
+    ctx.fillRect(3, 3, 10, 10);
+    // Blue water
+    ctx.fillStyle = '#4090d0';
+    ctx.fillRect(4, 4, 8, 8);
+    // Water highlight
+    ctx.fillStyle = '#60b0e0';
+    ctx.fillRect(5, 5, 3, 2);
+    // Center spray
+    ctx.fillStyle = '#c0e0f8';
+    ctx.fillRect(7, 5, 2, 2);
+    ctx.fillRect(7, 3, 2, 2);
+  },
+  [TileType.COBBLESTONE]: (ctx) => {
+    // Gray/tan interlocking rectangular pattern
+    ctx.fillStyle = '#b8b0a0';
+    ctx.fillRect(0, 0, 16, 16);
+    // Grout lines (darker)
+    ctx.fillStyle = '#989080';
+    ctx.fillRect(0, 0, 16, 1);
+    ctx.fillRect(0, 4, 16, 1);
+    ctx.fillRect(0, 8, 16, 1);
+    ctx.fillRect(0, 12, 16, 1);
+    ctx.fillRect(0, 0, 1, 16);
+    ctx.fillRect(8, 0, 1, 4);
+    ctx.fillRect(4, 4, 1, 4);
+    ctx.fillRect(12, 4, 1, 4);
+    ctx.fillRect(8, 8, 1, 4);
+    ctx.fillRect(4, 12, 1, 4);
+    ctx.fillRect(12, 12, 1, 4);
+  },
+  [TileType.DOORMAT]: (ctx) => {
+    // Indoor floor base
+    ctx.fillStyle = '#f8f0d0';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#e8e0c0';
+    ctx.fillRect(0, 0, 16, 1);
+    ctx.fillRect(0, 0, 1, 16);
+    // Brown woven mat
+    ctx.fillStyle = '#9b7340';
+    ctx.fillRect(1, 4, 14, 9);
+    // Lighter weave stripes
+    ctx.fillStyle = '#b8894e';
+    ctx.fillRect(2, 5, 12, 1);
+    ctx.fillRect(2, 7, 12, 1);
+    ctx.fillRect(2, 9, 12, 1);
+    ctx.fillRect(2, 11, 12, 1);
+    // Dark border around mat
+    ctx.fillStyle = '#7a5a2e';
+    ctx.fillRect(1, 4, 14, 1);
+    ctx.fillRect(1, 12, 14, 1);
+    ctx.fillRect(1, 4, 1, 9);
+    ctx.fillRect(14, 4, 1, 9);
+  },
+  [TileType.EXHIBIT_CASE]: (ctx) => {
+    // Indoor floor base
+    ctx.fillStyle = '#f0e8d0';
+    ctx.fillRect(0, 0, 16, 16);
+    // Dark wood frame
+    ctx.fillStyle = '#705030';
+    ctx.fillRect(1, 1, 14, 14);
+    ctx.fillStyle = '#604020';
+    ctx.fillRect(2, 2, 12, 12);
+    // Glass top
+    ctx.fillStyle = '#c0d8e8';
+    ctx.fillRect(3, 3, 10, 10);
+    // White highlight on glass
+    ctx.fillStyle = '#e8f0f8';
+    ctx.fillRect(4, 4, 4, 2);
+    ctx.fillRect(4, 4, 2, 4);
+  },
+  [TileType.FOSSIL_DISPLAY]: (ctx) => {
+    // Indoor floor base
+    ctx.fillStyle = '#f0e8d0';
+    ctx.fillRect(0, 0, 16, 16);
+    // Gray stone pedestal
+    ctx.fillStyle = '#b0a8a0';
+    ctx.fillRect(3, 4, 10, 12);
+    ctx.fillStyle = '#a09890';
+    ctx.fillRect(4, 5, 8, 10);
+    // Tan fossil shape on top
+    ctx.fillStyle = '#d8c890';
+    ctx.fillRect(5, 2, 6, 5);
+    ctx.fillStyle = '#c8b880';
+    ctx.fillRect(6, 3, 4, 3);
+  },
+  [TileType.SHUTTLE_DISPLAY]: (ctx) => {
+    // Indoor floor base
+    ctx.fillStyle = '#f0e8d0';
+    ctx.fillRect(0, 0, 16, 16);
+    // Dark metal stand
+    ctx.fillStyle = '#606060';
+    ctx.fillRect(5, 10, 6, 6);
+    ctx.fillStyle = '#505050';
+    ctx.fillRect(6, 11, 4, 4);
+    // White shuttle body
+    ctx.fillStyle = '#e0e0e0';
+    ctx.fillRect(4, 2, 8, 9);
+    ctx.fillStyle = '#d0d0d0';
+    ctx.fillRect(5, 3, 6, 7);
+    // Orange engine accent
+    ctx.fillStyle = '#e08030';
+    ctx.fillRect(6, 9, 4, 2);
+    // Nose cone
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillRect(6, 1, 4, 2);
+  },
+  [TileType.MUSEUM_PLAQUE]: (ctx) => {
+    // Indoor floor base
+    ctx.fillStyle = '#f0e8d0';
+    ctx.fillRect(0, 0, 16, 16);
+    // Small centered gold rectangle
+    ctx.fillStyle = '#c0a040';
+    ctx.fillRect(4, 5, 8, 6);
+    // Border
+    ctx.fillStyle = '#a08830';
+    ctx.fillRect(4, 5, 8, 1);
+    ctx.fillRect(4, 10, 8, 1);
+    ctx.fillRect(4, 5, 1, 6);
+    ctx.fillRect(11, 5, 1, 6);
+    // Text lines
+    ctx.fillStyle = '#806020';
+    ctx.fillRect(6, 7, 4, 1);
+    ctx.fillRect(6, 9, 3, 1);
+  },
+  [TileType.TOMBSTONE]: (ctx) => {
+    // Dark purple-gray base floor
+    ctx.fillStyle = '#3a2040';
+    ctx.fillRect(0, 0, 16, 16);
+    // Gray stone rectangle body
+    ctx.fillStyle = '#909090';
+    ctx.fillRect(4, 3, 8, 11);
+    // Lighter face detail
+    ctx.fillStyle = '#a8a8a8';
+    ctx.fillRect(5, 4, 6, 9);
+    // Rounded top
+    ctx.fillStyle = '#909090';
+    ctx.fillRect(5, 2, 6, 2);
+    ctx.fillStyle = '#a8a8a8';
+    ctx.fillRect(6, 2, 4, 1);
+    // Cross at top
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillRect(7, 4, 2, 5);
+    ctx.fillRect(6, 5, 4, 1);
+    // "RIP" text
+    ctx.fillStyle = '#606060';
+    ctx.fillRect(6, 10, 1, 2);
+    ctx.fillRect(8, 10, 1, 2);
+    ctx.fillRect(10, 10, 1, 2);
+  },
+  [TileType.CAVE_ENTRANCE]: (ctx) => {
+    // Rocky mountain base with dark cave opening
+    ctx.fillStyle = '#706050';
+    ctx.fillRect(0, 0, 16, 16);
+    // Rocky texture stripes (same as CAVE_WALL)
+    ctx.fillStyle = '#605040';
+    ctx.fillRect(0, 0, 16, 2);
+    ctx.fillRect(0, 8, 16, 2);
+    ctx.fillStyle = '#807060';
+    ctx.fillRect(4, 4, 4, 4);
+    // Dark cave opening — arched shape
+    ctx.fillStyle = '#1a1410';
+    ctx.fillRect(3, 4, 10, 12);
+    ctx.fillStyle = '#100c08';
+    ctx.fillRect(4, 5, 8, 11);
+    // Arch top (rounded)
+    ctx.fillStyle = '#1a1410';
+    ctx.fillRect(5, 3, 6, 2);
+    ctx.fillStyle = '#100c08';
+    ctx.fillRect(6, 4, 4, 1);
+    // Subtle ground at bottom of opening
+    ctx.fillStyle = '#302820';
+    ctx.fillRect(4, 14, 8, 2);
+  },
+};
+
+/** Kit tiles as themed drawers in the town's house colours (the no-kind fallback). */
+function buildingKitThemedDrawers(): Record<number, (ctx: CanvasRenderingContext2D, p: TownPalette) => void> {
+  const out: Record<number, (ctx: CanvasRenderingContext2D, p: TownPalette) => void> = {};
+  for (const [tileId, draw] of Object.entries(BUILDING_TILE_DRAWERS)) {
+    out[Number(tileId)] = (ctx, p) => draw(ctx, resolveBuildingPalette(p, 'house'), 'house');
+  }
+  return out;
+}
+
+/** Per-town variants of the tiles whose colours follow the town palette. */
+export const THEMED_TILE_DRAWERS: Record<number, (ctx: CanvasRenderingContext2D, p: TownPalette) => void> = {
+  [TileType.GRASS]: (ctx, p) => {
+    ctx.fillStyle = p.grassBase;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = p.grassAccent;
+    for (let i = 0; i < 4; i++) {
+      const x = (i % 2) * 8 + 2;
+      const y = Math.floor(i / 2) * 8 + 2;
+      ctx.fillRect(x, y, 2, 3);
+    }
+  },
+  [TileType.PATH]: (ctx, p) => {
+    ctx.fillStyle = p.pathBase;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = p.pathAccent;
+    ctx.fillRect(0, 0, 1, 16);
+    ctx.fillRect(0, 0, 16, 1);
+  },
+  [TileType.TREE]: (ctx, p) => {
+    ctx.fillStyle = p.treeTrunk;
+    ctx.fillRect(5, 10, 6, 6);
+    ctx.fillStyle = p.treeCanopy;
+    ctx.fillRect(1, 1, 14, 10);
+    ctx.fillStyle = p.treeCanopyLight;
+    ctx.fillRect(3, 2, 10, 7);
+  },
+  [TileType.TALL_GRASS]: (ctx, p) => {
+    ctx.fillStyle = p.tallGrassBase;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = p.tallGrassBlade;
+    for (let i = 0; i < 6; i++) {
+      ctx.fillRect(i * 3 + 1, 2, 2, 12);
+    }
+    ctx.fillStyle = p.tallGrassLight;
+    for (let i = 0; i < 5; i++) {
+      ctx.fillRect(i * 3 + 2, 4, 2, 8);
+    }
+  },
+  // BUILDING / DOOR / ROOF / the rest of the kit keep a plain `tile_<theme>_<id>`
+  // key drawn in the town's HOUSE colours: that is what a facade tile with no
+  // recorded building kind falls back to.
+  ...buildingKitThemedDrawers(),
+  [TileType.PLANK]: (ctx, p) => drawPlank(ctx, p.water),
+  [TileType.GRAVEL]: (ctx, p) => drawGravel(ctx, p.gravelBase, p.gravelAccent, p.gravelLight),
+  // Outdoors a doormat is a doorstep: the same woven mat, on the town's ground
+  // instead of an indoor floor. Interiors are not in MAP_THEMES, so they keep
+  // the indoor version.
+  [TileType.DOORMAT]: (ctx, p) => {
+    ctx.fillStyle = p.pathBase;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = p.pathAccent;
+    ctx.fillRect(0, 0, 16, 1);
+    ctx.fillRect(0, 0, 1, 16);
+    ctx.fillStyle = '#9b7340';
+    ctx.fillRect(1, 4, 14, 9);
+    ctx.fillStyle = '#b8894e';
+    ctx.fillRect(2, 5, 12, 1);
+    ctx.fillRect(2, 7, 12, 1);
+    ctx.fillRect(2, 9, 12, 1);
+    ctx.fillRect(2, 11, 12, 1);
+    ctx.fillStyle = '#7a5a2e';
+    ctx.fillRect(1, 4, 14, 1);
+    ctx.fillRect(1, 12, 14, 1);
+    ctx.fillRect(1, 4, 1, 9);
+    ctx.fillRect(14, 4, 1, 9);
+  },
+  [TileType.SIGN]: (ctx, p) => {
+    ctx.fillStyle = p.signGrass;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#805028';
+    ctx.fillRect(6, 10, 4, 6);
+    ctx.fillStyle = '#d0c080';
+    ctx.fillRect(2, 4, 12, 8);
+    ctx.fillStyle = '#a09060';
+    ctx.fillRect(3, 5, 10, 6);
+  },
+  [TileType.LEDGE]: (ctx, p) => {
+    ctx.fillStyle = p.ledgeGrass;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#507850';
+    ctx.fillRect(0, 12, 16, 4);
+    ctx.fillStyle = '#608860';
+    ctx.fillRect(0, 12, 16, 2);
+  },
+  [TileType.FENCE]: (ctx, p) => {
+    ctx.fillStyle = p.fenceGrass;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#d0b880';
+    ctx.fillRect(0, 4, 16, 8);
+    ctx.fillStyle = '#c0a870';
+    ctx.fillRect(2, 4, 2, 8);
+    ctx.fillRect(12, 4, 2, 8);
+    ctx.fillRect(0, 7, 16, 2);
+  },
+  [TileType.FLOWER]: (ctx, p) => {
+    ctx.fillStyle = p.flowerGrass;
+    ctx.fillRect(0, 0, 16, 16);
+    const colors = ['#f05050', '#f0f050', '#f050f0'];
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = colors[i];
+      ctx.fillRect(i * 5 + 2, 5, 3, 3);
+      ctx.fillStyle = '#50a038';
+      ctx.fillRect(i * 5 + 3, 8, 1, 4);
+    }
+  },
+  [TileType.CUT_TREE]: (ctx, p) => {
+    ctx.fillStyle = p.cutTreeGrass;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = p.treeTrunk;
+    ctx.fillRect(6, 10, 4, 6);
+    ctx.fillStyle = p.treeCanopy;
+    ctx.fillRect(3, 3, 10, 8);
+    ctx.fillStyle = p.treeCanopyLight;
+    ctx.fillRect(4, 4, 8, 6);
+    ctx.fillStyle = '#c0a040';
+    ctx.fillRect(6, 5, 4, 1);
+    ctx.fillRect(7, 4, 2, 3);
+  },
+  [TileType.FOUNTAIN]: (ctx, p) => {
+    ctx.fillStyle = p.grassBase;
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#a0a0a0';
+    ctx.fillRect(2, 2, 12, 12);
+    ctx.fillStyle = '#888888';
+    ctx.fillRect(3, 3, 10, 10);
+    ctx.fillStyle = '#4090d0';
+    ctx.fillRect(4, 4, 8, 8);
+    ctx.fillStyle = '#60b0e0';
+    ctx.fillRect(5, 5, 3, 2);
+    ctx.fillStyle = '#c0e0f8';
+    ctx.fillRect(7, 5, 2, 2);
+    ctx.fillRect(7, 3, 2, 2);
+  },
+};
+
 export function generateTileset(scene: Phaser.Scene): void {
-  const tileGraphics: Record<number, (ctx: CanvasRenderingContext2D) => void> = {
-    [TileType.GRASS]: (ctx) => {
-      ctx.fillStyle = '#88c070';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#78b060';
-      for (let i = 0; i < 4; i++) {
-        const x = (i % 2) * 8 + 2;
-        const y = Math.floor(i / 2) * 8 + 2;
-        ctx.fillRect(x, y, 2, 3);
-      }
-    },
-    [TileType.PATH]: (ctx) => {
-      ctx.fillStyle = '#d8c078';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#c8b068';
-      ctx.fillRect(0, 0, 1, 16);
-      ctx.fillRect(0, 0, 16, 1);
-    },
-    [TileType.WALL]: (ctx) => {
-      ctx.fillStyle = '#a08858';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#907848';
-      ctx.fillRect(0, 8, 16, 1);
-      ctx.fillRect(8, 0, 1, 16);
-    },
-    [TileType.WATER]: (ctx) => {
-      ctx.fillStyle = '#3890f8';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#58a8f8';
-      ctx.fillRect(2, 4, 6, 2);
-      ctx.fillRect(10, 10, 4, 2);
-    },
-    [TileType.TREE]: (ctx) => {
-      ctx.fillStyle = '#805028';
-      ctx.fillRect(5, 10, 6, 6);
-      ctx.fillStyle = '#408040';
-      ctx.fillRect(1, 1, 14, 10);
-      ctx.fillStyle = '#509050';
-      ctx.fillRect(3, 2, 10, 7);
-    },
-    [TileType.TALL_GRASS]: (ctx) => {
-      ctx.fillStyle = '#88c070';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#409030';
-      for (let i = 0; i < 6; i++) {
-        ctx.fillRect(i * 3 + 1, 2, 2, 12);
-      }
-      ctx.fillStyle = '#58a848';
-      for (let i = 0; i < 5; i++) {
-        ctx.fillRect(i * 3 + 2, 4, 2, 8);
-      }
-    },
-    [TileType.BUILDING]: (ctx) => {
-      ctx.fillStyle = '#e0d0b0';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#c0b090';
-      ctx.fillRect(0, 0, 16, 1);
-      ctx.fillRect(0, 0, 1, 16);
-      ctx.fillRect(15, 0, 1, 16);
-    },
-    [TileType.DOOR]: (ctx) => {
-      ctx.fillStyle = '#e0d0b0';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#805028';
-      ctx.fillRect(3, 2, 10, 14);
-      ctx.fillStyle = '#604018';
-      ctx.fillRect(4, 3, 8, 12);
-      ctx.fillStyle = '#c0a030';
-      ctx.fillRect(10, 9, 2, 2);
-    },
-    [TileType.SIGN]: (ctx) => {
-      ctx.fillStyle = '#88c070';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#805028';
-      ctx.fillRect(6, 10, 4, 6);
-      ctx.fillStyle = '#d0c080';
-      ctx.fillRect(2, 4, 12, 8);
-      ctx.fillStyle = '#a09060';
-      ctx.fillRect(3, 5, 10, 6);
-    },
-    [TileType.LEDGE]: (ctx) => {
-      ctx.fillStyle = '#88c070';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#507850';
-      ctx.fillRect(0, 12, 16, 4);
-      ctx.fillStyle = '#608860';
-      ctx.fillRect(0, 12, 16, 2);
-    },
-    [TileType.FENCE]: (ctx) => {
-      ctx.fillStyle = '#88c070';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#d0b880';
-      ctx.fillRect(0, 4, 16, 8);
-      ctx.fillStyle = '#c0a870';
-      ctx.fillRect(2, 4, 2, 8);
-      ctx.fillRect(12, 4, 2, 8);
-      ctx.fillRect(0, 7, 16, 2);
-    },
-    [TileType.FLOWER]: (ctx) => {
-      ctx.fillStyle = '#88c070';
-      ctx.fillRect(0, 0, 16, 16);
-      const colors = ['#f05050', '#f0f050', '#f050f0'];
-      for (let i = 0; i < 3; i++) {
-        ctx.fillStyle = colors[i];
-        ctx.fillRect(i * 5 + 2, 5, 3, 3);
-        ctx.fillStyle = '#50a038';
-        ctx.fillRect(i * 5 + 3, 8, 1, 4);
-      }
-    },
-    [TileType.INDOOR_FLOOR]: (ctx) => {
-      ctx.fillStyle = '#f8f0d0';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#e8e0c0';
-      ctx.fillRect(0, 0, 16, 1);
-      ctx.fillRect(0, 0, 1, 16);
-    },
-    [TileType.COUNTER]: (ctx) => {
-      ctx.fillStyle = '#b08840';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#c09850';
-      ctx.fillRect(1, 1, 14, 6);
-      ctx.fillStyle = '#a07830';
-      ctx.fillRect(0, 14, 16, 2);
-    },
-    [TileType.PC]: (ctx) => {
-      ctx.fillStyle = '#f8f0d0';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#606060';
-      ctx.fillRect(3, 2, 10, 12);
-      ctx.fillStyle = '#80c0e0';
-      ctx.fillRect(4, 3, 8, 8);
-      ctx.fillStyle = '#404040';
-      ctx.fillRect(5, 12, 6, 1);
-    },
-    [TileType.MART_SHELF]: (ctx) => {
-      ctx.fillStyle = '#f8f0d0';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#a08040';
-      ctx.fillRect(1, 2, 14, 12);
-      ctx.fillStyle = '#c09850';
-      ctx.fillRect(2, 4, 12, 3);
-      ctx.fillRect(2, 9, 12, 3);
-    },
-    [TileType.CARPET]: (ctx) => {
-      ctx.fillStyle = '#c04040';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#d05050';
-      ctx.fillRect(1, 1, 14, 14);
-    },
-    [TileType.SAND]: (ctx) => {
-      ctx.fillStyle = '#e8d898';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#d8c888';
-      ctx.fillRect(3, 5, 2, 2);
-      ctx.fillRect(10, 10, 2, 2);
-    },
-    [TileType.CAVE_FLOOR]: (ctx) => {
-      ctx.fillStyle = '#a09080';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#908070';
-      ctx.fillRect(4, 4, 3, 3);
-      ctx.fillRect(10, 9, 2, 2);
-    },
-    [TileType.CAVE_WALL]: (ctx) => {
-      ctx.fillStyle = '#706050';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#605040';
-      ctx.fillRect(0, 0, 16, 2);
-      ctx.fillRect(0, 8, 16, 2);
-      ctx.fillStyle = '#807060';
-      ctx.fillRect(4, 4, 4, 4);
-    },
-    [TileType.CUT_TREE]: (ctx) => {
-      // Small cuttable tree - lighter green, smaller
-      ctx.fillStyle = '#88c070';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#805028';
-      ctx.fillRect(6, 10, 4, 6);
-      ctx.fillStyle = '#60a050';
-      ctx.fillRect(3, 3, 10, 8);
-      ctx.fillStyle = '#70b060';
-      ctx.fillRect(4, 4, 8, 6);
-      // X mark to show it's cuttable
-      ctx.fillStyle = '#c0a040';
-      ctx.fillRect(6, 5, 4, 1);
-      ctx.fillRect(7, 4, 2, 3);
-    },
-    [TileType.BOULDER]: (ctx) => {
-      // Pushable boulder
-      ctx.fillStyle = '#a09080';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#808070';
-      ctx.fillRect(2, 3, 12, 10);
-      ctx.fillStyle = '#909080';
-      ctx.fillRect(3, 4, 10, 8);
-      // Shading
-      ctx.fillStyle = '#707060';
-      ctx.fillRect(2, 12, 12, 1);
-      ctx.fillRect(13, 3, 1, 10);
-    },
-    [TileType.STOP_TILE]: (ctx) => {
-      // Stop tile — indoor floor with a distinctive circle/dot pattern
-      ctx.fillStyle = '#f8f0d0';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#e8e0c0';
-      ctx.fillRect(0, 0, 16, 1);
-      ctx.fillRect(0, 0, 1, 16);
-      // Circle pattern to indicate stopping point
-      ctx.fillStyle = '#b0a888';
-      ctx.fillRect(5, 5, 6, 6);
-      ctx.fillStyle = '#f8f0d0';
-      ctx.fillRect(6, 6, 4, 4);
-      ctx.fillStyle = '#b0a888';
-      ctx.fillRect(7, 7, 2, 2);
-    },
-    [TileType.SWITCH_PLATE]: (ctx) => {
-      // Pressure plate set into cave floor: a raised square with a dark rim
-      ctx.fillStyle = '#a09080';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#585048';
-      ctx.fillRect(3, 3, 10, 10);
-      ctx.fillStyle = '#c0b0a0';
-      ctx.fillRect(4, 4, 8, 8);
-      ctx.fillStyle = '#887868';
-      ctx.fillRect(6, 6, 4, 4);
-    },
-    [TileType.GATE]: (ctx) => {
-      // Iron bars across a cave passage
-      ctx.fillStyle = '#a09080';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#403830';
-      ctx.fillRect(0, 1, 16, 2);
-      ctx.fillRect(0, 13, 16, 2);
-      for (let x = 1; x < 16; x += 4) ctx.fillRect(x, 1, 2, 14);
-      ctx.fillStyle = '#686058';
-      for (let x = 1; x < 16; x += 4) ctx.fillRect(x, 2, 1, 12);
-    },
-    [TileType.BOULDER_HOLE]: (ctx) => {
-      // A hole in the cave floor, big enough for a boulder
-      ctx.fillStyle = '#a09080';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#585048';
-      ctx.fillRect(2, 3, 12, 11);
-      ctx.fillStyle = '#201810';
-      ctx.fillRect(3, 4, 10, 9);
-      ctx.fillStyle = '#383028';
-      ctx.fillRect(4, 5, 8, 2);
-    },
-    [TileType.CURRENT]: (ctx) => {
-      // Flowing water (up arrow) - directional variants generated below
-      ctx.fillStyle = '#3890f8';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#58a8f8';
-      ctx.fillRect(2, 4, 6, 2);
-      ctx.fillRect(10, 10, 4, 2);
-      ctx.fillStyle = '#d8f0ff';
-      ctx.fillRect(7, 3, 2, 10);
-      ctx.fillRect(5, 5, 6, 2);
-      ctx.fillRect(6, 4, 4, 2);
-    },
-    [TileType.HEAL_TILE]: (ctx) => {
-      // Purifying square: pale floor with a soft glowing diamond
-      ctx.fillStyle = '#d8d0e8';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#f0ecf8';
-      ctx.fillRect(4, 7, 8, 2);
-      ctx.fillRect(7, 4, 2, 8);
-      ctx.fillRect(5, 6, 6, 4);
-      ctx.fillRect(6, 5, 4, 6);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(7, 7, 2, 2);
-      ctx.fillStyle = '#b8b0d0';
-      ctx.fillRect(0, 0, 16, 1);
-      ctx.fillRect(0, 0, 1, 16);
-    },
-    [TileType.SPIN_TILE]: (ctx) => {
-      // Default spin tile (up arrow) - directional variants generated below
-      ctx.fillStyle = '#f8f0d0';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#e8e0c0';
-      ctx.fillRect(0, 0, 16, 1);
-      ctx.fillRect(0, 0, 1, 16);
-      // Up arrow
-      ctx.fillStyle = '#c04040';
-      ctx.fillRect(7, 3, 2, 10);
-      ctx.fillRect(5, 5, 6, 2);
-      ctx.fillRect(6, 4, 4, 2);
-    },
-    [TileType.TELEPORT_PAD]: (ctx) => {
-      // Cyan/blue glowing teleport pad on indoor floor
-      ctx.fillStyle = '#f8f0d0';
-      ctx.fillRect(0, 0, 16, 16);
-      // Outer pad ring
-      ctx.fillStyle = '#2080b0';
-      ctx.fillRect(2, 2, 12, 12);
-      // Inner pad
-      ctx.fillStyle = '#40c0e0';
-      ctx.fillRect(4, 4, 8, 8);
-      // Bright center glow
-      ctx.fillStyle = '#80e0ff';
-      ctx.fillRect(6, 6, 4, 4);
-      // Corner accents
-      ctx.fillStyle = '#106090';
-      ctx.fillRect(2, 2, 2, 2);
-      ctx.fillRect(12, 2, 2, 2);
-      ctx.fillRect(2, 12, 2, 2);
-      ctx.fillRect(12, 12, 2, 2);
-    },
-    [TileType.ROOF]: (ctx) => {
-      ctx.fillStyle = '#c05050';
-      ctx.fillRect(0, 0, 16, 16);
-      // Lighter horizontal stripe for dimension
-      ctx.fillStyle = '#d06060';
-      ctx.fillRect(0, 4, 16, 3);
-      // Darker bottom edge (eave shadow)
-      ctx.fillStyle = '#a04040';
-      ctx.fillRect(0, 14, 16, 2);
-    },
-    [TileType.FOUNTAIN]: (ctx) => {
-      // Stone basin on grass
-      ctx.fillStyle = '#88c070';
-      ctx.fillRect(0, 0, 16, 16);
-      // Outer stone basin
-      ctx.fillStyle = '#a0a0a0';
-      ctx.fillRect(2, 2, 12, 12);
-      // Inner basin
-      ctx.fillStyle = '#888888';
-      ctx.fillRect(3, 3, 10, 10);
-      // Blue water
-      ctx.fillStyle = '#4090d0';
-      ctx.fillRect(4, 4, 8, 8);
-      // Water highlight
-      ctx.fillStyle = '#60b0e0';
-      ctx.fillRect(5, 5, 3, 2);
-      // Center spray
-      ctx.fillStyle = '#c0e0f8';
-      ctx.fillRect(7, 5, 2, 2);
-      ctx.fillRect(7, 3, 2, 2);
-    },
-    [TileType.COBBLESTONE]: (ctx) => {
-      // Gray/tan interlocking rectangular pattern
-      ctx.fillStyle = '#b8b0a0';
-      ctx.fillRect(0, 0, 16, 16);
-      // Grout lines (darker)
-      ctx.fillStyle = '#989080';
-      ctx.fillRect(0, 0, 16, 1);
-      ctx.fillRect(0, 4, 16, 1);
-      ctx.fillRect(0, 8, 16, 1);
-      ctx.fillRect(0, 12, 16, 1);
-      ctx.fillRect(0, 0, 1, 16);
-      ctx.fillRect(8, 0, 1, 4);
-      ctx.fillRect(4, 4, 1, 4);
-      ctx.fillRect(12, 4, 1, 4);
-      ctx.fillRect(8, 8, 1, 4);
-      ctx.fillRect(4, 12, 1, 4);
-      ctx.fillRect(12, 12, 1, 4);
-    },
-    [TileType.DOORMAT]: (ctx) => {
-      // Indoor floor base
-      ctx.fillStyle = '#f8f0d0';
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#e8e0c0';
-      ctx.fillRect(0, 0, 16, 1);
-      ctx.fillRect(0, 0, 1, 16);
-      // Brown woven mat
-      ctx.fillStyle = '#9b7340';
-      ctx.fillRect(1, 4, 14, 9);
-      // Lighter weave stripes
-      ctx.fillStyle = '#b8894e';
-      ctx.fillRect(2, 5, 12, 1);
-      ctx.fillRect(2, 7, 12, 1);
-      ctx.fillRect(2, 9, 12, 1);
-      ctx.fillRect(2, 11, 12, 1);
-      // Dark border around mat
-      ctx.fillStyle = '#7a5a2e';
-      ctx.fillRect(1, 4, 14, 1);
-      ctx.fillRect(1, 12, 14, 1);
-      ctx.fillRect(1, 4, 1, 9);
-      ctx.fillRect(14, 4, 1, 9);
-    },
-    [TileType.EXHIBIT_CASE]: (ctx) => {
-      // Indoor floor base
-      ctx.fillStyle = '#f0e8d0';
-      ctx.fillRect(0, 0, 16, 16);
-      // Dark wood frame
-      ctx.fillStyle = '#705030';
-      ctx.fillRect(1, 1, 14, 14);
-      ctx.fillStyle = '#604020';
-      ctx.fillRect(2, 2, 12, 12);
-      // Glass top
-      ctx.fillStyle = '#c0d8e8';
-      ctx.fillRect(3, 3, 10, 10);
-      // White highlight on glass
-      ctx.fillStyle = '#e8f0f8';
-      ctx.fillRect(4, 4, 4, 2);
-      ctx.fillRect(4, 4, 2, 4);
-    },
-    [TileType.FOSSIL_DISPLAY]: (ctx) => {
-      // Indoor floor base
-      ctx.fillStyle = '#f0e8d0';
-      ctx.fillRect(0, 0, 16, 16);
-      // Gray stone pedestal
-      ctx.fillStyle = '#b0a8a0';
-      ctx.fillRect(3, 4, 10, 12);
-      ctx.fillStyle = '#a09890';
-      ctx.fillRect(4, 5, 8, 10);
-      // Tan fossil shape on top
-      ctx.fillStyle = '#d8c890';
-      ctx.fillRect(5, 2, 6, 5);
-      ctx.fillStyle = '#c8b880';
-      ctx.fillRect(6, 3, 4, 3);
-    },
-    [TileType.SHUTTLE_DISPLAY]: (ctx) => {
-      // Indoor floor base
-      ctx.fillStyle = '#f0e8d0';
-      ctx.fillRect(0, 0, 16, 16);
-      // Dark metal stand
-      ctx.fillStyle = '#606060';
-      ctx.fillRect(5, 10, 6, 6);
-      ctx.fillStyle = '#505050';
-      ctx.fillRect(6, 11, 4, 4);
-      // White shuttle body
-      ctx.fillStyle = '#e0e0e0';
-      ctx.fillRect(4, 2, 8, 9);
-      ctx.fillStyle = '#d0d0d0';
-      ctx.fillRect(5, 3, 6, 7);
-      // Orange engine accent
-      ctx.fillStyle = '#e08030';
-      ctx.fillRect(6, 9, 4, 2);
-      // Nose cone
-      ctx.fillStyle = '#c0c0c0';
-      ctx.fillRect(6, 1, 4, 2);
-    },
-    [TileType.MUSEUM_PLAQUE]: (ctx) => {
-      // Indoor floor base
-      ctx.fillStyle = '#f0e8d0';
-      ctx.fillRect(0, 0, 16, 16);
-      // Small centered gold rectangle
-      ctx.fillStyle = '#c0a040';
-      ctx.fillRect(4, 5, 8, 6);
-      // Border
-      ctx.fillStyle = '#a08830';
-      ctx.fillRect(4, 5, 8, 1);
-      ctx.fillRect(4, 10, 8, 1);
-      ctx.fillRect(4, 5, 1, 6);
-      ctx.fillRect(11, 5, 1, 6);
-      // Text lines
-      ctx.fillStyle = '#806020';
-      ctx.fillRect(6, 7, 4, 1);
-      ctx.fillRect(6, 9, 3, 1);
-    },
-    [TileType.TOMBSTONE]: (ctx) => {
-      // Dark purple-gray base floor
-      ctx.fillStyle = '#3a2040';
-      ctx.fillRect(0, 0, 16, 16);
-      // Gray stone rectangle body
-      ctx.fillStyle = '#909090';
-      ctx.fillRect(4, 3, 8, 11);
-      // Lighter face detail
-      ctx.fillStyle = '#a8a8a8';
-      ctx.fillRect(5, 4, 6, 9);
-      // Rounded top
-      ctx.fillStyle = '#909090';
-      ctx.fillRect(5, 2, 6, 2);
-      ctx.fillStyle = '#a8a8a8';
-      ctx.fillRect(6, 2, 4, 1);
-      // Cross at top
-      ctx.fillStyle = '#c0c0c0';
-      ctx.fillRect(7, 4, 2, 5);
-      ctx.fillRect(6, 5, 4, 1);
-      // "RIP" text
-      ctx.fillStyle = '#606060';
-      ctx.fillRect(6, 10, 1, 2);
-      ctx.fillRect(8, 10, 1, 2);
-      ctx.fillRect(10, 10, 1, 2);
-    },
-    [TileType.CAVE_ENTRANCE]: (ctx) => {
-      // Rocky mountain base with dark cave opening
-      ctx.fillStyle = '#706050';
-      ctx.fillRect(0, 0, 16, 16);
-      // Rocky texture stripes (same as CAVE_WALL)
-      ctx.fillStyle = '#605040';
-      ctx.fillRect(0, 0, 16, 2);
-      ctx.fillRect(0, 8, 16, 2);
-      ctx.fillStyle = '#807060';
-      ctx.fillRect(4, 4, 4, 4);
-      // Dark cave opening — arched shape
-      ctx.fillStyle = '#1a1410';
-      ctx.fillRect(3, 4, 10, 12);
-      ctx.fillStyle = '#100c08';
-      ctx.fillRect(4, 5, 8, 11);
-      // Arch top (rounded)
-      ctx.fillStyle = '#1a1410';
-      ctx.fillRect(5, 3, 6, 2);
-      ctx.fillStyle = '#100c08';
-      ctx.fillRect(6, 4, 4, 1);
-      // Subtle ground at bottom of opening
-      ctx.fillStyle = '#302820';
-      ctx.fillRect(4, 14, 8, 2);
-    },
-  };
+  const tileGraphics = TILE_DRAWERS;
 
   // Generate individual tile textures
   const tileIds = Object.keys(tileGraphics).map(Number).sort((a, b) => a - b);
@@ -593,146 +970,7 @@ export function generateTileset(scene: Phaser.Scene): void {
   }
 
   // Generate themed tile variants for towns
-  const themedTileDrawers: Record<number, (ctx: CanvasRenderingContext2D, p: TownPalette) => void> = {
-    [TileType.GRASS]: (ctx, p) => {
-      ctx.fillStyle = p.grassBase;
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = p.grassAccent;
-      for (let i = 0; i < 4; i++) {
-        const x = (i % 2) * 8 + 2;
-        const y = Math.floor(i / 2) * 8 + 2;
-        ctx.fillRect(x, y, 2, 3);
-      }
-    },
-    [TileType.PATH]: (ctx, p) => {
-      ctx.fillStyle = p.pathBase;
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = p.pathAccent;
-      ctx.fillRect(0, 0, 1, 16);
-      ctx.fillRect(0, 0, 16, 1);
-    },
-    [TileType.TREE]: (ctx, p) => {
-      ctx.fillStyle = p.treeTrunk;
-      ctx.fillRect(5, 10, 6, 6);
-      ctx.fillStyle = p.treeCanopy;
-      ctx.fillRect(1, 1, 14, 10);
-      ctx.fillStyle = p.treeCanopyLight;
-      ctx.fillRect(3, 2, 10, 7);
-    },
-    [TileType.TALL_GRASS]: (ctx, p) => {
-      ctx.fillStyle = p.tallGrassBase;
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = p.tallGrassBlade;
-      for (let i = 0; i < 6; i++) {
-        ctx.fillRect(i * 3 + 1, 2, 2, 12);
-      }
-      ctx.fillStyle = p.tallGrassLight;
-      for (let i = 0; i < 5; i++) {
-        ctx.fillRect(i * 3 + 2, 4, 2, 8);
-      }
-    },
-    [TileType.BUILDING]: (ctx, p) => {
-      ctx.fillStyle = p.buildingWall;
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = p.buildingBorder;
-      ctx.fillRect(0, 0, 16, 1);
-      ctx.fillRect(0, 0, 1, 16);
-      ctx.fillRect(15, 0, 1, 16);
-    },
-    [TileType.DOOR]: (ctx, p) => {
-      ctx.fillStyle = p.doorWall;
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#805028';
-      ctx.fillRect(3, 2, 10, 14);
-      ctx.fillStyle = '#604018';
-      ctx.fillRect(4, 3, 8, 12);
-      ctx.fillStyle = '#c0a030';
-      ctx.fillRect(10, 9, 2, 2);
-    },
-    [TileType.SIGN]: (ctx, p) => {
-      ctx.fillStyle = p.signGrass;
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#805028';
-      ctx.fillRect(6, 10, 4, 6);
-      ctx.fillStyle = '#d0c080';
-      ctx.fillRect(2, 4, 12, 8);
-      ctx.fillStyle = '#a09060';
-      ctx.fillRect(3, 5, 10, 6);
-    },
-    [TileType.LEDGE]: (ctx, p) => {
-      ctx.fillStyle = p.ledgeGrass;
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#507850';
-      ctx.fillRect(0, 12, 16, 4);
-      ctx.fillStyle = '#608860';
-      ctx.fillRect(0, 12, 16, 2);
-    },
-    [TileType.FENCE]: (ctx, p) => {
-      ctx.fillStyle = p.fenceGrass;
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#d0b880';
-      ctx.fillRect(0, 4, 16, 8);
-      ctx.fillStyle = '#c0a870';
-      ctx.fillRect(2, 4, 2, 8);
-      ctx.fillRect(12, 4, 2, 8);
-      ctx.fillRect(0, 7, 16, 2);
-    },
-    [TileType.FLOWER]: (ctx, p) => {
-      ctx.fillStyle = p.flowerGrass;
-      ctx.fillRect(0, 0, 16, 16);
-      const colors = ['#f05050', '#f0f050', '#f050f0'];
-      for (let i = 0; i < 3; i++) {
-        ctx.fillStyle = colors[i];
-        ctx.fillRect(i * 5 + 2, 5, 3, 3);
-        ctx.fillStyle = '#50a038';
-        ctx.fillRect(i * 5 + 3, 8, 1, 4);
-      }
-    },
-    [TileType.CUT_TREE]: (ctx, p) => {
-      ctx.fillStyle = p.cutTreeGrass;
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = p.treeTrunk;
-      ctx.fillRect(6, 10, 4, 6);
-      ctx.fillStyle = p.treeCanopy;
-      ctx.fillRect(3, 3, 10, 8);
-      ctx.fillStyle = p.treeCanopyLight;
-      ctx.fillRect(4, 4, 8, 6);
-      ctx.fillStyle = '#c0a040';
-      ctx.fillRect(6, 5, 4, 1);
-      ctx.fillRect(7, 4, 2, 3);
-    },
-    [TileType.ROOF]: (ctx, p) => {
-      ctx.fillStyle = p.roof;
-      ctx.fillRect(0, 0, 16, 16);
-      // Lighter stripe for dimension
-      const r = parseInt(p.roof.slice(1, 3), 16);
-      const g = parseInt(p.roof.slice(3, 5), 16);
-      const b = parseInt(p.roof.slice(5, 7), 16);
-      const lighter = '#' + [Math.min(255, r + 24), Math.min(255, g + 24), Math.min(255, b + 24)]
-        .map(v => v.toString(16).padStart(2, '0')).join('');
-      const darker = '#' + [Math.max(0, r - 24), Math.max(0, g - 24), Math.max(0, b - 24)]
-        .map(v => v.toString(16).padStart(2, '0')).join('');
-      ctx.fillStyle = lighter;
-      ctx.fillRect(0, 4, 16, 3);
-      ctx.fillStyle = darker;
-      ctx.fillRect(0, 14, 16, 2);
-    },
-    [TileType.FOUNTAIN]: (ctx, p) => {
-      ctx.fillStyle = p.grassBase;
-      ctx.fillRect(0, 0, 16, 16);
-      ctx.fillStyle = '#a0a0a0';
-      ctx.fillRect(2, 2, 12, 12);
-      ctx.fillStyle = '#888888';
-      ctx.fillRect(3, 3, 10, 10);
-      ctx.fillStyle = '#4090d0';
-      ctx.fillRect(4, 4, 8, 8);
-      ctx.fillStyle = '#60b0e0';
-      ctx.fillRect(5, 5, 3, 2);
-      ctx.fillStyle = '#c0e0f8';
-      ctx.fillRect(7, 5, 2, 2);
-      ctx.fillRect(7, 3, 2, 2);
-    },
-  };
+  const themedTileDrawers = THEMED_TILE_DRAWERS;
 
   for (const [themeId, palette] of Object.entries(TOWN_THEMES)) {
     for (const [tileIdStr, drawFn] of Object.entries(themedTileDrawers)) {
@@ -744,6 +982,19 @@ export function generateTileset(scene: Phaser.Scene): void {
       const tcx = tc.getContext('2d')!;
       drawFn(tcx, palette);
       scene.textures.addCanvas(key, tc);
+    }
+
+    // Per-(theme, kind) facade tiles: `tile_<theme>_<kind>_<tileId>`. The scene
+    // reads the kind out of `MapData.tileKinds`, which `stampBuilding` writes.
+    for (const kind of BUILDING_KINDS) {
+      const bp = resolveBuildingPalette(palette, kind);
+      for (const [tileIdStr, drawFn] of Object.entries(BUILDING_TILE_DRAWERS)) {
+        const tc = document.createElement('canvas');
+        tc.width = TILE_SIZE;
+        tc.height = TILE_SIZE;
+        drawFn(tc.getContext('2d')!, bp, kind);
+        scene.textures.addCanvas(`tile_${themeId}_${kind}_${Number(tileIdStr)}`, tc);
+      }
     }
   }
 }

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TILE_SIZE, GAME_WIDTH, GAME_HEIGHT, MOVE_DURATION, Direction, DIR_VECTORS, OPPOSITE_DIR } from '../utils/constants';
 import { ALL_MAPS } from '../data/maps';
-import { MapData, TileType, NPCData, ElevatorFloor } from '../types/map.types';
+import { BuildingKind, MapData, TileType, NPCData, ElevatorFloor } from '../types/map.types';
 import { TextBox } from '../components/TextBox';
 import { PokedexScreen } from '../components/PokedexScreen';
 import { PartyScreen } from '../components/PartyScreen';
@@ -15,7 +15,7 @@ import { generateNPCSprite, generateItemBallSprite, generateStatueSprite, genera
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
 import { getMusicForMap } from '../data/musicTracks';
-import { MAP_THEMES } from '../data/townThemes';
+import { BUILDING_TILE_TYPES, MAP_THEMES } from '../data/townThemes';
 import { StatusCondition, PokemonInstance } from '../types/pokemon.types';
 import { createPokemon, gainHappiness, getHappiness } from '../entities/Pokemon';
 import { PlayerState } from '../entities/Player';
@@ -397,9 +397,19 @@ export class OverworldScene extends Phaser.Scene {
     return isMapCave(this.currentMap);
   }
 
-  private getTileKey(tileType: number): string {
+  /**
+   * Texture for a tile type on this map. Facade tiles (roof, wall, window,
+   * door, signboard, chimney) come in a variant per building kind; `kind` is
+   * the tile's entry in `MapData.tileKinds`, and a facade tile that belongs to
+   * no stamp is drawn as a house.
+   */
+  private getTileKey(tileType: number, kind?: BuildingKind): string {
     const theme = MAP_THEMES[this.currentMap.id];
     if (theme) {
+      if (BUILDING_TILE_TYPES.has(tileType)) {
+        const kindKey = `tile_${theme}_${kind ?? 'house'}_${tileType}`;
+        if (this.textures.exists(kindKey)) return kindKey;
+      }
       const key = `tile_${theme}_${tileType}`;
       if (this.textures.exists(key)) return key;
     }
@@ -417,7 +427,7 @@ export class OverworldScene extends Phaser.Scene {
       const dir = this.currentMap.currents?.[`${x},${y}`];
       if (dir) return `current_${dir}`;
     }
-    return this.getTileKey(tileType);
+    return this.getTileKey(tileType, this.currentMap.tileKinds?.[`${x},${y}`]);
   }
 
   private static isWaterTile(tileType: number | undefined): boolean {

@@ -197,6 +197,10 @@ export const OUTDOOR_TILES: ReadonlySet<number> = new Set<number>([
   TileType.TREE, TileType.GRASS, TileType.TALL_GRASS,
   TileType.WATER, TileType.SAND, TileType.FLOWER,
   TileType.BUILDING, TileType.FENCE, TileType.ROOF,
+  // Town building kit: all outdoor-only facade and ground tiles.
+  TileType.WINDOW, TileType.ROOF_EDGE_L, TileType.ROOF_EDGE_R, TileType.ROOF_RIDGE,
+  TileType.SIGNBOARD, TileType.CHIMNEY, TileType.PLANK, TileType.ROCK,
+  TileType.GRAVEL,
 ]);
 
 export interface MapShape {
