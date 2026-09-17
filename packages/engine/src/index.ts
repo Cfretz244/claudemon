@@ -22,6 +22,7 @@ export * from './logic/cutTrees';
 export * from './logic/elevator';
 export * from './logic/encounters';
 export * from './logic/fieldMoves';
+export * from './logic/follower';
 export * from './logic/forcedEncounters';
 export * from './logic/gameCornerPoster';
 export * from './logic/hallOfFame';
