@@ -1,17 +1,22 @@
 // A town is drawn once, in its sketch, and the map is built from it.
 //
-// `src/data/sketches/pallet_town.json` is the design artefact — the drawing
-// Fable's `tools/town-sketch-check.mjs` validates (doors reachable, no NPC in a
-// wall, every path connected). `packages/engine/src/data/sketches/palletTown.ts`
-// is the same drawing as engine data, and `maps.ts` builds PALLET_TOWN from it.
-// This file is the join: the two copies must be identical, and the shipped map
-// must actually agree with them — so a coordinate can only be changed in one
-// place, and changing it there changes the game.
+// `src/data/sketches/<id>.json` is the design artefact — the drawing Fable's
+// `tools/town-sketch-check.mjs` validates (doors reachable, no NPC in a wall,
+// every path connected). `packages/engine/src/data/sketches/<id>.ts` is the
+// same drawing as engine data, and `maps.ts` builds the town from it. This
+// file is the join: the two copies must be identical, and the shipped map must
+// actually agree with them — so a coordinate can only be changed in one place,
+// and changing it there changes the game.
 import { describe, it, expect } from 'vitest';
 import palletJson from '../../src/data/sketches/pallet_town.json';
-import { PALLET_TOWN_SKETCH } from '../../packages/engine/src/data/sketches/palletTown';
+import viridianJson from '../../src/data/sketches/viridian_city.json';
+import pewterJson from '../../src/data/sketches/pewter_city.json';
+import { PALLET_TOWN_SKETCH, TownSketch } from '../../packages/engine/src/data/sketches/palletTown';
+import { VIRIDIAN_CITY_SKETCH } from '../../packages/engine/src/data/sketches/viridianCity';
+import { PEWTER_CITY_SKETCH } from '../../packages/engine/src/data/sketches/pewterCity';
 import { ALL_MAPS } from '../../src/data/maps';
 import { MapData, TileType } from '../../src/types/map.types';
+import { SIGNS } from '../../src/data/signs';
 
 /** `"TALL_GRASS"` -> `TileType.TALL_GRASS` (the JSON names tiles, not numbers). */
 function tileByName(name: string): TileType {
@@ -27,30 +32,44 @@ const BUILDING_TILES = new Set<TileType>([
   TileType.CHIMNEY,
 ]);
 
-const sketch = PALLET_TOWN_SKETCH;
-const town = ALL_MAPS.pallet_town;
-const inBuilding = (x: number, y: number) =>
-  sketch.buildings.some(b => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h);
+/** The shape of the design artefact, as `import`ing the json gives it to us. */
+interface SketchJson {
+  id: string;
+  legend: Record<string, string>;
+  rows: string[];
+  buildings: unknown[];
+  npcs: unknown[];
+  edgeWarps: unknown[];
+  lookouts: unknown[];
+}
 
-describe('Pallet Town is built from its sketch', () => {
+const TOWNS: Array<{ sketch: TownSketch; json: SketchJson }> = [
+  { sketch: PALLET_TOWN_SKETCH, json: palletJson as SketchJson },
+  { sketch: VIRIDIAN_CITY_SKETCH, json: viridianJson as SketchJson },
+  { sketch: PEWTER_CITY_SKETCH, json: pewterJson as SketchJson },
+];
+
+describe.each(TOWNS)('$sketch.id is built from its sketch', ({ sketch, json }) => {
+  const town: MapData = ALL_MAPS[sketch.id];
+  const inBuilding = (x: number, y: number) =>
+    sketch.buildings.some(b => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h);
+
   it('the engine sketch is the shipped sketch, character for character', () => {
-    // `src/data/sketches/pallet_town.json` is `docs/towns/pallet_town.json` from
-    // the design repo, with one deliberate edit recorded in `palletTown.ts`: the
-    // tree ring closes right up to the two-wide Route 1 gap, because a path tile
-    // beside an edge warp is ground no player can stand on (the warp fires
-    // first) — see `tests/data/signsSolid.test.ts`. From here on the two copies
-    // move together or this fails.
-    expect(sketch.id).toBe(palletJson.id);
-    expect(sketch.rows).toEqual(palletJson.rows);
+    // The repo's json copies carry the deliberate edits each town's sketch
+    // module records in its header comment (Pallet's tree ring, Pewter's ROCK
+    // garden / `pewter_guide` / `viridian_forest` exit). From here on the two
+    // copies move together or this fails.
+    expect(sketch.id).toBe(json.id);
+    expect(sketch.rows).toEqual(json.rows);
 
     const jsonLegend = Object.fromEntries(
-      Object.entries(palletJson.legend).map(([ch, name]) => [ch, tileByName(name)]),
+      Object.entries(json.legend).map(([ch, name]) => [ch, tileByName(name)]),
     );
     expect(sketch.legend).toEqual(jsonLegend);
-    expect(sketch.buildings).toEqual(palletJson.buildings);
-    expect(sketch.npcs).toEqual(palletJson.npcs);
-    expect(sketch.edgeWarps).toEqual(palletJson.edgeWarps);
-    expect(sketch.lookouts).toEqual(palletJson.lookouts);
+    expect(sketch.buildings).toEqual(json.buildings);
+    expect(sketch.npcs).toEqual(json.npcs);
+    expect(sketch.edgeWarps).toEqual(json.edgeWarps);
+    expect(sketch.lookouts).toEqual(json.lookouts);
   });
 
   it('the map is the size of the sketch, and every row is the same width', () => {
@@ -104,7 +123,7 @@ describe('Pallet Town is built from its sketch', () => {
 
       const interior: MapData | undefined = ALL_MAPS[b.warp];
       expect(interior, `${b.warp} exists`).toBeDefined();
-      const backs = interior!.warps.filter(w => w.targetMap === 'pallet_town');
+      const backs = interior!.warps.filter(w => w.targetMap === sketch.id);
       expect(backs.length, `${b.warp} exits`).toBeGreaterThan(0);
       for (const back of backs) {
         expect({ x: back.targetX, y: back.targetY }, `${b.warp} exit at (${back.x},${back.y})`)
@@ -124,7 +143,7 @@ describe('Pallet Town is built from its sketch', () => {
     // itself a warp (you would bounce straight back out) and has nobody on it.
     for (const map of Object.values(ALL_MAPS)) {
       for (const w of map.warps) {
-        if (w.targetMap !== 'pallet_town') continue;
+        if (w.targetMap !== sketch.id) continue;
         const at = `${map.id} (${w.x},${w.y}) -> (${w.targetX},${w.targetY})`;
         expect(town.collision[w.targetY][w.targetX], `${at} lands on a wall`).toBe(false);
         expect(town.warps.some(o => o.x === w.targetX && o.y === w.targetY), `${at} lands on a warp`).toBe(false);
@@ -143,7 +162,7 @@ describe('Pallet Town is built from its sketch', () => {
     expect(new Set(town.npcs.map(n => `${n.x},${n.y}`)).size).toBe(town.npcs.length);
   });
 
-  it('both signs the sketch draws have text, and no sign tile is anywhere else', () => {
+  it('every sign the sketch draws has text, and no sign tile is anywhere else', () => {
     const signTiles: string[] = [];
     town.tiles.forEach((row, y) => row.forEach((t, x) => { if (t === TileType.SIGN) signTiles.push(`${x},${y}`); }));
     const fromSketch: string[] = [];
@@ -151,5 +170,7 @@ describe('Pallet Town is built from its sketch', () => {
       if (sketch.legend[ch] === TileType.SIGN) fromSketch.push(`${x},${y}`);
     }));
     expect(signTiles.sort()).toEqual(fromSketch.sort());
+    // A sign with no entry in the registry is a blank post in the street.
+    expect(fromSketch.filter(at => !SIGNS[`${sketch.id}:${at}`])).toEqual([]);
   });
 });
