@@ -124,21 +124,77 @@ list: adding a rule module needs no second edit, and no entry can rot.
 suite, so `dist` cannot rot between CI runs either. `packages/*/dist/` is
 gitignored; nothing in the app ever reads it.
 
+## The move pipeline: `battle/move.ts` (R3)
+
+`executeBattleMove(ctx, rng) -> MoveEvent` owns every decision one move makes.
+`BattleScene` no longer decides anything about a move; it draws the event.
+
+```ts
+const ctx: MoveContext = {
+  attacker, defender,        // Combatant: { pokemon, stages, volatile, disable, recharging }
+  moveIndex,                 // the slot the user picked
+  attackerIsPlayer,          // drives the `Foe ` prefix and which bar tweens
+};
+const event = executeBattleMove(ctx);        // rules, text, numbers
+// ... show event.before, play event.animation ...
+applyMoveEvent(ctx, event);                  // the staged HP/status/stages land here
+// ... sounds, bars, HUD, then event.messages ...
+```
+
+### Why it is split in two
+
+The `#87` invariant: **accuracy, crit and damage are resolved BEFORE the
+animation** (so the picture can show a crit as a crit) **but everything they
+imply is applied AFTER it** (so the HP bar does not drop before the first
+frame). `executeBattleMove` therefore runs the second half against detached
+copies and stores the result in `event.commit`; `applyMoveEvent` writes it
+back. Nothing else may commit it, and it is idempotent.
+
+The pre-action half is the exception: a wake, a thaw and a confusion self-hit
+are applied immediately, because their message describes a state the player is
+supposed to already see — which is what `presentation.refreshHudBefore` is for.
+
+### `MoveEvent`
+
+| Field | Meaning |
+|---|---|
+| `actorIsPlayer`, `actorName` | Who acted; `actorName` carries the `Foe ` prefix. |
+| `resolution` | `pre-action` · `charge` · `no-pp` · `failed` · `miss` · `special-failed` · `special-hit` · `immune` · `damage` · `status`. |
+| `preAction`, `chargeCancelled` | The pre-action verdict, and whether a stored charge was thrown away (put a hidden FLY/DIG user back). |
+| `moveId`, `moveName`, `selectedMoveId`, `metronomeMoveId`, `struggle`, `phase` | What was actually thrown, and what the user selected before METRONOME / STRUGGLE rewrote it. |
+| `ppSpent`, `ppRemaining` | PP comes off on the turn the move executes — never on a charge turn. |
+| `before[]`, `messages[]` | The exact lines, before and after the animation. Byte-identical to the old scene, `\n` breaks and all. |
+| `animation` | `{ moveId, phase? }`, or `null` when nothing plays. |
+| `outcome` | The tier-4 `MoveOutcome` (`hit`/`miss`/`immune` + `critical` + `effectiveness`) the animation consumes. |
+| `presentation` | `refreshHudBefore`, `hitFlash`, `impactSfx`, `effectivenessSfx: 'super'\|'weak'\|null`, `animateAttackerHp`, `animateDefenderHp`, `refreshHudAfter`. |
+| `hit`, `crit`, `effectiveness`, `hitCount`, `damage`, `recoil`, `drain`, `recharge`, `disable` | The numbers. |
+| `attacker`, `defender` | `SideChange`: HP before/after + delta, `fainted`, status before/after, stat-stage changes. |
+| `commit` | The staged post-animation state. `null` when the move stopped before it could change anything. |
+
+`presentation` is deliberately semantic. The engine never names a sound file,
+a sprite or a tween; the renderer maps `effectivenessSfx: 'super'` to whatever
+it plays, and a second renderer is free to map it to something else.
+
+### What pins it
+
+- `packages/engine/tests/moveParity.test.ts` — every move x both sides x six
+  attacker states x three seeds (5940 scenarios) against
+  `tests/fixtures/legacyMove.ts`, a byte-verified copy of the old scene code,
+  comparing the message list, the presentation trace, the resulting state AND
+  the RNG stream position.
+- `packages/engine/tests/moveContract.test.ts` — the #87 and #116 invariants,
+  the Struggle-after-charge ordering, the `Foe ` prefix, PP accounting.
+- `tests/logic/animationOutcome.test.ts` — the scene-side half: the order in
+  which `BattleScene` calls the engine, animates, and commits.
+
 ## What comes next
 
-This is R1 of the four-step re-land of PR #114 (see that PR's review for the
-reasoning). R1 is a pure relocation and changes no behaviour at all.
+R1 (the relocation), R2 (injectable RNG, `battle/rewards.ts`) and R3 (the move
+pipeline above) have landed. What is left of the four-step re-land of PR #114:
 
-- **R2** — injectable RNG: an optional trailing `rng: () => number = Math.random`
-  on `createPokemon`, the damage/accuracy/crit rolls, the AI, the catch and
-  encounter rolls, so a session can be replayed from a seed. Plus
-  `trainerPrizeMoney` and the shared Oak/parcel helpers.
-- **R3** — `battle/move.ts`: the move pipeline, lifted out of `BattleScene`
-  with its text byte-identical and the resolve-before-animate invariant intact,
-  pinned by a parity suite against the current scene code.
 - **R4** — `session/` and `persistence/codec.ts`: the command/effect API the 3D
   client drives, built on the same rule functions the Phaser scene calls rather
   than a second implementation of them.
 
-Until R3 and R4 land, the engine is data and rules; the orchestration still
-lives in the scenes.
+Until R4 lands the engine owns data, rules and one move at a time; the round,
+the battle and the save flow still live in the scenes.

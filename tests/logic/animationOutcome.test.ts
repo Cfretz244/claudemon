@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import MOVE_ANIMATIONS_SRC from '../../src/systems/MoveAnimations.ts?raw';
 import OVERRIDES_SRC from '../../src/systems/animations/overrides.ts?raw';
 import BATTLE_SCENE_SRC from '../../src/scenes/BattleScene.ts?raw';
+import MOVE_SRC from '../../packages/engine/src/battle/move.ts?raw';
 import {
   outcomeFor,
   outcomePlan,
@@ -139,34 +140,66 @@ describe('the tier-4 gate in MoveAnimations.ts (source contract)', () => {
   });
 });
 
-describe('the BattleScene wiring (source contract)', () => {
-  const body = BATTLE_SCENE_SRC.slice(BATTLE_SCENE_SRC.indexOf('private doExecuteMove('));
-  const iAcc = body.indexOf('checkAccuracy(');
-  const iCrit = body.indexOf('checkCritical(');
-  const iDmg = body.indexOf('calculateDamage(');
-  const iAnim = body.indexOf('playMoveAnimation(');
-  const iMiss = body.indexOf('this.textBox.show(["But it missed!"]');
+describe('the move pipeline wiring (source contract)', () => {
+  // R3 moved the rules into `packages/engine/src/battle/move.ts`, so the #87
+  // invariant now spans two files and is pinned in two halves:
+  //   engine - accuracy, crit and damage are rolled before a single mutation
+  //            is staged, and the outcome the picture consumes is derived there;
+  //   scene  - the staged event is committed only AFTER playMoveAnimation.
+  const engine = MOVE_SRC.slice(MOVE_SRC.indexOf('export function executeBattleMove('));
+  const iAcc = engine.indexOf('checkAccuracy(');
+  const iCrit = engine.indexOf('checkCritical(');
+  const iDmg = engine.indexOf('calculateDamage(');
+  const iOutcome = engine.indexOf('event.outcome = outcomeFor(');
+  const iStage = engine.indexOf('const stagedA = detach(a)');
 
-  it('accuracy, crit and damage are all rolled BEFORE the animation', () => {
-    expect(iAcc).toBeGreaterThan(-1);
-    expect(iCrit).toBeGreaterThan(-1);
-    expect(iDmg).toBeGreaterThan(-1);
-    expect(iAnim).toBeGreaterThan(-1);
-    expect(iAcc).toBeLessThan(iAnim);
-    expect(iCrit).toBeLessThan(iAnim);
-    expect(iDmg).toBeLessThan(iAnim);
+  it('accuracy, crit and damage are all rolled BEFORE anything is staged', () => {
+    for (const i of [iAcc, iCrit, iDmg, iOutcome, iStage]) expect(i).toBeGreaterThan(-1);
+    expect(iAcc).toBeLessThan(iOutcome);
+    expect(iCrit).toBeLessThan(iOutcome);
+    expect(iDmg).toBeLessThan(iOutcome);
+    expect(iOutcome).toBeLessThan(iStage);
   });
 
-  it('"But it missed!" is now shown AFTER the animation', () => {
-    expect(iMiss).toBeGreaterThan(iAnim);
+  it('the rolls touch no live HP: the effects run on detached copies', () => {
+    // Between the roll and the commit the engine may only write to `stagedA` /
+    // `stagedD`; `p` and `q` are the scene's own objects the HUD is reading.
+    expect(engine.slice(iOutcome, iStage)).not.toMatch(/\b[pq]\.(currentHp|status)\s*=/);
+    expect(engine.slice(iStage)).toContain('const sp = stagedA.pokemon');
   });
 
   it('the outcome handed to the renderer comes from the shared helper', () => {
-    expect(body).toMatch(/animCtx\.outcome = outcomeFor\(hit, preResult, moveData\)/);
-    expect(BATTLE_SCENE_SRC).toMatch(/import \{ outcomeFor \} from '\.\.\/logic\/animationOutcome'/);
+    expect(MOVE_SRC).toMatch(/import \{ outcomeFor, MoveOutcome \} from '\.\.\/logic\/animationOutcome'/);
+    expect(engine).toMatch(/event\.outcome = outcomeFor\(hit, result, move\)/);
+    // The scene does not re-derive it; it forwards what the event carries.
+    expect(BATTLE_SCENE_SRC).toContain('outcome: event.outcome,');
+    expect(BATTLE_SCENE_SRC).not.toContain('outcomeFor(');
   });
 
-  it('rollHitCount still runs after the animation (no mutation was moved)', () => {
-    expect(body.indexOf('rollHitCount(')).toBeGreaterThan(iAnim);
+  it('the scene commits the event only after the animation has played', () => {
+    const render = BATTLE_SCENE_SRC.slice(
+      BATTLE_SCENE_SRC.indexOf('private renderMoveEvent('),
+      BATTLE_SCENE_SRC.indexOf('private settleMoveEvent('),
+    );
+    expect(render).toContain('await playMoveAnimation(');
+    expect(render.indexOf('await playMoveAnimation(')).toBeLessThan(render.indexOf('this.settleMoveEvent('));
+    // One commit in the whole scene, and it is in the post-animation half.
+    const commits = [...BATTLE_SCENE_SRC.matchAll(/applyMoveEvent\(ctx, event\)/g)];
+    expect(commits).toHaveLength(1);
+    const settle = BATTLE_SCENE_SRC.slice(BATTLE_SCENE_SRC.indexOf('private settleMoveEvent('));
+    expect(settle).toContain('applyMoveEvent(ctx, event);');
+  });
+
+  it('"But it missed!" is still shown AFTER the animation', () => {
+    // The engine puts it in `messages`, which the scene only shows from
+    // settleMoveEvent - `before` is what goes up ahead of the picture.
+    expect(engine).toMatch(/event\.resolution = 'miss';\s*\n\s*event\.messages\.push\('But it missed!'\)/);
+    expect(BATTLE_SCENE_SRC).not.toContain('But it missed!');
+    const settle = BATTLE_SCENE_SRC.slice(BATTLE_SCENE_SRC.indexOf('private settleMoveEvent('));
+    expect(settle).toContain('this.textBox.show(event.messages, resolve)');
+  });
+
+  it('rollHitCount still runs after the outcome is fixed (no mutation moved up)', () => {
+    expect(engine.indexOf('rollHitCount(')).toBeGreaterThan(iStage);
   });
 });

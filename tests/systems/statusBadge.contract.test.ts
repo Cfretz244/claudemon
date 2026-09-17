@@ -1,84 +1,89 @@
 import { describe, it, expect } from 'vitest';
 import BATTLE_SCENE_SRC from '../../src/scenes/BattleScene.ts?raw';
 import BATTLE_HUD_SRC from '../../src/components/BattleHUD.ts?raw';
+import MOVE_SRC from '../../packages/engine/src/battle/move.ts?raw';
 
 /**
  * `BattleScene` and `BattleHUD` both import Phaser, which cannot be loaded in
  * the node test environment, so - the same idiom as `entrances.contract.test.ts`
  * and `moveOverrides.test.ts` - these read the scene as source text. That is
- * enough to pin the thing this PR fixes and that no unit test can see: the
+ * enough to pin the thing #116 fixed and that no unit test can see: the
  * wake / thaw branches redraw the HUD *before* they put their message up, so
  * the SLP / FRZ badge is already gone while the player reads "woke up!".
+ *
+ * R3 moved the decision into `packages/engine/src/battle/move.ts`, which names
+ * the two refresh points on the event (`presentation.refreshHudBefore` /
+ * `refreshHudAfter`). WHICH branches refresh is pinned behaviourally in
+ * `packages/engine/tests/moveContract.test.ts` ("#116: the HUD refresh points
+ * survive as event fields"); what is pinned here is that the renderer still
+ * draws them at the same two moments relative to the text and the bars.
  */
 
-/** The body of one `case '<name>':` in `resolvePreAction`'s switch. */
-function preActionCase(name: string): string {
-  const start = BATTLE_SCENE_SRC.indexOf(`case '${name}':`);
-  expect(start).toBeGreaterThan(-1);
-  const rest = BATTLE_SCENE_SRC.slice(start);
-  const end = rest.indexOf('\n          return;');
-  expect(end).toBeGreaterThan(-1);
-  return rest.slice(0, end);
-}
+const RENDER = BATTLE_SCENE_SRC.slice(
+  BATTLE_SCENE_SRC.indexOf('private renderMoveEvent('),
+  BATTLE_SCENE_SRC.indexOf('private settleMoveEvent('),
+);
+const SETTLE = BATTLE_SCENE_SRC.slice(
+  BATTLE_SCENE_SRC.indexOf('private settleMoveEvent('),
+  BATTLE_SCENE_SRC.indexOf('private applyStatusDamage('),
+);
 
-describe('pre-action switch: waking and thawing clear the badge immediately', () => {
-  for (const branch of ['sleep-wake', 'thaw']) {
-    it(`'${branch}' calls updateHUD() before textBox.show`, () => {
-      const body = preActionCase(branch);
-      const hud = body.indexOf('this.updateHUD()');
-      const show = body.indexOf('this.textBox.show');
-      expect(hud).toBeGreaterThan(-1);
-      expect(show).toBeGreaterThan(-1);
-      expect(hud).toBeLessThan(show);
-    });
-  }
-
-  it("'confusion-self-hit' still refreshes too (the branch this copies)", () => {
-    const body = preActionCase('confusion-self-hit');
-    expect(body.indexOf('this.updateHUD()')).toBeLessThan(body.indexOf('this.textBox.show'));
-  });
-
-  it('the branches that do NOT change status are left alone', () => {
+describe('waking and thawing clear the badge immediately', () => {
+  it('the engine asks for the refresh on exactly the status-changing branches', () => {
+    const set = MOVE_SRC.match(/const PRE_ACTION_REFRESHES_HUD: PreActionAction\[\] = \[([^\]]*)\]/);
+    expect(set).not.toBeNull();
+    const branches = set![1].split(',').map(b => b.trim().replace(/'/g, '')).filter(Boolean).sort();
+    expect(branches).toEqual(['confusion-self-hit', 'sleep-wake', 'thaw']);
     // 'sleep', 'frozen' and 'paralyzed' leave `status` exactly as the badge
     // already shows it, so an extra redraw there would be noise.
-    for (const branch of ['sleep', 'frozen', 'paralyzed']) {
-      expect(preActionCase(branch)).not.toContain('this.updateHUD()');
-    }
+    for (const quiet of ['sleep', 'frozen', 'paralyzed']) expect(branches).not.toContain(quiet);
+  });
+
+  it('the renderer redraws BEFORE the pre-action text goes up', () => {
+    const hud = RENDER.indexOf('if (event.presentation.refreshHudBefore) this.updateHUD();');
+    expect(hud).toBeGreaterThan(-1);
+    // Every way out of renderMoveEvent shows its text after that point.
+    const shows = [...RENDER.matchAll(/this\.textBox\.show\(/g)].map(m => m.index!);
+    expect(shows.length).toBeGreaterThan(0);
+    for (const show of shows) expect(hud).toBeLessThan(show);
+  });
+
+  it('the refresh is the event\'s call, not a branch the scene re-derives', () => {
+    // The scene must not second-guess it: no status/sleep tests of its own in
+    // the renderer half.
+    expect(RENDER).not.toMatch(/StatusCondition\./);
+    expect(RENDER).not.toMatch(/woke up|thawed/i);
   });
 });
 
 describe('status moves redraw the HUD as well', () => {
-  /** The `else` branch of doExecuteMove that handles power-0 status moves. */
-  const statusBranch = (() => {
-    const start = BATTLE_SCENE_SRC.indexOf('// Status move - effect always applies');
-    expect(start).toBeGreaterThan(-1);
-    return BATTLE_SCENE_SRC.slice(start, start + 1600);
-  })();
-
-  it('calls updateHUD() before its text', () => {
-    // A status move has no HP tween, so it has no other redraw; without this,
-    // a badge it applies (THUNDER WAVE, TOXIC, REST) - or HP it restored
+  it('the post-animation half waits for the bars, then redraws, then talks', () => {
+    // A status move has no HP tween of its own unless it moved HP, so without
+    // this a badge it applied (THUNDER WAVE, TOXIC, REST) - or HP it restored
     // (RECOVER, SOFTBOILED) - only appeared during the opponent's reply.
-    const hud = statusBranch.indexOf('this.updateHUD()');
-    const show = statusBranch.indexOf('this.textBox.show');
+    const finish = SETTLE.indexOf('const finish = () => {');
+    expect(finish).toBeGreaterThan(-1);
+    const body = SETTLE.slice(finish, SETTLE.indexOf('};', finish));
+    const hud = body.indexOf('this.updateHUD()');
+    const show = body.indexOf('this.textBox.show(event.messages');
     expect(hud).toBeGreaterThan(-1);
     expect(show).toBeGreaterThan(-1);
     expect(hud).toBeLessThan(show);
+    expect(SETTLE).toContain('void Promise.all(bars).then(finish);');
   });
 
   it('animates the HP bar of whichever side the move changed', () => {
-    expect(statusBranch).toContain('animatePlayerHP');
-    expect(statusBranch).toContain('animateOpponentHP');
     // Both sides are checked: RECOVER heals the attacker, an HP-draining
-    // status effect would move the defender.
-    expect(statusBranch).toContain('attacker.currentHp !== atkHpBefore');
-    expect(statusBranch).toContain('defender.currentHp !== defHpBefore');
+    // status effect would move the defender. The engine decides which.
+    expect(SETTLE).toContain('if (pres.animateAttackerHp) bars.push(this.animateHpBar(event.actorIsPlayer');
+    expect(SETTLE).toContain('if (pres.animateDefenderHp) bars.push(this.animateHpBar(!event.actorIsPlayer');
+    expect(MOVE_SRC).toContain('pres.animateAttackerHp = sp.currentHp !== atkHpBefore;');
+    expect(MOVE_SRC).toContain('pres.animateDefenderHp = sq.currentHp !== defHpBefore;');
   });
 
-  it('waits for the bar before the message, as the damage path does', () => {
-    const all = statusBranch.indexOf('Promise.all(bars)');
-    expect(all).toBeGreaterThan(-1);
-    expect(all).toBeLessThan(statusBranch.indexOf('this.updateHUD()'));
+  it('a turn that moved no HP waits for nothing (no unconditional 500 ms)', () => {
+    expect(SETTLE).toContain('if (bars.length > 0) void Promise.all(bars).then(finish);');
+    expect(SETTLE).toContain('else finish();');
   });
 });
 
