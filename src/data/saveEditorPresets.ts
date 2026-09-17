@@ -129,7 +129,7 @@ export const PRESETS: Preset[] = [
       fresh.party = [createPokemon(25, 5, save.playerName)]; // Pikachu
       fresh.currentMap = 'pallet_town';
       fresh.playerX = 4;
-      fresh.playerY = 7; // in front of the player's house door
+      fresh.playerY = 6; // the doorstep of the player's house
       Object.assign(save, fresh);
     },
   },
@@ -382,7 +382,7 @@ export const PRESETS: Preset[] = [
     apply: (save) => {
       save.currentMap = 'pallet_town';
       save.playerX = 4;
-      save.playerY = 7; // in front of the player's house door
+      save.playerY = 6; // the doorstep of the player's house
       // Set all known flags (including champion, which opens Cerulean Cave)
       save.storyFlags = {};
       for (const group of STORY_FLAG_GROUPS) {

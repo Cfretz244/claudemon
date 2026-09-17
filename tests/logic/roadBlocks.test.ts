@@ -17,6 +17,10 @@ import {
   badgeCheckBaseId,
   badgeCheckClearedFlag,
   RoadBlockState,
+  walkPath,
+  oakLabDoorstep,
+  oakGreetingSpot,
+  Tile,
 } from '../../src/logic/roadBlocks';
 import { ALL_MAPS } from '../../src/data/maps';
 import { GYM_LEADERS } from '../../src/data/gymLeaders';
@@ -342,5 +346,126 @@ describe('badge-check clear flags', () => {
   it('the flags are distinct per guard, so clearing one does not clear another', () => {
     const flags = Object.keys(BADGE_CHECK_REQUIREMENTS).map(badgeCheckClearedFlag);
     expect(new Set(flags).size).toBe(flags.length);
+  });
+});
+
+// ── Oak's escort walk ────────────────────────────────────────────────────────
+//
+// The cutscene used to hard-code Pallet's geometry ("walk west to x=6, then up
+// the lane"), so re-drawing the town silently walked Oak through a house. It is
+// now a shortest path over the map's own collision grid; these pin the walk
+// against the real map, so the next person to move the lab cannot break it
+// without a red test.
+
+/** A tiny map: `#` is solid, `.` is floor. */
+function grid(rows: string[], warps: Array<{ x: number; y: number; targetMap: string }> = []) {
+  return {
+    width: rows[0].length,
+    height: rows.length,
+    collision: rows.map(r => [...r].map(c => c === '#')),
+    warps,
+  };
+}
+const asKeys = (path: Tile[]) => path.map(t => `${t.x},${t.y}`);
+
+describe('walkPath', () => {
+  const open = grid(['.....', '.###.', '.....']);
+
+  it('walks a straight line, and does not include the tile it starts on', () => {
+    expect(asKeys(walkPath(open, { x: 0, y: 0 }, { x: 3, y: 0 })!)).toEqual(['1,0', '2,0', '3,0']);
+  });
+
+  it('goes around a wall rather than through it', () => {
+    const path = walkPath(open, { x: 1, y: 0 }, { x: 1, y: 2 })!;
+    expect(path.some(t => open.collision[t.y][t.x])).toBe(false);
+    expect(path[path.length - 1]).toEqual({ x: 1, y: 2 });
+    expect(path.length).toBe(4);       // down the left column and back along the bottom
+  });
+
+  it('takes the shortest way, and every step is next to the last', () => {
+    const path = [{ x: 0, y: 0 }, ...walkPath(open, { x: 0, y: 0 }, { x: 4, y: 2 })!];
+    for (let i = 1; i < path.length; i++) {
+      expect(Math.abs(path[i].x - path[i - 1].x) + Math.abs(path[i].y - path[i - 1].y)).toBe(1);
+    }
+    expect(path.length - 1).toBe(6);
+  });
+
+  it('returns an empty path when it is already there', () => {
+    expect(walkPath(open, { x: 2, y: 0 }, { x: 2, y: 0 })).toEqual([]);
+  });
+
+  it('refuses a destination that is a wall, off the map, or blocked by an NPC', () => {
+    expect(walkPath(open, { x: 0, y: 0 }, { x: 2, y: 1 })).toBeNull();
+    expect(walkPath(open, { x: 0, y: 0 }, { x: 9, y: 9 })).toBeNull();
+    expect(walkPath(open, { x: 0, y: 0 }, { x: 3, y: 0 }, new Set(['3,0']))).toBeNull();
+  });
+
+  it('returns null when the destination is walled off entirely', () => {
+    const sealed = grid(['...#...', '...#...']);
+    expect(walkPath(sealed, { x: 0, y: 0 }, { x: 6, y: 0 })).toBeNull();
+  });
+
+  it('treats a blocked tile as a wall — a one-wide corridor closes', () => {
+    const corridor = grid(['.....']);
+    expect(walkPath(corridor, { x: 0, y: 0 }, { x: 4, y: 0 }, new Set(['2,0']))).toBeNull();
+  });
+});
+
+describe("Oak's escort walk, on the real Pallet Town", () => {
+  const pallet = ALL_MAPS.pallet_town;
+  const labDoor = pallet.warps.find(w => w.targetMap === OAK_ESCORT_DESTINATION.mapId)!;
+
+  it('Oak steps out onto the doorstep below his lab door, not into the facade', () => {
+    const step = oakLabDoorstep(pallet)!;
+    expect(step).toEqual({ x: labDoor.x, y: labDoor.y + 1 });
+    expect(pallet.collision[step.y][step.x]).toBe(false);
+  });
+
+  it('has no doorstep on a map with no lab', () => {
+    expect(oakLabDoorstep(ALL_MAPS.route1)).toBeNull();
+  });
+
+  it('walks from the lab to a player standing in the Route 1 gap, and back again', () => {
+    const doorstep = oakLabDoorstep(pallet)!;
+    const player = { x: 9, y: 1 };                 // where Route 1 puts you back
+    const greeting = oakGreetingSpot(pallet, doorstep, player)!;
+    expect(greeting).not.toBeNull();
+    // He stops next to the player — never on top of them.
+    expect(Math.abs(greeting.spot.x - player.x) + Math.abs(greeting.spot.y - player.y)).toBe(1);
+    expect(greeting.path[greeting.path.length - 1]).toEqual(greeting.spot);
+    expect(greeting.path.every(t => !pallet.collision[t.y][t.x])).toBe(true);
+    // And he can lead them home from there.
+    const home = walkPath(pallet, greeting.spot, doorstep)!;
+    expect(home[home.length - 1]).toEqual(doorstep);
+  });
+
+  it('prefers the tile south of the player, so he faces them up the path', () => {
+    const doorstep = oakLabDoorstep(pallet)!;
+    const player = { x: 9, y: 2 };
+    expect(oakGreetingSpot(pallet, doorstep, player)!.spot).toEqual({ x: 9, y: 3 });
+  });
+
+  it('takes another neighbouring tile when the south one is taken', () => {
+    const doorstep = oakLabDoorstep(pallet)!;
+    const player = { x: 9, y: 2 };
+    const greeting = oakGreetingSpot(pallet, doorstep, player, new Set(['9,3']))!;
+    expect(greeting.spot).not.toEqual({ x: 9, y: 3 });
+    expect(Math.abs(greeting.spot.x - player.x) + Math.abs(greeting.spot.y - player.y)).toBe(1);
+  });
+
+  it('can reach every tile the town warps you in on', () => {
+    const doorstep = oakLabDoorstep(pallet)!;
+    for (const map of Object.values(ALL_MAPS)) {
+      for (const w of map.warps) {
+        if (w.targetMap !== 'pallet_town') continue;
+        const at = `${map.id} (${w.x},${w.y})`;
+        expect(oakGreetingSpot(pallet, doorstep, { x: w.targetX, y: w.targetY }), at).not.toBeNull();
+      }
+    }
+  });
+
+  it('gives up rather than teleporting when the player is unreachable', () => {
+    const island = grid(['..#..']);
+    expect(oakGreetingSpot(island, { x: 0, y: 0 }, { x: 4, y: 0 })).toBeNull();
   });
 });

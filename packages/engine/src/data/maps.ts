@@ -1,4 +1,4 @@
-import { MapData, TileType } from '../types/map.types';
+import { MapData, NPCData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
 import { CERULEAN_MAPS } from './maps_cerulean';
 import { VERMILION_MAPS } from './maps_vermilion';
@@ -9,71 +9,87 @@ import { SILPH_MAPS } from './maps_silph';
 import { HIDEOUT_MAPS } from './maps_hideout';
 import { TOWER_MAPS } from './maps_tower';
 import { CAVE_MAPS } from './maps_cave';
-import { createMapShape, SOLID_TILES, stampBuilding } from './mapBuilder';
+import { createMapFromSketch, createMapShape, SOLID_TILES, stampBuilding } from './mapBuilder';
+import { PALLET_TOWN_SKETCH } from './sketches/palletTown';
 
 const T = TileType;
 
 const MUSEUM_SOLID = new Set([...SOLID_TILES, T.EXHIBIT_CASE, T.FOSSIL_DISPLAY, T.SHUTTLE_DISPLAY]);
 
+// ─── Pallet Town ─────────────────────────────────────────────────────────────
+//
+// Built FROM its sketch (`sketches/palletTown.ts`, the drawing Fable's
+// `tools/town-sketch-check.mjs` validates): the rows draw the ground, the
+// three buildings are stamped over their footprints with the kit, and every
+// door warp, edge warp and NPC spot is read back out of the sketch, so a
+// coordinate exists in exactly one place. Dialogue, sprite colours and the
+// wild table stay here — only *where* things are lives in the sketch.
+
+/** Where each door warp drops the player inside the interior. */
+const PALLET_DOOR_TARGETS: Record<string, { x: number; y: number }> = {
+  player_house: { x: 3, y: 7 },
+  rival_house: { x: 3, y: 7 },
+  oaks_lab: { x: 4, y: 11 },
+};
+
+/** Where each edge warp lands on the route, keyed by the town tile it sits on. */
+const PALLET_EDGE_TARGETS: Record<string, { x: number; y: number }> = {
+  // Route 1 runs a four-wide path down to its south edge; the two town-side
+  // gap tiles land on the two middle columns of it.
+  '9,0': { x: 9, y: 28 },
+  '10,0': { x: 10, y: 28 },
+  // Route 21 is open water: both pier tiles put the player on the same tile
+  // below its north edge, and the player surfs from there.
+  '10,16': { x: 7, y: 1 },
+  '11,16': { x: 7, y: 1 },
+};
+
+/** Everything about a Pallet NPC except where they stand (that is the sketch's). */
+const PALLET_NPC_DETAILS: Record<string, Omit<NPCData, 'id' | 'x' | 'y'>> = {
+  pallet_npc1: {
+    spriteColor: 0xf06060,
+    direction: Direction.DOWN,
+    dialogue: [
+      'PALLET TOWN',
+      'Shades of your journey\nawait!',
+    ],
+  },
+  pallet_npc2: {
+    spriteColor: 0x60a0f0,
+    direction: Direction.LEFT,
+    dialogue: [
+      "I heard PROF. OAK's\nlooking for you!",
+      'His lab is right over\nthere.',
+    ],
+  },
+  pallet_fisher: {
+    spriteColor: 0x40a0c0,
+    direction: Direction.DOWN,
+    dialogue: [
+      'The sea goes all the\nway to CINNABAR from\nhere.',
+      "That's ROUTE 21. You\nneed to SURF to cross\nit.",
+    ],
+  },
+};
+
 export const PALLET_TOWN: MapData = (() => {
-  const W = 20, H = 20;
-  const shape = createMapShape(W, H, T.GRASS);
-  const { tiles, collision, tileKinds, setTile, fillRect } = shape;
+  const sketch = PALLET_TOWN_SKETCH;
+  const shape = createMapFromSketch(sketch.rows, sketch.legend);
+  const { tiles, collision, tileKinds, width: W, height: H } = shape;
 
-  // Paths
-  fillRect(8, 4, 4, 14, T.PATH);
-  fillRect(2, 8, 16, 2, T.PATH);
-
-  // The three buildings come from the kit (`stampBuilding`), at the same
-  // footprints and the same door tiles they have always had — (4,6), (14,6)
-  // and (10,15) — so no warp, interior or story coordinate moves.
-  // Player's house (top-left area)
-  stampBuilding(shape, 'house', 2, 3, { w: 5, h: 4, chimney: true });
-  // Rival's house (top-right area)
-  stampBuilding(shape, 'house', 12, 3, { w: 5, h: 4, chimney: true });
-  // Oak's Lab (bottom center): a landmark, and its name is on the SIGN below.
-  stampBuilding(shape, 'landmark', 7, 12, { w: 6, h: 4, sign: 'none' });
-  // Sign
-  setTile(11, 16, T.SIGN);
-
-  // Trees border (with gap at north for Route 1 exit)
-  for (let x = 0; x < W; x++) {
-    // Leave gap at x=8-11 for north exit path
-    if (x < 8 || x > 11) {
-      setTile(x, 0, T.TREE);
-      setTile(x, 1, T.TREE);
-    } else {
-      setTile(x, 0, T.PATH);
-      setTile(x, 1, T.PATH);
-    }
+  // The two houses and Oak's lab, stamped over the `h` / `L` footprints the
+  // sketch reserves for them. Chimneys on the houses; the same stack reads as
+  // the lab's roof antenna. No signboards: Pallet has no public building, and
+  // the lab's name is on the SIGN standing on the path outside it.
+  for (const b of sketch.buildings) {
+    stampBuilding(shape, b.kind, b.x, b.y, {
+      w: b.w,
+      h: b.h,
+      door: b.door[0] - b.x,
+      sign: 'none',
+      chimney: true,
+    });
   }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.TREE);
-    setTile(1, y, T.TREE);
-    setTile(W - 1, y, T.TREE);
-    setTile(W - 2, y, T.TREE);
-  }
-
-  // Some flowers
-  setTile(5, 10, T.FLOWER);
-  setTile(6, 10, T.FLOWER);
-  setTile(14, 10, T.FLOWER);
-  setTile(15, 10, T.FLOWER);
-
-  // Tall grass patches
-  fillRect(3, 11, 4, 2, T.TALL_GRASS);
-  fillRect(14, 11, 4, 2, T.TALL_GRASS);
-
-  // South shore - water with trees on sides, then all water
-  for (let x = 2; x < W - 2; x++) {
-    setTile(x, H - 2, T.WATER);
-  }
-  for (let x = 0; x < W; x++) {
-    setTile(x, H - 1, T.WATER);
-  }
-
-  // Signs
-  setTile(7, 9, T.SIGN);
 
   return {
     id: 'pallet_town',
@@ -84,43 +100,22 @@ export const PALLET_TOWN: MapData = (() => {
     collision,
     tileKinds,
     warps: [
-      // Player's house door
-      { x: 4, y: 6, targetMap: 'player_house', targetX: 3, targetY: 7 },
-      // Rival's house door
-      { x: 14, y: 6, targetMap: 'rival_house', targetX: 3, targetY: 7 },
-      // Oak's Lab door
-      { x: 10, y: 15, targetMap: 'oaks_lab', targetX: 4, targetY: 11 },
-      // North exit to Route 1
-      { x: 8, y: 1, targetMap: 'route1', targetX: 8, targetY: 28 },
-      { x: 9, y: 1, targetMap: 'route1', targetX: 9, targetY: 28 },
-      { x: 10, y: 1, targetMap: 'route1', targetX: 10, targetY: 28 },
-      { x: 11, y: 1, targetMap: 'route1', targetX: 11, targetY: 28 },
-      // South exit to Route 21
-      { x: 9, y: 17, targetMap: 'route21', targetX: 7, targetY: 1 },
-      { x: 10, y: 17, targetMap: 'route21', targetX: 7, targetY: 1 },
+      ...sketch.buildings.map(b => ({
+        x: b.door[0],
+        y: b.door[1],
+        targetMap: b.warp,
+        targetX: PALLET_DOOR_TARGETS[b.warp].x,
+        targetY: PALLET_DOOR_TARGETS[b.warp].y,
+      })),
+      ...sketch.edgeWarps.map(([x, y, targetMap]) => ({
+        x,
+        y,
+        targetMap,
+        targetX: PALLET_EDGE_TARGETS[`${x},${y}`].x,
+        targetY: PALLET_EDGE_TARGETS[`${x},${y}`].y,
+      })),
     ],
-    npcs: [
-      {
-        id: 'pallet_npc1',
-        x: 6, y: 9,
-        spriteColor: 0xf06060,
-        direction: Direction.DOWN,
-        dialogue: [
-          'PALLET TOWN',
-          'Shades of your journey\nawait!',
-        ],
-      },
-      {
-        id: 'pallet_npc2',
-        x: 13, y: 9,
-        spriteColor: 0x60a0f0,
-        direction: Direction.LEFT,
-        dialogue: [
-          "I heard PROF. OAK's\nlooking for you!",
-          'His lab is right over\nthere.',
-        ],
-      },
-    ],
+    npcs: sketch.npcs.map(n => ({ id: n.id, x: n.x, y: n.y, ...PALLET_NPC_DETAILS[n.id] })),
     wildEncounters: {
       grassRate: 0.15,
       encounters: [
@@ -166,7 +161,8 @@ export const PLAYER_HOUSE: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'pallet_town', targetX: 4, targetY: 7 },
+      // The doorstep below the player's house door at (4,5).
+      { x: 3, y: H - 1, targetMap: 'pallet_town', targetX: 4, targetY: 6 },
     ],
     npcs: [
       {
@@ -220,7 +216,8 @@ export const RIVAL_HOUSE: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'pallet_town', targetX: 14, targetY: 7 },
+      // The doorstep below the rival's house door at (16,5).
+      { x: 3, y: H - 1, targetMap: 'pallet_town', targetX: 16, targetY: 6 },
     ],
     npcs: [
       {
@@ -277,11 +274,11 @@ export const OAKS_LAB: MapData = (() => {
     tiles,
     collision,
     warps: [
-      // Land one tile BELOW pallet_town's lab door (10,15) — the door tile is
-      // the facade you walk INTO, never the tile you come out onto. (10,16) is
-      // PATH; the sign sits at (11,16), so nothing else is there.
-      { x: 4, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 16 },
-      { x: 5, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 16 },
+      // Land one tile BELOW pallet_town's lab door (12,12) — the door tile is
+      // the facade you walk INTO, never the tile you come out onto. (12,13) is
+      // the DOORMAT at the head of the lab's cobbled forecourt.
+      { x: 4, y: H - 1, targetMap: 'pallet_town', targetX: 12, targetY: 13 },
+      { x: 5, y: H - 1, targetMap: 'pallet_town', targetX: 12, targetY: 13 },
     ],
     npcs: [
       {
@@ -364,11 +361,13 @@ export const ROUTE1: MapData = (() => {
     tiles,
     collision,
     warps: [
-      // South to Pallet Town
-      { x: 8, y: H - 1, targetMap: 'pallet_town', targetX: 8, targetY: 2 },
-      { x: 9, y: H - 1, targetMap: 'pallet_town', targetX: 9, targetY: 2 },
-      { x: 10, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 2 },
-      { x: 11, y: H - 1, targetMap: 'pallet_town', targetX: 11, targetY: 2 },
+      // South to Pallet Town. The town's tree ring only opens two tiles wide
+      // ((9,0) and (10,0)), so Route 1's four-wide path funnels onto the tile
+      // below each of them — (8,1) is the town sign, and nothing may land there.
+      { x: 8, y: H - 1, targetMap: 'pallet_town', targetX: 9, targetY: 1 },
+      { x: 9, y: H - 1, targetMap: 'pallet_town', targetX: 9, targetY: 1 },
+      { x: 10, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 1 },
+      { x: 11, y: H - 1, targetMap: 'pallet_town', targetX: 10, targetY: 1 },
       // North to Viridian City
       { x: 8, y: 0, targetMap: 'viridian_city', targetX: 8, targetY: 27 },
       { x: 9, y: 0, targetMap: 'viridian_city', targetX: 9, targetY: 27 },

@@ -94,4 +94,32 @@ await walkOutOfLab('9. no Pikachu yet: no ambush',
   r => (!r.battle && !r.ambush.length && r.over.map === 'pallet_town')
        || `battle=${JSON.stringify(r.battle?.trainerId)} map=${r.over?.map}`);
 
+// --- Oak's intercept, on the way out of town ---------------------------------
+// An empty party steps into the Route 1 gap: Oak comes out of the lab, says his
+// two lines and walks the player back to his door. Both legs are shortest paths
+// over the map itself (`logic/roadBlocks`), so this is the scenario that breaks
+// if the town is re-drawn and the cutscene is not moved with it.
+async function oakEscort(name) {
+  await t.boot({ map: 'pallet_town', x: 9, y: 1, party: [], bag: {}, flags: {}, noEncounters: true });
+  await t.shot('10.pre');
+  await t.tap(DIR_KEY.up, 160);                  // step onto the edge warp at (9,0)
+  const said = [];
+  let end = null;
+  for (let i = 0; i < 60; i++) {
+    await page.waitForTimeout(300);
+    const st = await t.state();
+    if (!st) continue;
+    if (st.map === 'oaks_lab') { end = st; break; }
+    if (st.textVisible) {
+      if (st.text[0] !== said[said.length - 1]) said.push(st.text[0]);
+      await t.tap('KeyZ');
+    }
+  }
+  await t.shot('10.post');
+  const at = end && `${end.map} (${end.x},${end.y})`;
+  t.record(name, said.length === 2 && at === 'oaks_lab (4,11)', `said=${said.length} at=${at}`);
+}
+
+await oakEscort('10. empty party at the Route 1 gap: Oak walks the player to his lab');
+
 await t.finish();
