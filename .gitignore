@@ -6,3 +6,5 @@ scripts/pokemon-cache.json
 coverage/
 e2e/shots/
 e2e/logs/
+packages/*/dist/
+.engine-check-*/
