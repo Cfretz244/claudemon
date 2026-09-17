@@ -15,6 +15,7 @@ export * from './types';
 export * from './entities/Pokemon';
 export * from './entities/Player';
 
+export * from './battle/move';
 export * from './battle/rewards';
 export * from './random/seed';
 

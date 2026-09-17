@@ -498,7 +498,7 @@ describe('BattleScene: the shared send-out (E3)', () => {
     // incoming Pokemon - unchanged by this PR.
     expect(voluntary.indexOf('selectAIMove('))
       .toBeLessThan(voluntary.indexOf('this.currentPlayerPokemonIndex = newIndex'));
-    expect(voluntary).toContain('this.executeMove(this.opponentPokemon');
+    expect(voluntary).toContain('this.executeMove(false, aiMoveIndex)');
     expect(voluntary).toContain('this.handlePlayerFaint()');
   });
 });
@@ -624,7 +624,7 @@ describe('the catch sequence (E5)', () => {
     expect(useBall).toContain("this.finishForcedEncounter('caught')");
     // The break-out still hands the AI a free swing, after the text.
     expect(useBall.indexOf('Oh no! The POKeMON'))
-      .toBeLessThan(useBall.indexOf('this.executeMove(this.opponentPokemon'));
+      .toBeLessThan(useBall.indexOf('this.executeMove(false, aiMoveIndex)'));
   });
 
   it('leaves the trainer short-circuit alone', () => {
@@ -634,7 +634,7 @@ describe('the catch sequence (E5)', () => {
     // nothing is thrown, so there is nothing to animate.
     expect(bag).toContain('The TRAINER blocked\\nthe BALL!');
     expect(bag).toContain("Don't be a thief!");
-    expect(shortCircuit).toContain('this.executeMove(this.opponentPokemon');
+    expect(shortCircuit).toContain('this.executeMove(false, aiMoveIndex)');
     expect(shortCircuit).not.toContain('catchSequence');
     expect(shortCircuit).not.toContain('useBall');
   });
