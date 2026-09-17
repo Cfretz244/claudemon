@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TILE_SIZE, GAME_WIDTH, GAME_HEIGHT, MOVE_DURATION, Direction, DIR_VECTORS, OPPOSITE_DIR } from '../utils/constants';
 import { ALL_MAPS } from '../data/maps';
-import { MapData, TileType, NPCData, ElevatorFloor } from '../types/map.types';
+import { BuildingKind, MapData, TileType, NPCData, ElevatorFloor } from '../types/map.types';
 import { TextBox } from '../components/TextBox';
 import { PokedexScreen } from '../components/PokedexScreen';
 import { PartyScreen } from '../components/PartyScreen';
@@ -15,7 +15,7 @@ import { generateNPCSprite, generateItemBallSprite, generateStatueSprite, genera
 import { SaveSystem, SaveData } from '../systems/SaveSystem';
 import { soundSystem } from '../systems/SoundSystem';
 import { getMusicForMap } from '../data/musicTracks';
-import { MAP_THEMES } from '../data/townThemes';
+import { BUILDING_TILE_TYPES, MAP_THEMES } from '../data/townThemes';
 import { StatusCondition, PokemonInstance } from '../types/pokemon.types';
 import { createPokemon, gainHappiness, getHappiness } from '../entities/Pokemon';
 import { PlayerState } from '../entities/Player';
@@ -37,6 +37,7 @@ import {
 import { checkEntryGates } from '../logic/warpGate';
 import { MapInstance, instantiateMap, landedBoulders, pushBoulder, isFlagGateOpen, tileUnder } from '../logic/boulders';
 import { restoreParty, healVisitFlag } from '../logic/healing';
+import { followerVisible } from '../logic/follower';
 import {
   interceptWarp, needsOakEscort, badgeCheckOutcome, OAK_INTERCEPT_MESSAGES,
   OAK_ESCORT_DESTINATION, PEWTER_GUIDE_NPC_ID, BADGE_CHECK_PASSED_SUFFIX,
@@ -251,7 +252,6 @@ export class OverworldScene extends Phaser.Scene {
     }
 
     // Pikachu follower - starts hidden on player tile, appears after first step
-    this.pikachuVisible = this.playerState.party.some(p => p.speciesId === 25);
     this.pikachuGridX = this.playerGridX;
     this.pikachuGridY = this.playerGridY;
     this.pikachu = this.add.sprite(
@@ -262,6 +262,9 @@ export class OverworldScene extends Phaser.Scene {
     );
     this.pikachu.setDepth(9);
     this.pikachu.setVisible(false); // Hidden until player takes first step
+    // Whether it is out at all is logic/follower.ts' rule, asked here and again
+    // every time the party can have changed without leaving the map.
+    this.refreshFollower();
 
     // Create NPCs
     this.createNPCs();
@@ -394,9 +397,19 @@ export class OverworldScene extends Phaser.Scene {
     return isMapCave(this.currentMap);
   }
 
-  private getTileKey(tileType: number): string {
+  /**
+   * Texture for a tile type on this map. Facade tiles (roof, wall, window,
+   * door, signboard, chimney) come in a variant per building kind; `kind` is
+   * the tile's entry in `MapData.tileKinds`, and a facade tile that belongs to
+   * no stamp is drawn as a house.
+   */
+  private getTileKey(tileType: number, kind?: BuildingKind): string {
     const theme = MAP_THEMES[this.currentMap.id];
     if (theme) {
+      if (BUILDING_TILE_TYPES.has(tileType)) {
+        const kindKey = `tile_${theme}_${kind ?? 'house'}_${tileType}`;
+        if (this.textures.exists(kindKey)) return kindKey;
+      }
       const key = `tile_${theme}_${tileType}`;
       if (this.textures.exists(key)) return key;
     }
@@ -414,7 +427,7 @@ export class OverworldScene extends Phaser.Scene {
       const dir = this.currentMap.currents?.[`${x},${y}`];
       if (dir) return `current_${dir}`;
     }
-    return this.getTileKey(tileType);
+    return this.getTileKey(tileType, this.currentMap.tileKinds?.[`${x},${y}`]);
   }
 
   private static isWaterTile(tileType: number | undefined): boolean {
@@ -709,6 +722,7 @@ export class OverworldScene extends Phaser.Scene {
 
         // Healing square (Pokemon Tower 5F): restore the party, jingle only if it did something
         if (this.currentMap.tiles[newY]?.[newX] === TileType.HEAL_TILE && restoreParty(this.playerState.party)) {
+          this.refreshFollower(); // same rule as the nurse: a revived Pikachu follows again
           soundSystem.heal();
           this.textBox.show(['A purifying aura\nsurrounds you!', 'Your POKEMON were\nhealed!']);
           return;
@@ -775,6 +789,36 @@ export class OverworldScene extends Phaser.Scene {
         this.checkWildEncounter(landX, landY);
       },
     });
+  }
+
+  /**
+   * Re-evaluate whether the Pikachu follower is out, from the LIVE party.
+   *
+   * `create()` used to decide this once, on species alone, so a fainted Pikachu
+   * kept following (the bug) and nothing that changed the party inside a map —
+   * a POKeMON CENTER heal, a REVIVE from the bag, a PC deposit, Oak's gift —
+   * could change the answer. Every one of those call sites now ends here, and
+   * the rule itself lives in `logic/follower.ts`.
+   *
+   * hidden -> visible parks the sprite on the player's tile facing the player's
+   * way and leaves it hidden, exactly as `create()` does: it appears on the next
+   * step, one tile behind, instead of popping into existence on the trail.
+   * visible -> hidden hides it on the spot, mid-walk tween included.
+   */
+  private refreshFollower(): void {
+    const visible = followerVisible(this.playerState.party);
+    if (visible === this.pikachuVisible) return;
+    this.pikachuVisible = visible;
+    this.tweens.killTweensOf(this.pikachu);
+    this.pikachu.setVisible(false);
+    if (!visible) return;
+    this.pikachuGridX = this.playerGridX;
+    this.pikachuGridY = this.playerGridY;
+    this.pikachuDirection = this.playerDirection;
+    this.pikachu.setPosition(
+      this.pikachuGridX * TILE_SIZE + TILE_SIZE / 2,
+      this.pikachuGridY * TILE_SIZE + TILE_SIZE / 2
+    );
   }
 
   private movePikachu(targetX: number, targetY: number, dir: Direction): void {
@@ -1581,6 +1625,7 @@ export class OverworldScene extends Phaser.Scene {
         this.screenOpen = true;
         this.pcScreen.show(this.playerState, () => {
           this.screenOpen = false;
+          this.refreshFollower(); // deposits/withdrawals change who is in the party
         });
       });
       return;
@@ -1857,14 +1902,8 @@ export class OverworldScene extends Phaser.Scene {
         applyOakStage(stage, this.playerState);
         soundSystem.pokemonCry(800);
 
-        // Update Pikachu follower visibility
-        this.pikachuVisible = true;
-        this.pikachuGridX = this.playerGridX;
-        this.pikachuGridY = this.playerGridY;
-        this.pikachu.setPosition(
-          this.pikachuGridX * TILE_SIZE + TILE_SIZE / 2,
-          this.pikachuGridY * TILE_SIZE + TILE_SIZE / 2
-        );
+        // The gift put a (healthy) Pikachu in the party: the follower is out.
+        this.refreshFollower();
       });
       return true;
     }
@@ -2341,6 +2380,7 @@ export class OverworldScene extends Phaser.Scene {
     this.screenOpen = true;
     this.partyScreen.show(this.playerState.party, () => {
       this.screenOpen = false;
+      this.refreshFollower();
     }, (moveId: number) => {
       this.handleFieldMove(moveId);
     });
@@ -2423,6 +2463,10 @@ export class OverworldScene extends Phaser.Scene {
     } : undefined;
     this.bagScreen.show(this.playerState, () => {
       this.screenOpen = false;
+      // The bag can REVIVE (or faint-proof) the follower. Item use does not
+      // close the bag, but the player cannot walk while it is open, so the
+      // close callback is the first moment the answer can matter on screen.
+      this.refreshFollower();
     }, escapeRopeCb, bicycleCb, fishingCb, (pokemon, toSpecies) => this.runEvolution(pokemon, toSpecies));
   }
 
@@ -2676,6 +2720,8 @@ export class OverworldScene extends Phaser.Scene {
         soundSystem.heal();
 
         restoreParty(this.playerState.party);
+        // A Pikachu that was fainted on the way in follows again on the way out.
+        this.refreshFollower();
         for (const pokemon of this.playerState.party) gainHappiness(pokemon, 3);
         this.playerState.lastHealMap = this.currentMap.id;
         this.playerState.lastHealX = this.playerGridX;
