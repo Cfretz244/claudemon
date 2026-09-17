@@ -1,3 +1,5 @@
+import { OAK_INTERCEPT_MESSAGES, OAK_ESCORT_DESTINATION } from '../logic/roadBlocks';
+import { createOakEscortScript, StoryScript } from '../story/opening';
 import { applyMedicine } from '../inventory/medicine';
 import { PlayerState } from '../entities/Player';
 import { createPokemon, gainHappiness } from '../entities/Pokemon';
@@ -84,7 +86,7 @@ export interface Objective {
 export function currentObjective(p: Pick<PlayerState, 'storyFlags' | 'bag'>): Objective {
   const f = p.storyFlags;
   const [stage, title, body] = !f.has_pikachu
-    ? ['01', 'A friend for the journey', 'Find Professor Oak in his laboratory.']
+    ? ['01', 'A friend for the journey', 'Explore Pallet Town and meet Professor Oak.']
     : !f.rival_battle_lab
       ? ['02', 'Your first challenge', 'Your rival is waiting. Leave the laboratory.']
       : !f.delivered_parcel && !(p.bag.oaks_parcel > 0)
@@ -95,6 +97,7 @@ export function currentObjective(p: Pick<PlayerState, 'storyFlags' | 'bag'>): Ob
   return { stage, title, body };
 }
 export type Effect =
+  | { kind: 'cutscene'; script: StoryScript }
   | { kind: 'dialogue'; lines: string[]; speaker?: string }
   | { kind: 'move'; x: number; y: number; direction: Direction; hop: boolean }
   | { kind: 'map' }
@@ -527,6 +530,22 @@ export class GameSession {
     }
     return i;
   }
+  private queueOakEscort() {
+    // Imported partyless saves outside Pallet have no laboratory doorway to walk to.
+    if (!this.map.warps.some(w => w.targetMap === 'oaks_lab')) {
+      this.say(OAK_INTERCEPT_MESSAGES.flat(), 'OAK');
+      this.jobs.push({kind: 'enter', map: OAK_ESCORT_DESTINATION.mapId, x: OAK_ESCORT_DESTINATION.x, y: OAK_ESCORT_DESTINATION.y});
+      return;
+    }
+    const script = createOakEscortScript(this.map, { x: this.x, y: this.y });
+    this.effect({ kind: 'cutscene', script });
+    this.jobs.push({
+      kind: 'enter',
+      map: script.destination.mapId,
+      x: script.destination.x,
+      y: script.destination.y,
+    });
+  }
   private queueRound(index: number) {
     const b = this.battle!,
       a = b.sides[0];
@@ -601,8 +620,7 @@ export class GameSession {
           this.steps++;
           if (this.map.tiles[this.y][this.x] !== TileType.TALL_GRASS) break;
           if (!this.player.party.length) {
-            this.say(['OAK: The tall grass is full of wild Pokémon! Come to my lab first.']);
-            this.jobs.push({ kind: 'enter', map: 'oaks_lab', x: 3, y: 8 });
+            this.queueOakEscort();
             break;
           }
           if (
@@ -625,11 +643,7 @@ export class GameSession {
             this.say(LAB_RIVAL_TALK_DIALOGUE.battle, this.player.rivalName);
             this.jobs.push({ kind: 'rival' });
           } else if (job.warp.targetMap === 'route1' && !this.player.party.length) {
-            this.say([
-              'OAK: Hey! Wait! It’s unsafe to go out without a Pokémon!',
-              'Come with me to my laboratory. I have a friend for you.',
-            ]);
-            this.jobs.push({ kind: 'enter', map: 'oaks_lab', x: 3, y: 8 });
+            this.queueOakEscort();
           } else if (!this.supported.has(job.warp.targetMap))
             this.say(
               [

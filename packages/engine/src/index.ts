@@ -13,3 +13,6 @@ export type {
   Objective,
 } from './session/session';
 export { SeededRandom } from './random/seed';
+
+export { createOakEscortScript, OAK_INTRO_PAGES, oakIntroText, NAME_OPTIONS_PLAYER, NAME_OPTIONS_RIVAL } from './story/opening';
+export type { StoryScript, StoryStep, StoryPoint, IntroPage } from './story/opening';
