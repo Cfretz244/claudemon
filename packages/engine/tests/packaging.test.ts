@@ -36,11 +36,13 @@ describe('the published package', () => {
   it('exports the three barrels plus one subpath PATTERN per source directory', () => {
     expect(Object.keys(pkg.exports).sort()).toEqual([
       '.',
+      './battle/*',
       './content',
       './data/*',
       './entities/*',
       './logic/*',
       './package.json',
+      './random/*',
       './systems/*',
       './types',
       './types/*',
@@ -48,7 +50,7 @@ describe('the published package', () => {
     ]);
     // Patterns, not a hand-maintained file list: adding a rule module must not
     // require a second edit here (the failure mode #114 shipped 70 entries of).
-    for (const key of ['./data/*', './logic/*', './systems/*']) {
+    for (const key of ['./battle/*', './data/*', './logic/*', './random/*', './systems/*']) {
       expect(pkg.exports[key]).toEqual({
         types: `./dist/${key.slice(2)}.d.ts`,
         import: `./dist/${key.slice(2)}.js`,
