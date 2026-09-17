@@ -1,6 +1,7 @@
 import { MapData, NPCData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
-import { createMapFromSketch, createMapShape, SketchShape } from './mapBuilder';
+import { createMapFromSketch, createMapShape, SketchShape, stampBuilding } from './mapBuilder';
+import { CERULEAN_CITY_SKETCH } from './sketches/ceruleanCity';
 
 const T = TileType;
 
@@ -370,123 +371,114 @@ export const ROUTE4: MapData = (() => {
 // ─────────────────────────────────────────────────────────────
 // 3. CERULEAN CITY  (25x25)
 // ─────────────────────────────────────────────────────────────
+//
+// Built FROM its sketch (`sketches/ceruleanCity.ts`), the way Pallet, Viridian
+// and Pewter are: the rows draw the ground, the six buildings are stamped over
+// their footprints with the kit, and every door warp, edge warp and NPC spot
+// is read back out of the sketch. Dialogue and sprite colours stay here — only
+// *where* things are lives in the sketch.
+
+/** Where each door warp drops the player inside the interior. */
+const CERULEAN_DOOR_TARGETS: Record<string, { x: number; y: number }> = {
+  cerulean_gym: { x: 4, y: 13 },
+  pokemon_center_cerulean: { x: 4, y: 7 },
+  cerulean_house: { x: 3, y: 6 },
+  bike_shop: { x: 3, y: 7 },
+  pokemart_cerulean: { x: 3, y: 7 },
+  burgled_house: { x: 3, y: 6 },
+};
+
+/**
+ * The burgled house's second door — the burglar's hole seen from the town —
+ * keyed by the tile it sits on. It lands on (4,2), the floor beside the hole:
+ * (3,2) itself is where the policeman stands and no warp may drop the player
+ * onto an NPC (`tests/data/maps.data.test.ts`).
+ */
+const CERULEAN_EXTRA_DOOR_TARGETS: Record<string, { x: number; y: number }> = {
+  '22,17': { x: 4, y: 2 },
+};
+
+/** Where each edge warp lands on the route, keyed by the town tile it sits on. */
+const CERULEAN_EDGE_TARGETS: Record<string, { x: number; y: number }> = {
+  // Nugget Bridge: the plank bridge carries the road north to Route 24.
+  '11,0': { x: 5, y: 19 },
+  '12,0': { x: 6, y: 19 },
+  // Route 4 comes in from the west, one landing per lane.
+  '0,12': { x: 23, y: 5 },
+  '0,13': { x: 23, y: 6 },
+  // Route 9 leaves east, out of the pocket behind the cut trees.
+  '24,12': { x: 1, y: 5 },
+  '24,13': { x: 1, y: 6 },
+  // Route 5 runs south out of the bottom of the main road.
+  '10,24': { x: 8, y: 1 },
+  '11,24': { x: 9, y: 1 },
+  '12,24': { x: 10, y: 1 },
+  '13,24': { x: 11, y: 1 },
+};
+
+/** Everything about a Cerulean NPC except where they stand (that is the sketch's). */
+const CERULEAN_NPC_DETAILS: Record<string, Omit<NPCData, 'id' | 'x' | 'y'>> = {
+  cerulean_npc1: {
+    spriteColor: 0x60b0f0,
+    direction: Direction.DOWN,
+    dialogue: [
+      'CERULEAN CITY',
+      'A Mysterious, Blue\nAura Surrounds It!',
+    ],
+  },
+  cerulean_npc2: {
+    spriteColor: 0xf0a060,
+    direction: Direction.LEFT,
+    dialogue: [
+      "MISTY's GYM is full\nof water POKeMON!",
+      'Be sure to bring a\nGRASS or ELECTRIC type!',
+    ],
+  },
+  // The Rocket grunt who burgled the house, in the walled garden behind it.
+  // The garden's only way in is the hole in the back wall, so he still has to
+  // be dealt with before the house is anything but a crime scene — and he is
+  // talk-triggered (no sightRange): the player warps in at (22,18) standing
+  // right on top of his line of sight, and being ambushed by a warp landing
+  // reads as a bug rather than as a trainer spotting you
+  // (`logic/trainerSight.ts` returns "not spotted" when sightRange is unset).
+  cerulean_rocket: {
+    spriteColor: 0x404040,
+    direction: Direction.UP,
+    dialogue: [
+      'ROCKET: I burglarized\nthat house! Hehe!',
+      'You want to battle?\nBring it on!',
+    ],
+    isTrainer: true,
+  },
+  cerulean_npc3: {
+    spriteColor: 0x80c080,
+    direction: Direction.LEFT,
+    dialogue: [
+      'The NUGGET BRIDGE to\nthe north is famous!',
+      'Five trainers in a row\nchallenge all comers!',
+    ],
+  },
+};
+
 export const CERULEAN_CITY: MapData = (() => {
-  const W = 25, H = 25;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
+  const sketch = CERULEAN_CITY_SKETCH;
+  const shape = createMapFromSketch(sketch.rows, sketch.legend);
+  const { tiles, collision, tileKinds, width: W, height: H } = shape;
 
-  // Tree borders (2 tiles)
-  for (let x = 0; x < W; x++) {
-    setTile(x, 0, T.TREE);
-    setTile(x, 1, T.TREE);
+  for (const b of sketch.buildings) {
+    stampBuilding(shape, b.kind, b.x, b.y, {
+      w: b.w,
+      h: b.h,
+      door: b.door[0] - b.x,
+      chimney: b.kind === 'house',
+    });
+    // The kit stamps one door per building. The burgled house has a second
+    // one in the same wall row — the burglar's hole, from the garden side —
+    // so it is written back over the wall tile the stamp just drew. It keeps
+    // the footprint's tileKind, and it gets no doorstep: the tile below it is
+    // the garden itself.
+    for (const e of b.extraDoors ?? []) shape.setTile(e.door[0], e.door[1], T.DOOR);
   }
-  for (let y = 0; y < H; y++) {
-    setTile(0, y, T.TREE);
-    setTile(1, y, T.TREE);
-    setTile(W - 1, y, T.TREE);
-    setTile(W - 2, y, T.TREE);
-  }
-
-  // Main roads: vertical at x:10-13, horizontal at y:12-13
-  fillRect(10, 2, 4, 23, T.PATH);
-  fillRect(2, 12, 21, 2, T.PATH);
-
-  // Cerulean Gym (left area)
-  fillRect(3, 5, 6, 1, T.ROOF); fillRect(3, 6, 6, 4, T.BUILDING);
-  setTile(6, 9, T.DOOR);
-
-  // Pokemon Center (right area) — sits on the main path row so the NE corner
-  // is free for the burgled house and its back garden.
-  fillRect(16, 8, 5, 1, T.ROOF); fillRect(16, 9, 5, 3, T.BUILDING);
-  setTile(18, 11, T.DOOR);
-
-  // Pokemart (right, lower)
-  fillRect(16, 15, 5, 1, T.ROOF); fillRect(16, 16, 5, 3, T.BUILDING);
-  setTile(18, 18, T.DOOR);
-
-  // Bike Shop (left, lower)
-  fillRect(3, 15, 5, 1, T.ROOF); fillRect(3, 16, 5, 3, T.BUILDING);
-  setTile(5, 18, T.DOOR);
-
-  // Signs near gym and center
-  setTile(5, 11, T.SIGN);   // Gym sign
-  setTile(15, 11, T.SIGN);  // Pokemon Center sign
-
-  // Bulbasaur house (small house north of path, center area)
-  fillRect(14, 2, 3, 1, T.ROOF);
-  fillRect(14, 3, 3, 2, T.BUILDING);
-  setTile(15, 4, T.DOOR);
-
-  // Burgled house (NE corner, as in Gen I): a 4-wide facade (x18-21) with a
-  // roof row, the front door on the south face and the burglar's hole in the
-  // back wall. Column x22 beside it stays grass — that is the garden's way out
-  // down the east edge of town.
-  fillRect(18, 4, 4, 1, T.ROOF);
-  fillRect(18, 5, 4, 2, T.BUILDING);
-  setTile(20, 6, T.DOOR);   // front door  → burgled_house (3,6)
-  setTile(20, 4, T.DOOR);   // hole in the back wall → burgled_house (3,2)
-
-  // Its back garden (x18-22, y2-3) is sealed by the tree border to the north
-  // and east, the house's roof row to the south and a short fence to the west:
-  // the only way in is through the house.
-  setTile(17, 2, T.FENCE);
-  setTile(17, 3, T.FENCE);
-
-  // Flowers and decoration
-  setTile(9, 6, T.FLOWER);
-  setTile(9, 7, T.FLOWER);
-  setTile(15, 6, T.FLOWER);
-  setTile(15, 7, T.FLOWER);
-  setTile(9, 16, T.FLOWER);
-  setTile(15, 16, T.FLOWER);
-
-  // Water feature (pond near center of town)
-  fillRect(6, 20, 3, 2, T.WATER);
-  setTile(5, 20, T.FOUNTAIN);
-
-  // CERULEAN CAVE: its mouth is in the north-west trees behind a pool that
-  // must be surfed; the grass strip in front of it is cut off from the town.
-  fillRect(2, 2, 6, 3, T.WATER);
-  fillRect(3, 2, 3, 1, T.GRASS);
-  setTile(4, 1, T.CAVE_ENTRANCE);
-
-  // Open gaps for exits in tree borders
-  // North exit
-  setTile(11, 0, T.PATH);
-  setTile(12, 0, T.PATH);
-  setTile(11, 1, T.PATH);
-  setTile(12, 1, T.PATH);
-  // West entrance
-  setTile(0, 12, T.PATH);
-  setTile(1, 12, T.PATH);
-  setTile(0, 13, T.PATH);
-  setTile(1, 13, T.PATH);
-  // East exit
-  setTile(W - 1, 12, T.PATH);
-  setTile(W - 2, 12, T.PATH);
-  setTile(W - 1, 13, T.PATH);
-  setTile(W - 2, 13, T.PATH);
-
-  // === Story progression gates ===
-
-  // Fence at y:22 seals the town off from the southern strip: the only gap is
-  // at (21,22)/(22,22), at the foot of the east-edge corridor. Route 5 (and,
-  // through the Cut trees, Route 9) is therefore behind the burgled house,
-  // exactly as in Gen I.
-  for (let x = 2; x <= 20; x++) setTile(x, 22, T.FENCE);
-
-  // East-edge corridor (x21-22, y7-21): the fenced lane that runs from the
-  // garden's exit at (22,4) down past the Cut trees to the fence gap. It is
-  // sealed from the town by the Center (x16-20, y8-11), the Mart (x16-20,
-  // y15-18) and a fence on x20 in every row those two do not cover.
-  for (const y of [12, 13, 14, 19, 20, 21]) setTile(20, y, T.FENCE);
-  // Row y7 is the exception: (20,7) is the front door's landing tile and has
-  // to stay walkable from the town, so the corridor is closed one tile further
-  // east, at (21,7). The lane enters from (22,6) instead.
-  setTile(21, 7, T.FENCE);
-
-  // CUT_TREE blocks east exit until player has Cut
-  setTile(22, 12, T.CUT_TREE);
-  setTile(22, 13, T.CUT_TREE);
 
   return {
     id: 'cerulean_city',
@@ -495,87 +487,37 @@ export const CERULEAN_CITY: MapData = (() => {
     height: H,
     tiles,
     collision,
+    tileKinds,
     warps: [
-      // South exit → Route 5
-      { x: 11, y: 24, targetMap: 'route5', targetX: 9, targetY: 1 },
-      { x: 12, y: 24, targetMap: 'route5', targetX: 10, targetY: 1 },
-      // North exit → Route 24
-      { x: 11, y: 1, targetMap: 'route24', targetX: 5, targetY: 19 },
-      { x: 12, y: 1, targetMap: 'route24', targetX: 6, targetY: 19 },
-      // West entrance → Route 4
-      { x: 1, y: 12, targetMap: 'route4', targetX: 23, targetY: 5 },
-      // Cerulean Cave mouth (behind the pool) → 1F, in front of the door
+      ...sketch.buildings.flatMap(b => [
+        {
+          x: b.door[0],
+          y: b.door[1],
+          targetMap: b.warp,
+          targetX: CERULEAN_DOOR_TARGETS[b.warp].x,
+          targetY: CERULEAN_DOOR_TARGETS[b.warp].y,
+        },
+        ...(b.extraDoors ?? []).map(e => ({
+          x: e.door[0],
+          y: e.door[1],
+          targetMap: b.warp,
+          targetX: CERULEAN_EXTRA_DOOR_TARGETS[`${e.door[0]},${e.door[1]}`].x,
+          targetY: CERULEAN_EXTRA_DOOR_TARGETS[`${e.door[0]},${e.door[1]}`].y,
+        })),
+      ]),
+      ...sketch.edgeWarps.map(([x, y, targetMap]) => ({
+        x,
+        y,
+        targetMap,
+        targetX: CERULEAN_EDGE_TARGETS[`${x},${y}`].x,
+        targetY: CERULEAN_EDGE_TARGETS[`${x},${y}`].y,
+      })),
+      // CERULEAN CAVE: the mouth is on the sand bank in the north lake, so
+      // only SURF gets you to it. It is not an edge warp — it sits inside the
+      // map on its CAVE_ENTRANCE tile.
       { x: 4, y: 1, targetMap: 'cerulean_cave_1f', targetX: 4, targetY: 18 },
-      { x: 1, y: 13, targetMap: 'route4', targetX: 23, targetY: 6 },
-      // East exit → Route 9
-      { x: 24, y: 12, targetMap: 'route9', targetX: 1, targetY: 5 },
-      { x: 24, y: 13, targetMap: 'route9', targetX: 1, targetY: 6 },
-      // Cerulean Gym door
-      { x: 6, y: 9, targetMap: 'cerulean_gym', targetX: 4, targetY: 13 },
-      // Pokemon Center door
-      { x: 18, y: 11, targetMap: 'pokemon_center_cerulean', targetX: 4, targetY: 7 },
-      // Pokemart door (no interior defined yet, placeholder)
-      { x: 18, y: 18, targetMap: 'pokemart_cerulean', targetX: 3, targetY: 7 },
-      // Bike Shop door
-      { x: 5, y: 18, targetMap: 'bike_shop', targetX: 3, targetY: 7 },
-      // Bulbasaur house door
-      { x: 15, y: 4, targetMap: 'cerulean_house', targetX: 3, targetY: 6 },
-      // Burgled House front door (south face, NE corner)
-      { x: 20, y: 6, targetMap: 'burgled_house', targetX: 3, targetY: 6 },
-      // Burgled House back wall hole (north face, from the garden). It lands
-      // on (4,2), the floor tile beside the hole: (3,2) itself is where the
-      // policeman stands, and no warp may drop the player onto an NPC.
-      { x: 20, y: 4, targetMap: 'burgled_house', targetX: 4, targetY: 2 },
     ],
-    npcs: [
-      {
-        id: 'cerulean_npc1',
-        x: 14, y: 13,
-        spriteColor: 0x60b0f0,
-        direction: Direction.DOWN,
-        dialogue: [
-          'CERULEAN CITY',
-          'A Mysterious, Blue\nAura Surrounds It!',
-        ],
-      },
-      {
-        id: 'cerulean_npc2',
-        x: 8, y: 12,
-        spriteColor: 0xf0a060,
-        direction: Direction.RIGHT,
-        dialogue: [
-          "MISTY's GYM is full\nof water POKeMON!",
-          'Be sure to bring a\nGRASS or ELECTRIC type!',
-        ],
-      },
-      {
-        id: 'cerulean_npc3',
-        x: 9, y: 20,
-        spriteColor: 0x80c080,
-        direction: Direction.LEFT,
-        dialogue: [
-          'The NUGGET BRIDGE to\nthe north is famous!',
-          'Five trainers in a row\nchallenge all comers!',
-        ],
-      },
-      // Rocket grunt hiding in the burgled house's back garden, standing on
-      // (22,3) — the garden's only exit, so beating him is mandatory before
-      // the east-edge corridor (and with it Route 5 and Route 9) opens. He
-      // faces LEFT with a sight range of 1, so he watches (21,3) only: the
-      // player lands on (20,3) out of the hole and is never ambushed there.
-      {
-        id: 'cerulean_rocket',
-        x: 22, y: 3,
-        spriteColor: 0x404040,
-        direction: Direction.LEFT,
-        dialogue: [
-          'ROCKET: I burglarized\nthat house! Hehe!',
-          "You want to battle?\nBring it on!",
-        ],
-        isTrainer: true,
-        sightRange: 1,
-      },
-    ],
+    npcs: sketch.npcs.map(n => ({ id: n.id, x: n.x, y: n.y, ...CERULEAN_NPC_DETAILS[n.id] })),
   };
 })();
 
@@ -620,8 +562,8 @@ export const CERULEAN_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 13, targetMap: 'cerulean_city', targetX: 6, targetY: 10 },
-      { x: 5, y: 13, targetMap: 'cerulean_city', targetX: 6, targetY: 10 },
+      { x: 4, y: 13, targetMap: 'cerulean_city', targetX: 5, targetY: 10 },
+      { x: 5, y: 13, targetMap: 'cerulean_city', targetX: 5, targetY: 10 },
     ],
     npcs: [
       {
@@ -698,8 +640,8 @@ export const POKEMON_CENTER_CERULEAN: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'cerulean_city', targetX: 18, targetY: 12 },
-      { x: 5, y: 7, targetMap: 'cerulean_city', targetX: 18, targetY: 12 },
+      { x: 4, y: 7, targetMap: 'cerulean_city', targetX: 15, targetY: 10 },
+      { x: 5, y: 7, targetMap: 'cerulean_city', targetX: 15, targetY: 10 },
     ],
     npcs: [
       {
@@ -1019,7 +961,7 @@ export const POKEMART_CERULEAN: MapData = (() => {
     width: W, height: H,
     tiles, collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'cerulean_city', targetX: 18, targetY: 19 },
+      { x: 3, y: H - 1, targetMap: 'cerulean_city', targetX: 15, targetY: 19 },
     ],
     npcs: [
       {
@@ -1134,9 +1076,9 @@ export const BURGLED_HOUSE: MapData = (() => {
     collision,
     warps: [
       // The hole in the back wall (north) → the back garden, above the hole
-      { x: 3, y: 1, targetMap: 'cerulean_city', targetX: 20, targetY: 3 },
+      { x: 3, y: 1, targetMap: 'cerulean_city', targetX: 22, targetY: 18 },
       // Front entrance (south) → the grass below the front door
-      { x: 3, y: 7, targetMap: 'cerulean_city', targetX: 20, targetY: 7 },
+      { x: 3, y: 7, targetMap: 'cerulean_city', targetX: 20, targetY: 18 },
     ],
     npcs: [
       // The policeman stands INSIDE, in front of the hole: (3,1) is only
@@ -1196,7 +1138,7 @@ export const BIKE_SHOP: MapData = (() => {
     width: W, height: H,
     tiles, collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'cerulean_city', targetX: 5, targetY: 19 },
+      { x: 3, y: H - 1, targetMap: 'cerulean_city', targetX: 4, targetY: 18 },
     ],
     npcs: [
       {
@@ -1246,7 +1188,7 @@ export const CERULEAN_HOUSE: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 3, y: H - 1, targetMap: 'cerulean_city', targetX: 15, targetY: 5 },
+      { x: 3, y: H - 1, targetMap: 'cerulean_city', targetX: 21, targetY: 9 },
     ],
     npcs: [
       {

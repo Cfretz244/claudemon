@@ -1,0 +1,217 @@
+{
+ "id": "cerulean_city",
+ "legend": {
+  "T": "TREE",
+  ".": "PATH",
+  ",": "COBBLESTONE",
+  "'": "GRASS",
+  "\"": "TALL_GRASS",
+  "*": "FLOWER",
+  "=": "FENCE",
+  "~": "WATER",
+  "P": "PLANK",
+  "F": "FOUNTAIN",
+  "t": "CUT_TREE",
+  "C": "CAVE_ENTRANCE",
+  ":": "SAND",
+  "_": "LEDGE",
+  "O": "BOULDER",
+  "B": "BUILDING",
+  "D": "DOOR",
+  "d": "DOORMAT",
+  "s": "SIGN",
+  "W": "PATH"
+ },
+ "rows": [
+  "TTTTTTTTTTTWWTTTTTTTTTTTT",
+  "T~~~C~~~~~~PP~~~~~~~~~~~T",
+  "T~~::~~~~~~PP~~~~~~~~~~~T",
+  "T~~~~~~~~~~PP~~~~~~~~~~~T",
+  "T'*******'s..'''''''''''T",
+  "T'BBBBBBB''..'''''''BBBBT",
+  "T'BBBBBBB''..BBBBBB'BBBBT",
+  "T'BBBBBBB''..BBBBBB'BBBBT",
+  "T'BBBBBBB''..BBBBBB'BDBBT",
+  "T'BBBDBBB''..BBDBBB''d''T",
+  "T''''d'''''....d......''T",
+  "T''s'........s'''''''''sT",
+  "W.....................t.W",
+  "W.....................t.W",
+  "T'BBBBB''''..''''''BBBB=T",
+  "T'BBBBB''''..BBBBB'BBBB=T",
+  "T'BBBBB''''..BBBBB'BBBB=T",
+  "T'BBDBB''''..BBBBB'BDBD=T",
+  "T'''d''''''..BBDBB'.d='=T",
+  "T'''...........d....=''=T",
+  "T''''''''''..s'''''=====T",
+  "T'',,,F,,....'****''''''T",
+  "T'',,,,,,....'''''''''''T",
+  "T''''''''s....''''''''''T",
+  "TTTTTTTTTTWWWWTTTTTTTTTTT"
+ ],
+ "buildings": [
+  {
+   "kind": "gym",
+   "x": 2,
+   "y": 5,
+   "w": 7,
+   "h": 5,
+   "door": [
+    5,
+    9
+   ],
+   "warp": "cerulean_gym"
+  },
+  {
+   "kind": "center",
+   "x": 13,
+   "y": 6,
+   "w": 6,
+   "h": 4,
+   "door": [
+    15,
+    9
+   ],
+   "warp": "pokemon_center_cerulean"
+  },
+  {
+   "kind": "house",
+   "x": 20,
+   "y": 5,
+   "w": 4,
+   "h": 4,
+   "door": [
+    21,
+    8
+   ],
+   "warp": "cerulean_house"
+  },
+  {
+   "kind": "landmark",
+   "x": 2,
+   "y": 14,
+   "w": 5,
+   "h": 4,
+   "door": [
+    4,
+    17
+   ],
+   "warp": "bike_shop",
+   "note": "bike shop: a big shop window, a bike sign"
+  },
+  {
+   "kind": "mart",
+   "x": 13,
+   "y": 15,
+   "w": 5,
+   "h": 4,
+   "door": [
+    15,
+    18
+   ],
+   "warp": "pokemart_cerulean"
+  },
+  {
+   "kind": "house",
+   "x": 19,
+   "y": 14,
+   "w": 4,
+   "h": 4,
+   "door": [
+    20,
+    17
+   ],
+   "warp": "burgled_house",
+   "note": "the burgled house: the back door at (22,17) opens onto an ENCLOSED garden (22,18),(22,19),(21,19) fenced off from the street; the Rocket grunt stands in it and can only be reached through the house (the burglar hole)",
+   "extraDoors": [
+    {
+     "door": [
+      22,
+      17
+     ],
+     "land": [
+      22,
+      18
+     ],
+     "note": "the burglar hole, from the town side: it is inside the garden, so the street cannot reach it"
+    }
+   ]
+  }
+ ],
+ "npcs": [
+  {
+   "id": "cerulean_npc1",
+   "x": 9,
+   "y": 14
+  },
+  {
+   "id": "cerulean_npc2",
+   "x": 15,
+   "y": 14
+  },
+  {
+   "id": "cerulean_rocket",
+   "x": 22,
+   "y": 19
+  },
+  {
+   "id": "cerulean_npc3",
+   "x": 5,
+   "y": 20
+  }
+ ],
+ "edgeWarps": [
+  [
+   11,
+   0,
+   "route24"
+  ],
+  [
+   12,
+   0,
+   "route24"
+  ],
+  [
+   0,
+   12,
+   "route4"
+  ],
+  [
+   0,
+   13,
+   "route4"
+  ],
+  [
+   24,
+   12,
+   "route9"
+  ],
+  [
+   24,
+   13,
+   "route9"
+  ],
+  [
+   10,
+   24,
+   "route5"
+  ],
+  [
+   11,
+   24,
+   "route5"
+  ],
+  [
+   12,
+   24,
+   "route5"
+  ],
+  [
+   13,
+   24,
+   "route5"
+  ]
+ ],
+ "lookouts": [],
+ "notes": "Nugget Bridge landing (11-12,2) on the plank bridge; cave mouth stays at (4,1) on a sand bank reachable by Surf (warp kept); cut trees kept at (22,12),(22,13) gating route9; landings (2,12-13), (10-13,23) walkable. Interiors exit to door+1. DEVIATIONS (town-t3): the Rocket grunt keeps his Gen I gate — the garden east of the burgled house is enclosed (fences (21,18),(20,19); (23,18-19) and row 20 already fence) and is only reachable through the house, so (22,17) is a second DOOR into burgled_house and cerulean_rocket stands at (22,19); (19,18) is PATH so the front doorstep still has a street approach; the sketch's cerulean_npc4 is the shipped cerulean_npc3."
+}

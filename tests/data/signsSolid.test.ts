@@ -159,7 +159,9 @@ describe('signs are solid', () => {
     // and interaction hits the NPC before readSign, so these overlaps neither
     // change movement nor hide anything — the NPC *is* the sign's text. They
     // are listed rather than ignored so a new, accidental overlap still fails.
-    const KNOWN_SIGN_NPCS = ['vermilion_city/vermilion_fan_club_sign (23,9)'];
+    // Empty since town-t3: `vermilion_fan_club_sign` was the only one, and the
+    // rebuilt Vermilion stands it on the lawn at (27,10) rather than on a SIGN.
+    const KNOWN_SIGN_NPCS: string[] = [];
     const offenders: string[] = [];
     for (const map of maps) {
       for (const n of map.npcs) if (isSign(map, n.x, n.y)) offenders.push(`${map.id}/${n.id} (${n.x},${n.y})`);
