@@ -17,6 +17,7 @@ import {
   PendingEvolution, learnsetAtLevel, queueEvolution,
 } from '../logic/evolutionSequence';
 import { playEvolution } from '../systems/animations/evolution';
+import { applyBattleScale } from '../systems/animations/baseScale';
 import { attemptCatch } from '../systems/CatchSystem';
 import { trainerPrizeMoney } from '@claudemon/engine/battle/rewards';
 import { selectAIMove } from '../systems/AISystem';
@@ -218,11 +219,16 @@ export class BattleScene extends Phaser.Scene {
       this.ensurePokemonSprite(this.opponentPokemon.speciesId);
     }
 
-    // Opponent sprite (top-right, front view, frame 0) - hidden initially
+    // Opponent sprite (top-right, front view, frame 0) - hidden initially.
+    // `applyBattleScale` sets the species' size class and stands it on the far
+    // ledge's ground line; the position here is just the pre-scale default.
     const oppSpriteKey = this.isGhost ? 'pokemon_ghost' : `pokemon_${this.opponentPokemon.speciesId}`;
     this.opponentSprite = this.add.sprite(GAME_WIDTH - 40, 28, oppSpriteKey, 0);
     this.opponentSprite.setDepth(5);
     this.opponentSprite.setScrollFactor(0);
+    // The ghost has no species row, so it renders at M like it always has.
+    applyBattleScale(this.opponentSprite, 'opponent', this.opponentPokemon.speciesId,
+      this.isGhost ? undefined : POKEMON_DATA[this.opponentPokemon.speciesId]);
 
     // Player sprite (bottom-left, back view, frame 1) - hidden initially
     const plrSpriteKey = `pokemon_${this.playerPokemon.speciesId}`;
@@ -230,6 +236,8 @@ export class BattleScene extends Phaser.Scene {
     this.playerSprite.setDepth(5);
     this.playerSprite.setScrollFactor(0);
     this.playerSprite.setAlpha(0);
+    applyBattleScale(this.playerSprite, 'player', this.playerPokemon.speciesId,
+      POKEMON_DATA[this.playerPokemon.speciesId]);
 
     // Player trainer back sprite (stands in for the player until Pokemon is sent out)
     if (this.textures.exists('trainer_player_back')) {
@@ -417,8 +425,11 @@ export class BattleScene extends Phaser.Scene {
     const sprite = side === 'player' ? this.playerSprite : this.opponentSprite;
     const prevKey = sprite.texture.key;
     const prevFrame = sprite.frame.name;
+    const prevSpecies = side === 'player' ? this.playerPokemon : this.opponentPokemon;
     this.ensurePokemonSprite(speciesId);
     sprite.setTexture(`pokemon_${speciesId}`, side === 'player' ? 1 : 0);
+    // Review the borrowed species at ITS size, not the resident's.
+    applyBattleScale(sprite, side, speciesId, species);
     try {
       await playEntrance(this, sprite, resolveEntrance(species, kind), {
         side,
@@ -426,6 +437,7 @@ export class BattleScene extends Phaser.Scene {
       });
     } finally {
       sprite.setTexture(prevKey, prevFrame);
+      applyBattleScale(sprite, side, prevSpecies.speciesId, POKEMON_DATA[prevSpecies.speciesId]);
     }
   }
 
@@ -463,16 +475,18 @@ export class BattleScene extends Phaser.Scene {
    */
   private sendOut(side: 'player' | 'opponent', pokemon: PokemonInstance): Promise<void> {
     const sprite = side === 'player' ? this.playerSprite : this.opponentSprite;
-    const homeY = side === 'player' ? 76 : 28;
     this.ensurePokemonSprite(pokemon.speciesId);
     // The switch-in paths' existing precedent, now shared by all of them: a
     // faint/damage tween still running would fight the entrance.
     this.tweens.killTweensOf(sprite);
     sprite.setTexture(`pokemon_${pokemon.speciesId}`, side === 'player' ? 1 : 0);
-    sprite.setPosition(side === 'player' ? 36 : GAME_WIDTH - 40, homeY);
+    const species = POKEMON_DATA[pokemon.speciesId];
+    // The species just changed, so the size class has too: re-scale and re-home
+    // BEFORE the entrance runs, since the entrance reads the sprite's base
+    // scale and its home position and animates around both.
+    applyBattleScale(sprite, side, pokemon.speciesId, species);
     sprite.setAlpha(0);
 
-    const species = POKEMON_DATA[pokemon.speciesId];
     if (!species) {
       sprite.setAlpha(1);
       return Promise.resolve();
