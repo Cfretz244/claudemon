@@ -33,6 +33,8 @@ try {
       "import { POKEMON_DATA, MOVES_DATA } from '@claudemon/engine/content';",
       "import { ALL_MAPS as MAPS_SUBPATH } from '@claudemon/engine/data/maps';",
       "import { MAX_PARTY_SIZE } from '@claudemon/engine/utils/constants';",
+      "import { trainerPrizeMoney } from '@claudemon/engine/battle/rewards';",
+      "import { SeededRandom, seededRng } from '@claudemon/engine/random/seed';",
       "assert.equal(typeof ENGINE_VERSION, 'string');",
       "assert.equal(Object.keys(POKEMON_DATA).length, 151);",
       "assert.ok(Object.keys(MOVES_DATA).length > 100);",
@@ -41,6 +43,12 @@ try {
       "const mon = createPokemon(25, 5);",
       "assert.equal(mon.speciesId, 25);",
       "assert.ok(mon.stats.hp > 0);",
+      "assert.equal(trainerPrizeMoney({ level: 12 }), 600);",
+      // A seeded consumer must get the SAME mon twice: the point of the rng
+      // widening is that an external client can replay a run.
+      "const seeded = () => createPokemon(25, 5, 'RED', new SeededRandom(7).next);",
+      "assert.deepEqual(seeded().ivs, seeded().ivs);",
+      "assert.equal(seededRng(7)(), new SeededRandom(7).next());",
       "assert.ok(Object.keys(TYPE_CHART).length > 0);",
       '',
     ].join('\n'),

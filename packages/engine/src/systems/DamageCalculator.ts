@@ -1,3 +1,7 @@
+// Randomness is injected: every function that draws a random number takes an
+// optional TRAILING `rng: () => number` defaulting to `Math.random`, so the
+// Phaser call sites are unchanged while a seeded consumer (`random/seed.ts`)
+// can replay the same sequence. See `packages/engine/tests/determinism.test.ts`.
 import { PokemonInstance, MoveData, PokemonType, MoveCategory, PHYSICAL_TYPES } from '../types/pokemon.types';
 import { getTypeEffectiveness } from '../data/typeChart';
 import { POKEMON_DATA } from '../data/pokemon';
@@ -26,6 +30,7 @@ export function calculateDamage(
   critical: boolean = false,
   attackerStages?: StatStages,
   defenderStages?: StatStages,
+  rng: () => number = Math.random,
 ): DamageResult {
   if (move.power === 0 || move.category === MoveCategory.STATUS) {
     return { damage: 0, isCritical: false, effectiveness: 1 };
@@ -103,7 +108,7 @@ export function calculateDamage(
   damage = Math.floor(damage * effectiveness);
 
   // Random factor (217-255 in Gen 1, which is 85%-100%)
-  const random = Math.floor(Math.random() * 39) + 217;
+  const random = Math.floor(rng() * 39) + 217;
   damage = Math.floor(damage * random / 255);
 
   // Minimum 1 damage
@@ -116,18 +121,18 @@ export function calculateDamage(
   };
 }
 
-export function checkCritical(attacker: PokemonInstance): boolean {
+export function checkCritical(attacker: PokemonInstance, rng: () => number = Math.random): boolean {
   // Gen 1: Critical hit rate = base speed / 512
   const baseSpeed = POKEMON_DATA[attacker.speciesId]?.baseStats.speed ?? 50;
   const critRate = baseSpeed / 512;
-  return Math.random() < critRate;
+  return rng() < critRate;
 }
 
-export function checkAccuracy(move: MoveData, attackerAccStage: number = 0, defenderEvaStage: number = 0): boolean {
+export function checkAccuracy(move: MoveData, attackerAccStage: number = 0, defenderEvaStage: number = 0, rng: () => number = Math.random): boolean {
   if (move.accuracy === 0) return true; // Always hits (like Swift)
   // Effective accuracy = base accuracy * acc stage multiplier / eva stage multiplier
   const accMul = getStageMultiplier(attackerAccStage);
   const evaMul = getStageMultiplier(defenderEvaStage);
   const effectiveAccuracy = move.accuracy * accMul / evaMul;
-  return Math.random() * 100 < effectiveAccuracy;
+  return rng() * 100 < effectiveAccuracy;
 }

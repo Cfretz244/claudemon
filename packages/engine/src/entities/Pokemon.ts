@@ -1,3 +1,7 @@
+// Randomness is injected: every function that draws a random number takes an
+// optional TRAILING `rng: () => number` defaulting to `Math.random`, so the
+// Phaser call sites are unchanged while a seeded consumer (`random/seed.ts`)
+// can replay the same sequence. See `packages/engine/tests/determinism.test.ts`.
 import {
   PokemonInstance,
   PokemonMove,
@@ -29,23 +33,23 @@ export function calculateStats(species: PokemonSpecies, level: number, ivs: Base
   };
 }
 
-export function generateIVs(): BaseStats {
+export function generateIVs(rng: () => number = Math.random): BaseStats {
   return {
-    hp: Math.floor(Math.random() * (MAX_IV + 1)),
-    attack: Math.floor(Math.random() * (MAX_IV + 1)),
-    defense: Math.floor(Math.random() * (MAX_IV + 1)),
-    special: Math.floor(Math.random() * (MAX_IV + 1)),
-    speed: Math.floor(Math.random() * (MAX_IV + 1)),
+    hp: Math.floor(rng() * (MAX_IV + 1)),
+    attack: Math.floor(rng() * (MAX_IV + 1)),
+    defense: Math.floor(rng() * (MAX_IV + 1)),
+    special: Math.floor(rng() * (MAX_IV + 1)),
+    speed: Math.floor(rng() * (MAX_IV + 1)),
   };
 }
 
-export function createPokemon(speciesId: number, level: number, ot: string = 'RED'): PokemonInstance {
+export function createPokemon(speciesId: number, level: number, ot: string = 'RED', rng: () => number = Math.random): PokemonInstance {
   const species = POKEMON_DATA[speciesId];
   if (!species) {
     throw new Error(`Unknown Pokemon species: ${speciesId}`);
   }
 
-  const ivs = generateIVs();
+  const ivs = generateIVs(rng);
   const evs: BaseStats = { hp: 0, attack: 0, defense: 0, special: 0, speed: 0 };
   const stats = calculateStats(species, level, ivs, evs);
 

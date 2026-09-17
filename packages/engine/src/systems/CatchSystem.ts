@@ -1,3 +1,7 @@
+// Randomness is injected: every function that draws a random number takes an
+// optional TRAILING `rng: () => number` defaulting to `Math.random`, so the
+// Phaser call sites are unchanged while a seeded consumer (`random/seed.ts`)
+// can replay the same sequence. See `packages/engine/tests/determinism.test.ts`.
 import { PokemonInstance, StatusCondition } from '../types/pokemon.types';
 import { POKEMON_DATA } from '../data/pokemon';
 
@@ -10,6 +14,7 @@ export interface CatchResult {
 export function attemptCatch(
   pokemon: PokemonInstance,
   ballType: string = 'poke_ball',
+  rng: () => number = Math.random,
 ): CatchResult {
   const species = POKEMON_DATA[pokemon.speciesId];
   if (!species) return { caught: false, shakes: 0 };
@@ -46,7 +51,7 @@ export function attemptCatch(
 
   let shakes = 0;
   for (let i = 0; i < 3; i++) {
-    if (Math.random() * 65536 < shakeProb) {
+    if (rng() * 65536 < shakeProb) {
       shakes++;
     } else {
       break;
