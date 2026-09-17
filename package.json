@@ -2,6 +2,9 @@
   "name": "claudemon",
   "version": "1.0.0",
   "description": "A Pokemon Yellow recreation built entirely by Claude",
+  "workspaces": [
+    "packages/*"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,12 +13,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "e2e": "node e2e/run.mjs"
+    "e2e": "node e2e/run.mjs",
+    "engine:build": "npm run build --workspace @claudemon/engine",
+    "engine:check": "npm run engine:build && node packages/engine/scripts/check.mjs && node scripts/check-engine-package.mjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@claudemon/engine": "*",
     "phaser": "^3.90.0"
   },
   "devDependencies": {

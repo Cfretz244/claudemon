@@ -13,8 +13,15 @@
     "jsx": "preserve",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@claudemon/engine": ["packages/engine/src/index.ts"],
+      "@claudemon/engine/*": ["packages/engine/src/*"]
     }
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "packages/engine/src/**/*.ts",
+    "packages/engine/tests/**/*.ts"
+  ]
 }

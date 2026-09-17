@@ -12,13 +12,17 @@ import { ALL_MAPS } from '../../src/data/maps';
 import { GIFT_NPCS } from '../../src/data/giftNpcs';
 
 /**
- * Every .ts file under `src/`, as source text. `import.meta.glob` is Vite's
+ * Every .ts file under `src/` and under the engine package, as source text. `import.meta.glob` is Vite's
  * (and so vitest's) own file sweep — no node typings needed — and the `?raw`
  * query hands back the text instead of the module.
  */
 const SRC_FILES = (import.meta as unknown as {
-  glob(pattern: string, opts: object): Record<string, string>;
-}).glob('../../src/**/*.ts', { query: '?raw', import: 'default', eager: true });
+  glob(pattern: string[], opts: object): Record<string, string>;
+}).glob(['../../src/**/*.ts', '../../packages/engine/src/**/*.ts'], {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
 
 describe('newGameState', () => {
   it('sets exactly one story flag', () => {
@@ -87,12 +91,12 @@ describe('intro_complete is write-only', () => {
 
   it('only three files in src mention it, and all three WRITE it', () => {
     expect(mentions.sort()).toEqual([
+      // Where a new game sets it.
+      'packages/engine/src/logic/newGame.ts',
       // The battle simulator seeds a started game.
       'src/data/battleSimConfig.ts',
       // The save editor's presets and its flag list.
       'src/data/saveEditorPresets.ts',
-      // Where a new game sets it.
-      'src/logic/newGame.ts',
     ]);
   });
 

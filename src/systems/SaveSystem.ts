@@ -1,30 +1,7 @@
-import { PokemonInstance } from '../types/pokemon.types';
-
-export interface SaveData {
-  playerName: string;
-  rivalName: string;
-  currentMap: string;
-  playerX: number;
-  playerY: number;
-  lastHealMap: string;
-  lastHealX: number;
-  lastHealY: number;
-  party: PokemonInstance[];
-  pc: PokemonInstance[];
-  bag: Record<string, number>;
-  pcItems: Record<string, number>;
-  money: number;
-  coins?: number;
-  badges: string[];
-  defeatedTrainers: string[];
-  pokedexSeen: number[];
-  pokedexCaught: number[];
-  storyFlags: Record<string, boolean>;
-  playTime: number;
-  isSurfing?: boolean;
-  isRidingBike?: boolean;
-  repelSteps?: number;
-}
+// The SaveData shape is engine-owned; the localStorage class below is the
+// browser-side half and stays in the app.
+import type { SaveData } from '@claudemon/engine/systems/SaveSystem';
+export type { SaveData } from '@claudemon/engine/systems/SaveSystem';
 
 const SAVE_KEY = 'pokemon_yellow_save';
 
