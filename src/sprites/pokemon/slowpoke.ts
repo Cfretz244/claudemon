@@ -1,73 +1,90 @@
 import { CustomSpriteDrawFn } from '../types';
 
+/**
+ * Slowpoke — full redo ("wtf is slowpoke at the moment"). The old one hung
+ * half off the left edge. Now a centred pink quadruped: big rounded head with
+ * a cream muzzle, vacant white eyes with tiny pupils, stubby ears and the
+ * long tapering tail out to the right.
+ */
 export const slowpoke: CustomSpriteDrawFn = (ctx, isBack) => {
-  // Slowpoke - pink dopey quadruped, vacant round eyes, long tail
+  const PINK = '#f898b8';       // species spriteColor
+  const PINK_DARK = '#c86888';
+  const CREAM = '#f0d8e0';      // species spriteColor2
 
-  // Long tail extending right
-  ctx.fillStyle = '#d08888';
-  ctx.fillRect(24, 16, 4, 4);
-  ctx.fillRect(27, 14, 4, 4);
-  ctx.fillRect(28, 12, 3, 4);
-  // Tail tip - lighter
-  ctx.fillStyle = '#e0a0a0';
-  ctx.fillRect(29, 11, 3, 3);
+  // Tail: thick at the rump, tapering up and to the right
+  ctx.fillStyle = PINK;
+  ctx.fillRect(23, 17, 5, 5);
+  ctx.fillRect(26, 14, 4, 5);
+  ctx.fillRect(28, 11, 4, 5);
+  ctx.fillStyle = '#ffc0d4';
+  ctx.fillRect(29, 10, 3, 3);
 
-  // Body - round quadruped
-  ctx.fillStyle = '#e898a8';
-  ctx.fillRect(6, 12, 20, 10);
-  ctx.fillRect(4, 14, 22, 6);
-
-  // Head - large and dopey
-  ctx.fillStyle = '#e898a8';
-  ctx.fillRect(0, 6, 14, 10);
-  ctx.fillRect(2, 4, 10, 4);
-  ctx.fillRect(1, 8, 14, 6);
-
-  // Snout/muzzle
-  ctx.fillStyle = '#d88898';
-  ctx.fillRect(0, 10, 4, 5);
-  ctx.fillRect(0, 12, 2, 3);
+  // Barrel body
+  ctx.fillStyle = PINK;
+  ctx.fillRect(7, 16, 18, 11);
+  ctx.fillRect(5, 18, 22, 8);
 
   if (!isBack) {
-    // Vacant round eyes - very dopey
+    // Ears
+    ctx.fillStyle = PINK;
+    ctx.fillRect(5, 1, 5, 6);
+    ctx.fillRect(20, 1, 5, 6);
+    ctx.fillStyle = PINK_DARK;
+    ctx.fillRect(6, 2, 3, 3);
+    ctx.fillRect(21, 2, 3, 3);
+
+    // Big dopey head
+    ctx.fillStyle = PINK;
+    ctx.fillRect(8, 3, 15, 14);
+    ctx.fillRect(6, 6, 19, 10);
+
+    // Cream muzzle
+    ctx.fillStyle = CREAM;
+    ctx.fillRect(10, 11, 12, 7);
+    ctx.fillRect(11, 10, 10, 2);
+
+    // Vacant eyes: a lot of white, a very small pupil
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(4, 6, 4, 4);
-    ctx.fillRect(10, 6, 4, 4);
-    // Small pupils (vacant look)
-    ctx.fillStyle = '#302020';
-    ctx.fillRect(5, 7, 2, 2);
-    ctx.fillRect(11, 7, 2, 2);
-    // Open mouth
-    ctx.fillStyle = '#302020';
-    ctx.fillRect(1, 13, 3, 2);
-    ctx.fillStyle = '#c07878';
-    ctx.fillRect(1, 13, 2, 1);
+    ctx.fillRect(9, 6, 5, 5);
+    ctx.fillRect(18, 6, 5, 5);
+    ctx.fillStyle = '#201820';
+    ctx.fillRect(11, 8, 2, 2);
+    ctx.fillRect(19, 8, 2, 2);
+    // Nostrils + the slack open mouth
+    ctx.fillStyle = PINK_DARK;
+    ctx.fillRect(13, 12, 2, 1);
+    ctx.fillRect(18, 12, 2, 1);
+    ctx.fillStyle = '#b05878';
+    ctx.fillRect(12, 15, 9, 1);
+    ctx.fillRect(12, 14, 1, 2);
+    ctx.fillRect(20, 14, 1, 2);
+
+    // Four stubby legs
+    ctx.fillStyle = PINK;
+    ctx.fillRect(6, 26, 6, 5);
+    ctx.fillRect(20, 26, 6, 5);
+    ctx.fillStyle = PINK_DARK;
+    ctx.fillRect(13, 26, 5, 4);
+    ctx.fillStyle = CREAM;
+    ctx.fillRect(6, 29, 6, 2);
+    ctx.fillRect(20, 29, 6, 2);
   } else {
-    // Back - round pink body
-    ctx.fillStyle = '#d88898';
-    ctx.fillRect(6, 8, 12, 8);
-    ctx.fillRect(8, 14, 14, 4);
+    // Back: rump, the tail rising away, ears from behind
+    ctx.fillStyle = PINK;
+    ctx.fillRect(5, 1, 5, 6);
+    ctx.fillRect(20, 1, 5, 6);
+    ctx.fillRect(8, 3, 15, 14);
+    ctx.fillRect(6, 6, 19, 10);
+    ctx.fillStyle = PINK_DARK;
+    ctx.fillRect(6, 2, 3, 3);
+    ctx.fillRect(21, 2, 3, 3);
+    ctx.fillRect(9, 16, 14, 2);
+    ctx.fillRect(10, 23, 12, 2);
+    ctx.fillStyle = PINK;
+    ctx.fillRect(6, 26, 6, 5);
+    ctx.fillRect(20, 26, 6, 5);
+    ctx.fillStyle = CREAM;
+    ctx.fillRect(6, 29, 6, 2);
+    ctx.fillRect(20, 29, 6, 2);
   }
-
-  // Ears
-  ctx.fillStyle = '#e898a8';
-  ctx.fillRect(3, 2, 4, 4);
-  ctx.fillRect(11, 2, 4, 4);
-  // Inner ear
-  ctx.fillStyle = '#d88898';
-  ctx.fillRect(4, 3, 2, 2);
-  ctx.fillRect(12, 3, 2, 2);
-
-  // Front legs - stubby
-  ctx.fillStyle = '#e898a8';
-  ctx.fillRect(6, 22, 5, 5);
-  ctx.fillRect(14, 22, 5, 5);
-  // Paws
-  ctx.fillStyle = '#d88898';
-  ctx.fillRect(6, 26, 5, 3);
-  ctx.fillRect(14, 26, 5, 3);
-
-  // Belly
-  ctx.fillStyle = '#f0b0b8';
-  ctx.fillRect(8, 16, 12, 4);
 };
