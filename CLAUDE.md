@@ -9,6 +9,8 @@ npx tsc --noEmit # Type-check only (fast)
 npm test         # Run tests (vitest)
 npm run test:coverage  # Tests + coverage report
 npm run e2e      # Playwright smoke suite (see e2e/README.md)
+npm run engine:build   # Build packages/engine to dist (external consumers only)
+npm run engine:check   # Boundary check + pack the engine and import it from bare Node
 npm run preview  # Preview production build
 ```
 
@@ -50,6 +52,17 @@ Scenes communicate via `this.scene.start('SceneName', data)`. The `OverworldScen
 The `OverworldScene` has an `isWarping` flag that blocks all player input during scene transitions (warps, battle transitions). This prevents double-warps and softlocks. **Always set `isWarping = true` before any scene transition and reset it in `init()`.**
 
 ## Source Layout
+
+> **The rules and the content now live in `packages/engine`.** Everything under
+> `src/data/`, `src/entities/`, `src/types/`, `src/logic/`, `src/utils/constants.ts`
+> and the seven rule systems below was relocated to the headless
+> `@claudemon/engine` workspace package so the 3D client can share it. Each old
+> path is still there as a two-line re-export shim, so every import in this
+> document and in the code is unchanged, and `npm run dev` still hot-reloads an
+> engine edit — the build aliases `@claudemon/engine` straight at
+> `packages/engine/src`. Presentation stayed behind: music tracks, the animation
+> and HUD specs, the localStorage `SaveSystem`, `SoundSystem`, scenes and
+> components. See `docs/shared-engine.md`.
 
 ```
 src/
@@ -197,7 +210,12 @@ tests/
 
 Tests use `mockPokemon()` and `mockMove()` from `tests/helpers/pokemon.factory.ts` for deterministic test data. Mock `Math.random` with `vi.spyOn` when testing randomized systems.
 
-Coverage is scoped to `src/systems/`, `src/entities/`, `src/data/`, and `src/logic/`. Run `npm run test:coverage` for a full report.
+Coverage is scoped to `packages/engine/src/`, `src/systems/`, `src/entities/`, `src/data/`, and `src/logic/`. Run `npm run test:coverage` for a full report.
+
+`packages/engine/tests/` holds the two checks that are about the *package*
+rather than the game: the headless boundary (no Phaser, no DOM, no Node) and the
+packed-tarball consumer. The source-audit sweeps in `tests/logic/hallOfFame.test.ts`
+and `tests/logic/newGame.test.ts` glob both trees.
 
 ### End-to-end smoke suite (`e2e/`)
 

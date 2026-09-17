@@ -1,0 +1,53 @@
+{
+  "name": "@claudemon/engine",
+  "version": "0.1.0",
+  "description": "Headless gameplay engine for claudemon: content data, shared types and the pure rule systems, with no renderer, DOM or storage dependency.",
+  "license": "ISC",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./content": {
+      "types": "./dist/content.d.ts",
+      "import": "./dist/content.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    },
+    "./data/*": {
+      "types": "./dist/data/*.d.ts",
+      "import": "./dist/data/*.js"
+    },
+    "./entities/*": {
+      "types": "./dist/entities/*.d.ts",
+      "import": "./dist/entities/*.js"
+    },
+    "./logic/*": {
+      "types": "./dist/logic/*.d.ts",
+      "import": "./dist/logic/*.js"
+    },
+    "./systems/*": {
+      "types": "./dist/systems/*.d.ts",
+      "import": "./dist/systems/*.js"
+    },
+    "./types/*": {
+      "types": "./dist/types/*.d.ts",
+      "import": "./dist/types/*.js"
+    },
+    "./utils/*": {
+      "types": "./dist/utils/*.d.ts",
+      "import": "./dist/utils/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/esm.mjs",
+    "check": "node scripts/check.mjs"
+  }
+}
