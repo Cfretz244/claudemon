@@ -11,6 +11,7 @@ import {
   spriteFlash, tweenPromise, warpArcs,
 } from '../MoveAnimations';
 import { soundSystem } from '../SoundSystem';
+import { baseScaleOf } from './baseScale';
 import { CatchResult } from '../CatchSystem';
 import {
   CATCH_BREAK_MS, CATCH_CAUGHT_MS, CATCH_DROP_MS, CATCH_OPEN_MS, CATCH_PULL_MS,
@@ -83,6 +84,8 @@ export interface EntranceKit {
   /** Where the mon has to end up (integers). */
   readonly homeX: number;
   readonly homeY: number;
+  /** The sprite's rest scale: its species' size class. Multiply, never assume 1. */
+  readonly base: number;
   /** The primary type's palette, already resolved out of `TYPE_VOCAB`. */
   readonly color: number;
   readonly accent: number;
@@ -217,6 +220,12 @@ interface Run {
   /** Home position, so a renderer can fly the sprite in from somewhere else. */
   homeX: number;
   homeY: number;
+  /**
+   * The sprite's REST scale — its species' size class (`baseScale`), 1 for
+   * anything unclassified. Every "back to normal" in this file is this number,
+   * not the literal 1 it used to be.
+   */
+  base: number;
   color: number;
   accent: number;
   /** Pale wash used for the silhouette. */
@@ -330,8 +339,11 @@ export async function materialise(
   const pale = tint ?? paleOf(vocab.color);
   const pop = Math.round(ms * 0.62);
   const fade = Math.max(1, ms - pop);
-  const sx = run ? 1 : sprite.scaleX;
-  const sy = run ? 1 : sprite.scaleY;
+  // The rest scale is the SPECIES' scale, not 1: a materialise that popped to
+  // 1 would shrink an XL mon the moment it arrived. Without a run (the
+  // evolution overlay) the sprite's own scale is already the right target.
+  const sx = run ? run.base : sprite.scaleX;
+  const sy = run ? run.base : sprite.scaleY;
 
   sprite.setAlpha(1);
   sprite.setTintFill(pale);
@@ -463,7 +475,7 @@ const arriveSendOut: ArrivalFn = async (run, ms) => {
 
   // Nothing of the mon is on screen while the ball is in the air.
   sprite.setPosition(run.homeX, run.homeY);
-  sprite.setScale(1, 1);
+  sprite.setScale(run.base, run.base);
   sprite.setAlpha(0);
 
   await ballThrow(
@@ -505,10 +517,10 @@ const arriveRound: ArrivalFn = async (run, ms) => {
     frames(run, land, t => {
       // Two squashes, integer-safe: scaleY 1 -> 0.8 -> 1 -> 0.9 -> 1.
       const squash = Math.abs(Math.sin(t * Math.PI * 2));
-      sprite.setScale(1 + squash * 0.12, 1 - squash * 0.2 * (1 - t * 0.5));
+      sprite.setScale(run.base * (1 + squash * 0.12), run.base * (1 - squash * 0.2 * (1 - t * 0.5)));
     }),
   ]);
-  sprite.setScale(1, 1);
+  sprite.setScale(run.base, run.base);
 };
 
 /** Angular: rises out of the ground behind a bottom-up wipe, throwing rock. */
@@ -549,7 +561,7 @@ const arriveTall: ArrivalFn = async (run, ms) => {
   sprite.setPosition(run.homeX, run.homeY);
   sprite.setAlpha(1);
   sprite.setTintFill(run.pale);
-  sprite.setScale(0, 0);
+  sprite.setScale(0, 0);   // 0 -> base, never 0 -> 1.
 
   // The silhouette forms FIRST, on its own. `afterimage` clones the sprite's
   // texture at its natural size and does not inherit the sprite's scale, so
@@ -558,7 +570,7 @@ const arriveTall: ArrivalFn = async (run, ms) => {
   // INVISIBLE-AT-T0 check caught.
   const forming: Array<Promise<void>> = [
     tweenPromise(scene, {
-      targets: sprite, scaleX: 1, scaleY: 1,
+      targets: sprite, scaleX: run.base, scaleY: run.base,
       duration: Math.max(1, pop), ease: 'Back.easeOut',
     }),
   ];
@@ -587,7 +599,7 @@ const arriveWide: ArrivalFn = async (run, ms) => {
   const fadeIn = Math.round(ms * 0.56);
   const fade = Math.max(1, ms - fadeIn);
   sprite.setPosition(run.homeX, run.homeY);
-  sprite.setScale(1, 1);
+  sprite.setScale(run.base, run.base);
   sprite.setAlpha(0);
   sprite.setTintFill(run.pale);
 
@@ -615,7 +627,7 @@ const arriveBird: ArrivalFn = async (run, ms) => {
   // In from whichever corner is further away, so the arc crosses the field.
   const fromX = run.homeX < GAME_WIDTH / 2 ? GAME_WIDTH + 24 : -24;
   const fromY = Math.max(4, run.homeY - 28);
-  sprite.setScale(1, 1);
+  sprite.setScale(run.base, run.base);
   sprite.setAlpha(1);
   sprite.setTintFill(run.pale);
   sprite.setPosition(fromX, fromY);
@@ -628,11 +640,11 @@ const arriveBird: ArrivalFn = async (run, ms) => {
     // Three wing beats. The sprite's second frame is the BACK view, not a
     // wing-up pose, so a frame flip would turn the mon around mid-swoop: the
     // flutter is done with scaleY instead (deviation from design section 4).
-    sprite.setScale(1, 1 - Math.abs(Math.sin(t * Math.PI * 3)) * 0.25);
+    sprite.setScale(run.base, run.base * (1 - Math.abs(Math.sin(t * Math.PI * 3)) * 0.25));
   });
   if (run.aborted) return;
   sprite.setPosition(run.homeX, run.homeY);
-  sprite.setScale(1, 1);
+  sprite.setScale(run.base, run.base);
   if (run.spec.mass) void screenShake(scene, 2, 120);
   await crossFade(scene, sprite, run.pale, fade, run);
 };
@@ -647,7 +659,7 @@ const arriveSnake: ArrivalFn = async (run, ms) => {
   const fromX = run.homeX + dir * (halfW * 2 + 6);
 
   const wipe = makeWipe(run);
-  sprite.setScale(1, 1);
+  sprite.setScale(run.base, run.base);
   sprite.setAlpha(1);
   sprite.setTintFill(run.pale);
   sprite.setPosition(fromX, run.homeY);
@@ -681,9 +693,9 @@ const arriveBug: ArrivalFn = async (run, ms) => {
   sprite.setPosition(run.homeX, run.homeY);
   sprite.setAlpha(1);
   sprite.setTintFill(run.pale);
-  sprite.setScale(0, 0);
+  sprite.setScale(0, 0);   // 0 -> base, never 0 -> 1.
   await tweenPromise(scene, {
-    targets: sprite, scaleX: 1, scaleY: 1,
+    targets: sprite, scaleX: run.base, scaleY: run.base,
     duration: Math.max(1, pop), ease: 'Back.easeOut',
   });
   if (run.aborted) return;
@@ -747,8 +759,8 @@ const FLOURISHES: Record<EntranceSpec['flourish'], FlourishFn> = {
     run.sprite.setX(run.homeX + Math.round(Math.sin(t * Math.PI * 4) * 2 * amp));
   }).then(() => { run.sprite.setX(run.homeX); }),
   stance: (run, amp, ms = FLOURISH_MS.stance) => frames(run, ms, t => {
-    run.sprite.setScale(1 + 0.1 * amp * (1 - t), 1);
-  }).then(() => { run.sprite.setScale(1, 1); }),
+    run.sprite.setScale(run.base * (1 + 0.1 * amp * (1 - t)), run.base);
+  }).then(() => { run.sprite.setScale(run.base, run.base); }),
   settle: (run, amp, ms = FLOURISH_MS.settle) => frames(run, ms, t => {
     run.sprite.setY(run.homeY + Math.round(Math.sin(t * Math.PI) * 2 * amp));
   }).then(() => { run.sprite.setY(run.homeY); }),
@@ -772,6 +784,7 @@ function makeKit(run: Run, ms: number, amp: number, cry: () => void): EntranceKi
     ctx: run.ctx,
     homeX: run.homeX,
     homeY: run.homeY,
+    base: run.base,
     color: run.color,
     accent: run.accent,
     pale: run.pale,
@@ -850,6 +863,7 @@ export async function playEntrance(
     junk: [], masks: [], aborted: false,
     homeX: Math.round(sprite.x),
     homeY: Math.round(sprite.y),
+    base: baseScaleOf(sprite),
     color: vocab.color,
     accent: vocab.accentColor,
     pale: paleOf(vocab.color),
@@ -893,7 +907,7 @@ export async function playEntrance(
         // job for every species: the override owns what happens once it opens.
         const throwMs = Math.min(BALL_ARC_MS, Math.round(budget * 0.35));
         sprite.setPosition(run.homeX, run.homeY);
-        sprite.setScale(1, 1);
+        sprite.setScale(run.base, run.base);
         sprite.setAlpha(0);
         await ballThrow(
           scene,
@@ -1107,6 +1121,8 @@ export async function catchSequence(
   const run: Run = {
     scene, sprite, spec, ctx: {}, junk: [], masks: [], aborted: false,
     homeX, homeY,
+    // The break-free `materialise` pops back to the mon's own size.
+    base: baseScaleOf(sprite),
     color: vocab.color,
     accent: vocab.accentColor,
     pale: paleOf(vocab.color),

@@ -23,6 +23,11 @@ import {
  * what happens once the ball has opened, at the 0.6x amplitude a send-out
  * always uses so a switch-in cannot upstage the fight.
  *
+ * REST SCALE. Every "back to normal" here is `kit.base` - the mon's size class
+ * (`animations/baseScale.ts`) - and every squash/stretch multiplies it, because
+ * a literal `setScale(1, 1)` would shrink an XL CHARIZARD to M and leave it
+ * there. `setScale(0, 0)` is unchanged: growing from nothing is still nothing.
+ *
  * A renderer gets an `EntranceKit` and nothing else. It never names a Phaser
  * scene API of its own: everything it draws is either a `MoveAnimations`
  * primitive (which destroys its own graphics) or a kit method whose objects go
@@ -93,9 +98,9 @@ const entrancePikachu: EntranceOverrideFn = async kit => {
   void sparkle(kit.scene, kit.homeX, kit.homeY, kit.accent, 2, land + hopA);
   await kit.frames(land, t => {
     // One squash on the landing frame, easing out: integer-safe, scale only.
-    kit.sprite.setScale(1 + 0.14 * (1 - t), 1 - 0.18 * (1 - t));
+    kit.sprite.setScale(kit.base * (1 + 0.14 * (1 - t)), kit.base * (1 - 0.18 * (1 - t)));
   });
-  kit.sprite.setScale(1, 1);
+  kit.sprite.setScale(kit.base, kit.base);
   if (kit.aborted) return;
 
   await kit.flourish('hop', hopA);
@@ -137,9 +142,9 @@ const entranceCharizard: EntranceOverrideFn = async kit => {
   await kit.frames(flutter, t => {
     // Wing beats are scaleY: the sprite's second frame is the BACK view, so a
     // frame flip would turn CHARIZARD around (the deviation E2 documented).
-    kit.sprite.setScale(1, 1 - Math.abs(Math.sin(t * Math.PI * 3)) * 0.22 * kit.amp);
+    kit.sprite.setScale(kit.base, kit.base * (1 - Math.abs(Math.sin(t * Math.PI * 3)) * 0.22 * kit.amp));
   });
-  kit.sprite.setScale(1, 1);
+  kit.sprite.setScale(kit.base, kit.base);
   if (kit.aborted) return;
   await kit.flourish('stance', settle);
 };
@@ -161,7 +166,7 @@ const entranceBlastoise: EntranceOverrideFn = async kit => {
   const wipe = kit.wipe();
   wipe.to(0, foot, GAME_WIDTH, 0);
   kit.sprite.setPosition(kit.homeX, kit.homeY);
-  kit.sprite.setScale(1, 1);
+  kit.sprite.setScale(kit.base, kit.base);
   kit.silhouette();
   await kit.frames(lead, NOTHING);
   if (kit.aborted) return;
@@ -193,7 +198,7 @@ const entranceVenusaur: EntranceOverrideFn = async kit => {
   const [lead, fade, cross, leaves] = splitPhases(kit.ms, [6, 48, 22, 24]);
 
   kit.sprite.setPosition(kit.homeX, kit.homeY);
-  kit.sprite.setScale(1, 1);
+  kit.sprite.setScale(kit.base, kit.base);
   kit.silhouette();
   kit.sprite.setAlpha(0);
   await kit.frames(lead, NOTHING);
@@ -224,7 +229,7 @@ const entranceGengar: EntranceOverrideFn = async kit => {
   const [lead, ghost, solid, cross, drift] = splitPhases(kit.ms, [10, 28, 30, 20, 12]);
 
   kit.sprite.setPosition(kit.homeX, kit.homeY);
-  kit.sprite.setScale(1, 1);
+  kit.sprite.setScale(kit.base, kit.base);
   kit.silhouette(GENGAR_TINT);
   kit.sprite.setAlpha(0);
   // `warpArcs` draws on its very first frame, and the runner caught it: the
@@ -265,7 +270,7 @@ const entranceOnix: EntranceOverrideFn = async kit => {
   const wipe = kit.wipe();
   wipe.to(0, foot, GAME_WIDTH, 0);
   kit.sprite.setPosition(kit.homeX, kit.homeY);
-  kit.sprite.setScale(1, 1);
+  kit.sprite.setScale(kit.base, kit.base);
   kit.silhouette();
   await kit.frames(lead, NOTHING);
 
@@ -302,7 +307,7 @@ const entranceSnorlax: EntranceOverrideFn = async kit => {
   const fromY = kit.homeY - Math.round(70 * kit.amp);
 
   kit.sprite.setPosition(kit.homeX, fromY);
-  kit.sprite.setScale(1, 1);
+  kit.sprite.setScale(kit.base, kit.base);
   kit.silhouette();
   await kit.frames(lead, NOTHING);
   if (kit.aborted) return;
@@ -319,9 +324,9 @@ const entranceSnorlax: EntranceOverrideFn = async kit => {
   await kit.frames(bounce, t => {
     // One big squash that eases back out: 1 -> 0.78 -> 1 on scaleY.
     const squash = Math.sin(t * Math.PI) * (1 - t * 0.35);
-    kit.sprite.setScale(1 + squash * 0.16, 1 - squash * 0.22);
+    kit.sprite.setScale(kit.base * (1 + squash * 0.16), kit.base * (1 - squash * 0.22));
   });
-  kit.sprite.setScale(1, 1);
+  kit.sprite.setScale(kit.base, kit.base);
   if (kit.aborted) return;
   await kit.crossFade(cross);
 };
@@ -335,7 +340,7 @@ const entranceGyarados: EntranceOverrideFn = async kit => {
   const fromY = kit.homeY + Math.round(22 * kit.amp);
 
   kit.sprite.setPosition(kit.homeX, fromY);
-  kit.sprite.setScale(1, 1);
+  kit.sprite.setScale(kit.base, kit.base);
   kit.silhouette();
   kit.sprite.setAlpha(0);
   await kit.frames(lead, NOTHING);
@@ -376,7 +381,7 @@ const entranceMagikarp: EntranceOverrideFn = async kit => {
   kit.sprite.setScale(0, 0);
   kit.silhouette();
   await kit.tween({
-    targets: kit.sprite, scaleX: 1, scaleY: 1, duration: pop, ease: 'Back.easeOut',
+    targets: kit.sprite, scaleX: kit.base, scaleY: kit.base, duration: pop, ease: 'Back.easeOut',
   });
   if (kit.aborted) return;
 
@@ -407,7 +412,7 @@ const entranceDragonite: EntranceOverrideFn = async kit => {
   const fromX = kit.homeX < GAME_WIDTH / 2 ? GAME_WIDTH + 24 : -24;
   const fromY = Math.max(2, kit.homeY - Math.round(30 * kit.amp));
 
-  kit.sprite.setScale(1, 1);
+  kit.sprite.setScale(kit.base, kit.base);
   kit.silhouette();
   kit.sprite.setPosition(fromX, fromY);
 
@@ -419,12 +424,12 @@ const entranceDragonite: EntranceOverrideFn = async kit => {
         Math.round(fromX + (kit.homeX - fromX) * e),
         Math.round(fromY + (kit.homeY - fromY) * e + Math.sin(e * Math.PI) * 12),
       );
-      kit.sprite.setScale(1, 1 - Math.abs(Math.sin(e * Math.PI * 2)) * 0.18);
+      kit.sprite.setScale(kit.base, kit.base * (1 - Math.abs(Math.sin(e * Math.PI * 2)) * 0.18));
     }),
   ]);
   if (kit.aborted) return;
   kit.sprite.setPosition(kit.homeX, kit.homeY);
-  kit.sprite.setScale(1, 1);
+  kit.sprite.setScale(kit.base, kit.base);
   kit.cry();
 
   await kit.crossFade(cross);
@@ -456,7 +461,7 @@ const entranceMewtwo: EntranceOverrideFn = async kit => {
   void kit.dim(MEWTWO_DIM, form + cross);
   await Promise.all([
     kit.tween({
-      targets: kit.sprite, scaleX: 1, scaleY: 1, duration: form, ease: 'Sine.easeOut',
+      targets: kit.sprite, scaleX: kit.base, scaleY: kit.base, duration: form, ease: 'Sine.easeOut',
     }),
     warpArcs(kit.scene, kit.homeX, kit.homeY, kit.color, kit.accent, form),
     sparkle(kit.scene, kit.homeX, kit.homeY, kit.accent, 4, form),

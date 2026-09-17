@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 
 import { soundSystem } from './SoundSystem';
+import { baseScaleOf } from './animations/baseScale';
 import {
   AnimationSpec,
   ParticleShape,
@@ -996,6 +997,11 @@ function snapshot(sprite: Phaser.GameObjects.Sprite): SpriteState {
   return { sprite, x: sprite.x, y: sprite.y, alpha: sprite.alpha, scaleX: sprite.scaleX, scaleY: sprite.scaleY };
 }
 
+/**
+ * Put the sprite back exactly as it was. This is the base-scale contract's
+ * anchor: the snapshot records the sprite's LIVE scale (its size class), so a
+ * move that squashes an XL mon leaves it XL. Nothing here may write a literal.
+ */
 function restore(state: SpriteState): void {
   const { sprite } = state;
   sprite.clearTint();
@@ -1466,8 +1472,12 @@ export async function renderSpec(spec: AnimationSpec, ctx: AnimationContext): Pr
           // what made HORN DRILL measure as a blank screen.
           gather(spec, ctx, windUp + cut),
           (async () => {
+            // Relative to the attacker's own size class, not 1.2/0.85 flat:
+            // the yoyo returns to whatever the tween started from, so an
+            // absolute target would snap an XL mon down to M for the wind-up.
+            const aBase = baseScaleOf(attackerSprite);
             await tweenPromise(scene, {
-              targets: attackerSprite, scaleX: 1.2, scaleY: 0.85,
+              targets: attackerSprite, scaleX: aBase * 1.2, scaleY: aBase * 0.85,
               duration: Math.round(windUp / 2), yoyo: true, ease: 'Sine.easeOut',
             });
             await animateFrames(scene, cut, t => {
@@ -1533,7 +1543,9 @@ export async function renderSpec(spec: AnimationSpec, ctx: AnimationContext): Pr
           impactBurst(scene, defenderSprite.x, defenderSprite.y, spec.color, spec.accentColor, 13, Math.round(d * 0.25)),
           spriteFlash(defenderSprite, scene, spec.color, 2),
           tweenPromise(scene, {
-            targets: defenderSprite, scaleX: 0.85, scaleY: 1.1,
+            // The bind squeeze, scaled to the defender's size class.
+            targets: defenderSprite,
+            scaleX: baseScaleOf(defenderSprite) * 0.85, scaleY: baseScaleOf(defenderSprite) * 1.1,
             duration: Math.round(d * 0.2), yoyo: true,
           }),
         ]);

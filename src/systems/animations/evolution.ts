@@ -9,6 +9,8 @@ import { generatePokemonSprite } from '../../utils/spriteGenerator';
 import { TextBox } from '../../components/TextBox';
 import { delay, screenFlash, sparkle } from '../MoveAnimations';
 import { materialise, paleOf } from './entrances';
+import { SPRITE_PX } from './baseScale';
+import { battleScale } from '../../logic/pokemonSize';
 import { soundSystem } from '../SoundSystem';
 import {
   EVO_FLASH_MS, EVO_INTRO_MS, EVO_PULSE_SCALE, EVO_REVEAL_MS, EVO_SPARKLES,
@@ -166,9 +168,23 @@ export async function playEvolution(
   field.fillStyle(EVO_FIELD_COLOR, 1);
   field.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
+  // The two forms' size classes. An evolution is the one moment the player
+  // watches a mon CHANGE SIZE, so the overlay honours the classes too: the old
+  // form pulses at its own scale, the new one is revealed at its own, and both
+  // stand on the same ground line so the growth reads as growth rather than as
+  // the sprite drifting up the screen.
+  const fromScale = battleScale(ctx.fromSpecies, POKEMON_DATA[ctx.fromSpecies]);
+  const toScale = battleScale(ctx.toSpecies, toSpecies);
+  const EVO_GROUND_Y = EVO_SPRITE_Y + SPRITE_PX / 2;
+  const stand = (scale: number): void => {
+    sprite.setScale(scale);
+    sprite.setY(EVO_GROUND_Y - (SPRITE_PX * scale) / 2);
+  };
+
   const sprite = scene.add.sprite(Math.round(GAME_WIDTH / 2), EVO_SPRITE_Y, fromKey, 0);
   sprite.setDepth(EVO_SPRITE_DEPTH);
   sprite.setScrollFactor(0);
+  stand(fromScale);
 
   // Its own text box, not the caller's: `OverworldScene` will not advance its
   // text box while a screen is open, and `BattleScene`'s is mid-teardown.
@@ -218,15 +234,18 @@ export async function playEvolution(
       const from = reached === 0 ? 0 : swaps[reached - 1];
       const to = reached < swaps.length ? swaps[reached] : total;
       const p = Math.min(1, Math.max(0, (now - from) / Math.max(1, to - from)));
-      sprite.setScale(1 + (EVO_PULSE_SCALE - 1) * 0.5 * (1 - Math.cos(p * Math.PI * 2)));
+      // The breath is a multiple of whichever form is on screen this frame.
+      const base = isNew ? toScale : fromScale;
+      stand(base * (1 + (EVO_PULSE_SCALE - 1) * 0.5 * (1 - Math.cos(p * Math.PI * 2))));
     });
     cancelArmed = false;
-    sprite.setScale(1);
+    stand(cancelled ? fromScale : toScale);
 
     // 3. Cancelled (Gen I's B): the old form comes back, in colour.
     if (cancelled) {
       sprite.setTexture(fromKey, 0);
       sprite.clearTint();
+      stand(fromScale);
       if (aborted) return 'cancelled';
       await showLine(lines.stopped);
       return 'cancelled';
@@ -241,7 +260,8 @@ export async function playEvolution(
     if (aborted) return 'evolved';
     sprite.setTexture(toKey, 0);
     sprite.clearTint();
-    sprite.setScale(1);
+    // The NEW species' class: `materialise` without a run pops 0 -> this.
+    stand(toScale);
     const palette = toSpecies?.types[0] ?? PokemonType.NORMAL;
     await materialise(scene, sprite, palette, EVO_REVEAL_MS);
     if (toSpecies) soundSystem.pokemonCryFor(resolveCry(toSpecies));
