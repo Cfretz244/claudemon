@@ -2,8 +2,10 @@
 // OverworldScene.readSign (which keeps the Game Corner poster special case).
 
 export const SIGNS: Record<string, string[]> = {
-  'pallet_town:7,9': ['PALLET TOWN', 'Shades of your journey\nawait!'],
-  'pallet_town:11,16': ["PROF. OAK's LAB"],
+  // Beside the Route 1 gap, where you arrive and where you leave.
+  'pallet_town:8,1': ['PALLET TOWN', 'Shades of your journey\nawait!'],
+  // On the path outside Oak's fenced plot, facing the lab door.
+  'pallet_town:7,11': ['OAK POKeMON\nRESEARCH LAB'],
   'viridian_city:7,13': ['VIRIDIAN CITY', 'The Eternally Green\nParadise!'],
   'viridian_city:12,13': ['TRAINER TIPS', "If your POKeMON's HP\nreaches 0, it faints!"],
   'route1:7,10': ['ROUTE 1', 'PALLET TOWN -\nVIRIDIAN CITY'],

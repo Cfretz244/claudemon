@@ -41,6 +41,7 @@ import { followerVisible } from '../logic/follower';
 import {
   interceptWarp, needsOakEscort, badgeCheckOutcome, OAK_INTERCEPT_MESSAGES,
   OAK_ESCORT_DESTINATION, PEWTER_GUIDE_NPC_ID, BADGE_CHECK_PASSED_SUFFIX,
+  walkPath, oakLabDoorstep, oakGreetingSpot,
 } from '../logic/roadBlocks';
 import { elevatorAccess, elevatorTarget, visitedFlag } from '../logic/elevator';
 import { newGameState } from '../logic/newGame';
@@ -1383,70 +1384,17 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   /**
-   * Build a path from lab door (10, 16) to a target position.
-   * Routes around buildings: lab (x=7-12, y=12-15), player house (x=2-6, y=3-6),
-   * rival house (x=12-16, y=3-6). Uses x=6 corridor south of houses, then
-   * main path (x=8) north of houses.
+   * Tiles the escort walk must not step on: every visible NPC except the
+   * player. Oak walking through the fisherman on the pier is the sort of thing
+   * a corridor heuristic could not see; a path search can.
    */
-  private buildPathFromLabTo(targetX: number, targetY: number): Array<{x: number, y: number}> {
-    const path: Array<{x: number, y: number}> = [];
-    let cx = 10, cy = 16;
-
-    // Go west to x=6 (clear of lab building x=7-12)
-    while (cx > 6) { cx--; path.push({x: cx, y: cy}); }
-
-    // Go north on x=6 to y=7 or target row, whichever is further south
-    // (x=6 is safe from y=7 to y=16, but player's house occupies x=6 at y=3-6)
-    const safeStopY = Math.max(targetY, 7);
-    while (cy > safeStopY) { cy--; path.push({x: cx, y: cy}); }
-
-    // If target is above y=7, step east to x=8 (main path) to avoid player's house
-    if (targetY < 7) {
-      while (cx < 8) { cx++; path.push({x: cx, y: cy}); }
-      // Continue north on x=8 (safe: between houses, above lab)
-      while (cy > targetY) { cy--; path.push({x: cx, y: cy}); }
+  private escortBlockedTiles(): Set<string> {
+    const blocked = new Set<string>();
+    for (const npc of this.currentMap.npcs ?? []) {
+      if (this.shouldSkipNPC(npc)) continue;
+      blocked.add(`${npc.x},${npc.y}`);
     }
-
-    // Go to target column
-    while (cx < targetX) { cx++; path.push({x: cx, y: cy}); }
-    while (cx > targetX) { cx--; path.push({x: cx, y: cy}); }
-
-    // Go south to target row if needed
-    while (cy < targetY) { cy++; path.push({x: cx, y: cy}); }
-
-    return path;
-  }
-
-  /**
-   * Build a path from a position to the lab door (10, 16).
-   * Routes around the lab building (x=7-12, y=12-15).
-   */
-  private buildPathToLab(startX: number, startY: number): Array<{x: number, y: number}> {
-    const path: Array<{x: number, y: number}> = [];
-    let cx = startX, cy = startY;
-
-    // Walk south to y=11 if north of building
-    while (cy < 11) { cy++; path.push({x: cx, y: cy}); }
-
-    // Route around the building (x=7-12, y=12-15)
-    if (cx >= 7 && cx <= 12) {
-      // On building's x-range, go west to x=6
-      while (cx > 6) { cx--; path.push({x: cx, y: cy}); }
-    } else if (cx > 12) {
-      // East of building, route to x=13
-      while (cx > 13) { cx--; path.push({x: cx, y: cy}); }
-      while (cx < 13) { cx++; path.push({x: cx, y: cy}); }
-    }
-    // If cx <= 6, already west of building
-
-    // Walk south to y=16 (lab door level)
-    while (cy < 16) { cy++; path.push({x: cx, y: cy}); }
-
-    // Walk to x=10 (lab door)
-    while (cx < 10) { cx++; path.push({x: cx, y: cy}); }
-    while (cx > 10) { cx--; path.push({x: cx, y: cy}); }
-
-    return path;
+    return blocked;
   }
 
   private triggerPewterGuideIntercept(): void {
@@ -1529,23 +1477,36 @@ export class OverworldScene extends Phaser.Scene {
       generateNPCSprite(this, oakKey, oakColor);
     }
 
+    // Oak steps out of his lab and walks to the player. Both legs are shortest
+    // paths over the map's own collision grid (`logic/roadBlocks`), so re-drawing
+    // Pallet moves the walk with the lab instead of stranding it.
+    const doorstep = oakLabDoorstep(this.currentMap);
+    const blocked = this.escortBlockedTiles();
+    const greeting = doorstep && oakGreetingSpot(
+      this.currentMap, doorstep, { x: this.playerGridX, y: this.playerGridY }, blocked,
+    );
+    if (!doorstep || !greeting) {
+      // No lab on this map, or nowhere for Oak to stand: say the lines where the
+      // player is rather than freezing them in a cutscene that cannot play.
+      this.textBox.show(OAK_INTERCEPT_MESSAGES[0], () => {
+        this.textBox.show(OAK_INTERCEPT_MESSAGES[1]);
+      });
+      return;
+    }
+
     // Block input during cutscene
     this.isWarping = true;
     soundSystem.startMusic('oaks_theme');
 
-    // Oak starts at lab door (10, 16) and walks to the player
     const oakSprite = this.add.sprite(
-      10 * TILE_SIZE + TILE_SIZE / 2,
-      16 * TILE_SIZE + TILE_SIZE / 2,
+      doorstep.x * TILE_SIZE + TILE_SIZE / 2,
+      doorstep.y * TILE_SIZE + TILE_SIZE / 2,
       oakKey, 1  // facing up
     );
     oakSprite.setDepth(10);
 
-    // Build approach path from lab door to one tile south of player
-    const approachPath = this.buildPathFromLabTo(this.playerGridX, this.playerGridY + 1);
-
     // Oak walks to the player (faster pace - he's hurrying)
-    this.animateWalkPath(oakSprite, approachPath, 120, () => {
+    this.animateWalkPath(oakSprite, greeting.path, 120, () => {
       // Oak arrived next to player - allow text advancement
       this.isWarping = false;
 
@@ -1554,13 +1515,10 @@ export class OverworldScene extends Phaser.Scene {
           // Block input for walk to lab
           this.isWarping = true;
 
-          // Build Oak's return path from Oak's position (one tile south of player) to lab door
-          const oakReturnPath = this.buildPathToLab(this.playerGridX, this.playerGridY + 1);
-          // Player's path: first step south to where Oak was, then follow Oak's route (stop 1 before end)
-          const playerReturnPath = [
-            {x: this.playerGridX, y: this.playerGridY + 1},
-            ...oakReturnPath.slice(0, -1)
-          ];
+          // Oak walks back to his doorstep from where he stopped; the player
+          // follows one tile behind, stepping onto the tile Oak just left.
+          const oakReturnPath = walkPath(this.currentMap, greeting.spot, doorstep, blocked) ?? [];
+          const playerReturnPath = [greeting.spot, ...oakReturnPath.slice(0, -1)];
 
           // Both walk simultaneously - Oak leads, player follows one tile behind
           this.animateWalkPath(oakSprite, oakReturnPath, 200, () => {
