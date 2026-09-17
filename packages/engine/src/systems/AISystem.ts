@@ -1,3 +1,7 @@
+// Randomness is injected: every function that draws a random number takes an
+// optional TRAILING `rng: () => number` defaulting to `Math.random`, so the
+// Phaser call sites are unchanged while a seeded consumer (`random/seed.ts`)
+// can replay the same sequence. See `packages/engine/tests/determinism.test.ts`.
 import { PokemonInstance, MoveData, MoveCategory, MoveEffect, StatusCondition } from '../types/pokemon.types';
 import { POKEMON_DATA } from '../data/pokemon';
 import { MOVES_DATA } from '../data/moves';
@@ -7,6 +11,7 @@ import { calculateDamage } from './DamageCalculator';
 export function selectAIMove(
   aiPokemon: PokemonInstance,
   playerPokemon: PokemonInstance,
+  rng: () => number = Math.random,
 ): number {
   // Return index of the move to use
   const usableMoves = aiPokemon.moves
@@ -34,7 +39,7 @@ export function selectAIMove(
       score = scoreStatusMove(moveData, aiPokemon, playerPokemon);
     } else {
       // Calculate expected damage
-      const result = calculateDamage(aiPokemon, playerPokemon, moveData, false);
+      const result = calculateDamage(aiPokemon, playerPokemon, moveData, false, undefined, undefined, rng);
       score = result.damage;
 
       // Bonus for super effective
@@ -63,7 +68,7 @@ export function selectAIMove(
     }
 
     // Small random factor (±15%)
-    score *= 0.85 + Math.random() * 0.3;
+    score *= 0.85 + rng() * 0.3;
 
     if (score > bestScore) {
       bestScore = score;
