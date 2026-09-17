@@ -105,8 +105,8 @@ export function oakStage(state: OakChainState): OakStage {
  * a Lv5 Pikachu into the party and the flag. Runs in the text box's onComplete,
  * so the party is only touched once the player has read the whole speech.
  */
-export function applyPikachuGrant(state: OakChainMutableState): void {
-  state.addToParty(createPokemon(PIKACHU_SPECIES_ID, PIKACHU_LEVEL));
+export function applyPikachuGrant(state: OakChainMutableState, rng: () => number = Math.random): void {
+  state.addToParty(createPokemon(PIKACHU_SPECIES_ID, PIKACHU_LEVEL, 'RED', rng));
   state.storyFlags[HAS_PIKACHU_FLAG] = true;
 }
 
@@ -125,8 +125,8 @@ export function applyParcelDelivery(state: OakChainMutableState): void {
 }
 
 /** Runs the effects for a stage, if it has any. Talking to Oak again is a no-op. */
-export function applyOakStage(stage: OakStage, state: OakChainMutableState): void {
-  if (stage === 'give_pikachu') applyPikachuGrant(state);
+export function applyOakStage(stage: OakStage, state: OakChainMutableState, rng: () => number = Math.random): void {
+  if (stage === 'give_pikachu') applyPikachuGrant(state, rng);
   else if (stage === 'deliver_parcel') applyParcelDelivery(state);
 }
 

@@ -28,7 +28,7 @@ import { rollFishingEncounter } from '../systems/EncounterSystem';
 import { resyncMobileInput } from '../utils/mobileControls';
 import { shouldSkipNPC as shouldSkipNPCLogic } from '../logic/npcVisibility';
 import { STATIC_LEGENDARIES, getStaticLegendary, legendaryClearedFlag } from '../data/staticLegendaries';
-import { shouldGiveOaksParcel } from '../logic/oaksParcel';
+import { shouldGiveOaksParcel, oaksParcelDialogue, grantOaksParcel } from '../logic/oaksParcel';
 import {
   oakStage, applyOakStage, OAK_DIALOGUE, shouldTriggerLabRivalBattle,
   labRivalTriggerOutcome, consumeLabRivalEncounter, labRivalTalkOutcome,
@@ -1712,13 +1712,9 @@ export class OverworldScene extends Phaser.Scene {
         shouldGiveOaksParcel(this.currentMap.id, this.playerState.storyFlags,
                              (id) => this.playerState.hasItem(id))) {
       this.textBox.show(
-        [
-          "Hey! You came from\nPALLET TOWN?",
-          "I have a package\nfor PROF. OAK!",
-          `${this.playerState.name} received\nOAK's PARCEL!`,
-        ],
+        oaksParcelDialogue(this.playerState.name),
         () => {
-          this.playerState.addItem('oaks_parcel');
+          grantOaksParcel(this.playerState);
         }
       );
       return;
@@ -2496,7 +2492,7 @@ export class OverworldScene extends Phaser.Scene {
       // Cancelled (B): nothing is applied. `checkEvolution` offers it again the
       // next time this mon levels up, which is Gen I's behaviour.
       if (outcome === 'cancelled') return [];
-      evolvePokemon(pokemon, toSpecies);
+      evolvePokemon(pokemon, toSpecies, this.playerState);
       return learnsetAtLevel(toSpecies, level);
     } finally {
       if (darkWasVisible) this.darkOverlay!.setVisible(true);

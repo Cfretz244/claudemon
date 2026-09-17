@@ -12,6 +12,7 @@ import { MoveForgetUI } from './MoveForgetUI';
 import { bindMenuKeys, clampIndex } from './MenuInput';
 import { reviveHp } from '../logic/reviveItems';
 import { applyVitamin, STAT_DISPLAY_NAME } from '../logic/vitamins';
+import { rareCandyResult } from '../logic/rareCandy';
 
 export class BagScreen {
   private scene: Phaser.Scene;
@@ -542,13 +543,18 @@ export class BagScreen {
       return;
     }
 
-    // Rare Candy
+    // Rare Candy: exactly one level (Gen I), decided by `logic/rareCandy.ts`.
     if (item.id === 'rare_candy') {
-      if (pokemon.level >= 100) {
+      const candy = rareCandyResult(pokemon);
+      if (!candy.ok) {
+        // Lv100: the message, and the candy stays in the bag.
         this.showMessage("It won't have any\neffect!");
         return;
       }
-      const levelUps = addExperience(pokemon, 999999);
+      // Set the EXP to the next threshold exactly, then let `addExperience`
+      // run its normal loop: it levels once, recalculates the stats, adds the
+      // HP and reports the new level's moves, all the way a battle would.
+      const levelUps = addExperience(pokemon, candy.newExp! - pokemon.exp);
       this.playerState.useItem(item.id);
       soundSystem.heal();
 

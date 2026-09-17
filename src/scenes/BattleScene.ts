@@ -18,6 +18,7 @@ import {
 } from '../logic/evolutionSequence';
 import { playEvolution } from '../systems/animations/evolution';
 import { attemptCatch } from '../systems/CatchSystem';
+import { trainerPrizeMoney } from '@claudemon/engine/battle/rewards';
 import { selectAIMove } from '../systems/AISystem';
 import {
   resolveTurnOrder, resolvePreAction, rollHitCount, applySpecialDamage,
@@ -1338,7 +1339,7 @@ export class BattleScene extends Phaser.Scene {
       }
 
       // Prize money
-      const prizeMoney = this.opponentPokemon.level * 50;
+      const prizeMoney = trainerPrizeMoney(this.opponentPokemon);
       this.playerState.money += prizeMoney;
 
       // Look up trainer loss dialogue
@@ -1728,7 +1729,7 @@ export class BattleScene extends Phaser.Scene {
       // the next level-up, which falls out of `checkEvolution` re-running.
       if (outcome === 'cancelled') continue;
 
-      evolvePokemon(pokemon, entry.toSpecies);
+      evolvePokemon(pokemon, entry.toSpecies, this.playerState);
 
       // The new species' own level-<level> moves, through the level-up prompt.
       // Under its NEW name: the evolution lines are the only ones that still

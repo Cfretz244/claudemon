@@ -15,6 +15,9 @@ export * from './types';
 export * from './entities/Pokemon';
 export * from './entities/Player';
 
+export * from './battle/rewards';
+export * from './random/seed';
+
 export * from './logic/animationOutcome';
 export * from './logic/boulders';
 export * from './logic/chargeMoves';
@@ -34,6 +37,7 @@ export * from './logic/npcVisibility';
 export * from './logic/oakLab';
 export * from './logic/oaksParcel';
 export * from './logic/pokemonShape';
+export * from './logic/rareCandy';
 export * from './logic/reviveItems';
 export * from './logic/roadBlocks';
 export * from './logic/saveMigration';

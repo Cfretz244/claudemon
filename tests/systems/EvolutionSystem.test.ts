@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { checkEvolution, evolvePokemon } from '../../src/systems/EvolutionSystem';
 import { mockPokemon } from '../helpers/pokemon.factory';
 import { createPokemon } from '../../src/entities/Pokemon';
+import { PlayerState } from '../../src/entities/Player';
 
 /** Creates a Pokemon with deterministic 0 IVs by mocking Math.random */
 function makeTestPokemon(speciesId: number, level: number) {
@@ -108,6 +109,56 @@ describe('EvolutionSystem', () => {
       const hpGain = pokemon.stats.hp - oldMaxHp;
       // Current HP should increase by the difference in max HP
       expect(pokemon.currentHp).toBe(Math.min(pokemon.stats.hp, oldCurrentHp + hpGain));
+    });
+  });
+  /**
+   * An evolved Pokemon is one you own, so it belongs in the Pokedex as CAUGHT.
+   * Nothing registered it before: `PlayerState.addToParty` is the only other
+   * way a species enters the party, and an evolution never goes through it -
+   * it changes the species of a mon that is already there. The result was a
+   * CHARMELEON in the party and an unseen entry 5 in the Pokedex.
+   */
+  describe('Pokedex registration', () => {
+    it('marks the new species as caught and seen', () => {
+      const player = new PlayerState();
+      const pokemon = makeTestPokemon(1, 16);
+
+      evolvePokemon(pokemon, 2, player);
+
+      expect(player.pokedexCaught).toContain(2);
+      expect(player.pokedexSeen).toContain(2);
+    });
+
+    it('registers the new species, not the old one', () => {
+      const player = new PlayerState();
+      evolvePokemon(makeTestPokemon(1, 16), 2, player);
+
+      expect(player.pokedexCaught).toEqual([2]);
+    });
+
+    it('does not duplicate an entry that is already there', () => {
+      const player = new PlayerState();
+      player.markCaught(2);
+
+      evolvePokemon(makeTestPokemon(1, 16), 2, player);
+
+      expect(player.pokedexCaught.filter(id => id === 2)).toHaveLength(1);
+    });
+
+    it('does not register anything when the species is unknown', () => {
+      const player = new PlayerState();
+      const pokemon = makeTestPokemon(1, 16);
+
+      evolvePokemon(pokemon, 9999, player);
+
+      expect(pokemon.speciesId).toBe(1);
+      expect(player.pokedexCaught).toEqual([]);
+    });
+
+    it('still evolves with no Pokedex to register in (the battle simulator)', () => {
+      const pokemon = makeTestPokemon(1, 16);
+      expect(() => evolvePokemon(pokemon, 2)).not.toThrow();
+      expect(pokemon.speciesId).toBe(2);
     });
   });
 });
