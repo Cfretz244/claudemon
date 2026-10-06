@@ -20,7 +20,7 @@ import { calculateStats } from '../src/entities/Pokemon';
 import { POKEMON_DATA } from '../src/data/pokemon';
 import { SeededRandom } from '../src/random/seed';
 import {
-  Combatant, MoveContext, executeBattleMove, freshStages, freshVolatile,
+  Combatant, MoveContext, executeBattleMove, freshStages, freshVolatile, STRUGGLE_MOVE_ID,
 } from '../src/battle/move';
 import { LegacyState, runLegacyMove } from './fixtures/legacyMove';
 import { renderMoveEventTrace } from './fixtures/renderMoveEvent';
@@ -167,12 +167,33 @@ interface Mismatch { label: string; field: string; legacy: unknown; modern: unkn
 
 /** Guards against a loop that silently stops iterating. */
 let comparisons = 0;
+/** Guards against the STRUGGLE recoil correction below never firing. */
+let struggleRecoilCorrections = 0;
+
+/**
+ * The ONE intentional divergence from main inside the sweep: Gen I STRUGGLE
+ * recoil is 1/2 of the damage dealt (pokered `RecoilEffect_`), main took 1/4
+ * like TAKE DOWN. The oracle is main, so its attacker HP is corrected by
+ * exactly that difference before comparing. main's recoil is recoverable from
+ * the engine's because floor(D / 4) === floor(floor(D / 2) / 2), and both are
+ * at least 1. Everything else (text, trace, RNG draws, the rest of the state)
+ * must still match byte for byte.
+ */
+function applyGenIStruggleRecoil(r: Awaited<ReturnType<typeof compare>>): void {
+  const e = r.event;
+  if (e.moveId !== STRUGGLE_MOVE_ID || e.recoil <= 0) return;
+  const mainRecoil = Math.max(1, Math.floor(e.recoil / 2));
+  const attacker = e.actorIsPlayer ? r.legacyState.player : r.legacyState.opponent;
+  attacker.currentHp = Math.max(0, attacker.currentHp + mainRecoil - e.recoil);
+  struggleRecoilCorrections++;
+}
 
 async function collect(
   label: string, build: () => Scenario, seed: number, into: Mismatch[],
 ): Promise<void> {
   comparisons++;
   const r = await compare(build, seed);
+  applyGenIStruggleRecoil(r);
   const push = (field: string, legacy: unknown, modern: unknown) => {
     if (JSON.stringify(legacy) !== JSON.stringify(modern)) into.push({ label, field, legacy, modern });
   };
@@ -214,6 +235,9 @@ describe('every move, both sides, six attacker states, three seeds', () => {
     expect(MOVE_IDS.length).toBe(165);
     // 165 moves x 2 sides x 6 states x 3 seeds
     expect(MOVE_IDS.length * 2 * STATES.length * 3).toBe(5940);
+    // The sweeps above ran STRUGGLE in slot 0 and hit with it: the Gen I
+    // recoil correction was exercised, not skipped.
+    expect(struggleRecoilCorrections).toBeGreaterThan(0);
   });
 });
 
@@ -360,8 +384,10 @@ describe('the cases #114 got wrong', () => {
 
   it('Struggle is the ONLY behaviour main did not have (player side only, gated last)', async () => {
     // Out of PP on every slot: the player falls back to STRUGGLE (the Gen I
-    // rule; unreachable today because BattleMenu refuses an empty slot). The
-    // legacy fixture has no such path, so this case is pinned on its own.
+    // rule; BattleMenu's FIGHT dispatches slot 0 straight here since
+    // fix/struggle-menu). The legacy fixture has no such path, so this case is
+    // pinned on its own. (Its 1/2 recoil is the sweep's one correction, see
+    // `applyGenIStruggleRecoil`, and is pinned in moveContract.test.ts.)
     const s = scenario(1, true, 'clean');
     for (const m of s.state.playerPokemon.moves) m.currentPp = 0;
     const ctx = toContext(s.state, true, 0);

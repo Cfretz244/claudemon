@@ -21,6 +21,7 @@ import { attemptCatch } from '../systems/CatchSystem';
 import { trainerPrizeMoney } from '@claudemon/engine/battle/rewards';
 import {
   executeBattleMove, applyMoveEvent, Combatant, MoveContext, MoveEvent,
+  STRUGGLE_MOVE_ID, battleName,
 } from '@claudemon/engine/battle/move';
 import { selectAIMove } from '../systems/AISystem';
 import {
@@ -41,6 +42,7 @@ import { resolveEntrance, resolveCry, EntranceKind } from '../logic/entranceSpec
 import { reviveHp, isReviveItem } from '../logic/reviveItems';
 import { clearsForcedEncounter, WildBattleEnd } from '../logic/forcedEncounters';
 import { roundContinues } from '../logic/turnFlow';
+import { fightAction, noMovesLeftText } from '../logic/fightAction';
 import { ChargeState } from '../logic/chargeMoves';
 import { hallOfFameResult } from '../logic/hallOfFame';
 import { restoreParty } from '../logic/healing';
@@ -554,7 +556,13 @@ export class BattleScene extends Phaser.Scene {
       bagItems,
       this.playerState.party,
       this.currentPlayerPokemonIndex,
+      this.playerDisable.moveIndex,
     );
+  }
+
+  /** Gen I: no move with PP outside the disabled slot => FIGHT is STRUGGLE. */
+  private playerMustStruggle(): boolean {
+    return fightAction(this.playerPokemon.moves, this.playerDisable.moveIndex).kind === 'struggle';
   }
 
   private buildBagItems(): BagItem[] {
@@ -596,7 +604,14 @@ export class BattleScene extends Phaser.Scene {
 
     switch (selection.type) {
       case 'fight':
-        this.executeTurn(selection.moveIndex);
+        if (this.playerMustStruggle()) {
+          // pokered prints `_NoMovesLeftText` at selection time, before the
+          // turn order is known (a faster foe still moves first).
+          const line = noMovesLeftText(battleName(this.playerPokemon.speciesId, true));
+          this.textBox.show([line], () => { void this.executeTurn(selection.moveIndex); });
+        } else {
+          this.executeTurn(selection.moveIndex);
+        }
         break;
       case 'bag':
         if (!selection.itemId) {
@@ -677,8 +692,12 @@ export class BattleScene extends Phaser.Scene {
   private async executeTurn(playerMoveIndex: number): Promise<void> {
     if (this.turnInProgress) return;
 
+    // STRUGGLE: no selectable move, so the dispatched slot is a placeholder
+    // the engine replaces - it is neither disabled nor required to exist.
+    const struggling = this.playerMustStruggle();
+
     // Block disabled moves (a charge release is not a fresh selection)
-    if (!this.playerVolatile.charging && this.playerDisable.moveIndex === playerMoveIndex) {
+    if (!this.playerVolatile.charging && !struggling && this.playerDisable.moveIndex === playerMoveIndex) {
       this.textBox.show(["That move is\ndisabled!"], () => this.showBattleMenu());
       return;
     }
@@ -700,13 +719,14 @@ export class BattleScene extends Phaser.Scene {
     }
     const aiMove = this.opponentPokemon.moves[aiMoveIndex];
 
-    if (!playerMove || !aiMove) {
+    if ((!playerMove && !struggling) || !aiMove) {
       this.turnInProgress = false;
       this.showBattleMenu();
       return;
     }
 
-    const playerMoveData = MOVES_DATA[playerMove.moveId];
+    // Turn order reads STRUGGLE's priority, not the dry slot's (QUICK ATTACK).
+    const playerMoveData = MOVES_DATA[struggling ? STRUGGLE_MOVE_ID : playerMove.moveId];
     const aiMoveData = MOVES_DATA[aiMove.moveId];
 
     if (!playerMoveData || !aiMoveData) {
