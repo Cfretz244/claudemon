@@ -241,6 +241,8 @@ export const TOWN_THEMES: Record<string, TownPalette> = {
     grassAccent: '#68b050',
     treeCanopy: '#308830',
     treeCanopyLight: '#409840',
+    // The Game Corner's neon marquee lights up in hot pink.
+    buildings: { landmark: { sign: '#f048b0' } },
   }),
   saffron: theme({
     roof: '#d0b040',

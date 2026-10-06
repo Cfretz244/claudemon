@@ -658,8 +658,8 @@ export const ROUTE10: MapData = (() => {
       // Pokemon Center door
       { x: 14, y: 7, targetMap: 'pokemon_center_route10', targetX: 4, targetY: 7 },
       // South exit -> Lavender Town
-      { x: 9, y: 24, targetMap: 'lavender_town', targetX: 11, targetY: 2 },
-      { x: 10, y: 24, targetMap: 'lavender_town', targetX: 11, targetY: 2 },
+      { x: 9, y: 24, targetMap: 'lavender_town', targetX: 9, targetY: 1 },
+      { x: 10, y: 24, targetMap: 'lavender_town', targetX: 10, targetY: 1 },
     ],
     npcs: [],
     wildEncounters: {

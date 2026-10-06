@@ -40,8 +40,24 @@ export const SIGNS: Record<string, string[]> = {
   'vermilion_city:11,15': ['VERMILION CITY GYM\nLEADER: LT. SURGE', 'The Lightning\nAmerican!'],
   'vermilion_city:20,22': ['S.S. ANNE DOCK', 'The luxury liner is\nin port. A ticket is\nrequired to board.'],
   'route3:41,6': ['ROUTE 3', 'MT. MOON ahead'],
-  'celadon_city:12,12': ['CELADON CITY GYM\nLEADER: ERIKA', 'The Nature-Loving\nPrincess!'],
-  'celadon_city:9,10': ['CELADON CITY', 'The City of Rainbow\nDreams!'],
+  // Lavender Town, rebuilt from its sketch: the town name where the Route 10
+  // road comes in, the Tower gate, the road west to Route 8 and the road south
+  // to Route 12.
+  'lavender_town:8,2': ['LAVENDER TOWN', 'The Noble Purple\nTown!'],
+  'lavender_town:11,8': ['POKeMON TOWER', 'A memorial to the\nspirits of departed\nPOKeMON.'],
+  'lavender_town:1,12': ['ROUTE 8 AHEAD', 'LAVENDER TOWN -\nSAFFRON CITY'],
+  'lavender_town:11,18': ['ROUTE 12 AHEAD', 'LAVENDER TOWN -\nFUCHSIA CITY'],
+  // Celadon City, rebuilt from its sketch: the town name (kept text) where the
+  // Route 7 road comes in from Saffron, the gym in its garden (kept text), the
+  // road west to Route 16, the Mansion, the dept store, the Game Corner and the
+  // north lawn.
+  'celadon_city:27,14': ['CELADON CITY', 'The City of Rainbow\nDreams!'],
+  'celadon_city:13,21': ['CELADON CITY GYM\nLEADER: ERIKA', 'The Nature-Loving\nPrincess!'],
+  'celadon_city:1,14': ['ROUTE 16 AHEAD', 'CYCLING ROAD starts\npast the gate.'],
+  'celadon_city:9,8': ['CELADON MANSION'],
+  'celadon_city:16,8': ['CELADON DEPT. STORE', 'Find what you need\nat CELADON DEPT.!'],
+  'celadon_city:22,20': ['ROCKET GAME CORNER', 'The playground\nfor grown-ups!'],
+  'celadon_city:13,2': ['TRAINER TIPS', 'The dept store sells\nTMs and evolution\nstones!'],
   'route5:12,18': ['UNDERGROUND PATH', 'Route 5 - Route 6'],
   'route6:12,3': ['UNDERGROUND PATH', 'Route 5 - Route 6'],
   'route7:12,3': ['UNDERGROUND PATH', 'Route 7 - Route 8'],

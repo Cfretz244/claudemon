@@ -63,6 +63,36 @@ const SIGN_TEXT: Record<string, { word: string; color: string; xs: number[] }> =
   gym: { word: 'GYM', color: '#303038', xs: [3, 7, 11] },
 };
 
+/**
+ * A landmark's signboard (the `NEON` glyph): a dark marquee framed by lit
+ * bulbs in the palette's `sign` colour and yellow, with a star in the middle,
+ * so it reads as neon at 1x and never as a shop board.
+ */
+function drawNeonBoard(ctx: CanvasRenderingContext2D, b: BuildingPalette): void {
+  ctx.fillStyle = '#181820';
+  ctx.fillRect(1, 2, 14, 12);
+  ctx.fillStyle = '#302838';
+  ctx.fillRect(2, 3, 12, 10);
+  for (let i = 0; i < 6; i++) {
+    ctx.fillStyle = i % 2 === 0 ? b.sign : '#f8e040';
+    ctx.fillRect(2 + i * 2, 3, 1, 1);
+    ctx.fillRect(3 + i * 2, 12, 1, 1);
+  }
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#f8e040' : b.sign;
+    ctx.fillRect(2, 5 + i * 2, 1, 1);
+    ctx.fillRect(13, 4 + i * 2, 1, 1);
+  }
+  ctx.fillStyle = '#60f0f8';
+  ctx.fillRect(7, 5, 2, 6);
+  ctx.fillRect(5, 7, 6, 2);
+  ctx.fillStyle = b.sign;
+  ctx.fillRect(5, 5, 1, 1); ctx.fillRect(10, 5, 1, 1);
+  ctx.fillRect(5, 10, 1, 1); ctx.fillRect(10, 10, 1, 1);
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fillRect(7, 7, 2, 2);
+}
+
 function drawWall(ctx: CanvasRenderingContext2D, b: BuildingPalette): void {
   ctx.fillStyle = b.wall;
   ctx.fillRect(0, 0, 16, 16);
@@ -155,6 +185,7 @@ export const BUILDING_TILE_DRAWERS: Record<number, (ctx: CanvasRenderingContext2
   // A 12x8 board on the wall; the glyph comes from the kind.
   [TileType.SIGNBOARD]: (ctx, b, kind) => {
     drawWall(ctx, b);
+    if (kind === 'landmark') { drawNeonBoard(ctx, b); return; }
     ctx.fillStyle = '#4c4c54';
     ctx.fillRect(1, 3, 14, 10);
     ctx.fillStyle = b.sign;
