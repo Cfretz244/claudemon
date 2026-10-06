@@ -11,11 +11,11 @@ import { describe, it, expect } from 'vitest';
 import { MOVES_DATA } from '../src/data/moves';
 import { POKEMON_DATA } from '../src/data/pokemon';
 import { calculateStats } from '../src/entities/Pokemon';
-import { MoveEffect, StatusCondition, PokemonInstance } from '../src/types/pokemon.types';
+import { MoveEffect, StatusCondition, PokemonInstance, PokemonType } from '../src/types/pokemon.types';
 import { SeededRandom } from '../src/random/seed';
 import {
   Combatant, MoveContext, MoveEvent, executeBattleMove, applyMoveEvent,
-  combatant, speciesName, battleName,
+  combatant, speciesName, battleName, STRUGGLE_MOVE_ID,
 } from '../src/battle/move';
 import { outcomeFor } from '../src/logic/animationOutcome';
 
@@ -356,5 +356,94 @@ describe('PP accounting', () => {
     expect(event.moveId).toBe(event.metronomeMoveId);
     expect(ctx.attacker.pokemon.moves[0].currentPp).toBe(full - 1);
     expect(event.before.filter(l => l.includes(' used\n'))).toHaveLength(2);
+  });
+});
+
+describe('STRUGGLE (fix/struggle-menu): Gen I recoil, type and the DISABLE rule', () => {
+  /** A player PIKACHU with every slot dry, into a SNORLAX that survives anything. */
+  const dry = (seed: number, tweak: (ctx: MoveContext) => void = () => {}) => {
+    const ctx = fight(1);
+    tanky(ctx);
+    for (const m of ctx.attacker.pokemon.moves) m.currentPp = 0;
+    tweak(ctx);
+    const event = executeBattleMove(ctx, new SeededRandom(seed).next);
+    return { ctx, event };
+  };
+
+  it('recoil is floor(damage / 2), at least 1 (pokered RecoilEffect_; Gen II+ is 1/4)', () => {
+    let hits = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const { ctx, event } = dry(seed);
+      expect(event.moveId).toBe(STRUGGLE_MOVE_ID);
+      if (event.resolution !== 'damage') continue;
+      hits++;
+      // SNORLAX never drops to 0, so `damage` is the uncapped roll.
+      expect(event.recoil).toBe(Math.max(1, Math.floor(event.damage / 2)));
+      expect(event.messages).toContain('PIKACHU is hit\nwith recoil!');
+      applyMoveEvent(ctx, event);
+      expect(ctx.attacker.pokemon.currentHp).toBe(event.attacker.hpBefore - event.recoil);
+    }
+    expect(hits).toBeGreaterThan(30);
+  });
+
+  it('a 1-damage STRUGGLE still costs 1 HP (the minimum)', () => {
+    // A Lv2 PIKACHU into a Lv80 SNORLAX: the roll floors at 1.
+    for (let seed = 1; seed <= 20; seed++) {
+      const ctx = fight(1);
+      ctx.attacker.pokemon = mon(25, 2, [1]);
+      ctx.attacker.pokemon.moves[0].currentPp = 0;
+      tanky(ctx);
+      const event = executeBattleMove(ctx, new SeededRandom(seed).next);
+      if (event.resolution !== 'damage' || event.damage > 1) continue;
+      expect(event.recoil).toBe(1);
+      return;
+    }
+    throw new Error('no seed produced a 1-damage STRUGGLE');
+  });
+
+  it('the other recoil moves keep Gen I 1/4 (TAKE DOWN)', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const ctx = fight(36);
+      tanky(ctx);
+      const event = executeBattleMove(ctx, new SeededRandom(seed).next);
+      if (event.resolution !== 'damage') continue;
+      expect(event.recoil).toBe(Math.max(1, Math.floor(event.damage / 4)));
+    }
+  });
+
+  it('STRUGGLE stays NORMAL: a GHOST is immune, no damage and no recoil', () => {
+    expect(MOVES_DATA[STRUGGLE_MOVE_ID].type).toBe(PokemonType.NORMAL);
+    const { event } = dry(3, ctx => { ctx.defender.pokemon = mon(92, 30, [1]); }); // GASTLY
+    expect(event.struggle).toBe(true);
+    expect(event.damage).toBe(0);
+    expect(event.recoil).toBe(0);
+  });
+
+  it("the disabled slot's PP is ignored: DISABLE on the last move with PP => STRUGGLE", () => {
+    const { ctx, event } = dry(5, c => {
+      c.attacker.pokemon.moves[0].currentPp = 10;
+      c.attacker.disable = { moveIndex: 0, turnsLeft: 3 };
+    });
+    expect(event.struggle).toBe(true);
+    expect(event.moveId).toBe(STRUGGLE_MOVE_ID);
+    expect(event.ppSpent).toBe(false);
+    expect(ctx.attacker.pokemon.moves[0].currentPp).toBe(10);
+  });
+
+  it('a disabled slot does not force STRUGGLE while another slot has PP', () => {
+    const { event } = dry(5, c => {
+      c.attacker.pokemon.moves[1].currentPp = 4;
+      c.attacker.disable = { moveIndex: 0, turnsLeft: 3 };
+    });
+    expect(event.struggle).toBe(false);
+  });
+
+  it('a foe never Struggles, even dry with its last move disabled (Gen I)', () => {
+    const ctx = fight(1, false);
+    for (const m of ctx.attacker.pokemon.moves) m.currentPp = 0;
+    ctx.attacker.disable = { moveIndex: 1, turnsLeft: 3 };
+    const event = executeBattleMove(ctx, new SeededRandom(5).next);
+    expect(event.struggle).toBe(false);
+    expect(event.moveId).toBe(1);
   });
 });

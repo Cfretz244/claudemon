@@ -6,6 +6,7 @@ import { POKEMON_DATA } from '../data/pokemon';
 import { ITEMS } from '../data/items';
 import { soundSystem } from '../systems/SoundSystem';
 import { bindMenuKeys } from './MenuInput';
+import { fightAction } from '../logic/fightAction';
 
 export interface BagItem {
   id: string;
@@ -41,6 +42,7 @@ export class BattleMenu {
   private moveCursor: Phaser.GameObjects.Text;
   private moveSelectedIndex = 0;
   private currentMoves: PokemonMove[] = [];
+  private disabledMoveIndex = -1;
   private onSelect: ((selection: MenuSelection) => void) | null = null;
   private active = false;
 
@@ -214,8 +216,10 @@ export class BattleMenu {
     bagItems?: BagItem[],
     party?: PokemonInstance[],
     activePokemonIndex?: number,
+    disabledMoveIndex = -1,
   ): void {
     this.currentMoves = pokemon.moves;
+    this.disabledMoveIndex = disabledMoveIndex;
     this.onSelect = onSelect;
     this.bagItems = bagItems || [];
     this.partyPokemon = party || [];
@@ -332,9 +336,14 @@ export class BattleMenu {
 
     if (this.mode === 'main') {
       switch (this.selectedIndex) {
-        case 0: // FIGHT
-          this.showMoveMenu();
+        case 0: { // FIGHT
+          // Gen I: with no selectable move the list never opens - the mon
+          // STRUGGLEs at once (the engine substitutes it for the slot sent).
+          const action = fightAction(this.currentMoves, this.disabledMoveIndex);
+          if (action.kind === 'struggle') this.onSelect({ type: 'fight', moveIndex: action.moveIndex });
+          else this.showMoveMenu();
           break;
+        }
         case 1: // BAG
           this.showBagMenu();
           break;
