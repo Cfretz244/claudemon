@@ -187,7 +187,7 @@ const floor = (id: string, name: string, s: SketchShape, extras: Partial<MapData
 
 const POKEMON_TOWER_1F = floor('pokemon_tower_1f', 'POKEMON TOWER 1F', PT_1F, {
   warps: [
-    { ...PT_1F.findOne('E'), targetMap: 'lavender_town', targetX: 14, targetY: 8 },
+    { ...PT_1F.findOne('E'), targetMap: 'lavender_town', targetX: 15, targetY: 9 },
     stairsUp(PT_1F, PT_2F, 'pokemon_tower_2f'),
   ],
   npcs: [

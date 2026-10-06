@@ -1,0 +1,143 @@
+{
+ "id": "lavender_town",
+ "legend": {
+  "T": "TREE",
+  ".": "PATH",
+  ",": "COBBLESTONE",
+  "'": "GRASS",
+  "*": "FLOWER",
+  "=": "FENCE",
+  "~": "WATER",
+  "F": "FOUNTAIN",
+  "+": "TOMBSTONE",
+  "B": "BUILDING",
+  "D": "DOOR",
+  "d": "DOORMAT",
+  "s": "SIGN",
+  "W": "PATH"
+ },
+ "rows": [
+  "TTTTTTTTTWWTTTTTTTTT",
+  "T''''''''..''''''''T",
+  "T'******s..'=BBBBB'T",
+  "T''''''''..'=BBBBB+T",
+  "T'BBBBBB'..'=BBBBB*T",
+  "T'BBBBBB'..'=BBBBB+T",
+  "T'BBBBBB'..'=BBBBB*T",
+  "T'BBDBBB'..'=BBBBB+T",
+  "T'''d......s=BBDBB'T",
+  "T''''''''......d'''T",
+  "W..................T",
+  "W..................T",
+  "Ts'''''''..''''''''T",
+  "T'BBBBB''..''BBBB''T",
+  "T'BBBBB''..''BBBB''T",
+  "T'BBBBB''..''BBBB''T",
+  "T'BBDBB''..''BDBB''T",
+  "T'''d.........d''''T",
+  "T''''''''..s'****''T",
+  "TTTTTTTTTWWTTTTTTTTT"
+ ],
+ "buildings": [
+  {
+   "kind": "landmark",
+   "x": 13,
+   "y": 2,
+   "w": 5,
+   "h": 7,
+   "door": [
+    15,
+    8
+   ],
+   "warp": "pokemon_tower_1f",
+   "note": "Pokemon Tower: pagoda roof (3 ridge rows), graveyard fence west (x=12) and tombstones east"
+  },
+  {
+   "kind": "center",
+   "x": 2,
+   "y": 4,
+   "w": 6,
+   "h": 4,
+   "door": [
+    4,
+    7
+   ],
+   "warp": "pokemon_center_lavender"
+  },
+  {
+   "kind": "mart",
+   "x": 2,
+   "y": 13,
+   "w": 5,
+   "h": 4,
+   "door": [
+    4,
+    16
+   ],
+   "warp": "pokemart_lavender"
+  },
+  {
+   "kind": "house",
+   "x": 13,
+   "y": 13,
+   "w": 4,
+   "h": 4,
+   "door": [
+    14,
+    16
+   ],
+   "warp": "lavender_house"
+  }
+ ],
+ "npcs": [
+  {
+   "id": "lavender_npc1",
+   "x": 7,
+   "y": 12
+  },
+  {
+   "id": "lavender_npc2",
+   "x": 12,
+   "y": 12
+  },
+  {
+   "id": "lavender_npc3",
+   "x": 17,
+   "y": 9
+  }
+ ],
+ "edgeWarps": [
+  [
+   9,
+   0,
+   "route10"
+  ],
+  [
+   10,
+   0,
+   "route10"
+  ],
+  [
+   0,
+   10,
+   "route8"
+  ],
+  [
+   0,
+   11,
+   "route8"
+  ],
+  [
+   9,
+   19,
+   "route12"
+  ],
+  [
+   10,
+   19,
+   "route12"
+  ]
+ ],
+ "lookouts": [],
+ "notes": "Route landings (9-10,1/18), (1-2,10-11) walkable. Interiors exit to door+1. Muted grass + purple roofs; the Tower dominates the NE; npc3 mourns by the tombstones."
+}

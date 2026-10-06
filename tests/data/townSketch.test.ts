@@ -13,11 +13,15 @@ import viridianJson from '../../src/data/sketches/viridian_city.json';
 import pewterJson from '../../src/data/sketches/pewter_city.json';
 import ceruleanJson from '../../src/data/sketches/cerulean_city.json';
 import vermilionJson from '../../src/data/sketches/vermilion_city.json';
+import lavenderJson from '../../src/data/sketches/lavender_town.json';
+import celadonJson from '../../src/data/sketches/celadon_city.json';
 import { PALLET_TOWN_SKETCH, TownSketch } from '../../packages/engine/src/data/sketches/palletTown';
 import { VIRIDIAN_CITY_SKETCH } from '../../packages/engine/src/data/sketches/viridianCity';
 import { PEWTER_CITY_SKETCH } from '../../packages/engine/src/data/sketches/pewterCity';
 import { CERULEAN_CITY_SKETCH } from '../../packages/engine/src/data/sketches/ceruleanCity';
 import { VERMILION_CITY_SKETCH } from '../../packages/engine/src/data/sketches/vermilionCity';
+import { LAVENDER_TOWN_SKETCH } from '../../packages/engine/src/data/sketches/lavenderTown';
+import { CELADON_CITY_SKETCH } from '../../packages/engine/src/data/sketches/celadonCity';
 import { ALL_MAPS } from '../../src/data/maps';
 import { MapData, TileType } from '../../src/types/map.types';
 import { SIGNS } from '../../src/data/signs';
@@ -53,6 +57,8 @@ const TOWNS: Array<{ sketch: TownSketch; json: SketchJson }> = [
   { sketch: PEWTER_CITY_SKETCH, json: pewterJson as SketchJson },
   { sketch: CERULEAN_CITY_SKETCH, json: ceruleanJson as SketchJson },
   { sketch: VERMILION_CITY_SKETCH, json: vermilionJson as SketchJson },
+  { sketch: LAVENDER_TOWN_SKETCH, json: lavenderJson as SketchJson },
+  { sketch: CELADON_CITY_SKETCH, json: celadonJson as SketchJson },
 ];
 
 describe.each(TOWNS)('$sketch.id is built from its sketch', ({ sketch, json }) => {

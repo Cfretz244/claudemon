@@ -207,9 +207,12 @@ export const SIGN_GLYPH_KIND: Record<Exclude<SignGlyph, 'none'>, BuildingKind> =
   P: 'center',
   MART: 'mart',
   GYM: 'gym',
+  // A landmark's board is a lit marquee (Celadon's Game Corner); no landmark
+  // gets a board unless its caller asks for one.
+  NEON: 'landmark',
 };
 
-export type SignGlyph = 'P' | 'MART' | 'GYM' | 'none';
+export type SignGlyph = 'P' | 'MART' | 'GYM' | 'NEON' | 'none';
 
 export interface StampOptions {
   /** Footprint width in tiles (default: `DEFAULT_BUILDING_SIZE[kind].w`). */

@@ -1,42 +1,91 @@
-import { MapData, TileType } from '../types/map.types';
+import { MapData, NPCData, TileType } from '../types/map.types';
 import { Direction } from '../utils/constants';
-import { createMapFromSketch, createMapShape, SketchShape } from './mapBuilder';
+import { createMapFromSketch, createMapShape, SketchShape, SOLID_TILES, stampBuilding } from './mapBuilder';
+import { LAVENDER_TOWN_SKETCH } from './sketches/lavenderTown';
+import { CELADON_CITY_SKETCH } from './sketches/celadonCity';
+import { TownSketch } from './sketches/townSketch';
 
 const T = TileType;
 
 // ─── 1. LAVENDER TOWN ────────────────────────────────────────────────────────
 
+// Built from `sketches/lavenderTown.ts` (the drawing) + the building kit; this
+// file only holds what a drawing cannot: where each door and road lands on the
+// far side, and who the townspeople are.
+
+/** Where each Lavender door puts you inside (unchanged by the rebuild). */
+const LAVENDER_DOOR_TARGETS: Record<string, { x: number; y: number }> = {
+  pokemon_tower_1f: { x: 5, y: 13 },
+  pokemon_center_lavender: { x: 4, y: 7 },
+  pokemart_lavender: { x: 3, y: 7 },
+  lavender_house: { x: 3, y: 7 },
+};
+
+/** Where each Lavender edge warp puts you on the route (unchanged by the rebuild). */
+const LAVENDER_EDGE_TARGETS: Record<string, { x: number; y: number }> = {
+  '9,0': { x: 9, y: 23 },
+  '10,0': { x: 9, y: 23 },
+  '0,10': { x: 24, y: 5 },
+  '0,11': { x: 24, y: 5 },
+  '9,19': { x: 7, y: 1 },
+  '10,19': { x: 7, y: 1 },
+};
+
+/** Dialogue, colours and facing; positions come from the sketch. */
+const LAVENDER_NPC_DETAILS: Record<string, Omit<NPCData, 'id' | 'x' | 'y'>> = {
+  // On the lawn below the main street, greeting arrivals from Route 8.
+  lavender_npc1: {
+    spriteColor: 0x9070a0,
+    direction: Direction.DOWN,
+    dialogue: [
+      'LAVENDER TOWN',
+      'The Noble Purple\nTown...',
+      "Can you hear the\ncries at night?",
+    ],
+  },
+  // Beside the crossroads, looking back along the street at the Tower path.
+  lavender_npc2: {
+    spriteColor: 0x808080,
+    direction: Direction.LEFT,
+    dialogue: [
+      'They say ghosts\nappear in POKEMON',
+      'TOWER... I can feel\nthem watching...',
+    ],
+  },
+  // Mourning at the foot of the Tower, facing up towards the graves (they
+  // lie north-north-east of him, so up is the side he turns to).
+  lavender_npc3: {
+    spriteColor: 0x605080,
+    direction: Direction.UP,
+    dialogue: [
+      "I came to pay my\nrespects to my",
+      'departed POKeMON...',
+      'POKEMON TOWER is a\nresting place for them.',
+    ],
+  },
+};
+
+/** Graves are solid in town as in the Tower (the global set keeps TOMBSTONE walkable). */
+const LAVENDER_SOLID = new Set([...SOLID_TILES, T.TOMBSTONE]);
+
 export const LAVENDER_TOWN: MapData = (() => {
-  const W = 20, H = 20;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
+  const sketch = LAVENDER_TOWN_SKETCH;
+  const shape = createMapFromSketch(sketch.rows, sketch.legend, { solid: LAVENDER_SOLID });
+  const { tiles, collision, tileKinds, width: W, height: H } = shape;
 
-  // Tree borders (2 tiles thick)
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.TREE); setTile(x, 1, T.TREE); }
-  for (let y = 0; y < H; y++) { setTile(0, y, T.TREE); setTile(1, y, T.TREE); setTile(W - 1, y, T.TREE); setTile(W - 2, y, T.TREE); }
-
-  // Main roads
-  fillRect(8, 2, 4, 18, T.PATH);   // vertical
-  fillRect(2, 10, 16, 2, T.PATH);   // horizontal
-
-  // Pokemon Tower (large building)
-  fillRect(12, 3, 5, 1, T.ROOF); fillRect(12, 4, 5, 4, T.BUILDING);
-  setTile(14, 7, T.DOOR);
-
-  // Pokemon Center
-  fillRect(3, 5, 5, 1, T.ROOF); fillRect(3, 6, 5, 3, T.BUILDING);
-  setTile(5, 8, T.DOOR);
-
-  // Pokemart
-  fillRect(3, 13, 5, 1, T.ROOF); fillRect(3, 14, 5, 3, T.BUILDING);
-  setTile(5, 16, T.DOOR);
-
-  // House
-  fillRect(12, 13, 5, 1, T.ROOF); fillRect(12, 14, 5, 3, T.BUILDING);
-  setTile(14, 16, T.DOOR);
-
-  // Signs
-  setTile(7, 10, T.SIGN);
-  setTile(13, 9, T.SIGN);
+  for (const b of sketch.buildings) {
+    const tower = b.warp === 'pokemon_tower_1f';
+    stampBuilding(shape, b.kind, b.x, b.y, {
+      w: b.w,
+      h: b.h,
+      door: b.door[0] - b.x,
+      chimney: b.kind === 'house',
+      // The Tower's pagoda roof: three ridge rows...
+      ridge: tower ? 3 : 1,
+    });
+    // ...with an eave across the middle one, so it reads as two tiers.
+    if (tower) for (let dx = 0; dx < b.w; dx++) shape.setTile(b.x + dx, b.y + 1, T.ROOF);
+  }
 
   return {
     id: 'lavender_town',
@@ -45,59 +94,24 @@ export const LAVENDER_TOWN: MapData = (() => {
     height: H,
     tiles,
     collision,
+    tileKinds,
     warps: [
-      // West exit → Route 8
-      { x: 1, y: 10, targetMap: 'route8', targetX: 24, targetY: 5 },
-      { x: 1, y: 11, targetMap: 'route8', targetX: 24, targetY: 5 },
-      // North exit → Route 10
-      { x: 9, y: 1, targetMap: 'route10', targetX: 9, targetY: 23 },
-      { x: 10, y: 1, targetMap: 'route10', targetX: 9, targetY: 23 },
-      // South exit → Route 12
-      { x: 9, y: 19, targetMap: 'route12', targetX: 7, targetY: 1 },
-      { x: 10, y: 19, targetMap: 'route12', targetX: 7, targetY: 1 },
-      // Pokemon Tower door
-      { x: 14, y: 7, targetMap: 'pokemon_tower_1f', targetX: 5, targetY: 13 },
-      // Pokemon Center door
-      { x: 5, y: 8, targetMap: 'pokemon_center_lavender', targetX: 4, targetY: 7 },
-      // Pokemart door
-      { x: 5, y: 16, targetMap: 'pokemart_lavender', targetX: 3, targetY: 7 },
-      // House door
-      { x: 14, y: 16, targetMap: 'lavender_house', targetX: 3, targetY: 7 },
+      ...sketch.buildings.map(b => ({
+        x: b.door[0],
+        y: b.door[1],
+        targetMap: b.warp,
+        targetX: LAVENDER_DOOR_TARGETS[b.warp].x,
+        targetY: LAVENDER_DOOR_TARGETS[b.warp].y,
+      })),
+      ...sketch.edgeWarps.map(([x, y, targetMap]) => ({
+        x,
+        y,
+        targetMap,
+        targetX: LAVENDER_EDGE_TARGETS[`${x},${y}`].x,
+        targetY: LAVENDER_EDGE_TARGETS[`${x},${y}`].y,
+      })),
     ],
-    npcs: [
-      {
-        id: 'lavender_npc1',
-        x: 6, y: 11,
-        spriteColor: 0x9070a0,
-        direction: Direction.DOWN,
-        dialogue: [
-          'LAVENDER TOWN',
-          'The Noble Purple\nTown...',
-          "Can you hear the\ncries at night?",
-        ],
-      },
-      {
-        id: 'lavender_npc2',
-        x: 13, y: 11,
-        spriteColor: 0x808080,
-        direction: Direction.LEFT,
-        dialogue: [
-          'They say ghosts\nappear in POKEMON',
-          'TOWER... I can feel\nthem watching...',
-        ],
-      },
-      {
-        id: 'lavender_npc3',
-        x: 11, y: 17,
-        spriteColor: 0x605080,
-        direction: Direction.UP,
-        dialogue: [
-          "I came to pay my\nrespects to my",
-          'departed POKeMON...',
-          'POKEMON TOWER is a\nresting place for them.',
-        ],
-      },
-    ],
+    npcs: sketch.npcs.map(n => ({ id: n.id, x: n.x, y: n.y, ...LAVENDER_NPC_DETAILS[n.id] })),
   };
 })();
 
@@ -133,8 +147,8 @@ export const POKEMON_CENTER_LAVENDER: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'lavender_town', targetX: 5, targetY: 9 },
-      { x: 5, y: 7, targetMap: 'lavender_town', targetX: 5, targetY: 9 },
+      { x: 4, y: 7, targetMap: 'lavender_town', targetX: 4, targetY: 8 },
+      { x: 5, y: 7, targetMap: 'lavender_town', targetX: 4, targetY: 8 },
     ],
     npcs: [
       {
@@ -378,54 +392,105 @@ export const ROUTE11: MapData = (() => {
 
 // ─── 7. CELADON CITY ─────────────────────────────────────────────────────────
 
+// Built from `sketches/celadonCity.ts` (the drawing) + the building kit.
+
+/** Where each Celadon door puts you inside (unchanged by the rebuild). */
+const CELADON_DOOR_TARGETS: Record<string, { x: number; y: number }> = {
+  celadon_mansion: { x: 3, y: 7 },
+  celadon_dept_1f: { x: 5, y: 9 },
+  celadon_gym: { x: 4, y: 13 },
+  game_corner: { x: 7, y: 10 },
+  pokemon_center_celadon: { x: 4, y: 7 },
+};
+
+/** Where each Celadon edge warp puts you on the route (unchanged by the rebuild). */
+const CELADON_EDGE_TARGETS: Record<string, { x: number; y: number }> = {
+  '0,12': { x: 12, y: 2 },
+  '0,13': { x: 12, y: 3 },
+  '29,12': { x: 1, y: 4 },
+  '29,13': { x: 1, y: 5 },
+};
+
+/** Dialogue, colours and facing; positions come from the sketch. */
+const CELADON_NPC_DETAILS: Record<string, Omit<NPCData, 'id' | 'x' | 'y'>> = {
+  // On the lawn below the main street, by the Gym's flower beds.
+  celadon_npc1: {
+    spriteColor: 0x60c060,
+    direction: Direction.DOWN,
+    dialogue: [
+      'CELADON CITY',
+      'The City of Rainbow\nDreams!',
+    ],
+  },
+  // Outside the Game Corner, looking back up the avenue.
+  celadon_npc2: {
+    spriteColor: 0xf0a060,
+    direction: Direction.LEFT,
+    dialogue: [
+      "Have you been to the\nDEPARTMENT STORE?",
+      "They have everything\na trainer needs!",
+    ],
+  },
+  // At the south end of the avenue, between the flower gardens.
+  celadon_npc3: {
+    spriteColor: 0xa0c0f0,
+    direction: Direction.RIGHT,
+    dialogue: [
+      "The GAME CORNER is\nso much fun!",
+      "But I keep losing\nall my coins...",
+    ],
+  },
+  // On the east lawn off the fountain square.
+  celadon_npc4: {
+    spriteColor: 0x80c080,
+    direction: Direction.DOWN,
+    dialogue: [
+      "ERIKA is the GYM\nLEADER here.",
+      "She uses GRASS-type\nPOKeMON. Be prepared!",
+    ],
+  },
+  // Below the Mansion she works at (the TEA gift: `GIFT_NPCS.celadon_tea_lady`).
+  celadon_tea_lady: {
+    spriteColor: 0xc0a080,
+    direction: Direction.RIGHT,
+    dialogue: [
+      "I work at CELADON\nMANSION.",
+      "Here, have some TEA!\nIt's very refreshing!",
+    ],
+  },
+};
+
 export const CELADON_CITY: MapData = (() => {
-  const W = 30, H = 25;
-  const { tiles, collision, setTile, fillRect } = createMapShape(W, H, T.GRASS);
+  const sketch = CELADON_CITY_SKETCH;
+  const shape = createMapFromSketch(sketch.rows, sketch.legend);
+  const { tiles, collision, tileKinds, width: W, height: H } = shape;
+  const at = (b: TownSketch['buildings'][number], dx: number, dy: number, t: TileType) =>
+    shape.setTile(b.x + dx, b.y + dy, t);
 
-  // Tree borders (2 tiles thick on all four sides — Celadon has no north/south exits)
-  for (let x = 0; x < W; x++) { setTile(x, 0, T.TREE); setTile(x, 1, T.TREE); setTile(x, H - 2, T.TREE); setTile(x, H - 1, T.TREE); }
-  for (let y = 0; y < H; y++) { setTile(0, y, T.TREE); setTile(1, y, T.TREE); setTile(W - 1, y, T.TREE); setTile(W - 2, y, T.TREE); }
-
-  // Main roads — vertical path ends within the city so it doesn't imply off-map exits
-  fillRect(13, 4, 4, 17, T.PATH);  // vertical (y=4..20)
-  fillRect(2, 12, 26, 2, T.PATH);  // horizontal
-
-  // Celadon Gym
-  fillRect(3, 5, 6, 1, T.ROOF); fillRect(3, 6, 6, 4, T.BUILDING);
-  setTile(6, 9, T.DOOR);
-
-  // Pokemon Center
-  fillRect(20, 5, 5, 1, T.ROOF); fillRect(20, 6, 5, 3, T.BUILDING);
-  setTile(22, 8, T.DOOR);
-
-  // Department Store (large)
-  fillRect(20, 15, 6, 1, T.ROOF); fillRect(20, 16, 6, 4, T.BUILDING);
-  setTile(23, 19, T.DOOR);
-
-  // Game Corner
-  fillRect(10, 15, 6, 1, T.ROOF); fillRect(10, 16, 6, 3, T.BUILDING);
-  setTile(13, 18, T.DOOR);
-
-  // Celadon Mansion
-  fillRect(3, 15, 5, 1, T.ROOF); fillRect(3, 16, 5, 3, T.BUILDING);
-  setTile(5, 18, T.DOOR);
-
-  // Garden fountain
-  setTile(14, 8, T.FOUNTAIN); setTile(15, 8, T.FOUNTAIN);
-
-  // Flowers everywhere (it's the garden city!)
-  setTile(10, 5, T.FLOWER); setTile(11, 5, T.FLOWER); setTile(12, 5, T.FLOWER);
-  setTile(10, 6, T.FLOWER); setTile(11, 6, T.FLOWER);
-  setTile(17, 5, T.FLOWER); setTile(18, 5, T.FLOWER); setTile(19, 5, T.FLOWER);
-  setTile(17, 6, T.FLOWER); setTile(18, 6, T.FLOWER);
-  setTile(5, 22, T.FLOWER); setTile(6, 22, T.FLOWER); setTile(7, 22, T.FLOWER);
-  setTile(10, 22, T.FLOWER); setTile(11, 22, T.FLOWER);
-  setTile(20, 22, T.FLOWER); setTile(21, 22, T.FLOWER);
-  setTile(3, 12, T.FLOWER); setTile(4, 12, T.FLOWER);
-
-  // Signs
-  setTile(12, 12, T.SIGN);
-  setTile(9, 10, T.SIGN);
+  for (const b of sketch.buildings) {
+    const door = b.door[0] - b.x;
+    switch (b.warp) {
+      case 'celadon_dept_1f':
+        // The tallest building in town: four rows of windows (three floors
+        // above an awning, shop windows either side of the door).
+        stampBuilding(shape, b.kind, b.x, b.y, { w: b.w, h: b.h, door, windows: [1, 3, 4, 6] });
+        for (const dy of [3, 4]) for (const dx of [1, 3, 4, 6]) at(b, dx, dy, T.WINDOW);
+        for (let dx = 0; dx < b.w; dx++) at(b, dx, b.h - 2, T.ROOF);   // the awning
+        for (const dx of [1, 6]) at(b, dx, b.h - 1, T.WINDOW);
+        break;
+      case 'celadon_mansion':
+        // Tall, many windows: two upper floors and the ground floor.
+        stampBuilding(shape, b.kind, b.x, b.y, { w: b.w, h: b.h, door, windows: [1, 5] });
+        for (const dy of [3, 5]) for (const dx of [1, 5]) at(b, dx, dy, T.WINDOW);
+        break;
+      case 'game_corner':
+        // A neon marquee beside the door.
+        stampBuilding(shape, b.kind, b.x, b.y, { w: b.w, h: b.h, door, sign: 'NEON' });
+        break;
+      default:
+        stampBuilding(shape, b.kind, b.x, b.y, { w: b.w, h: b.h, door, chimney: b.kind === 'house' });
+    }
+  }
 
   return {
     id: 'celadon_city',
@@ -434,76 +499,24 @@ export const CELADON_CITY: MapData = (() => {
     height: H,
     tiles,
     collision,
+    tileKinds,
     warps: [
-      // East exit → Route 7
-      { x: 28, y: 12, targetMap: 'route7', targetX: 1, targetY: 4 },
-      { x: 28, y: 13, targetMap: 'route7', targetX: 1, targetY: 5 },
-      // West exit → Route 16 (Cycling Road)
-      { x: 1, y: 12, targetMap: 'route16', targetX: 12, targetY: 2 },
-      { x: 1, y: 13, targetMap: 'route16', targetX: 12, targetY: 3 },
-      // Gym door
-      { x: 6, y: 9, targetMap: 'celadon_gym', targetX: 4, targetY: 13 },
-      // Pokemon Center door
-      { x: 22, y: 8, targetMap: 'pokemon_center_celadon', targetX: 4, targetY: 7 },
-      // Department Store
-      { x: 23, y: 19, targetMap: 'celadon_dept_1f', targetX: 5, targetY: 9 },
-      // Game Corner
-      { x: 13, y: 18, targetMap: 'game_corner', targetX: 7, targetY: 10 },
-      // Celadon Mansion
-      { x: 5, y: 18, targetMap: 'celadon_mansion', targetX: 3, targetY: 7 },
+      ...sketch.buildings.map(b => ({
+        x: b.door[0],
+        y: b.door[1],
+        targetMap: b.warp,
+        targetX: CELADON_DOOR_TARGETS[b.warp].x,
+        targetY: CELADON_DOOR_TARGETS[b.warp].y,
+      })),
+      ...sketch.edgeWarps.map(([x, y, targetMap]) => ({
+        x,
+        y,
+        targetMap,
+        targetX: CELADON_EDGE_TARGETS[`${x},${y}`].x,
+        targetY: CELADON_EDGE_TARGETS[`${x},${y}`].y,
+      })),
     ],
-    npcs: [
-      {
-        id: 'celadon_npc1',
-        x: 12, y: 13,
-        spriteColor: 0x60c060,
-        direction: Direction.DOWN,
-        dialogue: [
-          'CELADON CITY',
-          'The City of Rainbow\nDreams!',
-        ],
-      },
-      {
-        id: 'celadon_npc2',
-        x: 18, y: 12,
-        spriteColor: 0xf0a060,
-        direction: Direction.LEFT,
-        dialogue: [
-          "Have you been to the\nDEPARTMENT STORE?",
-          "They have everything\na trainer needs!",
-        ],
-      },
-      {
-        id: 'celadon_npc3',
-        x: 9, y: 20,
-        spriteColor: 0xa0c0f0,
-        direction: Direction.RIGHT,
-        dialogue: [
-          "The GAME CORNER is\nso much fun!",
-          "But I keep losing\nall my coins...",
-        ],
-      },
-      {
-        id: 'celadon_npc4',
-        x: 8, y: 10,
-        spriteColor: 0x80c080,
-        direction: Direction.DOWN,
-        dialogue: [
-          "ERIKA is the GYM\nLEADER here.",
-          "She uses GRASS-type\nPOKeMON. Be prepared!",
-        ],
-      },
-      {
-        id: 'celadon_tea_lady',
-        x: 4, y: 19,
-        spriteColor: 0xc0a080,
-        direction: Direction.RIGHT,
-        dialogue: [
-          "I work at CELADON\nMANSION.",
-          "Here, have some TEA!\nIt's very refreshing!",
-        ],
-      },
-    ],
+    npcs: sketch.npcs.map(n => ({ id: n.id, x: n.x, y: n.y, ...CELADON_NPC_DETAILS[n.id] })),
   };
 })();
 
@@ -536,8 +549,8 @@ export const CELADON_GYM: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 13, targetMap: 'celadon_city', targetX: 6, targetY: 10 },
-      { x: 5, y: 13, targetMap: 'celadon_city', targetX: 6, targetY: 10 },
+      { x: 4, y: 13, targetMap: 'celadon_city', targetX: 5, targetY: 20 },
+      { x: 5, y: 13, targetMap: 'celadon_city', targetX: 5, targetY: 20 },
     ],
     npcs: [
       {
@@ -613,8 +626,8 @@ export const POKEMON_CENTER_CELADON: MapData = (() => {
     tiles,
     collision,
     warps: [
-      { x: 4, y: 7, targetMap: 'celadon_city', targetX: 22, targetY: 9 },
-      { x: 5, y: 7, targetMap: 'celadon_city', targetX: 22, targetY: 9 },
+      { x: 4, y: 7, targetMap: 'celadon_city', targetX: 25, targetY: 19 },
+      { x: 5, y: 7, targetMap: 'celadon_city', targetX: 25, targetY: 19 },
     ],
     npcs: [
       {
@@ -898,7 +911,7 @@ const POKEMART_LAVENDER: MapData = (() => {
   setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'pokemart_lavender', name: 'POKeMON MART', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'lavender_town', targetX: 5, targetY: 17 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'lavender_town', targetX: 4, targetY: 17 }],
     npcs: [{
       id: 'mart_clerk', x: 2, y: 2, spriteColor: 0x4080f0, direction: Direction.DOWN,
       dialogue: ['Welcome! How may I\nserve you?'],
@@ -927,7 +940,7 @@ const CELADON_DEPT_1F: MapData = (() => {
   return {
     id: 'celadon_dept_1f', name: 'CELADON DEPT STORE 1F', width: W, height: H, tiles, collision,
     warps: [
-      { x: 5, y: H - 1, targetMap: 'celadon_city', targetX: 23, targetY: 20 },
+      { x: 5, y: H - 1, targetMap: 'celadon_city', targetX: 23, targetY: 9 },
       { x: 10, y: 3, targetMap: 'celadon_dept_2f', targetX: 1, targetY: 3 },
     ],
     npcs: [{
@@ -1142,7 +1155,7 @@ const GAME_CORNER: MapData = (() => {
     tiles, collision,
     warps: [
       // Exit to Celadon City
-      { x: 7, y: 11, targetMap: 'celadon_city', targetX: 13, targetY: 19 },
+      { x: 7, y: 11, targetMap: 'celadon_city', targetX: 18, targetY: 19 },
       // Hidden stairs to B1F (behind poster, x=11 y=2 is the sign/poster)
       { x: 12, y: 2, targetMap: 'rocket_hideout_b1f', targetX: 1, targetY: 0 },
     ],
@@ -1414,7 +1427,7 @@ export const CELADON_MANSION: MapData = (() => {
   setTile(3, H - 1, T.DOORMAT);
   return {
     id: 'celadon_mansion', name: 'CELADON MANSION', width: W, height: H, tiles, collision,
-    warps: [{ x: 3, y: H - 1, targetMap: 'celadon_city', targetX: 5, targetY: 19 }],
+    warps: [{ x: 3, y: H - 1, targetMap: 'celadon_city', targetX: 5, targetY: 9 }],
     npcs: [
       {
         id: 'celadon_mansion_npc', x: 4, y: 3, spriteColor: 0x60a0c0, direction: Direction.DOWN,

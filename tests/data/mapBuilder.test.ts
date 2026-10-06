@@ -249,6 +249,13 @@ describe('stampBuilding', () => {
     expect(b.kinds['3,3']).toBe('house');
   });
 
+  it('gives a NEON board the landmark marquee art (the Celadon Game Corner)', () => {
+    const b = stampOn(6, 5, 'landmark', 0, 0, { w: 6, h: 4, door: 2, sign: 'NEON' });
+    expect(b.rows[3]).toBe('BBDsBB');
+    expect(b.kinds['3,3']).toBe('landmark');
+    expect(b.shape.collision[3][3]).toBe(true);
+  });
+
   it('rejects footprints it cannot draw', () => {
     const shape = createMapShape(10, 10, T.GRASS);
     expect(() => stampBuilding(shape, 'house', 0, 0, { w: 2 })).toThrow(/2 wide/);
