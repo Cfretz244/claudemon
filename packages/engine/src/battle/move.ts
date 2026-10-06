@@ -59,6 +59,7 @@ import {
   PreActionAction,
 } from '../logic/chargeMoves';
 import { outcomeFor, MoveOutcome } from '../logic/animationOutcome';
+import { hasSelectableMove } from '../logic/fightAction';
 import { Rng } from '../random/seed';
 
 /** STRUGGLE's id in `MOVES_DATA`. */
@@ -476,13 +477,14 @@ export function executeBattleMove(ctx: MoveContext, rng: Rng = Math.random): Mov
   // Gen II), so a foe whose slots are all dry simply executes the selected
   // slot again: `currentPp` stays clamped at 0, there is no `no-pp` refusal
   // and no Struggle, exactly what main's scene did (it had no PP gate at all).
-  // Player side: the Gen I rule. Every slot dry => STRUGGLE; a spent slot with
-  // PP elsewhere => `no-pp`. Both are unreachable today because `BattleMenu`
-  // refuses an empty slot (so a fully dry player mon is soft-locked, on main
-  // too; that is a separate fix, not this module's). A selected index with no
-  // slot behind it has nothing to execute on either side (main would have
-  // thrown reading `moveId` of undefined).
-  const struggle = isPlayer && !p.moves.some(m => m.currentPp > 0);
+  // Player side: the Gen I rule (pokered `AnyMoveToSelect`). No selectable
+  // slot - every slot dry, the disabled one's PP ignored - => STRUGGLE; a
+  // spent slot with PP elsewhere => `no-pp` (unreachable: `BattleMenu`
+  // refuses an empty slot). `BattleMenu`'s FIGHT consults the same rule
+  // (`fightAction`) and dispatches slot 0 without opening the move list. A
+  // selected index with no slot behind it has nothing to execute on either
+  // side (main would have thrown reading `moveId` of undefined).
+  const struggle = isPlayer && !hasSelectableMove(p.moves, a.disable.moveIndex);
   event.struggle = struggle;
   if (!struggle && (!slot || (isPlayer && slot.currentPp <= 0))) {
     event.resolution = 'no-pp';
@@ -651,7 +653,9 @@ export function executeBattleMove(ctx: MoveContext, rng: Rng = Math.random): Mov
     pres.impactSfx = true;
 
     if (move.effect === MoveEffect.RECOIL) {
-      const recoilDmg = Math.max(1, Math.floor(dmg.damage / 4));
+      // Gen I (pokered RecoilEffect_): 1/4 of the damage dealt, but STRUGGLE
+      // takes 1/2 (Gen II+ changed it); at least 1 either way.
+      const recoilDmg = Math.max(1, Math.floor(dmg.damage / (id === STRUGGLE_MOVE_ID ? 2 : 4)));
       sp.currentHp = Math.max(0, sp.currentHp - recoilDmg);
       event.recoil = recoilDmg;
       messages.push(`${actorName} is hit\nwith recoil!`);
