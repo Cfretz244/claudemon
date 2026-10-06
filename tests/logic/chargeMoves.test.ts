@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import BATTLE_SCENE_SRC from '../../src/scenes/BattleScene.ts?raw';
+import MOVE_SRC from '../../packages/engine/src/battle/move.ts?raw';
 import {
   CHARGE_MESSAGES,
   isChargeMove,
@@ -143,25 +144,38 @@ describe('BattleScene honours the charge lock', () => {
   });
 
   it('a cancelled charge puts the user back on the field', () => {
-    expect(BATTLE_SCENE_SRC).toMatch(/if \(pre\.chargeCancelled\) this\.clearCharge\(isPlayer\);/);
+    // R3: the engine drops the stored move (`cancelsCharge`) and reports it on
+    // the event; the scene's only job is to un-hide a FLY/DIG user.
+    expect(MOVE_SRC).toMatch(/event\.chargeCancelled = pre\.chargeCancelled === true;/);
+    expect(BATTLE_SCENE_SRC).toMatch(/if \(event\.chargeCancelled\) this\.clearCharge\(isPlayer\);/);
     expect(BATTLE_SCENE_SRC).toMatch(/this\.clearCharge\(true\);/);   // player faint
     expect(BATTLE_SCENE_SRC).toMatch(/this\.clearCharge\(false\);/);  // opponent faint
     expect(BATTLE_SCENE_SRC).toMatch(/vol\.charging = null;/);        // switch / reset
   });
 
   it('PP comes off on the release turn only, and the charge turn is separate', () => {
-    // doChargeTurn never touches currentPp; doExecuteMove (the release path)
-    // holds the single decrement in the whole scene.
-    const decrements = [...BATTLE_SCENE_SRC.matchAll(/currentPp = Math\.max\(0, move\.currentPp - 1\)/g)];
+    // The single decrement in the codebase now lives in the engine, after the
+    // charge block: the charge turn returns before it, so an interrupted
+    // two-turn move costs nothing and a completed one costs exactly 1.
+    const decrements = [...MOVE_SRC.matchAll(/currentPp = Math\.max\(0, slot\.currentPp - 1\)/g)];
     expect(decrements).toHaveLength(1);
-    const from = BATTLE_SCENE_SRC.indexOf('private doChargeTurn(');
-    const to = BATTLE_SCENE_SRC.indexOf('private doExecuteMove(');
-    expect(from).toBeGreaterThan(-1);
-    expect(BATTLE_SCENE_SRC.slice(from, to)).not.toMatch(/currentPp -/);
+    expect(BATTLE_SCENE_SRC).not.toMatch(/currentPp\s*=\s*Math\.max/);
+    const body = MOVE_SRC.slice(MOVE_SRC.indexOf('export function executeBattleMove('));
+    const chargeReturn = body.indexOf("if (step === 'charge') {");
+    expect(chargeReturn).toBeGreaterThan(-1);
+    expect(chargeReturn).toBeLessThan(body.indexOf('currentPp = Math.max(0, slot.currentPp - 1)'));
+    // Nothing in the charge branch itself spends PP.
+    const chargeBranch = body.slice(chargeReturn, body.indexOf("a.volatile.charging = null;"));
+    expect(chargeBranch).not.toMatch(/currentPp/);
   });
 
   it('the release turn plays the release half of the animation', () => {
-    expect(BATTLE_SCENE_SRC).toMatch(/phase: 'charge'/);
-    expect(BATTLE_SCENE_SRC).toMatch(/step === 'release' \? 'release' : undefined/);
+    // The engine names the half on the event; the scene forwards it and, on a
+    // release, makes sure the hidden sprite comes back.
+    expect(MOVE_SRC).toMatch(/event\.animation = \{ moveId: slot\.moveId, phase: 'charge' \}/);
+    expect(MOVE_SRC).toMatch(/event\.phase = step;/);
+    expect(MOVE_SRC).toMatch(/event\.animation = \{ moveId: id, phase: event\.phase \}/);
+    expect(BATTLE_SCENE_SRC).toMatch(/phase: event\.animation\.phase,/);
+    expect(BATTLE_SCENE_SRC).toMatch(/if \(event\.animation!\.phase === 'release'\) animCtx\.attackerSprite\.setAlpha\(1\);/);
   });
 });

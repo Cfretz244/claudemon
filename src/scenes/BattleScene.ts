@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from '../utils/constants';
-import { PokemonInstance, StatusCondition, MoveCategory, MoveEffect, PHYSICAL_TYPES, PokemonType } from '../types/pokemon.types';
+import { PokemonInstance, StatusCondition, PokemonType } from '../types/pokemon.types';
 import { BattleType } from '../types/battle.types';
 import { POKEMON_DATA } from '../data/pokemon';
 import { MOVES_DATA } from '../data/moves';
@@ -8,7 +8,6 @@ import { BattleHUD } from '../components/BattleHUD';
 import { BattleMenu, MenuSelection, BagItem } from '../components/BattleMenu';
 import { ITEMS } from '../data/items';
 import { TextBox } from '../components/TextBox';
-import { calculateDamage, checkCritical, checkAccuracy } from '../systems/DamageCalculator';
 import { calculateExpGain, addExperience, learnMove } from '../systems/ExperienceSystem';
 import { expGainSegments } from '../logic/expBar';
 import { MoveForgetUI } from '../components/MoveForgetUI';
@@ -20,17 +19,18 @@ import { playEvolution } from '../systems/animations/evolution';
 import { applyBattleScale } from '../systems/animations/baseScale';
 import { attemptCatch } from '../systems/CatchSystem';
 import { trainerPrizeMoney } from '@claudemon/engine/battle/rewards';
+import {
+  executeBattleMove, applyMoveEvent, Combatant, MoveContext, MoveEvent,
+} from '@claudemon/engine/battle/move';
 import { selectAIMove } from '../systems/AISystem';
 import {
-  resolveTurnOrder, resolvePreAction, rollHitCount, applySpecialDamage,
-  applyMoveEffect, applyLeechSeed, calculateRunChance,
-  splitExp, getFirstAlivePokemon, EffectContext, evadesSemiInvulnerable,
+  resolveTurnOrder, applyLeechSeed, calculateRunChance,
+  splitExp, getFirstAlivePokemon,
 } from '../systems/BattleEngine';
 import { soundSystem } from '../systems/SoundSystem';
 import { generatePokemonSprite, getShapeForSpecies, generateGhostBattleSprite } from '../utils/spriteGenerator';
 import { PlayerState } from '../entities/Player';
 import { SaveData } from '../systems/SaveSystem';
-import { getEffectivenessText } from '../data/typeChart';
 import { createPokemon, gainHappiness, loseHappiness } from '../entities/Pokemon';
 import { TRAINERS } from '../data/trainers';
 import { GYM_LEADERS } from '../data/gymLeaders';
@@ -38,13 +38,10 @@ import { ELITE_FOUR, CHAMPION, HALL_OF_FAME_TEXT } from '../data/eliteFour';
 import { playMoveAnimation, AnimationContext } from '../systems/MoveAnimations';
 import { playEntrance, catchSequence } from '../systems/animations/entrances';
 import { resolveEntrance, resolveCry, EntranceKind } from '../logic/entranceSpec';
-import { outcomeFor } from '../logic/animationOutcome';
 import { reviveHp, isReviveItem } from '../logic/reviveItems';
 import { clearsForcedEncounter, WildBattleEnd } from '../logic/forcedEncounters';
 import { roundContinues } from '../logic/turnFlow';
-import {
-  ChargeState, isChargeMove, isSemiInvulnerableCharge, chargeMessage, resolveChargeStep,
-} from '../logic/chargeMoves';
+import { ChargeState } from '../logic/chargeMoves';
 import { hallOfFameResult } from '../logic/hallOfFame';
 import { restoreParty } from '../logic/healing';
 import '../systems/animations';
@@ -628,7 +625,7 @@ export class BattleScene extends Phaser.Scene {
         const aiMove = this.opponentPokemon.moves[aiMoveIndex];
         const aiMoveData = MOVES_DATA[aiMove?.moveId];
         if (aiMove && aiMoveData) {
-          this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false).then(() => {
+          this.executeMove(false, aiMoveIndex).then(() => {
             if (this.playerPokemon.currentHp <= 0) {
               this.handlePlayerFaint();
             } else {
@@ -725,19 +722,19 @@ export class BattleScene extends Phaser.Scene {
     );
 
     if (playerFirst) {
-      await this.executeMove(this.playerPokemon, this.opponentPokemon, playerMove, playerMoveData, true);
+      await this.executeMove(true, playerMoveIndex);
       if (this.battleOver) return;
 
       if (roundContinues(this.playerPokemon, this.opponentPokemon)) {
-        await this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false);
+        await this.executeMove(false, aiMoveIndex);
         if (this.battleOver) return;
       }
     } else {
-      await this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false);
+      await this.executeMove(false, aiMoveIndex);
       if (this.battleOver) return;
 
       if (roundContinues(this.opponentPokemon, this.playerPokemon)) {
-        await this.executeMove(this.playerPokemon, this.opponentPokemon, playerMove, playerMoveData, true);
+        await this.executeMove(true, playerMoveIndex);
         if (this.battleOver) return;
       }
     }
@@ -773,436 +770,145 @@ export class BattleScene extends Phaser.Scene {
     this.showBattleMenu();
   }
 
-  private executeMove(
-    attacker: PokemonInstance,
-    defender: PokemonInstance,
-    move: { moveId: number; currentPp: number; maxPp: number },
-    moveData: { id: number; name: string; type: any; category: any; power: number; accuracy: number; pp: number; effect?: MoveEffect; priority?: number },
-    isPlayer: boolean,
-  ): Promise<void> {
-    return new Promise<void>((resolve) => {
-      const atkVol = isPlayer ? this.playerVolatile : this.opponentVolatile;
-      const isRecharging = isPlayer ? this.playerRecharging : this.opponentRecharging;
-      const name = this.getSpeciesName(attacker.speciesId);
+  /**
+   * One side of the battle as the engine sees it: the scene's own live objects,
+   * so a commit writes straight through to what the HUD reads.
+   */
+  private combatant(isPlayer: boolean): Combatant {
+    return {
+      pokemon: isPlayer ? this.playerPokemon : this.opponentPokemon,
+      stages: isPlayer ? this.playerStatStages : this.opponentStatStages,
+      volatile: isPlayer ? this.playerVolatile : this.opponentVolatile,
+      disable: isPlayer ? this.playerDisable : this.opponentDisable,
+      recharging: isPlayer ? this.playerRecharging : this.opponentRecharging,
+    };
+  }
 
-      // Two-turn CHARGE moves. `moveIndex` identifies the slot the charge is
-      // stored against; the fake move METRONOME builds is not in the list, and
-      // is not a charge move either, so the -1 it yields never charges.
-      const moveIndex = attacker.moves.indexOf(move as PokemonInstance['moves'][number]);
-      const step = isChargeMove(move.moveId)
-        ? resolveChargeStep(atkVol.charging, moveIndex)
-        : null;
+  /** `recharging` is a primitive on the scene, so it is copied back by hand. */
+  private syncRecharging(ctx: MoveContext): void {
+    const isPlayer = ctx.attackerIsPlayer;
+    if (isPlayer) {
+      this.playerRecharging = ctx.attacker.recharging;
+      this.opponentRecharging = ctx.defender.recharging;
+    } else {
+      this.opponentRecharging = ctx.attacker.recharging;
+      this.playerRecharging = ctx.defender.recharging;
+    }
+  }
 
-      const attack = () => {
-        if (step === 'charge') {
-          this.doChargeTurn(attacker, move, moveData, isPlayer, moveIndex, resolve);
-          return;
-        }
-        // Releasing: the state clears BEFORE the move runs, so a miss clears it
-        // too. The sprite is left hidden on purpose - the release half of the
-        // FLY/DIG animation is what brings it back.
-        if (step === 'release') atkVol.charging = null;
-        this.doExecuteMove(
-          attacker, defender, move, moveData, isPlayer, resolve,
-          step === 'release' ? 'release' : undefined,
-        );
-      };
-
-      const pre = resolvePreAction(attacker, atkVol, isRecharging);
-      // Asleep / frozen / fully paralysed / flinched / confusion self-hit on the
-      // release turn: the engine has already dropped the charge, the scene just
-      // has to put a hidden FLY/DIG user back on the field.
-      if (pre.chargeCancelled) this.clearCharge(isPlayer);
-      switch (pre.action) {
-        case 'recharge':
-          if (isPlayer) this.playerRecharging = false;
-          else this.opponentRecharging = false;
-          this.textBox.show([`${name} must recharge!`], resolve);
-          return;
-        case 'flinch':
-          this.textBox.show([`${name} flinched!`], resolve);
-          return;
-        case 'confusion-snap':
-          this.textBox.show([`${name} snapped out\nof confusion!`], attack);
-          return;
-        case 'confusion-self-hit':
-          this.updateHUD();
-          this.textBox.show([`${name} is confused!`, 'It hurt itself in\nits confusion!'], resolve);
-          return;
-        case 'confusion-attack':
-          this.textBox.show([`${name} is confused!`], attack);
-          return;
-        case 'sleep-wake':
-          // `resolvePreAction` has already cleared `status`. Refresh the HUD in
-          // the same tick (as 'confusion-self-hit' does) so the SLP badge is
-          // gone while "woke up!" is on screen, instead of lingering until the
-          // next damage/end-of-turn redraw.
-          this.updateHUD();
-          this.textBox.show([`${name} woke up!`], resolve);
-          return;
-        case 'sleep':
-          this.textBox.show([`${name} is fast\nasleep!`], resolve);
-          return;
-        case 'paralyzed':
-          this.textBox.show([`${name} is fully\nparalyzed!`], resolve);
-          return;
-        case 'frozen':
-          this.textBox.show([`${name} is frozen\nsolid!`], resolve);
-          return;
-        case 'thaw':
-          // Show the thaw message, then attack once the player advances it
-          // (same shape as 'confusion-snap'). Previously attack() ran in the
-          // same tick, and doExecuteMove's textBox.show() replaced this
-          // message before it was ever drawn.
-          // Same as 'sleep-wake': the FRZ badge has to go with the message.
-          this.updateHUD();
-          this.textBox.show([`${name} thawed out!`], attack);
-          return;
-        case 'attack':
-          attack();
-          return;
-      }
-    });
+  private animateHpBar(mine: boolean, mon: PokemonInstance): Promise<void> {
+    return mine
+      ? this.hud.animatePlayerHP(mon.currentHp / mon.stats.hp)
+      : this.hud.animateOpponentHP(mon.currentHp / mon.stats.hp);
   }
 
   /**
-   * Turn 1 of a two-turn CHARGE move: store the lock, print the charge line,
-   * play the `charge` half of the animation. No PP, no accuracy roll, no
-   * damage and no secondary effect - Gen I does all of that on turn 2.
+   * Run one move. Every rule lives in `@claudemon/engine`'s
+   * `executeBattleMove`; this scene only draws the `MoveEvent` it returns.
+   *
+   * The split is deliberate and is what keeps the #87 invariant honest:
+   * `executeBattleMove` resolves accuracy, crit and damage up front (so the
+   * animation can show what is about to happen) but STAGES everything they
+   * imply; `applyMoveEvent` commits it after the animation, in the same tick
+   * the old `doExecuteMove` subtracted HP.
    */
-  private doChargeTurn(
-    attacker: PokemonInstance,
-    move: { moveId: number; currentPp: number; maxPp: number },
-    moveData: { id: number; name: string },
-    isPlayer: boolean,
-    moveIndex: number,
-    resolve: () => void,
-  ): void {
-    const atkVol = isPlayer ? this.playerVolatile : this.opponentVolatile;
-    atkVol.charging = { moveIndex, moveId: move.moveId };
-
-    const attackerName = isPlayer
-      ? this.getSpeciesName(attacker.speciesId)
-      : `Foe ${this.getSpeciesName(attacker.speciesId)}`;
-    const charge = chargeMessage(move.moveId, attackerName);
-
-    const animCtx: AnimationContext = {
-      scene: this,
-      attackerSprite: isPlayer ? this.playerSprite : this.opponentSprite,
-      defenderSprite: isPlayer ? this.opponentSprite : this.playerSprite,
-      isPlayer,
-      phase: 'charge',
-    };
-
-    const lines = [`${attackerName} used\n${moveData.name}!`];
-    if (charge) lines.push(charge);
-    this.textBox.show(lines, async () => {
-      await playMoveAnimation(move.moveId, animCtx);
-      resolve();
+  private executeMove(isPlayer: boolean, moveIndex: number): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const ctx: MoveContext = {
+        attacker: this.combatant(isPlayer),
+        defender: this.combatant(!isPlayer),
+        moveIndex,
+        attackerIsPlayer: isPlayer,
+      };
+      const event = executeBattleMove(ctx);
+      // The pre-action half already mutated the model (wake, thaw, confusion
+      // damage, the charge lock, PP): pick up its `recharging` before drawing.
+      this.syncRecharging(ctx);
+      this.renderMoveEvent(ctx, event, resolve);
     });
   }
 
-  /** Core move execution after status/confusion checks pass */
-  private doExecuteMove(
-    attacker: PokemonInstance,
-    defender: PokemonInstance,
-    move: { moveId: number; currentPp: number; maxPp: number },
-    moveData: { id: number; name: string; type: any; category: any; power: number; accuracy: number; pp: number; effect?: MoveEffect; priority?: number },
-    isPlayer: boolean,
-    resolve: () => void,
-    phase?: 'charge' | 'release',
-  ): void {
-    const defVol = isPlayer ? this.opponentVolatile : this.playerVolatile;
+  /** Draw a `MoveEvent`: text, animation, then the post-animation commit. */
+  private renderMoveEvent(ctx: MoveContext, event: MoveEvent, resolve: () => void): void {
+    const isPlayer = event.actorIsPlayer;
 
-    // PP comes off here, i.e. on the turn the move actually executes. Gen I
-    // deducts SOLAR BEAM's PP on the release turn (Bulbapedia, Solar Beam ->
-    // Generation I): an interrupted charge costs nothing, and a full two-turn
-    // use costs exactly 1.
-    move.currentPp = Math.max(0, move.currentPp - 1);
+    // Asleep / frozen / fully paralysed / flinched / confusion self-hit on the
+    // release turn: the engine has already dropped the charge, the scene just
+    // has to put a hidden FLY/DIG user back on the field.
+    if (event.chargeCancelled) this.clearCharge(isPlayer);
+    // #116: the badge a wake/thaw just cleared, and the HP a confusion self-hit
+    // just took, are redrawn in the same tick the message goes up.
+    if (event.presentation.refreshHudBefore) this.updateHUD();
 
-    const attackerName = isPlayer
-      ? this.getSpeciesName(attacker.speciesId)
-      : `Foe ${this.getSpeciesName(attacker.speciesId)}`;
-
-    const usedMessage = `${attackerName} used\n${moveData.name}!`;
-
-    // Build animation context
-    const animCtx: AnimationContext = {
-      scene: this,
-      attackerSprite: isPlayer ? this.playerSprite : this.opponentSprite,
-      defenderSprite: isPlayer ? this.opponentSprite : this.playerSprite,
-      isPlayer,
-      phase,
-    };
-
-    // Metronome: pick a random move and execute it instead
-    if (moveData.effect === MoveEffect.METRONOME) {
-      const allMoveIds = Object.keys(MOVES_DATA).map(Number).filter(id => {
-        const m = MOVES_DATA[id];
-        return m && m.effect !== MoveEffect.METRONOME && m.effect !== MoveEffect.MIRROR_MOVE;
-      });
-      const randomId = allMoveIds[Math.floor(Math.random() * allMoveIds.length)];
-      const randomMove = MOVES_DATA[randomId];
-      if (randomMove) {
-        this.textBox.show([usedMessage, `It became\n${randomMove.name}!`], () => {
-          const fakeMove = { moveId: randomId, currentPp: 1, maxPp: 1 };
-          this.doExecuteMove(attacker, defender, fakeMove, randomMove, isPlayer, resolve);
-        });
-        return;
-      }
-    }
-
-    // Mirror Move: copy opponent's last move
-    if (moveData.effect === MoveEffect.MIRROR_MOVE) {
-      this.textBox.show([usedMessage, 'But it failed!'], resolve);
+    // Nothing to animate (a pre-action stop, MIRROR MOVE, DREAM EATER on a
+    // waking target, an empty move slot): one run of lines and we are done.
+    if (!event.animation) {
+      const lines = [...event.before, ...event.messages];
+      if (lines.length > 0) this.textBox.show(lines, resolve);
+      else resolve();
       return;
     }
 
-    // Dream Eater: only works if defender is sleeping
-    if (moveData.effect === MoveEffect.DREAM_EATER) {
-      if (defender.status !== StatusCondition.SLEEP) {
-        this.textBox.show([usedMessage, 'But it failed!'], resolve);
-        return;
-      }
-    }
+    const animCtx: AnimationContext = {
+      scene: this,
+      attackerSprite: isPlayer ? this.playerSprite : this.opponentSprite,
+      defenderSprite: isPlayer ? this.opponentSprite : this.playerSprite,
+      isPlayer,
+      phase: event.animation.phase,
+      // Tier 4: the picture knows how the move turned out before it plays.
+      outcome: event.outcome,
+    };
 
-    // Accuracy check (with stat stages)
-    const atkStages = isPlayer ? this.playerStatStages : this.opponentStatStages;
-    const defStages = isPlayer ? this.opponentStatStages : this.playerStatStages;
-    // A FLY / DIG user in mid-charge is off the field: everything aimed at it
-    // misses down the ordinary miss path, except always-hit moves like SWIFT.
-    const defenderSemiInvulnerable = !!defVol.charging && isSemiInvulnerableCharge(defVol.charging.moveId);
-    const hit = !evadesSemiInvulnerable(moveData.accuracy, defenderSemiInvulnerable)
-      && checkAccuracy(moveData as any, atkStages.acc, defStages.eva);
-
-    // === Tier 4: the animation has to know how the move turned out ===
-    //
-    // The crit roll and the damage calculation move UP here, ahead of the
-    // animation, purely so the picture can show what is about to happen.
-    // `checkCritical` and `calculateDamage` are pure - they read `Math.random`
-    // but mutate nothing - so rolling them earlier changes no outcome; the
-    // results are carried down and reused, so nothing is rolled twice. Status
-    // moves and the special-damage effects (all `power: 0`) are skipped, which
-    // leaves their `outcome` undefined and their animation exactly as it was.
-    const damaging = hit && moveData.power > 0 && moveData.category !== MoveCategory.STATUS;
-    const preCrit = damaging ? checkCritical(attacker) : false;
-    const preResult = damaging
-      ? calculateDamage(attacker, defender, moveData as any, preCrit, atkStages, defStages)
-      : undefined;
-    animCtx.outcome = outcomeFor(hit, preResult, moveData);
-
-    // Show "X used MOVE!", play the animation - a miss animation too, which is
-    // why "But it missed!" now comes after it rather than instead of it - then
-    // continue with the results.
-    this.textBox.show([usedMessage], async () => {
-      // Play move animation
-      await playMoveAnimation(move.moveId, animCtx);
+    this.textBox.show(event.before, async () => {
+      await playMoveAnimation(event.animation!.moveId, animCtx);
       // Belt and braces: the release half of FLY / DIG un-hides the user, but
       // never leave a sprite invisible if an override bailed out early.
-      if (phase === 'release') animCtx.attackerSprite.setAlpha(1);
+      if (event.animation!.phase === 'release') animCtx.attackerSprite.setAlpha(1);
+      this.settleMoveEvent(ctx, event, animCtx, resolve);
+    });
+  }
 
-      if (!hit) {
-        this.textBox.show(["But it missed!"], resolve);
-        return;
-      }
+  /** The post-animation half: commit the staged state, then show the result. */
+  private settleMoveEvent(
+    ctx: MoveContext,
+    event: MoveEvent,
+    animCtx: AnimationContext,
+    resolve: () => void,
+  ): void {
+    // #87: HP, status, stages and the recharge flag land HERE, after the
+    // picture, exactly where the old `doExecuteMove` subtracted them.
+    applyMoveEvent(ctx, event);
+    this.syncRecharging(ctx);
 
-      const messages: string[] = [];
+    const pres = event.presentation;
+    // The engine names what happened; the scene owns every asset string.
+    if (pres.effectivenessSfx === 'super') soundSystem.superEffective();
+    else if (pres.effectivenessSfx === 'weak') soundSystem.notVeryEffective();
+    if (pres.impactSfx) soundSystem.hit();
 
-      const atkVol = isPlayer ? this.playerVolatile : this.opponentVolatile;
-      const buildEffectCtx = (isSecondary: boolean): EffectContext => ({
-        attacker, defender,
-        atkName: this.getSpeciesName(attacker.speciesId),
-        defName: this.getSpeciesName(defender.speciesId),
-        atkStages, defStages,
-        atkVolatile: atkVol, defVolatile: defVol,
-        defDisable: isPlayer ? this.opponentDisable : this.playerDisable,
-        isSecondary,
+    const bars: Promise<void>[] = [];
+    if (pres.animateAttackerHp) bars.push(this.animateHpBar(event.actorIsPlayer, ctx.attacker.pokemon));
+    if (pres.animateDefenderHp) bars.push(this.animateHpBar(!event.actorIsPlayer, ctx.defender.pokemon));
+
+    if (pres.hitFlash) {
+      this.tweens.add({
+        targets: animCtx.defenderSprite,
+        alpha: 0,
+        duration: 80,
+        yoyo: true,
+        repeat: 2,
       });
+    }
 
-      // === Special damage effects (bypass normal damage formula) ===
-      const special = applySpecialDamage(moveData.effect, move.moveId, attacker, defender, atkVol, defVol);
-      if (special.kind === 'failed') {
-        messages.push(...special.messages);
-        this.textBox.show(messages, resolve);
-        return;
-      }
-      if (special.kind === 'hit') {
-        messages.push(...special.messages);
-        soundSystem.hit();
-        this.applyDamageAnimation(defender, isPlayer, messages, resolve);
-        return;
-      }
-
-      // === Normal damage path ===
-      if (moveData.power > 0 && moveData.category !== MoveCategory.STATUS) {
-        // Rolled before the animation (see the tier-4 block above); reused
-        // verbatim here, so the picture and the numbers can never disagree.
-        const isCrit = preCrit;
-        const result = preResult ?? calculateDamage(attacker, defender, moveData as any, isCrit, atkStages, defStages);
-
-        if (result.effectiveness === 0) {
-          messages.push(getEffectivenessText(0));
-          this.textBox.show(messages, resolve);
-          return;
-        }
-
-        // Multi-hit moves
-        const hitCount = rollHitCount(moveData.effect);
-        const totalDamage = result.damage * hitCount;
-
-        // Track damage for Counter
-        defVol.lastDamageTaken = totalDamage;
-        defVol.lastDamagePhysical = PHYSICAL_TYPES.includes(moveData.type);
-
-        defender.currentHp = Math.max(0, defender.currentHp - totalDamage);
-
-        if (result.isCritical) {
-          messages.push("A critical hit!");
-        }
-
-        if (hitCount > 1) {
-          messages.push(`Hit ${hitCount} times!`);
-        }
-
-        const effText = getEffectivenessText(result.effectiveness);
-        if (effText) {
-          messages.push(effText);
-          if (result.effectiveness > 1) {
-            soundSystem.superEffective();
-          } else if (result.effectiveness < 1) {
-            soundSystem.notVeryEffective();
-          }
-        }
-
-        soundSystem.hit();
-
-        // Recoil damage (Take Down, Double-Edge, Submission)
-        if (moveData.effect === MoveEffect.RECOIL) {
-          const recoilDmg = Math.max(1, Math.floor(result.damage / 4));
-          attacker.currentHp = Math.max(0, attacker.currentHp - recoilDmg);
-          messages.push(`${attackerName} is hit\nwith recoil!`);
-        }
-
-        // Drain moves (Absorb, Mega Drain, Leech Life)
-        if (moveData.effect === MoveEffect.DRAIN) {
-          const drainAmt = Math.max(1, Math.floor(result.damage / 2));
-          attacker.currentHp = Math.min(attacker.stats.hp, attacker.currentHp + drainAmt);
-          messages.push(`${attackerName} drained\nenergy!`);
-        }
-
-        // Self-destruct / Explosion
-        if (moveData.effect === MoveEffect.SELF_DESTRUCT) {
-          attacker.currentHp = 0;
-        }
-
-        // Flinch (secondary effect on damage moves)
-        if (moveData.effect === MoveEffect.FLINCH && defender.currentHp > 0) {
-          if (Math.random() < 0.3) {
-            defVol.flinched = true;
-          }
-        }
-
-        // Recharge (Hyper Beam) - must skip next turn
-        if (moveData.effect === MoveEffect.RECHARGE && defender.currentHp > 0) {
-          if (isPlayer) this.playerRecharging = true;
-          else this.opponentRecharging = true;
-          messages.push(`${attackerName} must\nrecharge!`);
-        }
-
-        // Dream Eater heals 50% of damage dealt
-        if (moveData.effect === MoveEffect.DREAM_EATER) {
-          const drainAmt = Math.max(1, Math.floor(totalDamage / 2));
-          attacker.currentHp = Math.min(attacker.stats.hp, attacker.currentHp + drainAmt);
-          messages.push(`${attackerName} drained\nenergy!`);
-        }
-
-        // Apply other secondary effects (chance-based for damage moves)
-        const SKIP_SECONDARY = [
-          MoveEffect.RECOIL, MoveEffect.DRAIN, MoveEffect.SELF_DESTRUCT,
-          MoveEffect.FLINCH, MoveEffect.MULTI_HIT, MoveEffect.TWO_HIT,
-          MoveEffect.RECHARGE, MoveEffect.DREAM_EATER, MoveEffect.CHARGE,
-          MoveEffect.WRAP,
-        ];
-        if (moveData.effect && defender.currentHp > 0 && !SKIP_SECONDARY.includes(moveData.effect)) {
-          applyMoveEffect(moveData.effect, buildEffectCtx(true), messages);
-        }
-
-        // Animate HP changes
-        const hpPromise = isPlayer
-          ? this.hud.animateOpponentHP(defender.currentHp / defender.stats.hp)
-          : this.hud.animatePlayerHP(defender.currentHp / defender.stats.hp);
-
-        const targetSprite = isPlayer ? this.opponentSprite : this.playerSprite;
-        this.tweens.add({
-          targets: targetSprite,
-          alpha: 0,
-          duration: 80,
-          yoyo: true,
-          repeat: 2,
-        });
-
-        hpPromise.then(() => {
-          this.updateHUD();
-          if (messages.length > 0) {
-            this.textBox.show(messages, resolve);
-          } else {
-            resolve();
-          }
-        });
-      } else {
-        // Status move - effect always applies (already passed accuracy check)
-        const atkHpBefore = attacker.currentHp;
-        const defHpBefore = defender.currentHp;
-        if (moveData.effect) {
-          applyMoveEffect(moveData.effect, buildEffectCtx(false), messages);
-        }
-        // The damage path redraws the HUD once its HP tween finishes; a status
-        // move never took that path, so nothing redrew the HP box at all and a
-        // status it just applied (THUNDER WAVE -> PAR, TOXIC -> PSN, REST's own
-        // sleep) or an HP change it just made (RECOVER, SOFTBOILED, REST) only
-        // showed up on the NEXT refresh - i.e. during the opponent's reply.
-        // Animate whichever bar moved, exactly as `applyDamageAnimation` does,
-        // then redraw everything before the text goes up.
-        const bars: Promise<void>[] = [];
-        const animate = (mine: boolean, mon: PokemonInstance) => bars.push(
-          mine
-            ? this.hud.animatePlayerHP(mon.currentHp / mon.stats.hp)
-            : this.hud.animateOpponentHP(mon.currentHp / mon.stats.hp),
-        );
-        if (attacker.currentHp !== atkHpBefore) animate(isPlayer, attacker);
-        if (defender.currentHp !== defHpBefore) animate(!isPlayer, defender);
-        void Promise.all(bars).then(() => {
-          this.updateHUD();
-          if (messages.length > 0) {
-            this.textBox.show(messages, resolve);
-          } else {
-            resolve();
-          }
-        });
-      }
-    });
+    const finish = () => {
+      if (pres.refreshHudAfter) this.updateHUD();
+      if (event.messages.length > 0) this.textBox.show(event.messages, resolve);
+      else resolve();
+    };
+    if (bars.length > 0) void Promise.all(bars).then(finish);
+    else finish();
   }
 
-  /** Animate HP drop + sprite flash for special damage moves (OHKO, fixed dmg, etc.), then show messages */
-  private applyDamageAnimation(defender: PokemonInstance, isPlayer: boolean, messages: string[], resolve: () => void): void {
-    const hpPromise = isPlayer
-      ? this.hud.animateOpponentHP(defender.currentHp / defender.stats.hp)
-      : this.hud.animatePlayerHP(defender.currentHp / defender.stats.hp);
-
-    const targetSprite = isPlayer ? this.opponentSprite : this.playerSprite;
-    this.tweens.add({
-      targets: targetSprite,
-      alpha: 0,
-      duration: 80,
-      yoyo: true,
-      repeat: 2,
-    });
-
-    hpPromise.then(() => {
-      this.updateHUD();
-      this.textBox.show(messages, resolve);
-    });
-  }
 
   private applyStatusDamage(pokemon: PokemonInstance, isPlayer: boolean): Promise<void> {
     return new Promise(resolve => {
@@ -1477,7 +1183,7 @@ export class BattleScene extends Phaser.Scene {
         const aiMove = this.opponentPokemon.moves[aiMoveIndex];
         const aiMoveData = MOVES_DATA[aiMove?.moveId];
         if (aiMove && aiMoveData) {
-          this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false).then(() => {
+          this.executeMove(false, aiMoveIndex).then(() => {
             if (this.playerPokemon.currentHp <= 0) {
               this.handlePlayerFaint();
             } else {
@@ -1540,7 +1246,7 @@ export class BattleScene extends Phaser.Scene {
       const aiMove = this.opponentPokemon.moves[aiMoveIndex];
       const aiMoveData = MOVES_DATA[aiMove?.moveId];
       if (aiMove && aiMoveData) {
-        await this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false);
+        await this.executeMove(false, aiMoveIndex);
         if (this.playerPokemon.currentHp <= 0) {
           await this.handlePlayerFaint();
           return;
@@ -1589,7 +1295,7 @@ export class BattleScene extends Phaser.Scene {
     this.textBox.show([`Used ${itemName} on\n${name}!`], () => {
       // Opponent attacks with pre-selected move
       if (aiMove && aiMoveData) {
-        this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false).then(() => {
+        this.executeMove(false, aiMoveIndex).then(() => {
           if (this.playerPokemon.currentHp <= 0) {
             this.handlePlayerFaint();
           } else {
@@ -1629,7 +1335,7 @@ export class BattleScene extends Phaser.Scene {
     this.textBox.show([`${name} was revived!`], () => {
       // Opponent attacks with pre-selected move
       if (aiMove && aiMoveData) {
-        this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false).then(() => {
+        this.executeMove(false, aiMoveIndex).then(() => {
           if (this.playerPokemon.currentHp <= 0) {
             this.handlePlayerFaint();
           } else {
@@ -1673,7 +1379,7 @@ export class BattleScene extends Phaser.Scene {
       void entrance.then(() => {
         // Opponent attacks with pre-selected move (chosen before seeing the switch)
         if (aiMove && aiMoveData) {
-          this.executeMove(this.opponentPokemon, this.playerPokemon, aiMove, aiMoveData, false).then(() => {
+          this.executeMove(false, aiMoveIndex).then(() => {
             if (this.playerPokemon.currentHp <= 0) {
               this.handlePlayerFaint();
             } else {
