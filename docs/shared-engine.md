@@ -161,7 +161,7 @@ supposed to already see — which is what `presentation.refreshHudBefore` is for
 | `actorIsPlayer`, `actorName` | Who acted; `actorName` carries the `Foe ` prefix. |
 | `resolution` | `pre-action` · `charge` · `no-pp` · `failed` · `miss` · `special-failed` · `special-hit` · `immune` · `damage` · `status`. |
 | `preAction`, `chargeCancelled` | The pre-action verdict, and whether a stored charge was thrown away (put a hidden FLY/DIG user back). |
-| `moveId`, `moveName`, `selectedMoveId`, `metronomeMoveId`, `struggle`, `phase` | What was actually thrown, and what the user selected before METRONOME / STRUGGLE rewrote it. |
+| `moveId`, `moveName`, `selectedMoveId`, `metronomeMoveId`, `struggle`, `phase` | What was actually thrown, and what the user selected before METRONOME / STRUGGLE rewrote it. STRUGGLE and `no-pp` are player-only: as in Gen I, a foe never runs out of PP, and a fully dry foe re-uses the selected slot at 0 PP (main's behaviour). |
 | `ppSpent`, `ppRemaining` | PP comes off on the turn the move executes — never on a charge turn. |
 | `before[]`, `messages[]` | The exact lines, before and after the animation. Byte-identical to the old scene, `\n` breaks and all. |
 | `animation` | `{ moveId, phase? }`, or `null` when nothing plays. |

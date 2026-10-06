@@ -94,7 +94,7 @@ export type MoveResolution =
   | 'pre-action'
   /** Turn 1 of a two-turn CHARGE move. */
   | 'charge'
-  /** The selected slot is out of PP while another slot still has some. */
+  /** Player only: the selected slot is out of PP while another slot still has some. */
   | 'no-pp'
   /** MIRROR MOVE, or DREAM EATER on a target that is not asleep. No animation. */
   | 'failed'
@@ -185,6 +185,7 @@ export interface MoveEvent {
   moveName: string | null;
   /** The move the user selected, before Metronome / Struggle rewrote it. */
   selectedMoveId: number | null;
+  /** Player only: every slot was dry, so STRUGGLE ran. A foe never Struggles (Gen I). */
   struggle: boolean;
   /** The move Metronome rolled, or null. */
   metronomeMoveId: number | null;
@@ -447,7 +448,8 @@ export function executeBattleMove(ctx: MoveContext, rng: Rng = Math.random): Mov
   // The charge block runs BEFORE the Struggle gate on purpose: a FLY/DIG user
   // that has run out of PP must still release (and come back onto the field)
   // rather than Struggle with `volatile.charging` left set, which would leave
-  // it semi-invulnerable and sprite-hidden forever.
+  // it semi-invulnerable and sprite-hidden forever. A dry player releases as
+  // STRUGGLE; a dry foe releases the real move, as main did.
   const slot = p.moves[index];
   if (slot && isChargeMove(slot.moveId)) {
     const step = resolveChargeStep(a.volatile.charging, index);
@@ -469,14 +471,20 @@ export function executeBattleMove(ctx: MoveContext, rng: Rng = Math.random): Mov
   }
 
   // === PP / Struggle =======================================================
-  // DELIBERATE CHANGE vs the old scene, which had no PP gate at all and simply
-  // executed a 0-PP move with `currentPp` clamped at 0. Unreachable from the
-  // Phaser menu (`BattleMenu` blocks an empty slot) and from the AI (which
-  // filters on PP); it fires for a fully exhausted combatant, where the old
-  // scene would have re-used a spent move.
-  const struggle = !p.moves.some(m => m.currentPp > 0);
+  // Opponent side: byte-identical to main AND to Gen I. Red/Blue/Yellow never
+  // run a wild or trainer Pokemon out of PP (Struggle for the AI began in
+  // Gen II), so a foe whose slots are all dry simply executes the selected
+  // slot again: `currentPp` stays clamped at 0, there is no `no-pp` refusal
+  // and no Struggle, exactly what main's scene did (it had no PP gate at all).
+  // Player side: the Gen I rule. Every slot dry => STRUGGLE; a spent slot with
+  // PP elsewhere => `no-pp`. Both are unreachable today because `BattleMenu`
+  // refuses an empty slot (so a fully dry player mon is soft-locked, on main
+  // too; that is a separate fix, not this module's). A selected index with no
+  // slot behind it has nothing to execute on either side (main would have
+  // thrown reading `moveId` of undefined).
+  const struggle = isPlayer && !p.moves.some(m => m.currentPp > 0);
   event.struggle = struggle;
-  if (!struggle && (!slot || slot.currentPp <= 0)) {
+  if (!struggle && (!slot || (isPlayer && slot.currentPp <= 0))) {
     event.resolution = 'no-pp';
     event.messages.push('There is no PP left for this move.');
     return event;

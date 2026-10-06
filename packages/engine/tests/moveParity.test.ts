@@ -51,8 +51,9 @@ interface Scenario { state: LegacyState; index: number; isPlayer: boolean }
 
 /**
  * Build the scenario. The attacker holds the move under test in slot 0 and
- * three POUNDs behind it, so the Struggle gate never fires (main had no
- * Struggle: see `docs/fixes/engine-r3/report.md`, deviation 1).
+ * three POUNDs behind it, so the player-side Struggle gate never fires (main
+ * had no Struggle; the foe side never Struggles at all, as in Gen I: see
+ * `docs/fixes/engine-r3/report.md`, deviation 1).
  */
 function scenario(moveId: number, isPlayer: boolean, attackerState: AttackerState): Scenario {
   const attacker = mon(25, 30, [moveId, 1, 1, 1]);      // PIKACHU
@@ -357,9 +358,10 @@ describe('the cases #114 got wrong', () => {
     }
   });
 
-  it('Struggle is the ONLY behaviour main did not have (and it is gated last)', async () => {
-    // Out of PP on every slot: the engine falls back to STRUGGLE. The legacy
-    // fixture has no such path, so this case is pinned on its own.
+  it('Struggle is the ONLY behaviour main did not have (player side only, gated last)', async () => {
+    // Out of PP on every slot: the player falls back to STRUGGLE (the Gen I
+    // rule; unreachable today because BattleMenu refuses an empty slot). The
+    // legacy fixture has no such path, so this case is pinned on its own.
     const s = scenario(1, true, 'clean');
     for (const m of s.state.playerPokemon.moves) m.currentPp = 0;
     const ctx = toContext(s.state, true, 0);
@@ -371,6 +373,49 @@ describe('the cases #114 got wrong', () => {
     expect(event.ppSpent).toBe(false);
   });
 
+  it('a foe with every slot dry re-uses the selected move, exactly as main (Gen I: no foe Struggle)', async () => {
+    // Red/Blue/Yellow never run a wild or trainer Pokemon out of PP, and
+    // main's scene had no gate: it executed the spent slot with PP clamped at
+    // 0. The legacy fixture runs this path, so the whole trace is compared.
+    const dryFoe = () => {
+      const s = scenario(1, false, 'clean');               // POUND
+      for (const m of s.state.opponentPokemon.moves) m.currentPp = 0;
+      return s;
+    };
+    for (const seed of [1, 3, 20260917]) {
+      const r = await run(dryFoe, seed);
+      expect(r.modernTrace).toEqual(r.legacyTrace);
+      expect(r.modernState).toEqual(r.legacyState);
+      expect(r.modernDraws).toBe(r.legacyDraws);
+      expect(r.event.struggle).toBe(false);
+      expect(r.event.resolution).not.toBe('no-pp');
+      expect(r.event.moveId).toBe(1);
+      expect(r.event.selectedMoveId).toBe(1);
+      expect(r.event.ppSpent).toBe(true);
+      expect(r.event.ppRemaining).toBe(0);
+      expect(r.event.before[0]).toBe('Foe PIKACHU used\nPOUND!');
+      expect(r.modernState.opponent.moves[0].currentPp).toBe(0);
+    }
+  });
+
+  it('a dry foe releasing FLY releases FLY itself, as main did', async () => {
+    const dryFlyer = () => {
+      const s = scenario(19, false, 'charging');           // FLY, mid-charge
+      for (const m of s.state.opponentPokemon.moves) m.currentPp = 0;
+      return s;
+    };
+    const r = await run(dryFlyer, 3);
+    expect(r.modernTrace).toEqual(r.legacyTrace);
+    expect(r.modernState).toEqual(r.legacyState);
+    expect(r.modernDraws).toBe(r.legacyDraws);
+    expect(r.event.phase).toBe('release');
+    expect(r.event.struggle).toBe(false);
+    expect(r.event.moveId).toBe(19);
+    expect(r.event.ppSpent).toBe(true);
+    expect(r.event.ppRemaining).toBe(0);
+    expect(r.modernState.opponentVolatile.charging).toBeNull();
+  });
+
   it('a FLY user out of PP still RELEASES rather than Struggling (blocker 4)', async () => {
     const s = scenario(19, true, 'charging');
     for (const m of s.state.playerPokemon.moves) m.currentPp = 0;
@@ -378,6 +423,7 @@ describe('the cases #114 got wrong', () => {
     const event = executeBattleMove(ctx, new SeededRandom(3).next);
     // The charge block runs first, so the lock is released and the mon comes
     // back on the field. #114 Struggled here and left `charging` set forever.
+    // (Player side: the release itself is STRUGGLE. A dry foe releases FLY.)
     expect(event.phase).toBe('release');
     expect(event.struggle).toBe(true);
     expect(ctx.attacker.volatile.charging).toBeNull();
